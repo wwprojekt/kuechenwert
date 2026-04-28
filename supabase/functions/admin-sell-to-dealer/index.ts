@@ -202,10 +202,10 @@ Deno.serve(async (req) => {
     }
     const { auctionId, buyerId, salePrice }: RequestPayload = validation.data;
 
-    // 3. Load auction + motorhome + bids
+    // 3. Load auction + kitchen + bids
     const { data: auction, error: auctionError } = await supabaseAdmin
       .from('auctions')
-      .select('*, motorhome:motorhomes(*), bids(*)')
+      .select('*, kitchen:kitchens(*), bids(*)')
       .eq('id', auctionId)
       .single();
 
@@ -215,8 +215,8 @@ Deno.serve(async (req) => {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
-    const motorhome = auction.motorhome;
-    if (!motorhome) {
+    const kitchen = auction.kitchen;
+    if (!kitchen) {
       return new Response(JSON.stringify({ error: 'Wohnmobil nicht gefunden' }), {
         status: 404,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -231,7 +231,7 @@ Deno.serve(async (req) => {
     //       - draft      → Inserat noch nicht veröffentlicht
     //       - ended      → Auktion lief aus (kein Zuschlag) — kann nachträglich verkauft werden
     //       - cancelled  → Auktion wurde abgebrochen (z. B. Stornierung) — Reaktivierung als Verkauf möglich
-    //     Status 'sold' wird hier (und beim Motorhome-Check unten) explizit ausgeschlossen.
+    //     Status 'sold' wird hier (und beim Kitchen-Check unten) explizit ausgeschlossen.
     const SELLABLE_AUCTION_STATUSES = ['active', 'kaufchance', 'draft', 'ended', 'cancelled'] as const;
     if (!SELLABLE_AUCTION_STATUSES.includes(auction.status as typeof SELLABLE_AUCTION_STATUSES[number])) {
       return new Response(
@@ -242,9 +242,9 @@ Deno.serve(async (req) => {
       );
     }
 
-    // 4b. Motorhome must not already be sold.
+    // 4b. Kitchen must not already be sold.
     //
-    // Idempotency note: If the motorhome is already sold to the SAME buyer at
+    // Idempotency note: If the kitchen is already sold to the SAME buyer at
     // the SAME price, the caller is almost certainly retrying after a
     // half-failed sell (e.g. Edge Function gateway returned non-2xx during
     // downstream invoicing/contract/email steps but the DB writes in step 5
@@ -252,15 +252,15 @@ Deno.serve(async (req) => {
     // without any recovery path — we return a structured 409 hint telling the
     // caller to use the dedicated repair flow (`admin-repair-sale-artefacts`).
     // We intentionally do NOT re-run the parent flow here because it consumes
-    // optimistic locks (place_bid_atomic / motorhome.updated_at) that are
+    // optimistic locks (place_bid_atomic / kitchen.updated_at) that are
     // already resolved for a sold vehicle.
-    if (motorhome.status === 'sold') {
-      const alreadySameBuyer = motorhome.sold_to === buyerId;
+    if (kitchen.status === 'sold') {
+      const alreadySameBuyer = kitchen.sold_to === buyerId;
       return new Response(
         JSON.stringify({
           error: 'Dieses Wohnmobil wurde bereits verkauft',
           code: 'ALREADY_SOLD',
-          alreadySoldTo: motorhome.sold_to,
+          alreadySoldTo: kitchen.sold_to,
           sameBuyer: alreadySameBuyer,
           hint: alreadySameBuyer
             ? 'Nutzen Sie den "Verkauf reparieren"-Button, um fehlende Artefakte (Vertrag, Rechnung, E-Mails) nachzureichen.'
@@ -299,7 +299,7 @@ Deno.serve(async (req) => {
     }
 
     // 4d. Buyer must not be the seller
-    if (motorhome.seller_id && motorhome.seller_id === buyerId) {
+    if (kitchen.seller_id && kitchen.seller_id === buyerId) {
       return new Response(
         JSON.stringify({ error: 'Der H\u00e4ndler kann nicht sein eigenes Fahrzeug kaufen' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
@@ -320,26 +320,26 @@ Deno.serve(async (req) => {
 
     // 5. Atomic-ish DB writes (mirror instant-buy step 6/7)
 
-    // 5a. Update motorhome with optimistic lock. Allowed pre-states map to
-    //     the auction statuses we now accept (sync_motorhome_status_from_auction
+    // 5a. Update kitchen with optimistic lock. Allowed pre-states map to
+    //     the auction statuses we now accept (sync_kitchen_status_from_auction
     //     trigger maps active/kaufchance→active, ended/cancelled→not_sold,
-    //     draft→ no sync, motorhome stays 'available').
+    //     draft→ no sync, kitchen stays 'available').
     //     'sold' / 'reserved' / 'pending' are intentionally excluded so we
     //     never re-sell something that already has a buyer attached.
-    const { data: updatedMotorhome, error: motorhomeUpdateError } = await supabaseAdmin
-      .from('motorhomes')
+    const { data: updatedKitchen, error: kitchenUpdateError } = await supabaseAdmin
+      .from('kitchens')
       .update({
         status: 'sold',
         sold_to: buyerId,
         sold_at: new Date().toISOString(),
         sale_type: 'instant', // ensures notify-auction-winner uses Sofortkauf wording + downstream filters treat it as instant buy
       })
-      .eq('id', motorhome.id)
+      .eq('id', kitchen.id)
       .in('status', ['available', 'active', 'not_sold'])
       .select()
       .single();
 
-    if (motorhomeUpdateError || !updatedMotorhome) {
+    if (kitchenUpdateError || !updatedKitchen) {
       return new Response(
         JSON.stringify({
           error:
@@ -382,11 +382,11 @@ Deno.serve(async (req) => {
     if (expireOffersErr) console.error('Failed to expire offers after admin manual sale:', expireOffersErr);
 
     console.log(
-      `Admin manual sale completed: auction=${auctionId}, motorhome=${motorhome.id}, ` +
+      `Admin manual sale completed: auction=${auctionId}, kitchen=${kitchen.id}, ` +
         `buyer=${buyerId}, price=${salePrice}, admin=${adminUserId ?? 'service-role'}`,
     );
 
-    const motorhomeName = `${motorhome.manufacturer || ''} ${motorhome.model || ''}`.trim();
+    const kitchenName = `${kitchen.manufacturer || ''} ${kitchen.model || ''}`.trim();
     const auctionUrl = `https://caravanwert.de/auktion/${auctionId}`;
 
     // Track non-fatal errors for the admin summary
@@ -461,15 +461,15 @@ Deno.serve(async (req) => {
         supabase: supabaseAdmin,
         source: 'admin-sell-to-dealer',
         auctionId,
-        motorhomeId: motorhome.id,
-        sellerId: motorhome.seller_id,
+        kitchenId: kitchen.id,
+        sellerId: kitchen.seller_id,
         dealerId: buyerId,
         saleAmount: salePrice,
         clickIds: {
-          gclid: motorhome.gclid,
-          gbraid: motorhome.gbraid,
-          wbraid: motorhome.wbraid,
-          msclkid: motorhome.msclkid,
+          gclid: kitchen.gclid,
+          gbraid: kitchen.gbraid,
+          wbraid: kitchen.wbraid,
+          msclkid: kitchen.msclkid,
         },
       });
       if (saleResult.attempted && !saleResult.success) {
@@ -482,13 +482,13 @@ Deno.serve(async (req) => {
         supabase: supabaseAdmin,
         source: 'admin-sell-to-dealer',
         auctionId,
-        motorhomeId: motorhome.id,
-        motorhomeCreatedAt: motorhome.created_at,
-        sellerId: motorhome.seller_id,
+        kitchenId: kitchen.id,
+        kitchenCreatedAt: kitchen.created_at,
+        sellerId: kitchen.seller_id,
         dealerId: buyerId,
         saleAmount: salePrice,
         clickIds: {
-          msclkid: motorhome.msclkid,
+          msclkid: kitchen.msclkid,
         },
       });
       if (bingResult.attempted && !bingResult.success) {
@@ -529,9 +529,9 @@ Deno.serve(async (req) => {
         'generate-purchase-contract',
         {
           auctionId,
-          motorhomeId: motorhome.id,
+          kitchenId: kitchen.id,
           buyerId,
-          sellerId: motorhome.seller_id,
+          sellerId: kitchen.seller_id,
           salePrice,
         },
         { label: 'generate-purchase-contract' },
@@ -550,7 +550,7 @@ Deno.serve(async (req) => {
         const { data: sellerProfile } = await supabaseAdmin
           .from('profiles')
           .select('email, first_name, last_name')
-          .eq('id', motorhome.seller_id)
+          .eq('id', kitchen.seller_id)
           .single();
 
         const { data: buyerProfile } = await supabaseAdmin
@@ -575,7 +575,7 @@ Deno.serve(async (req) => {
               ${paragraph('Anbei erhalten Sie den Kaufvertrag für Ihr verkauftes Fahrzeug.')}
               ${infoBox('Vertragsdetails', `
                 ${detailRow('Vertragsnr.', contractNumber)}
-                ${detailRow('Fahrzeug', motorhomeName)}
+                ${detailRow('Fahrzeug', kitchenName)}
                 ${detailRow('Kaufpreis', `€${salePrice.toLocaleString()}`)}
                 ${detailRow('Verkaufsart', 'Sofortkauf')}
               `, 'success')}
@@ -592,7 +592,7 @@ Deno.serve(async (req) => {
               body: JSON.stringify({
                 from: `${settingsData.site_name} <info@caravanwert.de>`,
                 to: [sellerProfile.email],
-                subject: `Kaufvertrag ${contractNumber} – ${motorhomeName}`,
+                subject: `Kaufvertrag ${contractNumber} – ${kitchenName}`,
                 html: contractEmailHtml,
                 attachments: [{
                   filename: `${contractNumber}.pdf`,
@@ -612,7 +612,7 @@ Deno.serve(async (req) => {
                 sender_name: settingsData.site_name,
                 recipient_email: sellerProfile.email,
                 recipient_name: sellerName,
-                subject: `Kaufvertrag ${contractNumber} – ${motorhomeName}`,
+                subject: `Kaufvertrag ${contractNumber} – ${kitchenName}`,
                 body_html: contractEmailHtml,
                 body_text: '',
                 email_type: 'purchase_contract',
@@ -633,7 +633,7 @@ Deno.serve(async (req) => {
                 recipientEmail: sellerProfile.email,
                 recipientName: sellerName,
                 contractNumber,
-                vehicleName: motorhomeName,
+                vehicleName: kitchenName,
                 salePrice,
                 downloadUrl: sellerContractUrl,
                 party: 'seller',
@@ -657,7 +657,7 @@ Deno.serve(async (req) => {
               ${paragraph('Anbei erhalten Sie den Kaufvertrag für das per Sofortkauf erworbene Fahrzeug.')}
               ${infoBox('Vertragsdetails', `
                 ${detailRow('Vertragsnr.', contractNumber)}
-                ${detailRow('Fahrzeug', motorhomeName)}
+                ${detailRow('Fahrzeug', kitchenName)}
                 ${detailRow('Kaufpreis', `€${salePrice.toLocaleString()}`)}
                 ${detailRow('Verkaufsart', 'Sofortkauf')}
               `, 'success')}
@@ -674,7 +674,7 @@ Deno.serve(async (req) => {
               body: JSON.stringify({
                 from: `${settingsData.site_name} <info@caravanwert.de>`,
                 to: [buyerProfile.email],
-                subject: `Kaufvertrag ${contractNumber} – ${motorhomeName}`,
+                subject: `Kaufvertrag ${contractNumber} – ${kitchenName}`,
                 html: contractEmailHtml,
                 attachments: [{
                   filename: `${contractNumber}.pdf`,
@@ -694,7 +694,7 @@ Deno.serve(async (req) => {
                 sender_name: settingsData.site_name,
                 recipient_email: buyerProfile.email,
                 recipient_name: buyerName,
-                subject: `Kaufvertrag ${contractNumber} – ${motorhomeName}`,
+                subject: `Kaufvertrag ${contractNumber} – ${kitchenName}`,
                 body_html: contractEmailHtml,
                 body_text: '',
                 email_type: 'purchase_contract',
@@ -715,7 +715,7 @@ Deno.serve(async (req) => {
                 recipientEmail: buyerProfile.email,
                 recipientName: buyerName,
                 contractNumber,
-                vehicleName: motorhomeName,
+                vehicleName: kitchenName,
                 salePrice,
                 downloadUrl: buyerContractUrl,
                 party: 'buyer',
@@ -743,7 +743,7 @@ Deno.serve(async (req) => {
         const { data: sellerProfile2 } = await supabaseAdmin
           .from('profiles')
           .select('email, first_name, last_name, company_name')
-          .eq('id', motorhome.seller_id)
+          .eq('id', kitchen.seller_id)
           .maybeSingle();
         const { data: buyerProfile2 } = await supabaseAdmin
           .from('profiles')
@@ -760,12 +760,12 @@ Deno.serve(async (req) => {
           supabase: supabaseAdmin,
           resendApiKey: RESEND_API_KEY,
           settingsData: settings2 || { site_name: 'CaravanWert', contact_email: 'info@caravanwert.de' },
-          motorhomeId: motorhome.id,
+          kitchenId: kitchen.id,
           buyerId,
-          sellerId: motorhome.seller_id,
+          sellerId: kitchen.seller_id,
           contractNumber,
           salePrice,
-          vehicleName: motorhomeName,
+          vehicleName: kitchenName,
           sellerProfile: sellerProfile2,
           buyerProfile: buyerProfile2,
           source: 'admin-sell-to-dealer',
@@ -777,12 +777,12 @@ Deno.serve(async (req) => {
     }
 
     // ─── 9. NOTIFY SELLER ────────────────────────────────────────
-    if (motorhome.seller_id) {
+    if (kitchen.seller_id) {
       try {
         const { data: sellerProfile } = await supabaseAdmin
           .from('profiles')
           .select('email, first_name')
-          .eq('id', motorhome.seller_id)
+          .eq('id', kitchen.seller_id)
           .single();
 
         if (sellerProfile?.email) {
@@ -793,8 +793,8 @@ Deno.serve(async (req) => {
               email: sellerProfile.email,
               name: sellerProfile.first_name || sellerProfile.email.split('@')[0],
               type: 'seller_sold',
-              motorhomeModel: motorhomeName,
-              auctionUrl: `https://caravanwert.de/dashboard/listings/${motorhome.id}`,
+              kitchenModel: kitchenName,
+              auctionUrl: `https://caravanwert.de/dashboard/listings/${kitchen.id}`,
               currentBid: `\u20ac${salePrice.toLocaleString()}`,
             },
             { label: 'send-auction-notification (seller_sold)' },
@@ -809,8 +809,8 @@ Deno.serve(async (req) => {
 
     // ─── 10. NOTIFY LOSING BIDDERS ───────────────────────────────
     // Re-fetch bids AFTER closing the auction so we don't miss any bid that
-    // raced in between our initial auction load (line ~202) and the motorhome
-    // update (line ~291). place_bid_atomic guards on motorhome.status='sold'
+    // raced in between our initial auction load (line ~202) and the kitchen
+    // update (line ~291). place_bid_atomic guards on kitchen.status='sold'
     // so no new bids will appear after this point.
     const { data: finalBids } = await supabaseAdmin
       .from('bids')
@@ -845,11 +845,11 @@ Deno.serve(async (req) => {
                 email: loserProfile.email,
                 name: loserProfile.first_name || loserProfile.email.split('@')[0],
                 type: 'lost',
-                motorhomeModel: motorhomeName,
+                kitchenModel: kitchenName,
                 auctionUrl,
                 yourBid: `\u20ac${loserHighestBid.toLocaleString()}`,
                 currentBid: `\u20ac${salePrice.toLocaleString()}`,
-                isFestpreis: motorhome.sale_channel === 'instant_price',
+                isFestpreis: kitchen.sale_channel === 'instant_price',
               },
             }).catch((e: any) => console.error('Error sending loser notification:', e));
           }
@@ -876,7 +876,7 @@ Deno.serve(async (req) => {
                 email: proposerProfile.email,
                 name: proposerProfile.company_name || proposerProfile.first_name || proposerProfile.email.split('@')[0],
                 type: 'lost',
-                motorhomeModel: motorhomeName,
+                kitchenModel: kitchenName,
                 auctionUrl: 'https://caravanwert.de/kaufen',
                 yourBid: `\u20ac${Number(eo.offer_amount).toLocaleString('de-DE')}`,
                 currentBid: `\u20ac${Number(salePrice).toLocaleString('de-DE')}`,
@@ -905,7 +905,7 @@ Deno.serve(async (req) => {
       ${paragraph(`<strong>Manueller Verkauf durch Admin (${adminDisplayName}) abgeschlossen.</strong>`)}
       ${infoBox('Verkaufs-Ergebnis', `
         ${detailRow('Status', '\u2705 VERKAUFT (Manueller Admin-Verkauf)')}
-        ${detailRow('Fahrzeug', motorhomeName)}
+        ${detailRow('Fahrzeug', kitchenName)}
         ${detailRow('Verkaufspreis', `\u20ac${salePrice.toLocaleString()}`)}
         ${detailRow('Anzahl Gebote vor Verkauf', String(allBids.length || 0))}
         ${detailRow('Auktions-Status vorher', String(auction.status))}
@@ -929,7 +929,7 @@ Deno.serve(async (req) => {
 
     await sendAdminEmail(
       supabaseAdmin,
-      `Manueller Verkauf: ${motorhomeName} f\u00fcr \u20ac${salePrice.toLocaleString()}`,
+      `Manueller Verkauf: ${kitchenName} f\u00fcr \u20ac${salePrice.toLocaleString()}`,
       adminContent,
     );
 
@@ -938,12 +938,12 @@ Deno.serve(async (req) => {
         success: true,
         message: 'Manueller Verkauf erfolgreich abgeschlossen',
         sale: {
-          motorhomeId: motorhome.id,
+          kitchenId: kitchen.id,
           auctionId,
           buyerId,
           price: salePrice,
           saleType: 'instant',
-          soldAt: updatedMotorhome.sold_at,
+          soldAt: updatedKitchen.sold_at,
           invoiceNumber: invoiceNumber || null,
           contractNumber: contractNumber || null,
           errors,

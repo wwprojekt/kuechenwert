@@ -56,7 +56,7 @@ const handler = async (req: Request): Promise<Response> => {
       .from('auctions')
       .select(`
         id, current_bid, end_time,
-        motorhomes (manufacturer, model, year)
+        kitchens (manufacturer, model, year)
       `)
       .eq('status', 'active')
       .order('end_time', { ascending: true })
@@ -142,7 +142,7 @@ const handler = async (req: Request): Promise<Response> => {
               let auctionPreview = '';
               if (activeAuctions && activeAuctions.length > 0) {
                 const items = activeAuctions.slice(0, 3).map((a: any) => {
-                  const m = a.motorhomes;
+                  const m = a.kitchens;
                   const price = typeof a.current_bid === 'number'
                     ? a.current_bid.toLocaleString('de-DE', { style: 'currency', currency: 'EUR' })
                     : `${a.current_bid || 0} €`;
@@ -247,7 +247,7 @@ const handler = async (req: Request): Promise<Response> => {
         let auctionList = '';
         if (activeAuctions && activeAuctions.length > 0) {
           const items = activeAuctions.map((a: any) => {
-            const m = a.motorhomes;
+            const m = a.kitchens;
             const price = typeof a.current_bid === 'number'
               ? a.current_bid.toLocaleString('de-DE', { style: 'currency', currency: 'EUR' })
               : `${a.current_bid || 0} €`;

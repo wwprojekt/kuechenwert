@@ -1,4 +1,4 @@
-﻿import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.100.1';
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.100.1';
 import { getCorsHeaders, handleCorsPreflightRequest } from '../_shared/cors.ts';
 // @deno-types="https://esm.sh/jspdf@2.5.2"
 import { jsPDF } from 'https://esm.sh/jspdf@2.5.2';
@@ -27,7 +27,7 @@ import { checkServiceRoleOrAdmin } from '../_shared/auth.ts';
  */
 
 interface HandoverProtocolRequest {
-  motorhomeId: string;
+  kitchenId: string;
   buyerId: string;
   sellerId: string;
   contractNumber: string;
@@ -87,11 +87,11 @@ Deno.serve(async (req) => {
     }
 
     const body = await req.json() as HandoverProtocolRequest;
-    const { motorhomeId, buyerId, sellerId, contractNumber, salePrice } = body;
+    const { kitchenId, buyerId, sellerId, contractNumber, salePrice } = body;
 
-    if (!motorhomeId || !buyerId || !sellerId || !contractNumber) {
+    if (!kitchenId || !buyerId || !sellerId || !contractNumber) {
       return new Response(
-        JSON.stringify({ error: 'Missing required fields: motorhomeId, buyerId, sellerId, contractNumber' }),
+        JSON.stringify({ error: 'Missing required fields: kitchenId, buyerId, sellerId, contractNumber' }),
         { status: 400, headers: { 'Content-Type': 'application/json', ...corsHeaders } },
       );
     }
@@ -101,20 +101,20 @@ Deno.serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
     );
 
-    const { data: motorhome, error: motorhomeError } = await supabase
-      .from('motorhomes')
+    const { data: kitchen, error: kitchenError } = await supabase
+      .from('kitchens')
       .select(`
         id, manufacturer, model, base_vehicle, power_kw, engine_power_hp,
         first_registration, vehicle_identification_number, weight_kg, mileage,
         fuel_type, engine_displacement_ccm, year, license_plate
       `)
-      .eq('id', motorhomeId)
+      .eq('id', kitchenId)
       .maybeSingle();
 
-    if (motorhomeError || !motorhome) {
-      console.error('Motorhome fetch failed:', motorhomeError);
+    if (kitchenError || !kitchen) {
+      console.error('Kitchen fetch failed:', kitchenError);
       return new Response(
-        JSON.stringify({ error: `Motorhome not found: ${motorhomeError?.message || 'unknown'}` }),
+        JSON.stringify({ error: `Kitchen not found: ${kitchenError?.message || 'unknown'}` }),
         { status: 404, headers: { 'Content-Type': 'application/json', ...corsHeaders } },
       );
     }
@@ -263,30 +263,30 @@ Deno.serve(async (req) => {
     };
 
     sectionHeader('1. Fahrzeugdaten');
-    const brandModel = `${safe(motorhome.manufacturer, '')} ${safe(motorhome.model, '')}`.trim() || DASH;
+    const brandModel = `${safe(kitchen.manufacturer, '')} ${safe(kitchen.model, '')}`.trim() || DASH;
     labelValueRow('Marke / Modell:', brandModel);
     labelValueRow(
-      'FIN (VIN):', safe(motorhome.vehicle_identification_number),
-      { col2Label: 'Erstzulassung:', col2Value: formatMonthYear(motorhome.first_registration) },
+      'FIN (VIN):', safe(kitchen.vehicle_identification_number),
+      { col2Label: 'Erstzulassung:', col2Value: formatMonthYear(kitchen.first_registration) },
     );
     labelValueRow(
-      'Basisfahrzeug:', safe(motorhome.base_vehicle),
-      { col2Label: 'Modelljahr:', col2Value: motorhome.year ? String(motorhome.year) : DASH },
+      'Basisfahrzeug:', safe(kitchen.base_vehicle),
+      { col2Label: 'Modelljahr:', col2Value: kitchen.year ? String(kitchen.year) : DASH },
     );
-    const psStr = motorhome.engine_power_hp
-      ? `${motorhome.engine_power_hp} PS${motorhome.power_kw ? ` (${motorhome.power_kw} kW)` : ''}`
-      : (motorhome.power_kw ? `${motorhome.power_kw} kW` : DASH);
+    const psStr = kitchen.engine_power_hp
+      ? `${kitchen.engine_power_hp} PS${kitchen.power_kw ? ` (${kitchen.power_kw} kW)` : ''}`
+      : (kitchen.power_kw ? `${kitchen.power_kw} kW` : DASH);
     labelValueRow(
       'Leistung:', psStr,
-      { col2Label: 'Hubraum:', col2Value: motorhome.engine_displacement_ccm ? `${motorhome.engine_displacement_ccm} ccm` : DASH },
+      { col2Label: 'Hubraum:', col2Value: kitchen.engine_displacement_ccm ? `${kitchen.engine_displacement_ccm} ccm` : DASH },
     );
     labelValueRow(
-      'Kraftstoff:', safe(motorhome.fuel_type),
-      { col2Label: 'Zul. Gesamtmasse:', col2Value: motorhome.weight_kg ? `${Number(motorhome.weight_kg).toLocaleString('de-DE')} kg` : DASH },
+      'Kraftstoff:', safe(kitchen.fuel_type),
+      { col2Label: 'Zul. Gesamtmasse:', col2Value: kitchen.weight_kg ? `${Number(kitchen.weight_kg).toLocaleString('de-DE')} kg` : DASH },
     );
     labelValueRow(
-      'Kennzeichen:', safe(motorhome.license_plate),
-      { col2Label: 'KM-Stand (Inserat):', col2Value: motorhome.mileage ? `${Number(motorhome.mileage).toLocaleString('de-DE')} km` : DASH },
+      'Kennzeichen:', safe(kitchen.license_plate),
+      { col2Label: 'KM-Stand (Inserat):', col2Value: kitchen.mileage ? `${Number(kitchen.mileage).toLocaleString('de-DE')} km` : DASH },
     );
     y += 2;
 

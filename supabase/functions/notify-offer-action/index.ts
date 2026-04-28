@@ -33,10 +33,10 @@ interface NotifyRequest {
   sellerResponse?: string;
 }
 
-type MotorhomeRow = { seller_id: string | null };
+type KitchenRow = { seller_id: string | null };
 
-function getSellerIdFromAuction(auctionData: { motorhome: MotorhomeRow | MotorhomeRow[] | null } | null): string | null {
-  const mh = auctionData?.motorhome;
+function getSellerIdFromAuction(auctionData: { kitchen: KitchenRow | KitchenRow[] | null } | null): string | null {
+  const mh = auctionData?.kitchen;
   if (!mh) return null;
   return Array.isArray(mh) ? (mh[0]?.seller_id ?? null) : (mh.seller_id ?? null);
 }
@@ -68,11 +68,11 @@ async function authorizeNotifyOfferRequest(
 
   const { data: auctionRow } = await supabase
     .from('auctions')
-    .select('motorhome:motorhomes(seller_id)')
+    .select('kitchen:kitchens(seller_id)')
     .eq('id', body.auctionId)
     .maybeSingle();
 
-  const sellerId = getSellerIdFromAuction(auctionRow as { motorhome: MotorhomeRow | MotorhomeRow[] | null } | null);
+  const sellerId = getSellerIdFromAuction(auctionRow as { kitchen: KitchenRow | KitchenRow[] | null } | null);
 
   if (body.action === 'new_offer') {
     if (user.id !== body.buyerId) return base;
@@ -80,12 +80,12 @@ async function authorizeNotifyOfferRequest(
     // For Festpreis listings, any authenticated dealer can make a proposal (no invitation needed)
     const { data: auctionCheck } = await supabase
       .from('auctions')
-      .select('status, motorhome:motorhomes(sale_channel)')
+      .select('status, kitchen:kitchens(sale_channel)')
       .eq('id', body.auctionId)
       .maybeSingle();
-    const saleChannel = Array.isArray(auctionCheck?.motorhome)
-      ? auctionCheck.motorhome[0]?.sale_channel
-      : (auctionCheck?.motorhome as any)?.sale_channel;
+    const saleChannel = Array.isArray(auctionCheck?.kitchen)
+      ? auctionCheck.kitchen[0]?.sale_channel
+      : (auctionCheck?.kitchen as any)?.sale_channel;
 
     if (saleChannel === 'instant_price' && auctionCheck?.status === 'active') {
       // Prevent seller from proposing on own listing
@@ -174,15 +174,15 @@ const handler = async (req: Request): Promise<Response> => {
     // 1. Lade Auktions- und Fahrzeugdaten
     const { data: auctionData, error: auctionError } = await supabase
       .from('auctions')
-      .select('id, current_bid, status, motorhome:motorhomes(id, seller_id, manufacturer, model, sale_channel)')
+      .select('id, current_bid, status, kitchen:kitchens(id, seller_id, manufacturer, model, sale_channel)')
       .eq('id', auctionId)
       .single();
 
-    const mhJoined = auctionData?.motorhome;
+    const mhJoined = auctionData?.kitchen;
     const mh = Array.isArray(mhJoined) ? mhJoined[0] : mhJoined;
 
     if (auctionError || !auctionData || !mh) {
-      console.error('[notify-offer-action] Auction/motorhome not found:', auctionError);
+      console.error('[notify-offer-action] Auction/kitchen not found:', auctionError);
       return new Response(JSON.stringify({ success: false, error: 'Auction not found' }), {
         status: 404,
         headers: { 'Content-Type': 'application/json', ...corsHeaders },
@@ -190,7 +190,7 @@ const handler = async (req: Request): Promise<Response> => {
     }
 
     const sellerId = mh.seller_id;
-    const motorhomeName = `${mh.manufacturer || ''} ${mh.model || ''}`.trim();
+    const kitchenName = `${mh.manufacturer || ''} ${mh.model || ''}`.trim();
     const isFestpreis = (mh as any).sale_channel === 'instant_price';
 
     // 2. Lade Käufer-Profil (service_role → kein RLS)
@@ -235,7 +235,7 @@ const handler = async (req: Request): Promise<Response> => {
                 email: sellerProfile.email,
                 name: sellerProfile.first_name || sellerProfile.email.split('@')[0],
                 type: 'seller_new_offer',
-                motorhomeModel: motorhomeName,
+                kitchenModel: kitchenName,
                 auctionUrl: `https://caravanwert.de/dashboard/listings/${mh.id}`,
                 offerAmount: formattedOffer,
                 currentBid: currentBidFormatted,
@@ -269,7 +269,7 @@ const handler = async (req: Request): Promise<Response> => {
                         email: admin.email,
                         name: admin.first_name || 'Admin',
                         type: 'admin_new_offer',
-                        motorhomeModel: motorhomeName,
+                        kitchenModel: kitchenName,
                         auctionUrl: 'https://caravanwert.de/admin/offers',
                         offerAmount: formattedOffer,
                         buyerName: buyerDisplayName,
@@ -298,7 +298,7 @@ const handler = async (req: Request): Promise<Response> => {
                 email: buyerProfile.email,
                 name: buyerDisplayName,
                 type: 'buyer_offer_rejected',
-                motorhomeModel: motorhomeName,
+                kitchenModel: kitchenName,
                 auctionUrl: `https://caravanwert.de/auktion/${auctionId}`,
                 offerAmount: formattedOffer,
                 sellerResponse: sellerResponse || undefined,
@@ -330,7 +330,7 @@ const handler = async (req: Request): Promise<Response> => {
                         email: admin.email,
                         name: admin.first_name || 'Admin',
                         type: 'buyer_offer_rejected',
-                        motorhomeModel: motorhomeName,
+                        kitchenModel: kitchenName,
                         auctionUrl: 'https://caravanwert.de/admin/offers',
                         offerAmount: formattedOffer,
                         sellerResponse: sellerResponse || undefined,
@@ -358,7 +358,7 @@ const handler = async (req: Request): Promise<Response> => {
                 email: buyerProfile.email,
                 name: buyerDisplayName,
                 type: 'buyer_counter_offer',
-                motorhomeModel: motorhomeName,
+                kitchenModel: kitchenName,
                 auctionUrl: `https://caravanwert.de/auktion/${auctionId}`,
                 offerAmount: formattedOffer,
                 counterAmount: formattedCounter,
@@ -391,7 +391,7 @@ const handler = async (req: Request): Promise<Response> => {
                         email: admin.email,
                         name: admin.first_name || 'Admin',
                         type: 'buyer_counter_offer',
-                        motorhomeModel: motorhomeName,
+                        kitchenModel: kitchenName,
                         auctionUrl: 'https://caravanwert.de/admin/offers',
                         offerAmount: formattedOffer,
                         counterAmount: formattedCounter,
@@ -420,7 +420,7 @@ const handler = async (req: Request): Promise<Response> => {
                 email: sellerProfile.email,
                 name: sellerProfile.first_name || sellerProfile.email.split('@')[0],
                 type: 'seller_buyer_rejected',
-                motorhomeModel: motorhomeName,
+                kitchenModel: kitchenName,
                 auctionUrl: `https://caravanwert.de/dashboard/listings/${mh.id}`,
                 offerAmount: formattedOffer,
                 counterAmount: formattedCounter,
@@ -454,7 +454,7 @@ const handler = async (req: Request): Promise<Response> => {
                         email: admin.email,
                         name: admin.first_name || 'Admin',
                         type: 'seller_buyer_rejected',
-                        motorhomeModel: motorhomeName,
+                        kitchenModel: kitchenName,
                         auctionUrl: 'https://caravanwert.de/admin/offers',
                         offerAmount: formattedOffer,
                         counterAmount: formattedCounter,

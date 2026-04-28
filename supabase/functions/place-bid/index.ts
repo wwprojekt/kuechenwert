@@ -132,13 +132,13 @@ Deno.serve(async (req) => {
     console.log('Place bid request:', { auctionId, amount, userId: user.id, isAutobid });
 
     // ─── Reject bids on instant-price-only listings ──────────────
-    const { data: auctionMotorhome } = await supabaseAdmin
+    const { data: auctionKitchen } = await supabaseAdmin
       .from('auctions')
-      .select('motorhome_id, motorhomes!inner(sale_channel)')
+      .select('kitchen_id, kitchens!inner(sale_channel)')
       .eq('id', auctionId)
       .single();
 
-    if ((auctionMotorhome?.motorhomes as any)?.sale_channel === 'instant_price') {
+    if ((auctionKitchen?.kitchens as any)?.sale_channel === 'instant_price') {
       throw new Error('Dieses Fahrzeug ist nur per Sofortkauf verfügbar. Gebote sind nicht möglich.');
     }
 
@@ -172,8 +172,8 @@ Deno.serve(async (req) => {
       auction_extended?: boolean;
       new_end_time?: string;
       current_bid?: number;
-      motorhome_seller_id?: string;
-      motorhome_id?: string;
+      kitchen_seller_id?: string;
+      kitchen_id?: string;
       minimum_bid?: number;
     };
 
@@ -213,17 +213,17 @@ Deno.serve(async (req) => {
 
     // ─── Notifications (fire and forget) ───────────────────────────
 
-    // Fetch motorhome details for notification text
-    let motorhomeName = '';
-    if (outcome.motorhome_id) {
-      const { data: motorhomeData } = await supabaseAdmin
-        .from('motorhomes')
+    // Fetch kitchen details for notification text
+    let kitchenName = '';
+    if (outcome.kitchen_id) {
+      const { data: kitchenData } = await supabaseAdmin
+        .from('kitchens')
         .select('manufacturer, model')
-        .eq('id', outcome.motorhome_id)
+        .eq('id', outcome.kitchen_id)
         .single();
 
-      if (motorhomeData) {
-        motorhomeName = `${motorhomeData.manufacturer || ''} ${motorhomeData.model || ''}`.trim();
+      if (kitchenData) {
+        kitchenName = `${kitchenData.manufacturer || ''} ${kitchenData.model || ''}`.trim();
       }
     }
 
@@ -234,7 +234,7 @@ Deno.serve(async (req) => {
         user_id: user.id,
         type: 'bid_confirmed',
         title: 'Gebot platziert',
-        message: `Ihr Gebot von \u20ac${amount.toLocaleString('de-DE')} auf ${motorhomeName || 'eine Auktion'} wurde erfolgreich platziert.`,
+        message: `Ihr Gebot von \u20ac${amount.toLocaleString('de-DE')} auf ${kitchenName || 'eine Auktion'} wurde erfolgreich platziert.`,
         link: `/auktion/${auctionId}`,
         auction_id: auctionId,
       })
@@ -261,7 +261,7 @@ Deno.serve(async (req) => {
           user_id: previousBids[0].bidder_id,
           type: 'outbid',
           title: 'Sie wurden \u00fcberboten!',
-          message: `Ihr Gebot auf ${motorhomeName || 'eine Auktion'} wurde \u00fcberboten. Neuer Preis: \u20ac${amount.toLocaleString('de-DE')}`,
+          message: `Ihr Gebot auf ${kitchenName || 'eine Auktion'} wurde \u00fcberboten. Neuer Preis: \u20ac${amount.toLocaleString('de-DE')}`,
           link: `/auktion/${auctionId}`,
           auction_id: auctionId,
         })
@@ -282,7 +282,7 @@ Deno.serve(async (req) => {
         body: {
           userId: previousBids[0].bidder_id,
           title: 'Sie wurden überboten!',
-          body: `Ihr Gebot auf ${motorhomeName || 'eine Auktion'} wurde überboten. Neuer Preis: €${amount.toLocaleString('de-DE')}`,
+          body: `Ihr Gebot auf ${kitchenName || 'eine Auktion'} wurde überboten. Neuer Preis: €${amount.toLocaleString('de-DE')}`,
           url: `https://caravanwert.de/auktion/${auctionId}`,
           tag: 'outbid',
         },
@@ -292,18 +292,18 @@ Deno.serve(async (req) => {
     // 3. Notify the seller about the new bid
     // Strict opt-out: Pref-Row fehlt oder Query-Fehler → senden;
     // nur explizites `email_new_bid = false` blockt die Mail.
-    if (outcome.motorhome_seller_id) {
+    if (outcome.kitchen_seller_id) {
       const { data: sellerProfile } = await supabaseAdmin
         .from('profiles')
         .select('email, first_name')
-        .eq('id', outcome.motorhome_seller_id)
+        .eq('id', outcome.kitchen_seller_id)
         .single();
 
       if (sellerProfile?.email) {
         const { data: sellerPrefs, error: sellerPrefsError } = await supabaseAdmin
           .from('user_notification_preferences')
           .select('email_new_bid')
-          .eq('user_id', outcome.motorhome_seller_id)
+          .eq('user_id', outcome.kitchen_seller_id)
           .maybeSingle();
 
         if (sellerPrefsError) {
@@ -316,26 +316,26 @@ Deno.serve(async (req) => {
               email: sellerProfile.email,
               name: sellerProfile.first_name || sellerProfile.email.split('@')[0],
               type: 'new_bid',
-              motorhomeModel: motorhomeName,
+              kitchenModel: kitchenName,
               auctionUrl: `https://caravanwert.de/auktion/${auctionId}`,
               currentBid: `€${amount.toLocaleString('de-DE')}`,
             },
           }).catch((e) => console.error('Error sending seller notification:', e));
         } else {
-          console.log(`[place-bid] skipped new_bid mail for seller ${outcome.motorhome_seller_id} (opted out)`);
+          console.log(`[place-bid] skipped new_bid mail for seller ${outcome.kitchen_seller_id} (opted out)`);
         }
       }
     }
 
-    // 4. Notify users who have this motorhome as favorite
-    if (outcome.motorhome_id) {
+    // 4. Notify users who have this kitchen as favorite
+    if (outcome.kitchen_id) {
       supabaseAdmin.functions.invoke('send-favorite-notification', {
         body: {
-          motorhome_id: outcome.motorhome_id,
+          kitchen_id: outcome.kitchen_id,
           auction_id: auctionId,
           event_type: 'price_change',
           new_price: amount,
-          auction_title: motorhomeName,
+          auction_title: kitchenName,
         },
       }).catch((e) => console.error('Error sending favorite notifications:', e));
     }

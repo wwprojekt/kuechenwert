@@ -12,7 +12,7 @@ import { sendBlankHandoverProtocol } from '../_shared/sendBlankHandoverProtocol.
  * Edge Function: instant-buy
  *
  * Handles the "Sofortkauf" (instant buy) flow server-side to prevent
- * client-side price manipulation. Validates the auction, motorhome status,
+ * client-side price manipulation. Validates the auction, kitchen status,
  * instant price, and buyer eligibility before executing the purchase
  * atomically via a database transaction (RPC).
  *
@@ -220,10 +220,10 @@ Deno.serve(async (req) => {
 
     const { auctionId }: InstantBuyRequest = validation.data;
 
-    // 4. Fetch auction + motorhome + bids in a single query
+    // 4. Fetch auction + kitchen + bids in a single query
     const { data: auction, error: auctionError } = await supabaseAdmin
       .from('auctions')
-      .select('*, motorhome:motorhomes(*), bids(*)')
+      .select('*, kitchen:kitchens(*), bids(*)')
       .eq('id', auctionId)
       .single();
 
@@ -231,8 +231,8 @@ Deno.serve(async (req) => {
       throw new Error('Auktion nicht gefunden');
     }
 
-    const motorhome = auction.motorhome;
-    if (!motorhome) {
+    const kitchen = auction.kitchen;
+    if (!kitchen) {
       throw new Error('Wohnmobil nicht gefunden');
     }
 
@@ -250,38 +250,38 @@ Deno.serve(async (req) => {
       throw new Error('Diese Auktion ist bereits beendet');
     }
 
-    // 5c. Check motorhome is not already sold
-    if (motorhome.status === 'sold') {
+    // 5c. Check kitchen is not already sold
+    if (kitchen.status === 'sold') {
       throw new Error('Dieses Wohnmobil wurde bereits verkauft');
     }
 
     // 5d. Check instant_price exists and is valid
-    const instantPrice = Number(motorhome.instant_price);
-    if (!motorhome.instant_price || instantPrice <= 0) {
+    const instantPrice = Number(kitchen.instant_price);
+    if (!kitchen.instant_price || instantPrice <= 0) {
       throw new Error('Sofortkauf ist für dieses Wohnmobil nicht verfügbar');
     }
 
     // 5e. Buyer must not be the seller
-    if (motorhome.seller_id === user.id) {
+    if (kitchen.seller_id === user.id) {
       throw new Error('Sie können Ihr eigenes Wohnmobil nicht kaufen');
     }
 
     // 6. Execute the purchase atomically
-    //    Update motorhome status to 'sold' – only if still 'available'
-    const { data: updatedMotorhome, error: motorhomeUpdateError } = await supabaseAdmin
-      .from('motorhomes')
+    //    Update kitchen status to 'sold' – only if still 'available'
+    const { data: updatedKitchen, error: kitchenUpdateError } = await supabaseAdmin
+      .from('kitchens')
       .update({
         status: 'sold',
         sold_to: user.id,
         sold_at: new Date().toISOString(),
         sale_type: 'instant',
       })
-      .eq('id', motorhome.id)
+      .eq('id', kitchen.id)
       .in('status', ['available', 'active'])  // Optimistic lock: only update if still purchasable
       .select()
       .single();
 
-    if (motorhomeUpdateError || !updatedMotorhome) {
+    if (kitchenUpdateError || !updatedKitchen) {
       throw new Error('Kauf konnte nicht abgeschlossen werden – das Wohnmobil wurde möglicherweise bereits verkauft');
     }
 
@@ -311,11 +311,11 @@ Deno.serve(async (req) => {
     if (expireOffersErr) console.error('Failed to expire offers after instant buy:', expireOffersErr);
 
     console.log(
-      `Instant buy completed: auction=${auctionId}, motorhome=${motorhome.id}, ` +
+      `Instant buy completed: auction=${auctionId}, kitchen=${kitchen.id}, ` +
       `buyer=${user.id}, price=${instantPrice}`,
     );
 
-    const motorhomeName = `${motorhome.manufacturer || ''} ${motorhome.model || ''}`.trim();
+    const kitchenName = `${kitchen.manufacturer || ''} ${kitchen.model || ''}`.trim();
     const auctionUrl = `https://caravanwert.de/auktion/${auctionId}`;
 
     // Track errors for admin summary (non-fatal)
@@ -398,15 +398,15 @@ Deno.serve(async (req) => {
         supabase: supabaseAdmin,
         source: 'instant-buy',
         auctionId,
-        motorhomeId: motorhome.id,
-        sellerId: motorhome.seller_id,
+        kitchenId: kitchen.id,
+        sellerId: kitchen.seller_id,
         dealerId: user.id,
         saleAmount: instantPrice,
         clickIds: {
-          gclid: motorhome.gclid,
-          gbraid: motorhome.gbraid,
-          wbraid: motorhome.wbraid,
-          msclkid: motorhome.msclkid,
+          gclid: kitchen.gclid,
+          gbraid: kitchen.gbraid,
+          wbraid: kitchen.wbraid,
+          msclkid: kitchen.msclkid,
         },
       });
       if (saleResult.attempted && !saleResult.success) {
@@ -419,13 +419,13 @@ Deno.serve(async (req) => {
         supabase: supabaseAdmin,
         source: 'instant-buy',
         auctionId,
-        motorhomeId: motorhome.id,
-        motorhomeCreatedAt: motorhome.created_at,
-        sellerId: motorhome.seller_id,
+        kitchenId: kitchen.id,
+        kitchenCreatedAt: kitchen.created_at,
+        sellerId: kitchen.seller_id,
         dealerId: user.id,
         saleAmount: instantPrice,
         clickIds: {
-          msclkid: motorhome.msclkid,
+          msclkid: kitchen.msclkid,
         },
       });
       if (bingResult.attempted && !bingResult.success) {
@@ -461,9 +461,9 @@ Deno.serve(async (req) => {
       const { data: contractResult, error: contractError } = await supabaseAdmin.functions.invoke('generate-purchase-contract', {
         body: {
           auctionId,
-          motorhomeId: motorhome.id,
+          kitchenId: kitchen.id,
           buyerId: user.id,
-          sellerId: motorhome.seller_id,
+          sellerId: kitchen.seller_id,
           salePrice: instantPrice,
         },
       });
@@ -483,7 +483,7 @@ Deno.serve(async (req) => {
         const { data: sellerProfile } = await supabaseAdmin
           .from('profiles')
           .select('email, first_name, last_name')
-          .eq('id', motorhome.seller_id)
+          .eq('id', kitchen.seller_id)
           .single();
 
         const { data: buyerProfile } = await supabaseAdmin
@@ -509,7 +509,7 @@ Deno.serve(async (req) => {
               ${paragraph('Anbei erhalten Sie den Kaufvertrag für Ihr verkauftes Fahrzeug.')}
               ${infoBox('Vertragsdetails', `
                 ${detailRow('Vertragsnr.', contractNumber)}
-                ${detailRow('Fahrzeug', motorhomeName)}
+                ${detailRow('Fahrzeug', kitchenName)}
                 ${detailRow('Kaufpreis', `€${instantPrice.toLocaleString()}`)}
                 ${detailRow('Verkaufsart', 'Sofortkauf')}
               `, 'success')}
@@ -526,7 +526,7 @@ Deno.serve(async (req) => {
               body: JSON.stringify({
                 from: `${settingsData.site_name} <info@caravanwert.de>`,
                 to: [sellerProfile.email],
-                subject: `Kaufvertrag ${contractNumber} – ${motorhomeName}`,
+                subject: `Kaufvertrag ${contractNumber} – ${kitchenName}`,
                 html: contractEmailHtml,
                 attachments: [{
                   filename: `${contractNumber}.pdf`,
@@ -547,7 +547,7 @@ Deno.serve(async (req) => {
                 sender_name: settingsData.site_name,
                 recipient_email: sellerProfile.email,
                 recipient_name: sellerName,
-                subject: `Kaufvertrag ${contractNumber} – ${motorhomeName}`,
+                subject: `Kaufvertrag ${contractNumber} – ${kitchenName}`,
                 body_html: contractEmailHtml,
                 body_text: '',
                 email_type: 'purchase_contract',
@@ -569,7 +569,7 @@ Deno.serve(async (req) => {
                 recipientEmail: sellerProfile.email,
                 recipientName: sellerName,
                 contractNumber,
-                vehicleName: motorhomeName,
+                vehicleName: kitchenName,
                 salePrice: instantPrice,
                 downloadUrl: sellerContractUrl,
                 party: 'seller',
@@ -594,7 +594,7 @@ Deno.serve(async (req) => {
               ${paragraph('Anbei erhalten Sie den Kaufvertrag für das per Sofortkauf erworbene Fahrzeug.')}
               ${infoBox('Vertragsdetails', `
                 ${detailRow('Vertragsnr.', contractNumber)}
-                ${detailRow('Fahrzeug', motorhomeName)}
+                ${detailRow('Fahrzeug', kitchenName)}
                 ${detailRow('Kaufpreis', `€${instantPrice.toLocaleString()}`)}
                 ${detailRow('Verkaufsart', 'Sofortkauf')}
               `, 'success')}
@@ -611,7 +611,7 @@ Deno.serve(async (req) => {
               body: JSON.stringify({
                 from: `${settingsData.site_name} <info@caravanwert.de>`,
                 to: [buyerProfile.email],
-                subject: `Kaufvertrag ${contractNumber} – ${motorhomeName}`,
+                subject: `Kaufvertrag ${contractNumber} – ${kitchenName}`,
                 html: contractEmailHtml,
                 attachments: [{
                   filename: `${contractNumber}.pdf`,
@@ -632,7 +632,7 @@ Deno.serve(async (req) => {
                 sender_name: settingsData.site_name,
                 recipient_email: buyerProfile.email,
                 recipient_name: buyerName,
-                subject: `Kaufvertrag ${contractNumber} – ${motorhomeName}`,
+                subject: `Kaufvertrag ${contractNumber} – ${kitchenName}`,
                 body_html: contractEmailHtml,
                 body_text: '',
                 email_type: 'purchase_contract',
@@ -654,7 +654,7 @@ Deno.serve(async (req) => {
                 recipientEmail: buyerProfile.email,
                 recipientName: buyerName,
                 contractNumber,
-                vehicleName: motorhomeName,
+                vehicleName: kitchenName,
                 salePrice: instantPrice,
                 downloadUrl: buyerContractUrl,
                 party: 'buyer',
@@ -683,7 +683,7 @@ Deno.serve(async (req) => {
         const { data: sellerProfile2 } = await supabaseAdmin
           .from('profiles')
           .select('email, first_name, last_name, company_name')
-          .eq('id', motorhome.seller_id)
+          .eq('id', kitchen.seller_id)
           .maybeSingle();
         const { data: buyerProfile2 } = await supabaseAdmin
           .from('profiles')
@@ -700,12 +700,12 @@ Deno.serve(async (req) => {
           supabase: supabaseAdmin,
           resendApiKey: RESEND_API_KEY,
           settingsData: settings2 || { site_name: 'CaravanWert', contact_email: 'info@caravanwert.de' },
-          motorhomeId: motorhome.id,
+          kitchenId: kitchen.id,
           buyerId: user.id,
-          sellerId: motorhome.seller_id,
+          sellerId: kitchen.seller_id,
           contractNumber,
           salePrice: instantPrice,
-          vehicleName: motorhomeName,
+          vehicleName: kitchenName,
           sellerProfile: sellerProfile2,
           buyerProfile: buyerProfile2,
           source: 'instant-buy',
@@ -717,12 +717,12 @@ Deno.serve(async (req) => {
     }
 
     // ─── 11. NOTIFY SELLER ──────────────────────────────────────
-    if (motorhome.seller_id) {
+    if (kitchen.seller_id) {
       try {
         const { data: sellerProfile } = await supabaseAdmin
           .from('profiles')
           .select('email, first_name')
-          .eq('id', motorhome.seller_id)
+          .eq('id', kitchen.seller_id)
           .single();
 
         if (sellerProfile?.email) {
@@ -731,8 +731,8 @@ Deno.serve(async (req) => {
               email: sellerProfile.email,
               name: sellerProfile.first_name || sellerProfile.email.split('@')[0],
               type: 'seller_sold',
-              motorhomeModel: motorhomeName,
-              auctionUrl: `https://caravanwert.de/dashboard/listings/${motorhome.id}`,
+              kitchenModel: kitchenName,
+              auctionUrl: `https://caravanwert.de/dashboard/listings/${kitchen.id}`,
               currentBid: `€${instantPrice.toLocaleString()}`,
             },
           });
@@ -773,11 +773,11 @@ Deno.serve(async (req) => {
                 email: loserProfile.email,
                 name: loserProfile.first_name || loserProfile.email.split('@')[0],
                 type: 'lost',
-                motorhomeModel: motorhomeName,
+                kitchenModel: kitchenName,
                 auctionUrl,
                 yourBid: `€${loserHighestBid.toLocaleString()}`,
                 currentBid: `€${instantPrice.toLocaleString()}`,
-                isFestpreis: motorhome.sale_channel === 'instant_price',
+                isFestpreis: kitchen.sale_channel === 'instant_price',
               },
             }).catch((e: any) => console.error('Error sending loser notification:', e));
           }
@@ -804,7 +804,7 @@ Deno.serve(async (req) => {
                 email: proposerProfile.email,
                 name: proposerProfile.company_name || proposerProfile.first_name || proposerProfile.email.split('@')[0],
                 type: 'lost',
-                motorhomeModel: motorhomeName,
+                kitchenModel: kitchenName,
                 auctionUrl: 'https://caravanwert.de/kaufen',
                 yourBid: `€${Number(eo.offer_amount).toLocaleString('de-DE')}`,
                 currentBid: `€${Number(instantPrice).toLocaleString('de-DE')}`,
@@ -831,7 +831,7 @@ Deno.serve(async (req) => {
       ${paragraph('<strong>Ein Sofortkauf wurde erfolgreich abgeschlossen.</strong>')}
       ${infoBox('Sofortkauf-Ergebnis', `
         ${detailRow('Status', '✅ VERKAUFT (Sofortkauf)')}
-        ${detailRow('Fahrzeug', motorhomeName)}
+        ${detailRow('Fahrzeug', kitchenName)}
         ${detailRow('Sofortkaufpreis', `€${instantPrice.toLocaleString()}`)}
         ${detailRow('Anzahl Gebote vor Sofortkauf', String(auction.bids?.length || 0))}
       `, 'success')}
@@ -851,19 +851,19 @@ Deno.serve(async (req) => {
 
     adminContent += button('Im Admin-Dashboard ansehen', `https://caravanwert.de/admin/auctions`);
 
-    await sendAdminEmail(supabaseAdmin, `Sofortkauf: ${motorhomeName} für €${instantPrice.toLocaleString()}`, adminContent);
+    await sendAdminEmail(supabaseAdmin, `Sofortkauf: ${kitchenName} für €${instantPrice.toLocaleString()}`, adminContent);
 
     return new Response(
       JSON.stringify({
         success: true,
         message: 'Kauf erfolgreich abgeschlossen',
         purchase: {
-          motorhomeId: motorhome.id,
+          kitchenId: kitchen.id,
           auctionId,
           buyerId: user.id,
           price: instantPrice,
           saleType: 'instant',
-          soldAt: updatedMotorhome.sold_at,
+          soldAt: updatedKitchen.sold_at,
         },
       }),
       {

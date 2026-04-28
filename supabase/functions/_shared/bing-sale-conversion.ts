@@ -18,14 +18,14 @@
  *
  * Bug-Schutz (siehe Diskussion mit User):
  *  1. Doppel-Upload bei Retry → DB-Tabelle `bing_offline_conversions_log`
- *     mit UNIQUE(motorhome_id, conversion_name); Pre-Flight Lookup.
+ *     mit UNIQUE(kitchen_id, conversion_name); Pre-Flight Lookup.
  *  2. Doppel-Zählung mit Phase-1-Pixel → MS-Ads-seitig getrenntes Goal
  *     (Pixel-Goals = "Wizard abgeschlossen" etc., Server-Goal = "Sale_..."
  *     wird vom Admin als „Offline" Goal-Typ angelegt).
  *  3. Sale-Flow crasht bei Bing-Down → ganzer Helper in try/catch, Fehler
  *     nur in Result-Objekt, der Aufrufer pusht in `errors[]` für Admin-Mail.
  *  4. OAuth-Token expired → Standard-Refresh-Pattern (identisch zu Google).
- *  5. MSCLKID > 90 Tage alt → Pre-Flight Check via `motorhomes.created_at`
+ *  5. MSCLKID > 90 Tage alt → Pre-Flight Check via `kitchens.created_at`
  *     als Proxy (echte Klick-Zeit haben wir nicht); Skip mit Reason.
  *  6. Wrong currency → hardcoded 'EUR' (DE-only Markt).
  *  7. Sandbox vs. Production → hardcoded Production-URL.
@@ -54,15 +54,15 @@ export interface UploadBingSaleConversionParams {
   /** Source für log prefix, z. B. "close-auction", "instant-buy". */
   source: 'close-auction' | 'instant-buy' | 'accept-kaufchance-offer' | 'admin-sell-to-dealer';
   auctionId: string | null;
-  motorhomeId: string;
-  /** Wann das motorhome ursprünglich erstellt wurde (Proxy für Click-Zeit). */
-  motorhomeCreatedAt?: string | null;
+  kitchenId: string;
+  /** Wann das kitchen ursprünglich erstellt wurde (Proxy für Click-Zeit). */
+  kitchenCreatedAt?: string | null;
   sellerId: string | null | undefined;
   /** Dealer (buyer) ID — für commission calculation. */
   dealerId: string;
   /** Final sale price in EUR. */
   saleAmount: number;
-  /** Click ID(s), die auf dem motorhome bei Sale-Zeit standen. */
+  /** Click ID(s), die auf dem kitchen bei Sale-Zeit standen. */
   clickIds: BingClickIds;
 }
 
@@ -135,8 +135,8 @@ export async function uploadSaleConversionToBingAds(
     supabase,
     source,
     auctionId,
-    motorhomeId,
-    motorhomeCreatedAt,
+    kitchenId,
+    kitchenCreatedAt,
     sellerId,
     dealerId,
     saleAmount,
@@ -151,13 +151,13 @@ export async function uploadSaleConversionToBingAds(
   // --- Bug-Schutz #5: Click zu alt? ---
   // Microsoft verwirft serverseitig Conversions, deren Click-Zeit > 90 Tage
   // vor der Conversion-Zeit liegt. Wir haben keine echte Click-Zeit, aber
-  // motorhome.created_at ist ein konservativer Proxy (Klick muss VOR oder
-  // GLEICHZEITIG mit der Wizard-Submission gewesen sein). Wenn motorhome
+  // kitchen.created_at ist ein konservativer Proxy (Klick muss VOR oder
+  // GLEICHZEITIG mit der Wizard-Submission gewesen sein). Wenn kitchen
   // älter als 90 Tage ist, war auch der Klick > 90 Tage alt → kein Sinn.
-  if (motorhomeCreatedAt) {
-    const ageMs = Date.now() - new Date(motorhomeCreatedAt).getTime();
+  if (kitchenCreatedAt) {
+    const ageMs = Date.now() - new Date(kitchenCreatedAt).getTime();
     if (Number.isFinite(ageMs) && ageMs > NINETY_DAYS_MS) {
-      log(`Motorhome älter als 90 Tage (age=${Math.round(ageMs / 86400000)}d), Click zu alt — skip.`);
+      log(`Kitchen älter als 90 Tage (age=${Math.round(ageMs / 86400000)}d), Click zu alt — skip.`);
       return { attempted: false, success: false, skipped: 'click_too_old' };
     }
   }
@@ -168,7 +168,7 @@ export async function uploadSaleConversionToBingAds(
   // — viel ungenauer. Für CaravanWert lohnt sich das nicht: ohne msclkid
   // schicken wir nichts. Das ist die saubere, klare Regel.
   if (!clickIds.msclkid) {
-    log('No MSCLKID auf motorhome, skipping Bing sale upload.');
+    log('No MSCLKID auf kitchen, skipping Bing sale upload.');
     return { attempted: false, success: false, skipped: 'no_msclkid' };
   }
 
@@ -199,14 +199,14 @@ export async function uploadSaleConversionToBingAds(
   const conversionName = BING_OFFLINE_CONVERSION_GOAL_NAME;
 
   // --- Bug-Schutz #1: Idempotenz-Pre-Flight ---
-  // Falls schon ein Eintrag mit (motorhome_id, conversion_name) existiert →
+  // Falls schon ein Eintrag mit (kitchen_id, conversion_name) existiert →
   // wir haben Bing diesen Verkauf schon einmal gemeldet. Nichts mehr machen,
   // sonst doppelt gezählte Conversion in MS Ads.
   try {
     const { data: existing, error: lookupErr } = await supabase
       .from('bing_offline_conversions_log')
       .select('id, status, uploaded_at')
-      .eq('motorhome_id', motorhomeId)
+      .eq('kitchen_id', kitchenId)
       .eq('conversion_name', conversionName)
       .maybeSingle();
 
@@ -312,7 +312,7 @@ export async function uploadSaleConversionToBingAds(
     errLog('OAuth refresh failed:', oauthErr);
     // Log-Eintrag fürs Monitoring schreiben, dann Skip.
     await safeLog(supabase, {
-      motorhome_id: motorhomeId,
+      kitchen_id: kitchenId,
       auction_id: auctionId,
       source,
       conversion_name: conversionName,
@@ -370,7 +370,7 @@ export async function uploadSaleConversionToBingAds(
   } catch (fetchErr: any) {
     errLog('Bing fetch failed:', fetchErr);
     await safeLog(supabase, {
-      motorhome_id: motorhomeId,
+      kitchen_id: kitchenId,
       auction_id: auctionId,
       source,
       conversion_name: conversionName,
@@ -394,13 +394,13 @@ export async function uploadSaleConversionToBingAds(
 
   log(
     `Bing sale upload: HTTP ${bingResponse.status} ` +
-      `(commission €${commissionAmount.toFixed(2)} of sale €${saleAmount}, motorhome ${motorhomeId})`,
+      `(commission €${commissionAmount.toFixed(2)} of sale €${saleAmount}, kitchen ${kitchenId})`,
   );
 
   if (!bingResponse.ok) {
     errLog('Bing API HTTP error:', JSON.stringify(bingResultJson));
     await safeLog(supabase, {
-      motorhome_id: motorhomeId,
+      kitchen_id: kitchenId,
       auction_id: auctionId,
       source,
       conversion_name: conversionName,
@@ -433,7 +433,7 @@ export async function uploadSaleConversionToBingAds(
     const errMsg =
       firstErr?.ErrorCode || firstErr?.Message || 'Bing partial failure (see logs)';
     await safeLog(supabase, {
-      motorhome_id: motorhomeId,
+      kitchen_id: kitchenId,
       auction_id: auctionId,
       source,
       conversion_name: conversionName,
@@ -458,7 +458,7 @@ export async function uploadSaleConversionToBingAds(
 
   // Erfolg → in Idempotenz-Tabelle merken.
   await safeLog(supabase, {
-    motorhome_id: motorhomeId,
+    kitchen_id: kitchenId,
     auction_id: auctionId,
     source,
     conversion_name: conversionName,
@@ -484,13 +484,13 @@ export async function uploadSaleConversionToBingAds(
 /**
  * Best-effort Insert in `bing_offline_conversions_log`.
  * Verwendet UPSERT, damit ein vorheriger Failure-Eintrag mit demselben
- * (motorhome_id, conversion_name) bei einem späteren erfolgreichen Retry
+ * (kitchen_id, conversion_name) bei einem späteren erfolgreichen Retry
  * überschrieben werden kann.
  */
 async function safeLog(
   supabase: any,
   row: {
-    motorhome_id: string;
+    kitchen_id: string;
     auction_id: string | null;
     source: string;
     conversion_name: string;
@@ -508,7 +508,7 @@ async function safeLog(
       .from('bing_offline_conversions_log')
       .upsert(
         {
-          motorhome_id: row.motorhome_id,
+          kitchen_id: row.kitchen_id,
           auction_id: row.auction_id,
           source: row.source,
           conversion_name: row.conversion_name,
@@ -521,7 +521,7 @@ async function safeLog(
           error_message: row.error_message,
           uploaded_at: new Date().toISOString(),
         },
-        { onConflict: 'motorhome_id,conversion_name' },
+        { onConflict: 'kitchen_id,conversion_name' },
       );
     if (error) {
       console.error('[bing-sale] failed to write log row:', error);

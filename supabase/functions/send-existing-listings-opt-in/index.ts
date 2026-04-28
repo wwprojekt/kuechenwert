@@ -84,9 +84,9 @@ Deno.serve(async (req) => {
     let query = supabase
       .from('auctions')
       .select(`
-        id, motorhome_id, reserve_price, status, created_at,
+        id, kitchen_id, reserve_price, status, created_at,
         marketing_phase_max_until, seller_initial_reserve,
-        motorhomes!inner(id, manufacturer, model, sale_channel, seller_id, instant_price, reserve_price)
+        kitchens!inner(id, manufacturer, model, sale_channel, seller_id, instant_price, reserve_price)
       `)
       .in('status', ['active', 'kaufchance'])
       .is('seller_initial_reserve', null)
@@ -112,12 +112,12 @@ Deno.serve(async (req) => {
     }> = [];
 
     for (const listing of bestandListings ?? []) {
-      const mh = (listing.motorhomes as any) || {};
-      const motorhomeName = `${mh.manufacturer || ''} ${mh.model || ''}`.trim();
+      const mh = (listing.kitchens as any) || {};
+      const kitchenName = `${mh.manufacturer || ''} ${mh.model || ''}`.trim();
 
       try {
         // Effektiven Anker-Preis ermitteln: bei vielen Bestand-Inseraten
-        // ist auctions.reserve_price=NULL aber motorhomes.reserve_price gesetzt
+        // ist auctions.reserve_price=NULL aber kitchens.reserve_price gesetzt
         // (Pre-P3-Drift). Wir nehmen den ersten verfügbaren Wert.
         const effectiveReserve = (listing.reserve_price && Number(listing.reserve_price) > 0)
           ? Number(listing.reserve_price)
@@ -203,11 +203,11 @@ Deno.serve(async (req) => {
             email: sellerProfile.email,
             name: sellerNameStr,
             type: 'seller_existing_listing_optin',
-            motorhomeModel: motorhomeName,
+            kitchenModel: kitchenName,
             auctionUrl: dashboardUrl,
             reservePrice: reserveFmt,
             softCapDate: softCapDateFmt,
-            motorhomeId: mh.id,
+            kitchenId: mh.id,
           },
         });
         if (mailErr) {

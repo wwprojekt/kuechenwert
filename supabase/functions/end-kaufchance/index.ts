@@ -23,14 +23,14 @@ import { MARKETING_CONFIG, computeKaufchanceRelistReserve } from '../_shared/mar
  *
  * mode='end_unsold':
  *   - auction.status -> 'ended'
- *   - motorhome.status -> 'not_sold'
+ *   - kitchen.status -> 'not_sold'
  *   - reject all open post_auction_offers
  *   - delete kaufchance_invitations
  *   - notify all bidders/proposers/invitees + seller
  *
  * mode='restart_auction':
  *   - auction.status -> 'active', new starting time, new end_time = +7d
- *   - motorhome.status -> 'active'
+ *   - kitchen.status -> 'active'
  *   - reset reserve_price, current_bid, kaufchance fields, increment auction_round
  *   - reject all open post_auction_offers, delete kaufchance_invitations and bids
  *   - notify all bidders/proposers/invitees (their offer is invalid; new auction
@@ -191,11 +191,11 @@ Deno.serve(async (req) => {
   const { data: auction, error: auctionErr } = await supabaseAdmin
     .from('auctions')
     .select(`
-      id, status, current_bid, starting_bid, reserve_price, end_time, motorhome_id, auction_round,
+      id, status, current_bid, starting_bid, reserve_price, end_time, kitchen_id, auction_round,
       seller_initial_reserve, dynamic_pricing,
-      motorhome:motorhomes(
+      kitchen:kitchens(
         id, manufacturer, model, year, postal_code, sale_channel, instant_price, reserve_price, seller_id,
-        seller:profiles!motorhomes_seller_id_fkey(id, email, first_name, last_name, company_name)
+        seller:profiles!kitchens_seller_id_fkey(id, email, first_name, last_name, company_name)
       )
     `)
     .eq('id', auctionId)
@@ -208,8 +208,8 @@ Deno.serve(async (req) => {
     );
   }
 
-  const motorhome = (auction as unknown as {
-    motorhome: {
+  const kitchen = (auction as unknown as {
+    kitchen: {
       id: string;
       manufacturer: string | null;
       model: string | null;
@@ -221,15 +221,15 @@ Deno.serve(async (req) => {
       seller_id: string | null;
       seller: ProfileLite | null;
     } | null;
-  }).motorhome;
-  const seller = motorhome?.seller ?? null;
-  const vehicleTitle = motorhome
-    ? `${motorhome.manufacturer ?? ''} ${motorhome.model ?? ''}`.trim() || 'Inserat'
+  }).kitchen;
+  const seller = kitchen?.seller ?? null;
+  const vehicleTitle = kitchen
+    ? `${kitchen.manufacturer ?? ''} ${kitchen.model ?? ''}`.trim() || 'Inserat'
     : 'Inserat';
-  const yearSuffix = motorhome?.year ? ` (${motorhome.year})` : '';
+  const yearSuffix = kitchen?.year ? ` (${kitchen.year})` : '';
 
   // restart_auction needs a postal_code (same precondition as normal activation)
-  if (mode === 'restart_auction' && !motorhome?.postal_code) {
+  if (mode === 'restart_auction' && !kitchen?.postal_code) {
     return new Response(
       JSON.stringify({ error: 'Das Wohnmobil hat keine PLZ. Bitte zuerst die Fahrzeugdaten vervollständigen.' }),
       { status: 400, headers },
@@ -269,11 +269,11 @@ Deno.serve(async (req) => {
         { status: 500, headers },
       );
     }
-    if (motorhome?.id) {
+    if (kitchen?.id) {
       await supabaseAdmin
-        .from('motorhomes')
+        .from('kitchens')
         .update({ status: 'not_sold', updated_at: new Date().toISOString() })
-        .eq('id', motorhome.id);
+        .eq('id', kitchen.id);
     }
   } else {
     // restart_auction
@@ -300,7 +300,7 @@ Deno.serve(async (req) => {
     const isNewSystemListing = sellerInitialReserveNum != null && sellerInitialReserveNum > 0;
     const dynamicPricing = auctionLifecycle.dynamic_pricing !== false;
     const currentRoundForOffers = Number(auctionLifecycle.auction_round ?? 1);
-    const fallbackReserve = auction.reserve_price ?? motorhome?.reserve_price ?? null;
+    const fallbackReserve = auction.reserve_price ?? kitchen?.reserve_price ?? null;
 
     let newReserve: number | null;
 
@@ -392,11 +392,11 @@ Deno.serve(async (req) => {
         { status: 500, headers },
       );
     }
-    if (motorhome?.id) {
+    if (kitchen?.id) {
       await supabaseAdmin
-        .from('motorhomes')
+        .from('kitchens')
         .update({ status: 'active', updated_at: new Date().toISOString() })
-        .eq('id', motorhome.id);
+        .eq('id', kitchen.id);
     }
   }
 
@@ -446,7 +446,7 @@ Deno.serve(async (req) => {
   if (mode === 'restart_auction') {
     for (const b of bidsRows ?? []) if (b?.bidder_id) recipientIds.add(b.bidder_id);
   }
-  if (motorhome?.seller_id) recipientIds.delete(motorhome.seller_id);
+  if (kitchen?.seller_id) recipientIds.delete(kitchen.seller_id);
 
   let recipientProfiles: ProfileLite[] = [];
   if (recipientIds.size > 0) {
@@ -601,8 +601,8 @@ Deno.serve(async (req) => {
       entity_id: auctionId,
       details: {
         vehicle_title: vehicleTitle,
-        motorhome_id: motorhome?.id ?? null,
-        seller_id: motorhome?.seller_id ?? null,
+        kitchen_id: kitchen?.id ?? null,
+        seller_id: kitchen?.seller_id ?? null,
         previous_status: auction.status,
         rejected_offers: rejectedOffers,
         deleted_invitations: deletedInvitations,

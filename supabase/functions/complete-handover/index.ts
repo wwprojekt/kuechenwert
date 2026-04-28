@@ -18,10 +18,10 @@ import {
  *
  * Order of operations:
  *   1. Auth: caller must be admin
- *   2. Load appointment with linked motorhome / station / buyer / seller
+ *   2. Load appointment with linked kitchen / station / buyer / seller
  *   3. Best-effort generate handover-PDF (continues even if it fails)
  *   4. Update appointment -> completed (idempotent: only if scheduled/verified)
- *   5. Mark motorhome as sold (preserve sale_type if already set via auction)
+ *   5. Mark kitchen as sold (preserve sale_type if already set via auction)
  *   6. Best-effort send confirmation emails to BUYER and SELLER (with PDF link)
  *   7. Audit log + persistent error_logs for any email failure
  *
@@ -29,7 +29,7 @@ import {
  * fallback for legacy callers):
  *   - appointment_id | appointmentId  (required)
  *   - payment_method  (default: "cash" — required for the audit trail)
- *   - payment_amount  (default: motorhome.instant_price; coerced to number)
+ *   - payment_amount  (default: kitchen.instant_price; coerced to number)
  *   - protocol_data   (free-form notes object, persisted via PDF only)
  */
 
@@ -175,7 +175,7 @@ serve(async (req) => {
     .from('appointments')
     .select(`
       *,
-      motorhomes(*, seller:profiles!motorhomes_seller_id_fkey(id, email, first_name, last_name, company_name)),
+      kitchens(*, seller:profiles!kitchens_seller_id_fkey(id, email, first_name, last_name, company_name)),
       purchase_stations(*),
       buyer:profiles!appointments_buyer_id_fkey(id, email, first_name, last_name, company_name)
     `)
@@ -189,23 +189,23 @@ serve(async (req) => {
     );
   }
 
-  const motorhome = appointment.motorhomes ?? null;
-  const seller: ProfileLite | null = motorhome?.seller ?? null;
+  const kitchen = appointment.kitchens ?? null;
+  const seller: ProfileLite | null = kitchen?.seller ?? null;
   const buyer: ProfileLite | null = (appointment.buyer ?? null) as ProfileLite | null;
   const station = appointment.purchase_stations ?? null;
 
-  let paymentAmount = Number(body.payment_amount ?? motorhome?.instant_price ?? 0);
+  let paymentAmount = Number(body.payment_amount ?? kitchen?.instant_price ?? 0);
   if (!paymentAmount || isNaN(paymentAmount) || paymentAmount <= 0) {
     return new Response(
-      JSON.stringify({ error: 'payment_amount muss > 0 sein (oder motorhome.instant_price gesetzt sein)' }),
+      JSON.stringify({ error: 'payment_amount muss > 0 sein (oder kitchen.instant_price gesetzt sein)' }),
       { status: 400, headers },
     );
   }
 
-  const vehicleTitle = motorhome
-    ? `${motorhome.manufacturer ?? ''} ${motorhome.model ?? ''}`.trim() || 'Fahrzeug'
+  const vehicleTitle = kitchen
+    ? `${kitchen.manufacturer ?? ''} ${kitchen.model ?? ''}`.trim() || 'Fahrzeug'
     : 'Fahrzeug';
-  const yearSuffix = motorhome?.year ? ` (${motorhome.year})` : '';
+  const yearSuffix = kitchen?.year ? ` (${kitchen.year})` : '';
 
   // ─── Best-effort generate PDF protocol ─────────────────────────────────
   let protocolUrl: string | null = null;
@@ -250,20 +250,20 @@ serve(async (req) => {
     );
   }
 
-  // ─── Step 2: mark motorhome as sold (preserve existing sale_type) ──────
-  const existingSaleType = motorhome?.sale_type;
-  const { error: motorhomeError } = await supabaseAdmin
-    .from('motorhomes')
+  // ─── Step 2: mark kitchen as sold (preserve existing sale_type) ──────
+  const existingSaleType = kitchen?.sale_type;
+  const { error: kitchenError } = await supabaseAdmin
+    .from('kitchens')
     .update({
       status: 'sold',
       sold_to: appointment.buyer_id || null,
       sold_at: new Date().toISOString(),
       sale_type: existingSaleType || 'handover',
     })
-    .eq('id', appointment.motorhome_id);
+    .eq('id', appointment.kitchen_id);
 
-  if (motorhomeError) {
-    edgeLogger.error('motorhome sold update failed', motorhomeError);
+  if (kitchenError) {
+    edgeLogger.error('kitchen sold update failed', kitchenError);
   }
 
   // ─── Step 3: send buyer + seller confirmation emails ───────────────────
@@ -390,8 +390,8 @@ serve(async (req) => {
       entity_id: appointmentId,
       details: {
         vehicle_title: vehicleTitle,
-        motorhome_id: appointment.motorhome_id,
-        seller_id: motorhome?.seller_id ?? null,
+        kitchen_id: appointment.kitchen_id,
+        seller_id: kitchen?.seller_id ?? null,
         buyer_id: appointment.buyer_id ?? null,
         station_id: appointment.station_id ?? null,
         station_name: station?.name ?? null,

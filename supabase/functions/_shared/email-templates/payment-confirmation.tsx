@@ -5,7 +5,7 @@ import { EmailLayout, InfoBox, DetailRow } from '../email-components.tsx';
 interface PaymentConfirmationProps {
   settings: any;
   name: string;
-  motorhomeModel: string;
+  kitchenModel: string;
   amount: string;
   paymentMethod: string;
   appointmentId: string;
@@ -15,7 +15,7 @@ interface PaymentConfirmationProps {
 export const PaymentConfirmation = ({
   settings,
   name,
-  motorhomeModel,
+  kitchenModel,
   amount,
   paymentMethod,
   appointmentId,
@@ -33,7 +33,7 @@ export const PaymentConfirmation = ({
     </Text>
 
     <InfoBox title="Zahlungsdetails" variant="success">
-      <DetailRow label="Fahrzeug" value={motorhomeModel} />
+      <DetailRow label="Fahrzeug" value={kitchenModel} />
       <DetailRow label="Betrag" value={amount} />
       <DetailRow label="Zahlungsmethode" value={paymentMethod} />
       <DetailRow label="Termin-ID" value={appointmentId} />

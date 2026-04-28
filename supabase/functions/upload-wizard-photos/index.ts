@@ -13,12 +13,12 @@
  * 
  * RACE CONDITION HANDLING:
  * auto-convert-wizard and this function run concurrently.
- * auto-convert-wizard creates the motorhome in ~2s, but photo upload takes 30s-3min.
+ * auto-convert-wizard creates the kitchen in ~2s, but photo upload takes 30s-3min.
  * So auto-convert-wizard is almost always done BEFORE photos are uploaded.
  * 
  * Solution: After uploading photos, this function checks if the wizard_session
  * has already been converted (status='converted'). If so, it looks up the
- * motorhome_id from the admin_notes and creates motorhome_photos records directly.
+ * kitchen_id from the admin_notes and creates kitchen_photos records directly.
  * This way, photos are correctly assigned regardless of execution order.
  * 
  * Returns: JSON with uploaded photo URLs and count
@@ -32,7 +32,7 @@ const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
 /**
  * Fire-and-forget Trigger: ruft die `process-photo` Edge Function auf,
- * damit für eine frisch eingefügte motorhome_photos-Row sofort die
+ * damit für eine frisch eingefügte kitchen_photos-Row sofort die
  * card/medium Variants generiert werden. Wir await den Promise NICHT —
  * die Wizard-Caller-UX ist so unabhängig von der Verarbeitungszeit.
  *
@@ -265,7 +265,7 @@ Deno.serve(async (req: Request) => {
       // Originale wieder vom Origin. Wizard-Originals sind unveränderlich
       // (Snapshot zum Upload-Zeitpunkt), `immutable` ist sicher.
       const { error: uploadError } = await adminClient.storage
-        .from("motorhome-photos")
+        .from("kitchen-photos")
         .upload(fileName, file, {
           contentType: detected.mime,
           cacheControl: "31536000, immutable",
@@ -278,7 +278,7 @@ Deno.serve(async (req: Request) => {
       }
 
       const { data: { publicUrl } } = adminClient.storage
-        .from("motorhome-photos")
+        .from("kitchen-photos")
         .getPublicUrl(fileName);
 
       uploadedUrls.push(publicUrl);
@@ -306,44 +306,44 @@ Deno.serve(async (req: Request) => {
         // ===== RACE CONDITION FIX =====
         // auto-convert-wizard runs concurrently and is usually done in ~2s.
         // By the time photos are uploaded (30s-3min), the session is already
-        // "converted" and a motorhome exists. But auto-convert couldn't assign
+        // "converted" and a kitchen exists. But auto-convert couldn't assign
         // photos because they weren't uploaded yet.
         //
         // Solution: If the session is already converted, we assign photos
-        // to the motorhome directly here.
+        // to the kitchen directly here.
         if (currentSession.status === "converted" && currentSession.admin_notes) {
-          // Extract motorhome ID from admin_notes
+          // Extract kitchen ID from admin_notes
           // Format: "[DD.MM.YYYY, HH:MM] Automatisch als Wohnmobil angelegt (ID: <uuid>)"
-          const motorhomeIdMatch = currentSession.admin_notes.match(/\(ID:\s*([a-f0-9-]+)\)/i);
+          const kitchenIdMatch = currentSession.admin_notes.match(/\(ID:\s*([a-f0-9-]+)\)/i);
           
-          if (motorhomeIdMatch) {
-            const motorhomeId = motorhomeIdMatch[1];
-            console.log(`Session already converted. Assigning ${uploadedUrls.length} photos to motorhome ${motorhomeId}`);
+          if (kitchenIdMatch) {
+            const kitchenId = kitchenIdMatch[1];
+            console.log(`Session already converted. Assigning ${uploadedUrls.length} photos to kitchen ${kitchenId}`);
 
-            // Check if motorhome_photos already exist for this motorhome
+            // Check if kitchen_photos already exist for this kitchen
             const { data: existingPhotos } = await adminClient
-              .from("motorhome_photos")
+              .from("kitchen_photos")
               .select("id")
-              .eq("motorhome_id", motorhomeId);
+              .eq("kitchen_id", kitchenId);
 
             const startOrder = existingPhotos?.length || 0;
 
-            // Create motorhome_photos records
+            // Create kitchen_photos records
             const photoRecords = uploadedUrls.map((url: string, index: number) => ({
-              motorhome_id: motorhomeId,
+              kitchen_id: kitchenId,
               url: url,
               display_order: startOrder + index,
             }));
 
             const { data: insertedPhotos, error: photosInsertError } = await adminClient
-              .from("motorhome_photos")
+              .from("kitchen_photos")
               .insert(photoRecords)
               .select("id");
 
             if (photosInsertError) {
-              console.error("Failed to insert motorhome photos:", photosInsertError.message);
+              console.error("Failed to insert kitchen photos:", photosInsertError.message);
             } else {
-              console.log(`Successfully assigned ${photoRecords.length} photos to motorhome ${motorhomeId}`);
+              console.log(`Successfully assigned ${photoRecords.length} photos to kitchen ${kitchenId}`);
               // Fire-and-forget: process-photo Edge Function pro Photo
               // pingen → card_url + medium_url werden sofort gebaut statt
               // erst beim nächsten Cron. Wir warten NICHT auf die Antwort
@@ -365,18 +365,18 @@ Deno.serve(async (req: Request) => {
                     const oldPath = `wizard_temp/${sessionId}/${fileName}`;
                     const newPath = `${sellerId}/${fileName}`;
                     await adminClient.storage
-                      .from("motorhome-photos")
+                      .from("kitchen-photos")
                       .move(oldPath, newPath);
 
-                    // Update the photo URL in motorhome_photos
+                    // Update the photo URL in kitchen_photos
                     const newPublicUrl = adminClient.storage
-                      .from("motorhome-photos")
+                      .from("kitchen-photos")
                       .getPublicUrl(newPath).data.publicUrl;
 
                     await adminClient
-                      .from("motorhome_photos")
+                      .from("kitchen_photos")
                       .update({ url: newPublicUrl })
-                      .eq("motorhome_id", motorhomeId)
+                      .eq("kitchen_id", kitchenId)
                       .eq("url", url);
                   }
                 }
@@ -386,7 +386,7 @@ Deno.serve(async (req: Request) => {
               }
             }
           } else {
-            console.warn("Session is converted but could not extract motorhome ID from admin_notes");
+            console.warn("Session is converted but could not extract kitchen ID from admin_notes");
           }
         } else {
           console.log(`Session status: ${currentSession.status}. Photos saved to wizard_temp, auto-convert-wizard will assign them later.`);

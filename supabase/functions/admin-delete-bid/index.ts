@@ -179,8 +179,8 @@ Deno.serve(async (req) => {
     .select(`
       id, amount, bidder_id, auction_id, created_at,
       auction:auctions(
-        id, status, current_bid, starting_bid, end_time, motorhome_id,
-        motorhome:motorhomes(id, manufacturer, model, year)
+        id, status, current_bid, starting_bid, end_time, kitchen_id,
+        kitchen:kitchens(id, manufacturer, model, year)
       )
     `)
     .eq('id', bidId)
@@ -200,15 +200,15 @@ Deno.serve(async (req) => {
       current_bid: number | null;
       starting_bid: number | null;
       end_time: string | null;
-      motorhome_id: string | null;
-      motorhome: { id: string; manufacturer: string | null; model: string | null; year: number | null } | null;
+      kitchen_id: string | null;
+      kitchen: { id: string; manufacturer: string | null; model: string | null; year: number | null } | null;
     } | null;
   }).auction;
-  const motorhome = auctionInfo?.motorhome ?? null;
-  const vehicleTitle = motorhome
-    ? `${motorhome.manufacturer ?? ''} ${motorhome.model ?? ''}`.trim() || 'Fahrzeug'
+  const kitchen = auctionInfo?.kitchen ?? null;
+  const vehicleTitle = kitchen
+    ? `${kitchen.manufacturer ?? ''} ${kitchen.model ?? ''}`.trim() || 'Fahrzeug'
     : 'Fahrzeug';
-  const yearSuffix = motorhome?.year ? ` (${motorhome.year})` : '';
+  const yearSuffix = kitchen?.year ? ` (${kitchen.year})` : '';
 
   const { data: bidder } = await supabaseAdmin
     .from('profiles')

@@ -11,7 +11,7 @@ const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 interface PaymentEmailRequest {
   email: string;
   name: string;
-  motorhomeModel: string;
+  kitchenModel: string;
   amount: string;
   paymentMethod: "cash" | "sepa_instant";
   handoverProtocolUrl?: string;
@@ -28,7 +28,7 @@ const handler = async (req: Request): Promise<Response> => {
   if (!authCheck.authorized) return authCheck.response;
 
   try {
-    const { email, name, motorhomeModel, amount, paymentMethod, handoverProtocolUrl, appointmentId }: PaymentEmailRequest = await req.json();
+    const { email, name, kitchenModel, amount, paymentMethod, handoverProtocolUrl, appointmentId }: PaymentEmailRequest = await req.json();
 
     console.log("Sending payment confirmation to:", email);
 
@@ -64,7 +64,7 @@ const handler = async (req: Request): Promise<Response> => {
       ${paragraph('Vielen Dank für Ihr Vertrauen! Die Übergabe Ihres Wohnmobils wurde erfolgreich abgeschlossen.')}
       
       ${infoBox('Zahlungsdetails', `
-        ${detailRow('Fahrzeug', motorhomeModel)}
+        ${detailRow('Fahrzeug', kitchenModel)}
         ${detailRow('Betrag', amount)}
         ${detailRow('Zahlungsmethode', paymentMethodText)}
         ${detailRow('Termin-ID', appointmentId)}

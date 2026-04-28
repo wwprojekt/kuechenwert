@@ -32,7 +32,7 @@ const handler = async (req: Request): Promise<Response> => {
       .from('auctions')
       .select(`
         id, current_bid, starting_bid, end_time, status,
-        motorhomes (manufacturer, model, year, seller_id, sale_channel, instant_price)
+        kitchens (manufacturer, model, year, seller_id, sale_channel, instant_price)
       `)
       .eq('status', 'active');
 
@@ -63,12 +63,12 @@ const handler = async (req: Request): Promise<Response> => {
       support_phone: '+49 511 51532476',
     };
 
-    // Group auctions by seller (seller_id from motorhomes)
+    // Group auctions by seller (seller_id from kitchens)
     const sellerAuctions: Record<string, any[]> = {};
     for (const auction of auctions) {
-      const motorhome = auction.motorhomes as any;
-      if (!motorhome?.seller_id) continue;
-      const sellerId = motorhome.seller_id;
+      const kitchen = auction.kitchens as any;
+      if (!kitchen?.seller_id) continue;
+      const sellerId = kitchen.seller_id;
       if (!sellerAuctions[sellerId]) sellerAuctions[sellerId] = [];
       sellerAuctions[sellerId].push(auction);
     }
@@ -101,11 +101,11 @@ const handler = async (req: Request): Promise<Response> => {
         // Build auction summary content
         let auctionRows = '';
         for (const auction of sellerAuctionList) {
-          const motorhome = auction.motorhomes as any;
-          const vehicleStr = `${motorhome.manufacturer} ${motorhome.model} (${motorhome.year})`;
-          const isInstantOnly = motorhome.sale_channel === 'instant_price';
+          const kitchen = auction.kitchens as any;
+          const vehicleStr = `${kitchen.manufacturer} ${kitchen.model} (${kitchen.year})`;
+          const isInstantOnly = kitchen.sale_channel === 'instant_price';
           const displayPrice = isInstantOnly
-            ? (motorhome.instant_price || 0).toLocaleString('de-DE', { style: 'currency', currency: 'EUR' })
+            ? (kitchen.instant_price || 0).toLocaleString('de-DE', { style: 'currency', currency: 'EUR' })
             : (typeof auction.current_bid === 'number'
               ? auction.current_bid.toLocaleString('de-DE', { style: 'currency', currency: 'EUR' })
               : `${auction.current_bid || 0} €`);

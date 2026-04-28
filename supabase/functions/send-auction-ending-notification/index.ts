@@ -40,7 +40,7 @@ const handler = async (req: Request): Promise<Response> => {
       .from('auctions')
       .select(`
         *,
-        motorhome:motorhomes(manufacturer, model, sale_channel)
+        kitchen:kitchens(manufacturer, model, sale_channel)
       `)
       .eq('status', 'active')
       .gt('end_time', now)
@@ -74,7 +74,7 @@ const handler = async (req: Request): Promise<Response> => {
 
     for (const auction of endingAuctions) {
       // Festpreis listings have no bidders — skip ending notification
-      if ((auction.motorhome as any)?.sale_channel === 'instant_price') continue;
+      if ((auction.kitchen as any)?.sale_channel === 'instant_price') continue;
 
       // Get all unique bidders for this auction
       const { data: bids } = await supabase
@@ -113,7 +113,7 @@ const handler = async (req: Request): Promise<Response> => {
         if (!profile?.email) continue;
 
         // ─── DUPLIKAT-PRÜFUNG: Über recipient_id + auction_id (bombensicher) ───
-        const motorhomeName = `${auction.motorhome.manufacturer} ${auction.motorhome.model}`;
+        const kitchenName = `${auction.kitchen.manufacturer} ${auction.kitchen.model}`;
         const { data: existingNotification } = await supabase
           .from('dealer_notifications')
           .select('id')
@@ -132,8 +132,8 @@ const handler = async (req: Request): Promise<Response> => {
         await supabase.from('dealer_notifications').insert({
           user_id: bidderId,
           type: 'auction_ending_soon',
-          title: `Auktion endet bald: ${motorhomeName}`,
-          message: `Die Auktion für ${motorhomeName} endet in Kürze.`,
+          title: `Auktion endet bald: ${kitchenName}`,
+          message: `Die Auktion für ${kitchenName} endet in Kürze.`,
           link: `/auktion/${auction.id}`,
           auction_id: auction.id,
         });
@@ -156,7 +156,7 @@ const handler = async (req: Request): Promise<Response> => {
         // Build email content
         const content = `
           ${paragraph(`Hallo ${userName},`)}
-          ${paragraph(`Die Auktion für <strong>${motorhomeName}</strong> endet in Kürze!`)}
+          ${paragraph(`Die Auktion für <strong>${kitchenName}</strong> endet in Kürze!`)}
           
           ${infoBox('Auktionsstatus', `
             ${detailRow('Aktuelles Höchstgebot', `€${auction.current_bid.toLocaleString()}`)}
@@ -174,7 +174,7 @@ const handler = async (req: Request): Promise<Response> => {
         `;
 
         const html = buildEmailLayout(settingsData, 'Auktion endet bald!', content);
-        const subject = `⏰ Auktion endet bald - ${motorhomeName}`;
+        const subject = `⏰ Auktion endet bald - ${kitchenName}`;
 
         // Send email
         try {

@@ -57,7 +57,7 @@ Deno.serve(async (req) => {
         *,
         dealer:profiles(first_name, last_name, company_name, email, customer_number),
         auction:auctions(
-          motorhome:motorhomes(manufacturer, model)
+          kitchen:kitchens(manufacturer, model)
         )
       `)
       .eq('id', invoiceId)
@@ -98,8 +98,8 @@ Deno.serve(async (req) => {
     const dealerName = invoice.dealer.company_name || 
       `${invoice.dealer.first_name || ''} ${invoice.dealer.last_name || ''}`.trim();
     
-    const motorhomeName = invoice.auction?.motorhome 
-      ? `${invoice.auction.motorhome.manufacturer} ${invoice.auction.motorhome.model}` 
+    const kitchenName = invoice.auction?.kitchen 
+      ? `${invoice.auction.kitchen.manufacturer} ${invoice.auction.kitchen.model}` 
       : 'Vermittlungsprovision';
 
     const invoiceDate = invoice.invoice_date || invoice.created_at;
@@ -120,7 +120,7 @@ Deno.serve(async (req) => {
       : 'Ihre Rechnung f&uuml;r den erfolgreichen Kauf bei CaravanWert ist bereit.';
 
     const detailLabel = isPenalty ? 'Grund' : 'Fahrzeug';
-    const detailValue = isPenalty ? penaltyReasonLabel : motorhomeName;
+    const detailValue = isPenalty ? penaltyReasonLabel : kitchenName;
 
     const content = `
       ${paragraph(`Sehr geehrte/r ${dealerName},`)}

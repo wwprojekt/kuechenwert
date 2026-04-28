@@ -8,7 +8,7 @@ interface AppointmentConfirmationProps {
   appointmentDate: string;
   stationName: string;
   stationAddress: string;
-  motorhomeModel: string;
+  kitchenModel: string;
   appointmentId: string;
 }
 
@@ -18,7 +18,7 @@ export const AppointmentConfirmation = ({
   appointmentDate,
   stationName,
   stationAddress,
-  motorhomeModel,
+  kitchenModel,
   appointmentId,
 }: AppointmentConfirmationProps) => (
   <EmailLayout 
@@ -33,7 +33,7 @@ export const AppointmentConfirmation = ({
     </Text>
 
     <InfoBox title="Termindetails">
-      <DetailRow label="Fahrzeug" value={motorhomeModel} />
+      <DetailRow label="Fahrzeug" value={kitchenModel} />
       <DetailRow label="Datum & Uhrzeit" value={appointmentDate} />
       <DetailRow label="Ankaufstation" value={stationName} />
       <DetailRow label="Adresse" value={stationAddress} />

@@ -1,7 +1,7 @@
 /**
  * Edge Function: fix-heic-photos
  *
- * Scans `motorhome_photos` (and optionally `damage_photos`) for files in
+ * Scans `kitchen_photos` (and optionally `damage_photos`) for files in
  * Supabase Storage that claim to be JPEGs but are actually HEIC (iPhone)
  * encoded. For each such file, downloads it, decodes the HEIC payload,
  * re-encodes it as a real JPEG, and replaces the storage object in place
@@ -12,9 +12,9 @@
  *
  * INPUT (JSON body, all fields optional):
  *   {
- *     "photoIds":     ["<motorhome_photos.id>", ...],   // process specific rows
- *     "motorhomeId":  "<motorhomes.id>",                 // process all photos of one motorhome
- *     "scanAll":      false,                              // process every motorhome_photos row
+ *     "photoIds":     ["<kitchen_photos.id>", ...],   // process specific rows
+ *     "kitchenId":  "<kitchens.id>",                 // process all photos of one kitchen
+ *     "scanAll":      false,                              // process every kitchen_photos row
  *     "limit":        100,                                // max rows per call (default 50)
  *     "dryRun":       false                               // detect only, do not convert
  *   }
@@ -40,7 +40,7 @@ import jpeg from "https://esm.sh/jpeg-js@0.4.4?target=denonext";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-const BUCKET = "motorhome-photos";
+const BUCKET = "kitchen-photos";
 
 interface ConvertResult {
   scanned: number;
@@ -108,7 +108,7 @@ Deno.serve(async (req: Request) => {
   // ── Parse input ────────────────────────────────────────────────────────
   type Body = {
     photoIds?: string[];
-    motorhomeId?: string;
+    kitchenId?: string;
     scanAll?: boolean;
     limit?: number;
     dryRun?: boolean;
@@ -123,14 +123,14 @@ Deno.serve(async (req: Request) => {
   const limit = Math.max(1, Math.min(500, body.limit ?? 50));
 
   // ── Load candidate rows ────────────────────────────────────────────────
-  let query = adminClient.from("motorhome_photos").select("id, url, motorhome_id");
+  let query = adminClient.from("kitchen_photos").select("id, url, kitchen_id");
   if (body.photoIds?.length) {
     query = query.in("id", body.photoIds);
-  } else if (body.motorhomeId) {
-    query = query.eq("motorhome_id", body.motorhomeId);
+  } else if (body.kitchenId) {
+    query = query.eq("kitchen_id", body.kitchenId);
   } else if (!body.scanAll) {
     return new Response(
-      JSON.stringify({ error: "Pass photoIds[], motorhomeId, or scanAll:true" }),
+      JSON.stringify({ error: "Pass photoIds[], kitchenId, or scanAll:true" }),
       { status: 400, headers },
     );
   }
@@ -153,7 +153,7 @@ Deno.serve(async (req: Request) => {
     try {
       const storagePath = extractStoragePath(row.url, BUCKET);
       if (!storagePath) {
-        result.errors.push({ id: row.id, url: row.url, message: "URL not in motorhome-photos bucket" });
+        result.errors.push({ id: row.id, url: row.url, message: "URL not in kitchen-photos bucket" });
         continue;
       }
 

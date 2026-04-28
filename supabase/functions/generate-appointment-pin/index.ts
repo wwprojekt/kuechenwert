@@ -77,7 +77,7 @@ serve(async (req) => {
         pin_generated_at: new Date().toISOString(),
       })
       .eq('id', appointment_id)
-      .select('*, motorhomes(*), purchase_stations(*), profiles!appointments_seller_id_fkey(*)')
+      .select('*, kitchens(*), purchase_stations(*), profiles!appointments_seller_id_fkey(*)')
       .single();
 
     if (updateError) throw updateError;
@@ -109,7 +109,7 @@ serve(async (req) => {
           ${pinDisplay(pin)}
 
           ${infoBox('Details zur &Uuml;bergabe', `
-            ${detailRow('Fahrzeug', `${fullAppointment.motorhomes.manufacturer} ${fullAppointment.motorhomes.model}`)}
+            ${detailRow('Fahrzeug', `${fullAppointment.kitchens.manufacturer} ${fullAppointment.kitchens.model}`)}
             ${detailRow('Station', fullAppointment.purchase_stations.name)}
             ${detailRow('Adresse', `${fullAppointment.purchase_stations.address}, ${fullAppointment.purchase_stations.city}`)}
             ${detailRow('Termin', new Date(fullAppointment.appointment_date).toLocaleString('de-DE'))}

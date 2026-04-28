@@ -129,7 +129,7 @@ const handler = async (req: Request): Promise<Response> => {
             .from('auctions')
             .select(`
               id, current_bid, starting_bid, end_time,
-              motorhomes!left (manufacturer, model, year, body_type, mileage, city, sale_channel, instant_price)
+              kitchens!left (manufacturer, model, year, body_type, mileage, city, sale_channel, instant_price)
             `)
             .eq('status', 'active')
             .order('end_time', { ascending: true })
@@ -138,7 +138,7 @@ const handler = async (req: Request): Promise<Response> => {
           if (activeAuctions && activeAuctions.length > 0) {
             let auctionRows = '';
             for (const auction of activeAuctions) {
-              const m = auction.motorhomes as any;
+              const m = auction.kitchens as any;
               if (!m) continue;
               const isFestpreis = m.sale_channel === 'instant_price';
               const price = isFestpreis ? Number(m.instant_price || 0) : (auction.current_bid || auction.starting_bid || 0);

@@ -80,9 +80,9 @@ const handler = async (req: Request): Promise<Response> => {
       .from('auctions')
       .select(`
         *,
-        motorhome:motorhomes(
+        kitchen:kitchens(
           manufacturer, model, year, mileage, city,
-          photos:motorhome_photos(url, display_order)
+          photos:kitchen_photos(url, display_order)
         )
       `)
       .eq('id', auctionId)
@@ -92,10 +92,10 @@ const handler = async (req: Request): Promise<Response> => {
       throw new Error('Auction not found');
     }
 
-    const mhRaw = auction.motorhome as Record<string, unknown> | null | undefined;
+    const mhRaw = auction.kitchen as Record<string, unknown> | null | undefined;
     const mh = Array.isArray(mhRaw) ? mhRaw[0] : mhRaw;
     if (!mh || typeof mh !== 'object') {
-      throw new Error('Motorhome not found');
+      throw new Error('Kitchen not found');
     }
 
     // Fetch site settings
@@ -120,7 +120,7 @@ const handler = async (req: Request): Promise<Response> => {
       city?: string | null;
       photos?: unknown;
     };
-    const motorhomeName = `${m.manufacturer || ''} ${m.model || ''}`.trim() || 'Fahrzeug';
+    const kitchenName = `${m.manufacturer || ''} ${m.model || ''}`.trim() || 'Fahrzeug';
     const vehicleTitle = `${m.manufacturer || '?'} ${m.model || ''} (${m.year ?? '–'})`.trim();
     const userName = profile.first_name || profile.email.split('@')[0];
     const auctionUrl = `https://caravanwert.de/auktion/${auctionId}`;
@@ -147,7 +147,7 @@ const handler = async (req: Request): Promise<Response> => {
       ? `
         ${paragraph(`Hallo ${userName},`)}
         ${customerBadge(profile.customer_number)}
-        ${paragraph(`Sie wurden bei der Auktion für <strong>${motorhomeName}</strong> überboten.`)}
+        ${paragraph(`Sie wurden bei der Auktion für <strong>${kitchenName}</strong> überboten.`)}
         ${auctionEmailCard(auctionUrl, vehicleTitle, outbidDetails, photoUrl)}
         ${paragraph('Geben Sie ein höheres Gebot ab, um weiterhin im Rennen zu bleiben.')}
         ${button('Jetzt höher bieten', auctionUrl, settingsData)}
@@ -155,7 +155,7 @@ const handler = async (req: Request): Promise<Response> => {
       : `
         ${paragraph(`Hallo ${userName},`)}
         ${customerBadge(profile.customer_number)}
-        ${paragraph(`Ihr Gebot für <strong>${motorhomeName}</strong> wurde erfolgreich platziert!`)}
+        ${paragraph(`Ihr Gebot für <strong>${kitchenName}</strong> wurde erfolgreich platziert!`)}
         ${auctionEmailCard(auctionUrl, vehicleTitle, confirmDetails, photoUrl)}
         ${paragraph('Behalten Sie die Auktion im Auge, um sicherzustellen, dass Sie Höchstbietender bleiben.')}
         ${button('Auktion ansehen', auctionUrl, settingsData)}
@@ -167,8 +167,8 @@ const handler = async (req: Request): Promise<Response> => {
       content
     );
     const subject = isOutbid
-      ? `Sie wurden überboten - ${motorhomeName}`
-      : `Gebot bestätigt - ${motorhomeName}`;
+      ? `Sie wurden überboten - ${kitchenName}`
+      : `Gebot bestätigt - ${kitchenName}`;
 
     // Quiet-Hours-Deferral: nur Outbid-Mails werden verschoben. Bid-Confirmed
     // ist transactional (unmittelbare Bestaetigung der Aktion) und geht sofort.

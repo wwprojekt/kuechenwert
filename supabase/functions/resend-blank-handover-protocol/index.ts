@@ -100,7 +100,7 @@ Deno.serve(async (req) => {
   // ─── 1. Load purchase contract ────────────────────────────────────────
   const { data: contract, error: contractErr } = await supabase
     .from('purchase_contracts')
-    .select('contract_number, motorhome_id, buyer_id, seller_id, sale_price')
+    .select('contract_number, kitchen_id, buyer_id, seller_id, sale_price')
     .eq('contract_number', contractNumber)
     .maybeSingle();
 
@@ -114,17 +114,17 @@ Deno.serve(async (req) => {
     );
   }
 
-  // ─── 2. Load motorhome (vehicle name) ────────────────────────────────
-  const { data: motorhome } = await supabase
-    .from('motorhomes')
+  // ─── 2. Load kitchen (vehicle name) ────────────────────────────────
+  const { data: kitchen } = await supabase
+    .from('kitchens')
     .select('manufacturer, model, year')
-    .eq('id', contract.motorhome_id)
+    .eq('id', contract.kitchen_id)
     .maybeSingle();
 
   const vehicleName = [
-    motorhome?.manufacturer,
-    motorhome?.model,
-    motorhome?.year ? `(${motorhome.year})` : '',
+    kitchen?.manufacturer,
+    kitchen?.model,
+    kitchen?.year ? `(${kitchen.year})` : '',
   ].filter(Boolean).join(' ').trim() || 'Fahrzeug';
 
   // ─── 3. Load seller + buyer profiles ─────────────────────────────────
@@ -159,7 +159,7 @@ Deno.serve(async (req) => {
             'apikey': SERVICE_ROLE_KEY,
           },
           body: JSON.stringify({
-            motorhomeId: contract.motorhome_id,
+            kitchenId: contract.kitchen_id,
             buyerId: contract.buyer_id,
             sellerId: contract.seller_id,
             contractNumber: contract.contract_number,
@@ -278,7 +278,7 @@ Deno.serve(async (req) => {
     supabase,
     resendApiKey: RESEND_API_KEY,
     settingsData,
-    motorhomeId: contract.motorhome_id,
+    kitchenId: contract.kitchen_id,
     buyerId: contract.buyer_id,
     sellerId: contract.seller_id,
     contractNumber: contract.contract_number,

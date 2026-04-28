@@ -39,7 +39,7 @@ serve(async (req) => {
       .from('appointments')
       .select(`
         *,
-        motorhomes(*),
+        kitchens(*),
         purchase_stations(*),
         profiles!appointments_seller_id_fkey(*)
       `)
@@ -78,7 +78,7 @@ serve(async (req) => {
     const htmlBytes = encoder.encode(html);
 
     const { error: uploadError } = await supabaseClient.storage
-      .from('motorhome-photos')
+      .from('kitchen-photos')
       .upload(`protocols/${fileName}`, htmlBytes, {
         contentType: 'text/html; charset=utf-8',
         cacheControl: '3600',
@@ -87,7 +87,7 @@ serve(async (req) => {
     if (uploadError) throw uploadError;
 
     const { data: { publicUrl } } = supabaseClient.storage
-      .from('motorhome-photos')
+      .from('kitchen-photos')
       .getPublicUrl(`protocols/${fileName}`);
 
     return new Response(
@@ -127,13 +127,13 @@ interface CompanyInfo {
 }
 
 function generateProtocolHTML(appointment: any, company: CompanyInfo): string {
-  const motorhome = appointment.motorhomes || {};
+  const kitchen = appointment.kitchens || {};
   const station = appointment.purchase_stations || {};
   const profile = appointment.profiles || {};
 
   const date = escapeHtml(new Date(appointment.appointment_date).toLocaleString('de-DE'));
-  const mileage = motorhome.mileage != null
-    ? escapeHtml(Number(motorhome.mileage).toLocaleString('de-DE'))
+  const mileage = kitchen.mileage != null
+    ? escapeHtml(Number(kitchen.mileage).toLocaleString('de-DE'))
     : '—';
   
   return `
@@ -142,7 +142,7 @@ function generateProtocolHTML(appointment: any, company: CompanyInfo): string {
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Übergabeprotokoll – ${escapeHtml(motorhome.manufacturer)} ${escapeHtml(motorhome.model)}</title>
+  <title>Übergabeprotokoll – ${escapeHtml(kitchen.manufacturer)} ${escapeHtml(kitchen.model)}</title>
   <style>
     @media print {
       body { margin: 0; padding: 20px; }
@@ -243,24 +243,24 @@ function generateProtocolHTML(appointment: any, company: CompanyInfo): string {
     <h1>Fahrzeugdaten</h1>
     <div class="info-row">
       <span class="label">Hersteller:</span>
-      <span class="value">${escapeHtml(motorhome.manufacturer) || '—'}</span>
+      <span class="value">${escapeHtml(kitchen.manufacturer) || '—'}</span>
     </div>
     <div class="info-row">
       <span class="label">Modell:</span>
-      <span class="value">${escapeHtml(motorhome.model) || '—'}</span>
+      <span class="value">${escapeHtml(kitchen.model) || '—'}</span>
     </div>
     <div class="info-row">
       <span class="label">Baujahr:</span>
-      <span class="value">${escapeHtml(motorhome.year) || '—'}</span>
+      <span class="value">${escapeHtml(kitchen.year) || '—'}</span>
     </div>
     <div class="info-row">
       <span class="label">Kilometerstand:</span>
       <span class="value">${mileage} km</span>
     </div>
-    ${motorhome.vehicle_identification_number ? `
+    ${kitchen.vehicle_identification_number ? `
     <div class="info-row">
       <span class="label">Fahrzeug-Identifikationsnummer:</span>
-      <span class="value">${escapeHtml(motorhome.vehicle_identification_number)}</span>
+      <span class="value">${escapeHtml(kitchen.vehicle_identification_number)}</span>
     </div>
     ` : ''}
   </div>

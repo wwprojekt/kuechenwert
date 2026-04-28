@@ -8,7 +8,7 @@ const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
 /**
  * Admin-only Edge Function to create a user account for a customer.
- * Used when admin converts a wizard session to a motorhome listing.
+ * Used when admin converts a wizard session to a kitchen listing.
  *
  * NOTE: verify_jwt is set to false to avoid 401 errors from expired tokens.
  * Authentication is handled internally by verifying the caller is an admin.

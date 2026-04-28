@@ -8,7 +8,7 @@ interface AuctionNotificationProps {
   settings: any;
   name: string;
   type: NotificationType;
-  motorhomeModel: string;
+  kitchenModel: string;
   auctionUrl: string;
   currentBid?: string;
   yourBid?: string;
@@ -16,7 +16,7 @@ interface AuctionNotificationProps {
 }
 
 const getContent = (type: NotificationType, props: AuctionNotificationProps) => {
-  const { name, motorhomeModel, currentBid, yourBid, endTime, auctionUrl } = props;
+  const { name, kitchenModel, currentBid, yourBid, endTime, auctionUrl } = props;
 
   switch (type) {
     case 'auction_started':
@@ -33,7 +33,7 @@ const getContent = (type: NotificationType, props: AuctionNotificationProps) => 
               Ihr Wohnmobil wurde erfolgreich in die Auktion aufgenommen und ist jetzt für Händler sichtbar.
             </Text>
             <InfoBox title="Fahrzeugdetails" variant="success">
-              <DetailRow label="Fahrzeug" value={motorhomeModel} />
+              <DetailRow label="Fahrzeug" value={kitchenModel} />
               {currentBid && <DetailRow label="Startgebot" value={currentBid} />}
               {endTime && <DetailRow label="Auktionsende" value={endTime} />}
             </InfoBox>
@@ -59,7 +59,7 @@ const getContent = (type: NotificationType, props: AuctionNotificationProps) => 
               Eine neue Auktion, die Ihren Kriterien entspricht, ist jetzt verfügbar:
             </Text>
             <InfoBox title="Fahrzeugdetails" variant="info">
-              <DetailRow label="Fahrzeug" value={motorhomeModel} />
+              <DetailRow label="Fahrzeug" value={kitchenModel} />
               {currentBid && <DetailRow label="Startgebot" value={currentBid} />}
               {endTime && <DetailRow label="Endet am" value={endTime} />}
             </InfoBox>
@@ -82,7 +82,7 @@ const getContent = (type: NotificationType, props: AuctionNotificationProps) => 
               Auf Ihr Wohnmobil wurde ein neues Gebot abgegeben:
             </Text>
             <InfoBox title="Gebotsdetails" variant="success">
-              <DetailRow label="Fahrzeug" value={motorhomeModel} />
+              <DetailRow label="Fahrzeug" value={kitchenModel} />
               {currentBid && <DetailRow label="Aktuelles Höchstgebot" value={currentBid} />}
             </InfoBox>
             <CTAButton href={auctionUrl} text="Auktion ansehen" />
@@ -104,7 +104,7 @@ const getContent = (type: NotificationType, props: AuctionNotificationProps) => 
               Ein anderer Händler hat ein höheres Gebot abgegeben:
             </Text>
             <InfoBox title="Gebotsdetails" variant="warning">
-              <DetailRow label="Fahrzeug" value={motorhomeModel} />
+              <DetailRow label="Fahrzeug" value={kitchenModel} />
               {yourBid && <DetailRow label="Ihr Gebot" value={yourBid} />}
               {currentBid && <DetailRow label="Aktuelles Höchstgebot" value={currentBid} />}
             </InfoBox>
@@ -127,7 +127,7 @@ const getContent = (type: NotificationType, props: AuctionNotificationProps) => 
               Sie haben die Auktion gewonnen!
             </Text>
             <InfoBox title="Auktionsdetails" variant="success">
-              <DetailRow label="Fahrzeug" value={motorhomeModel} />
+              <DetailRow label="Fahrzeug" value={kitchenModel} />
               {currentBid && <DetailRow label="Ihr Gebot" value={currentBid} />}
             </InfoBox>
             <Text style={{ fontSize: '16px', lineHeight: '26px' }}>
@@ -152,7 +152,7 @@ const getContent = (type: NotificationType, props: AuctionNotificationProps) => 
               Die Auktion für folgendes Fahrzeug wurde beendet:
             </Text>
             <InfoBox title="Auktionsdetails">
-              <DetailRow label="Fahrzeug" value={motorhomeModel} />
+              <DetailRow label="Fahrzeug" value={kitchenModel} />
               {yourBid && <DetailRow label="Ihr Gebot" value={yourBid} />}
               {currentBid && <DetailRow label="Höchstgebot" value={currentBid} />}
             </InfoBox>
@@ -178,7 +178,7 @@ const getContent = (type: NotificationType, props: AuctionNotificationProps) => 
               Eine Auktion, für die Sie geboten haben, endet in Kürze:
             </Text>
             <InfoBox title="Auktionsdetails" variant="warning">
-              <DetailRow label="Fahrzeug" value={motorhomeModel} />
+              <DetailRow label="Fahrzeug" value={kitchenModel} />
               {yourBid && <DetailRow label="Ihr Gebot" value={yourBid} />}
               {currentBid && <DetailRow label="Aktuelles Höchstgebot" value={currentBid} />}
               {endTime && <DetailRow label="Endet am" value={endTime} />}

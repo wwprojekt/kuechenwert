@@ -14,7 +14,7 @@ import { getCorsHeaders, handleCorsPreflightRequest } from '../_shared/cors.ts';
  *   2. Body validieren via Zod.
  *   3. Eigentum am Inserat prüfen, aktuelle Preise + Auktion lesen.
  *   4. Insert in price_change_requests (RLS lässt Owner zu, partial unique
- *      Index `uniq_pcr_motorhome_pending` blockiert doppelte pending Anfragen).
+ *      Index `uniq_pcr_kitchen_pending` blockiert doppelte pending Anfragen).
  *   5. Admin-E-Mail via Resend mit Direktlink ins Admin-Edit.
  *   6. Antwort an Client mit Request-ID und Status.
  *
@@ -22,7 +22,7 @@ import { getCorsHeaders, handleCorsPreflightRequest } from '../_shared/cors.ts';
  */
 
 const RequestSchema = z.object({
-  motorhomeId: z.string().uuid('Ungültige Inserat-ID'),
+  kitchenId: z.string().uuid('Ungültige Inserat-ID'),
   requestedReserve: z
     .number()
     .positive('Mindestpreis muss positiv sein')
@@ -99,24 +99,24 @@ Deno.serve(async (req: Request): Promise<Response> => {
         corsHeaders,
       );
     }
-    const { motorhomeId, requestedReserve, requestedInstant, reason } = parsed.data;
+    const { kitchenId, requestedReserve, requestedInstant, reason } = parsed.data;
 
-    const { data: motorhome, error: mhErr } = await adminClient
-      .from('motorhomes')
+    const { data: kitchen, error: mhErr } = await adminClient
+      .from('kitchens')
       .select('id, seller_id, manufacturer, model, year, sale_channel, reserve_price, instant_price')
-      .eq('id', motorhomeId)
+      .eq('id', kitchenId)
       .maybeSingle();
-    if (mhErr || !motorhome) {
+    if (mhErr || !kitchen) {
       return jsonResponse({ error: 'Inserat nicht gefunden' }, 404, corsHeaders);
     }
-    if (motorhome.seller_id !== user.id) {
+    if (kitchen.seller_id !== user.id) {
       return jsonResponse({ error: 'Keine Berechtigung für dieses Inserat' }, 403, corsHeaders);
     }
 
     const { data: auction } = await adminClient
       .from('auctions')
       .select('id, status, reserve_price, current_bid, end_time')
-      .eq('motorhome_id', motorhomeId)
+      .eq('kitchen_id', kitchenId)
       .order('created_at', { ascending: false })
       .limit(1)
       .maybeSingle();
@@ -125,13 +125,13 @@ Deno.serve(async (req: Request): Promise<Response> => {
     // niemals erhoehen. Bei laufender Auktion ist der Vergleichswert fuer
     // den Mindestpreis das potenziell bereits durch Dynamic Pricing
     // reduzierte auctions.reserve_price; fuer den Sofortpreis das unver-
-    // aenderte motorhomes.instant_price (wird vom Cron nicht reduziert).
+    // aenderte kitchens.instant_price (wird vom Cron nicht reduziert).
     const currentReserveForCompare =
       (auction?.reserve_price as number | null | undefined) ??
-      (motorhome.reserve_price as number | null | undefined) ??
+      (kitchen.reserve_price as number | null | undefined) ??
       null;
     const currentInstantForCompare =
-      (motorhome.instant_price as number | null | undefined) ?? null;
+      (kitchen.instant_price as number | null | undefined) ?? null;
 
     if (
       requestedReserve != null &&
@@ -165,7 +165,7 @@ Deno.serve(async (req: Request): Promise<Response> => {
     const { data: existing } = await adminClient
       .from('price_change_requests')
       .select('id, created_at')
-      .eq('motorhome_id', motorhomeId)
+      .eq('kitchen_id', kitchenId)
       .eq('status', 'pending')
       .maybeSingle();
     if (existing) {
@@ -182,10 +182,10 @@ Deno.serve(async (req: Request): Promise<Response> => {
 
     const insertPayload = {
       seller_id: user.id,
-      motorhome_id: motorhomeId,
+      kitchen_id: kitchenId,
       auction_id: auction?.id ?? null,
-      current_reserve: motorhome.reserve_price ?? null,
-      current_instant: motorhome.instant_price ?? null,
+      current_reserve: kitchen.reserve_price ?? null,
+      current_instant: kitchen.instant_price ?? null,
       requested_reserve: requestedReserve ?? null,
       requested_instant: requestedInstant ?? null,
       reason: reason.trim(),
@@ -212,7 +212,7 @@ Deno.serve(async (req: Request): Promise<Response> => {
     if (RESEND_API_KEY) {
       try {
         const sellerEmail = user.email ?? 'unbekannt';
-        const vehicle = `${motorhome.manufacturer ?? ''} ${motorhome.model ?? ''} (${motorhome.year ?? '?'})`.trim();
+        const vehicle = `${kitchen.manufacturer ?? ''} ${kitchen.model ?? ''} (${kitchen.year ?? '?'})`.trim();
         const subject = `📝 Preisänderungs-Anfrage: ${vehicle}`;
 
         const html = `<!doctype html>
@@ -229,11 +229,11 @@ Deno.serve(async (req: Request): Promise<Response> => {
     <table style="border-collapse:collapse;width:100%;font-size:14px;margin-top:16px;">
       <tbody>
         <tr><td style="padding:8px;border:1px solid #ddd;background:#f9fafb;font-weight:600;">Fahrzeug</td><td style="padding:8px;border:1px solid #ddd;">${vehicle}</td></tr>
-        <tr><td style="padding:8px;border:1px solid #ddd;background:#f9fafb;font-weight:600;">Verkaufskanal</td><td style="padding:8px;border:1px solid #ddd;">${motorhome.sale_channel ?? '–'}</td></tr>
+        <tr><td style="padding:8px;border:1px solid #ddd;background:#f9fafb;font-weight:600;">Verkaufskanal</td><td style="padding:8px;border:1px solid #ddd;">${kitchen.sale_channel ?? '–'}</td></tr>
         <tr><td style="padding:8px;border:1px solid #ddd;background:#f9fafb;font-weight:600;">Verkäufer</td><td style="padding:8px;border:1px solid #ddd;">${sellerEmail}</td></tr>
         <tr><td style="padding:8px;border:1px solid #ddd;background:#f9fafb;font-weight:600;">Auktion-Status</td><td style="padding:8px;border:1px solid #ddd;">${auction?.status ?? 'keine Auktion'}</td></tr>
-        <tr><td style="padding:8px;border:1px solid #ddd;background:#f9fafb;font-weight:600;">Aktueller Mindestpreis</td><td style="padding:8px;border:1px solid #ddd;">${fmtPrice(motorhome.reserve_price as number | null)}</td></tr>
-        <tr><td style="padding:8px;border:1px solid #ddd;background:#f9fafb;font-weight:600;">Aktueller Sofortpreis</td><td style="padding:8px;border:1px solid #ddd;">${fmtPrice(motorhome.instant_price as number | null)}</td></tr>
+        <tr><td style="padding:8px;border:1px solid #ddd;background:#f9fafb;font-weight:600;">Aktueller Mindestpreis</td><td style="padding:8px;border:1px solid #ddd;">${fmtPrice(kitchen.reserve_price as number | null)}</td></tr>
+        <tr><td style="padding:8px;border:1px solid #ddd;background:#f9fafb;font-weight:600;">Aktueller Sofortpreis</td><td style="padding:8px;border:1px solid #ddd;">${fmtPrice(kitchen.instant_price as number | null)}</td></tr>
         <tr><td style="padding:8px;border:1px solid #ddd;background:#fef3c7;font-weight:600;">Gewünschter Mindestpreis</td><td style="padding:8px;border:1px solid #ddd;background:#fef3c7;">${fmtPrice(requestedReserve ?? null)}</td></tr>
         <tr><td style="padding:8px;border:1px solid #ddd;background:#fef3c7;font-weight:600;">Gewünschter Sofortpreis</td><td style="padding:8px;border:1px solid #ddd;background:#fef3c7;">${fmtPrice(requestedInstant ?? null)}</td></tr>
         <tr><td style="padding:8px;border:1px solid #ddd;background:#f9fafb;font-weight:600;">Aktuelles Höchstgebot</td><td style="padding:8px;border:1px solid #ddd;">${fmtPrice(auction?.current_bid as number | null)}</td></tr>
@@ -244,7 +244,7 @@ Deno.serve(async (req: Request): Promise<Response> => {
     <blockquote style="border-left:3px solid #1f8aa2;padding:8px 16px;background:#f9fafb;margin:8px 0;font-style:italic;color:#374151;">${(reason || '').replace(/[<>]/g, '')}</blockquote>
 
     <p style="margin-top:24px;">
-      <a href="https://caravanwert.de/admin/motorhomes/${motorhomeId}" style="display:inline-block;background:#1f8aa2;color:#ffffff;text-decoration:none;padding:10px 20px;border-radius:6px;font-weight:600;font-size:14px;">Inserat im Admin öffnen →</a>
+      <a href="https://caravanwert.de/admin/kitchens/${kitchenId}" style="display:inline-block;background:#1f8aa2;color:#ffffff;text-decoration:none;padding:10px 20px;border-radius:6px;font-weight:600;font-size:14px;">Inserat im Admin öffnen →</a>
     </p>
 
     <p style="margin-top:16px;font-size:12px;color:#9ca3af;">Anfrage-ID: <code>${inserted.id}</code> · Eingang: ${new Date(inserted.created_at).toLocaleString('de-DE', { timeZone: 'Europe/Berlin' })}</p>

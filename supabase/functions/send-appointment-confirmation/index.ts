@@ -14,7 +14,7 @@ interface AppointmentEmailRequest {
   appointmentDate: string;
   stationName: string;
   stationAddress: string;
-  motorhomeModel: string;
+  kitchenModel: string;
   appointmentId: string;
 }
 
@@ -30,7 +30,7 @@ const handler = async (req: Request): Promise<Response> => {
   }
 
   try {
-    const { email, name, appointmentDate, stationName, stationAddress, motorhomeModel, appointmentId }: AppointmentEmailRequest = await req.json();
+    const { email, name, appointmentDate, stationName, stationAddress, kitchenModel, appointmentId }: AppointmentEmailRequest = await req.json();
 
     console.log("Sending appointment confirmation to:", email);
 
@@ -54,7 +54,7 @@ const handler = async (req: Request): Promise<Response> => {
       ${paragraph('Ihr Termin für die Wohnmobil-Übergabe wurde erfolgreich gebucht. Wir freuen uns auf Ihren Besuch!')}
       
       ${infoBox('Termindetails', `
-        ${detailRow('Fahrzeug', motorhomeModel)}
+        ${detailRow('Fahrzeug', kitchenModel)}
         ${detailRow('Datum & Uhrzeit', appointmentDate)}
         ${detailRow('Ankaufstation', stationName)}
         ${detailRow('Adresse', stationAddress)}

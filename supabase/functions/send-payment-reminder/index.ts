@@ -59,7 +59,7 @@ const handler = async (req: Request): Promise<Response> => {
       .select(`
         id, invoice_number, gross_amount, due_date, dealer_id, invoice_type, payment_reminder_sent,
         auctions:auction_id (
-          motorhomes:motorhome_id (manufacturer, model, year)
+          kitchens:kitchen_id (manufacturer, model, year)
         )
       `)
       .in('payment_status', ['pending', 'partial'])
@@ -116,10 +116,10 @@ const handler = async (req: Request): Promise<Response> => {
         // bought anything from us, so calling it a "Rechnung" with vehicle
         // context is misleading.
         const refLabel = isPenalty ? 'Vertragsstrafe' : 'Fahrzeug';
-        const motorhome = isPenalty ? null : (invoice.auctions as any)?.motorhomes;
+        const kitchen = isPenalty ? null : (invoice.auctions as any)?.kitchens;
         const refValue = isPenalty
           ? 'Vertragsstrafe gem&auml;&szlig; AGB'
-          : (motorhome ? `${motorhome.manufacturer} ${motorhome.model} (${motorhome.year})` : 'Vermittlungsprovision');
+          : (kitchen ? `${kitchen.manufacturer} ${kitchen.model} (${kitchen.year})` : 'Vermittlungsprovision');
 
         const dueDate = new Date(invoice.due_date).toLocaleDateString('de-DE', {
           year: 'numeric', month: 'long', day: 'numeric',

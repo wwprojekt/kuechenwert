@@ -85,11 +85,11 @@ Deno.serve(async (req) => {
     const { data: expiredAuctions, error: fetchError } = await supabase
       .from('auctions')
       .select(`
-        id, end_time, status, motorhome_id,
+        id, end_time, status, kitchen_id,
         auto_relist, auction_round, reserve_price,
         festpreis_admin_notified_at,
         seller_initial_instant_price, dynamic_pricing, marketing_phase_max_until,
-        motorhomes!inner(
+        kitchens!inner(
           id, sale_channel, manufacturer, model,
           instant_price, seller_id
         )
@@ -119,12 +119,12 @@ Deno.serve(async (req) => {
     if (expiredAuctions && expiredAuctions.length > 0) {
       for (const auction of expiredAuctions) {
         try {
-          const mh = (auction.motorhomes as any) || {};
+          const mh = (auction.kitchens as any) || {};
           const saleChannel = mh.sale_channel;
 
           // Instant-price-only listings: lifecycle handled inline
           if (saleChannel === 'instant_price') {
-            const motorhomeName = `${mh.manufacturer || ''} ${mh.model || ''}`.trim();
+            const kitchenName = `${mh.manufacturer || ''} ${mh.model || ''}`.trim();
             const instantPriceNum = Number(mh.instant_price ?? 0);
             const hasValidPrice = Number.isFinite(instantPriceNum) && instantPriceNum > 0;
             const autoRelist = auction.auto_relist !== false; // default true
@@ -146,7 +146,7 @@ Deno.serve(async (req) => {
 
             if (shouldEnd) {
               console.log(
-                `[festpreis-end] auction=${auction.id} motorhome=${auction.motorhome_id} ` +
+                `[festpreis-end] auction=${auction.id} kitchen=${auction.kitchen_id} ` +
                 `autoRelist=${autoRelist} hasValidPrice=${hasValidPrice} previouslyNotified=${previouslyNotified}`
               );
 
@@ -155,18 +155,18 @@ Deno.serve(async (req) => {
                 .update({ status: 'ended', updated_at: now })
                 .eq('id', auction.id);
 
-              if (!endError && auction.motorhome_id) {
-                // motorhomes.status CHECK constraint allows
+              if (!endError && auction.kitchen_id) {
+                // kitchens.status CHECK constraint allows
                 // ('available', 'active', 'sold', 'pending', 'not_sold', 'reserved').
                 // 'ended' is INVALID and would silently throw 23514 here, leaving
-                // motorhomes stuck on 'available' while the auction is gone.
+                // kitchens stuck on 'available' while the auction is gone.
                 // 'not_sold' matches end-kaufchance + AdminPostAuctionOffers
                 // semantics: the listing was offered but did not transact.
                 const { error: mhErr } = await supabase
-                  .from('motorhomes')
+                  .from('kitchens')
                   .update({ status: 'not_sold', updated_at: now })
-                  .eq('id', auction.motorhome_id);
-                if (mhErr) console.error(`Failed to update motorhome ${auction.motorhome_id} status:`, mhErr);
+                  .eq('id', auction.kitchen_id);
+                if (mhErr) console.error(`Failed to update kitchen ${auction.kitchen_id} status:`, mhErr);
               }
 
               // Expire any pending price proposals and notify proposers
@@ -197,7 +197,7 @@ Deno.serve(async (req) => {
                           email: profile.email,
                           name: profile.company_name || profile.first_name || profile.email.split('@')[0],
                           type: 'lost',
-                          motorhomeModel: motorhomeName,
+                          kitchenModel: kitchenName,
                           auctionUrl: 'https://caravanwert.de/kaufen',
                           yourBid: `€${Number(eo.offer_amount).toLocaleString('de-DE')}`,
                           isFestpreis: true,
@@ -233,7 +233,7 @@ Deno.serve(async (req) => {
                         email: sellerProfile.email,
                         name: sellerProfile.first_name || sellerProfile.email.split('@')[0],
                         type: 'seller_festpreis_cap_reached',
-                        motorhomeModel: motorhomeName,
+                        kitchenModel: kitchenName,
                         auctionUrl: dashboardUrl,
                         currentBid: instantPriceNum
                           ? `€${instantPriceNum.toLocaleString('de-DE')}`
@@ -308,16 +308,16 @@ Deno.serve(async (req) => {
                 .update(festpreisUpdate)
                 .eq('id', auction.id);
 
-              // Wenn Preis-Reduktion aktiv: instant_price auf motorhomes updaten.
+              // Wenn Preis-Reduktion aktiv: instant_price auf kitchens updaten.
               // (auctions.reserve_price wird hier NICHT touchiert — Festpreis hat
-              //  keine Reserve. Quelle der Wahrheit ist motorhomes.instant_price.)
-              if (!extError && nextInstantPrice != null && auction.motorhome_id) {
+              //  keine Reserve. Quelle der Wahrheit ist kitchens.instant_price.)
+              if (!extError && nextInstantPrice != null && auction.kitchen_id) {
                 const { error: priceErr } = await supabase
-                  .from('motorhomes')
+                  .from('kitchens')
                   .update({ instant_price: nextInstantPrice, updated_at: now })
-                  .eq('id', auction.motorhome_id);
+                  .eq('id', auction.kitchen_id);
                 if (priceErr) {
-                  console.error(`Festpreis price reduction failed for ${auction.motorhome_id}:`, priceErr);
+                  console.error(`Festpreis price reduction failed for ${auction.kitchen_id}:`, priceErr);
                 }
               }
 
@@ -332,12 +332,12 @@ Deno.serve(async (req) => {
                 continue;
               }
 
-              // Keep motorhome.updated_at in sync so dashboards refresh
-              if (auction.motorhome_id) {
+              // Keep kitchen.updated_at in sync so dashboards refresh
+              if (auction.kitchen_id) {
                 await supabase
-                  .from('motorhomes')
+                  .from('kitchens')
                   .update({ updated_at: now })
-                  .eq('id', auction.motorhome_id);
+                  .eq('id', auction.kitchen_id);
               }
 
               // Notify seller about auto-extension. Offers stay alive (β1).
@@ -368,7 +368,7 @@ Deno.serve(async (req) => {
                     // minute; if a deploy or DB hiccup re-processes the same expired
                     // listing inside the same round we don't want the seller to get
                     // duplicate "extended" mails. send-auction-notification stamps each
-                    // outbound mail with a `dedup:<auctionUrl>|round:<n>|motorhome:<id>`
+                    // outbound mail with a `dedup:<auctionUrl>|round:<n>|kitchen:<id>`
                     // marker in body_text exactly so we can probe it here.
                     const dedupExtended = `dedup:${dashboardUrl}|round:${newRound}%`;
                     const { data: sentExtended } = await supabase
@@ -386,7 +386,7 @@ Deno.serve(async (req) => {
                           email: sellerProfile.email,
                           name: sellerNameStr,
                           type: 'seller_festpreis_extended',
-                          motorhomeModel: motorhomeName,
+                          kitchenModel: kitchenName,
                           auctionUrl: dashboardUrl,
                           currentBid: currentBidStr,
                           endTime: endFmt,
@@ -395,7 +395,7 @@ Deno.serve(async (req) => {
                         },
                       }).catch((e: any) => console.error('Festpreis seller extend mail:', e?.message));
                     } else {
-                      console.log(`Festpreis extend mail deduped for motorhome ${mh.id} (already sent < 25h ago)`);
+                      console.log(`Festpreis extend mail deduped for kitchen ${mh.id} (already sent < 25h ago)`);
                     }
 
                     if (newRound >= 2) {
@@ -418,7 +418,7 @@ Deno.serve(async (req) => {
                             email: sellerProfile.email,
                             name: sellerNameStr,
                             type: 'seller_festpreis_round_warning',
-                            motorhomeModel: motorhomeName,
+                            kitchenModel: kitchenName,
                             auctionUrl: dashboardUrl,
                             currentBid: currentBidStr,
                             endTime: endFmt,
@@ -426,7 +426,7 @@ Deno.serve(async (req) => {
                           },
                         }).catch((e: any) => console.error('Festpreis seller round_warning mail:', e?.message));
                       } else {
-                        console.log(`Festpreis round_warning mail deduped for motorhome ${mh.id} round ${newRound}`);
+                        console.log(`Festpreis round_warning mail deduped for kitchen ${mh.id} round ${newRound}`);
                       }
                     }
                   }
@@ -448,7 +448,7 @@ Deno.serve(async (req) => {
             const grace = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
 
             console.log(
-              `[festpreis-admin-alert] auction=${auction.id} motorhome=${auction.motorhome_id} ` +
+              `[festpreis-admin-alert] auction=${auction.id} kitchen=${auction.kitchen_id} ` +
               `instant_price NULL/0 → 24h grace, end_time=${grace}`
             );
 
@@ -502,13 +502,13 @@ Deno.serve(async (req) => {
                   email: adminEmail,
                   name: 'Admin',
                   type: 'admin_festpreis_needs_price',
-                  motorhomeModel: motorhomeName,
-                  // Bug-fix #3: link straight to the motorhome edit dialog.
+                  kitchenModel: kitchenName,
+                  // Bug-fix #3: link straight to the kitchen edit dialog.
                   // /admin/auctions does not let admins set the missing instant_price;
-                  // /admin/motorhomes/<id> opens the edit row where price + sale_channel
+                  // /admin/kitchens/<id> opens the edit row where price + sale_channel
                   // can be corrected in one click.
-                  auctionUrl: `https://caravanwert.de/admin/motorhomes/${mh.id}`,
-                  motorhomeId: mh.id,
+                  auctionUrl: `https://caravanwert.de/admin/kitchens/${mh.id}`,
+                  kitchenId: mh.id,
                   sellerName: sellerNameStr,
                 },
               }).catch((e: any) => console.error('Festpreis admin alert mail:', e?.message));
@@ -520,7 +520,7 @@ Deno.serve(async (req) => {
               auctionId: auction.id,
               type: 'festpreis_admin_alert',
               success: true,
-              data: { graceEnd: grace, motorhomeId: mh.id },
+              data: { graceEnd: grace, kitchenId: mh.id },
             });
             continue;
           }
@@ -584,15 +584,15 @@ Deno.serve(async (req) => {
       if (expiredKaufchancen && expiredKaufchancen.length > 0) {
         for (const kaufchance of expiredKaufchancen) {
           try {
-            // Load auction with motorhome data
+            // Load auction with kitchen data
             const { data: auctionData } = await supabase
               .from('auctions')
-              .select('motorhome_id, motorhome:motorhomes(id, seller_id, manufacturer, model, reserve_price)')
+              .select('kitchen_id, kitchen:kitchens(id, seller_id, manufacturer, model, reserve_price)')
               .eq('id', kaufchance.id)
               .single();
 
-            const mh = Array.isArray(auctionData?.motorhome) ? auctionData.motorhome[0] : auctionData?.motorhome;
-            const motorhomeName = mh ? `${mh.manufacturer || ''} ${mh.model || ''}`.trim() : 'Fahrzeug';
+            const mh = Array.isArray(auctionData?.kitchen) ? auctionData.kitchen[0] : auctionData?.kitchen;
+            const kitchenName = mh ? `${mh.manufacturer || ''} ${mh.model || ''}`.trim() : 'Fahrzeug';
 
             // ── AUTO-RELIST: default on (matches DB NOT NULL + frontend `!== false`) ──
             //
@@ -643,7 +643,7 @@ Deno.serve(async (req) => {
             if (shouldRelist) {
               console.log(`Auto-relisting kaufchance ${kaufchance.id} (round ${currentRound}, system=${isNewSystemListing ? 'new' : 'legacy'})...`);
 
-              // Baseline reserve (auction row, else motorhome — same idea as close-auction)
+              // Baseline reserve (auction row, else kitchen — same idea as close-auction)
               let newReservePrice: number | null =
                 (kaufchance.reserve_price as number | null)
                 ?? ((mh as { reserve_price?: number | null } | undefined)?.reserve_price ?? null);
@@ -803,11 +803,11 @@ Deno.serve(async (req) => {
               const { error: invDelErr } = await supabase.from('kaufchance_invitations').delete().eq('auction_id', kaufchance.id);
               if (invDelErr) console.error(`Delete kaufchance_invitations after relist ${kaufchance.id}:`, invDelErr);
 
-              if (auctionData?.motorhome_id) {
-                const { error: mhErr } = await supabase.from('motorhomes')
+              if (auctionData?.kitchen_id) {
+                const { error: mhErr } = await supabase.from('kitchens')
                   .update({ status: 'active', reserve_price: newReservePrice, updated_at: now })
-                  .eq('id', auctionData.motorhome_id);
-                if (mhErr) console.error(`Motorhome sync after relist ${kaufchance.id}:`, mhErr);
+                  .eq('id', auctionData.kitchen_id);
+                if (mhErr) console.error(`Kitchen sync after relist ${kaufchance.id}:`, mhErr);
               }
 
               const endTimeFormatted = new Date(endTime).toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
@@ -830,7 +830,7 @@ Deno.serve(async (req) => {
                         email: sellerProfile.email,
                         name: sellerNameStr,
                         type: 'seller_auto_relisted',
-                        motorhomeModel: motorhomeName,
+                        kitchenModel: kitchenName,
                         auctionUrl: dashboardUrl,
                         endTime: endTimeFormatted,
                         reservePrice: reserveFormatted,
@@ -844,7 +844,7 @@ Deno.serve(async (req) => {
                           email: sellerProfile.email,
                           name: sellerNameStr,
                           type: 'seller_auction_round_warning',
-                          motorhomeModel: motorhomeName,
+                          kitchenModel: kitchenName,
                           auctionUrl: dashboardUrl,
                           endTime: endTimeFormatted,
                           reservePrice: reserveFormatted,
@@ -872,7 +872,7 @@ Deno.serve(async (req) => {
                         email: profile.email,
                         name: profile.company_name || profile.first_name || profile.email.split('@')[0],
                         type: 'auction_relisted',
-                        motorhomeModel: motorhomeName,
+                        kitchenModel: kitchenName,
                         auctionUrl: `https://caravanwert.de/auktion/${kaufchance.id}`,
                         endTime: endTimeFormatted,
                         currentBid: `Runde ${newRound}`,
@@ -897,7 +897,7 @@ Deno.serve(async (req) => {
                         email: profile.email,
                         name: profile.company_name || profile.first_name || profile.email.split('@')[0],
                         type: 'auction_relisted',
-                        motorhomeModel: motorhomeName,
+                        kitchenModel: kitchenName,
                         auctionUrl: `https://caravanwert.de/auktion/${kaufchance.id}`,
                         endTime: endTimeFormatted,
                         currentBid: `Runde ${newRound}`,
@@ -944,11 +944,11 @@ Deno.serve(async (req) => {
                 continue;
               }
 
-              // motorhomes.status sync wird vom DB-Trigger trg_sync_motorhome_status
-              // (Migration 20260420151441) übernommen: auctions.ended → motorhomes.not_sold.
+              // kitchens.status sync wird vom DB-Trigger trg_sync_kitchen_status
+              // (Migration 20260420151441) übernommen: auctions.ended → kitchens.not_sold.
               // Ein expliziter UPDATE auf 'active' wäre semantisch FALSCH (Auktion ist beendet,
               // nicht aktiv) und würde die korrekte 'not_sold'-Synchronisation überschreiben.
-              // Vor 2026-04-23 hat genau dieser Bug 5 Motorhomes verwaisen lassen
+              // Vor 2026-04-23 hat genau dieser Bug 5 Kitchens verwaisen lassen
               // (status='active' obwohl Auktion 'ended').
 
               await supabase.from('post_auction_offers')
@@ -970,7 +970,7 @@ Deno.serve(async (req) => {
                           email: profile.email,
                           name: profile.company_name || profile.first_name || profile.email.split('@')[0],
                           type: 'kaufchance_expired',
-                          motorhomeModel: motorhomeName,
+                          kitchenModel: kitchenName,
                           auctionUrl: `https://caravanwert.de/auktion/${kaufchance.id}`,
                         },
                       }).catch((e: any) => console.error(`Failed to notify bidder ${inv.bidder_id}:`, e));
@@ -995,7 +995,7 @@ Deno.serve(async (req) => {
                           email: sellerProfile.email,
                           name: sellerProfile.first_name || sellerProfile.email.split('@')[0],
                           type: 'seller_soft_brake',
-                          motorhomeModel: motorhomeName,
+                          kitchenModel: kitchenName,
                           auctionUrl: dashboardUrl,
                           roundNumber: String(currentRound),
                           reservePrice: kaufchance.reserve_price
@@ -1019,7 +1019,7 @@ Deno.serve(async (req) => {
                           email: sellerProfile.email,
                           name: sellerProfile.first_name || sellerProfile.email.split('@')[0],
                           type: 'seller_chose_to_end',
-                          motorhomeModel: motorhomeName,
+                          kitchenModel: kitchenName,
                           auctionUrl: dashboardUrl,
                           roundNumber: String(currentRound),
                           reservePrice: kaufchance.reserve_price
@@ -1052,7 +1052,7 @@ Deno.serve(async (req) => {
     try {
       const { data: orphanOffers } = await supabase
         .from('post_auction_offers')
-        .select('id, auction_id, buyer_id, offer_amount, auction:auctions(status, motorhome:motorhomes(manufacturer, model))')
+        .select('id, auction_id, buyer_id, offer_amount, auction:auctions(status, kitchen:kitchens(manufacturer, model))')
         .in('status', ['pending', 'countered'])
         .limit(500);
 
@@ -1092,10 +1092,10 @@ Deno.serve(async (req) => {
                 .eq('id', o.buyer_id)
                 .single();
               if (profile?.email) {
-                const mh = auc?.motorhome
-                  ? (Array.isArray(auc.motorhome) ? auc.motorhome[0] : auc.motorhome)
+                const mh = auc?.kitchen
+                  ? (Array.isArray(auc.kitchen) ? auc.kitchen[0] : auc.kitchen)
                   : null;
-                const motorhomeName = mh
+                const kitchenName = mh
                   ? `${mh.manufacturer || ''} ${mh.model || ''}`.trim()
                   : 'Inserat';
                 await supabase.functions.invoke('send-auction-notification', {
@@ -1103,7 +1103,7 @@ Deno.serve(async (req) => {
                     email: profile.email,
                     name: profile.company_name || profile.first_name || profile.email.split('@')[0],
                     type: 'lost',
-                    motorhomeModel: motorhomeName,
+                    kitchenModel: kitchenName,
                     auctionUrl: 'https://caravanwert.de/kaufen',
                     yourBid: `€${Number(o.offer_amount).toLocaleString('de-DE')}`,
                     isFestpreis: true,

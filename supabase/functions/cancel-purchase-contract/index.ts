@@ -14,15 +14,15 @@ import { edgeLogger, logEdgeError } from '../_shared/edgeLogger.ts';
  *
  * Atomic admin action: cancels a purchase contract and notifies BOTH buyer
  * and seller. Replaces the previous client-side flow which only flipped
- * the row to status='cancelled' and reset the motorhome — without telling
+ * the row to status='cancelled' and reset the kitchen — without telling
  * either party.
  *
  * Order of operations:
  *   1. Auth: caller must be admin
- *   2. Load contract + linked motorhome + buyer + seller profiles
+ *   2. Load contract + linked kitchen + buyer + seller profiles
  *   3. Validate (already cancelled / completed → reject)
  *   4. Update purchase_contracts (status, cancelled_at, cancellation_reason)
- *   5. Reset motorhome status if no other active contract exists
+ *   5. Reset kitchen status if no other active contract exists
  *      (mirrors the previous client-side cleanup)
  *   6. Send cancellation email to buyer AND seller
  *   7. Audit log
@@ -178,7 +178,7 @@ Deno.serve(async (req) => {
   const { data: contract, error: contractErr } = await supabaseAdmin
     .from('purchase_contracts')
     .select(
-      'id, contract_number, status, sale_price, vehicle_description, motorhome_id, buyer_id, seller_id, buyer_name, seller_name, created_at',
+      'id, contract_number, status, sale_price, vehicle_description, kitchen_id, buyer_id, seller_id, buyer_name, seller_name, created_at',
     )
     .eq('id', contractId)
     .single();
@@ -229,14 +229,14 @@ Deno.serve(async (req) => {
     );
   }
 
-  // ─── Step 2: reset motorhome status if no other active contract ────────
-  let motorhomeReset: 'pending' | 'active' | null = null;
-  if (contract.motorhome_id) {
+  // ─── Step 2: reset kitchen status if no other active contract ────────
+  let kitchenReset: 'pending' | 'active' | null = null;
+  if (contract.kitchen_id) {
     try {
       const { data: otherActive } = await supabaseAdmin
         .from('purchase_contracts')
         .select('id')
-        .eq('motorhome_id', contract.motorhome_id)
+        .eq('kitchen_id', contract.kitchen_id)
         .eq('status', 'active')
         .limit(1);
 
@@ -244,7 +244,7 @@ Deno.serve(async (req) => {
         const { data: liveAuction } = await supabaseAdmin
           .from('auctions')
           .select('id, status')
-          .eq('motorhome_id', contract.motorhome_id)
+          .eq('kitchen_id', contract.kitchen_id)
           .in('status', ['active', 'draft', 'kaufchance'])
           .limit(1);
 
@@ -252,25 +252,25 @@ Deno.serve(async (req) => {
           liveAuction && liveAuction.length > 0 ? 'active' : 'pending';
 
         const { error: mhErr, data: updRows } = await supabaseAdmin
-          .from('motorhomes')
+          .from('kitchens')
           .update({
             status: newStatus,
             sold_at: null,
             sold_to: null,
             updated_at: new Date().toISOString(),
           })
-          .eq('id', contract.motorhome_id)
+          .eq('id', contract.kitchen_id)
           .eq('status', 'sold')
           .select('id');
 
         if (mhErr) {
-          edgeLogger.error('motorhome reset failed', mhErr);
+          edgeLogger.error('kitchen reset failed', mhErr);
         } else if (updRows && updRows.length > 0) {
-          motorhomeReset = newStatus;
+          kitchenReset = newStatus;
         }
       }
     } catch (e) {
-      edgeLogger.error('motorhome reset block threw', e);
+      edgeLogger.error('kitchen reset block threw', e);
     }
   }
 
@@ -420,13 +420,13 @@ Deno.serve(async (req) => {
       details: {
         contract_number: contract.contract_number,
         sale_price: Number(contract.sale_price || 0),
-        motorhome_id: contract.motorhome_id,
+        kitchen_id: contract.kitchen_id,
         buyer_id: contract.buyer_id,
         buyer_email: buyer?.email ?? null,
         seller_id: contract.seller_id,
         seller_email: seller?.email ?? null,
         reason,
-        motorhome_reset_to: motorhomeReset,
+        kitchen_reset_to: kitchenReset,
         buyer_mail_sent: buyerMailSent,
         buyer_mail_error: buyerMailError,
         seller_mail_sent: sellerMailSent,
@@ -443,7 +443,7 @@ Deno.serve(async (req) => {
       success: true,
       contractId,
       contractNumber: contract.contract_number,
-      motorhomeReset,
+      kitchenReset,
       buyerMailSent,
       buyerMailError,
       sellerMailSent,

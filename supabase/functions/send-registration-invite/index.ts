@@ -25,13 +25,13 @@ const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
  * 3. Redirects them to their dashboard where they can set a password
  *
  * Supports two invite types:
- * - "seller" (default): For customers whose motorhome was created by admin
+ * - "seller" (default): For customers whose kitchen was created by admin
  * - "dealer": For dealers created via the admin Händlerverwaltung
  *
  * Body: {
  *   email: string (required) - Recipient email
  *   customerName?: string - Recipient name for greeting
- *   motorhomeId?: string - Motorhome ID for vehicle info in email (seller only)
+ *   kitchenId?: string - Kitchen ID for vehicle info in email (seller only)
  *   sessionId?: string - Wizard session ID to track invite sent (seller only)
  *   inviteType?: "seller" | "dealer" - Type of invite (default: "seller")
  *   companyName?: string - Company name for dealer invites
@@ -41,7 +41,7 @@ const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 interface InviteRequest {
   email: string;
   customerName?: string;
-  motorhomeId?: string;
+  kitchenId?: string;
   sessionId?: string;
   inviteType?: "seller" | "dealer";
   companyName?: string;
@@ -91,34 +91,34 @@ const handler = async (req: Request): Promise<Response> => {
       support_phone: "+49 511 51532476",
     };
 
-    // Load motorhome info if provided (seller invites only)
+    // Load kitchen info if provided (seller invites only)
     let vehicleInfo = "";
     let vehicleName = "Ihr Wohnmobil";
-    if (inviteType === "seller" && body.motorhomeId) {
-      const { data: motorhome } = await supabase
-        .from("motorhomes")
+    if (inviteType === "seller" && body.kitchenId) {
+      const { data: kitchen } = await supabase
+        .from("kitchens")
         .select("manufacturer, model, year, body_type, mileage, sale_channel, instant_price")
-        .eq("id", body.motorhomeId)
+        .eq("id", body.kitchenId)
         .maybeSingle();
 
-      if (motorhome) {
-        vehicleName = [motorhome.manufacturer, motorhome.model, motorhome.year ? `(${motorhome.year})` : ""]
+      if (kitchen) {
+        vehicleName = [kitchen.manufacturer, kitchen.model, kitchen.year ? `(${kitchen.year})` : ""]
           .filter(Boolean)
           .join(" ");
 
-        const hasInstantBuy = motorhome.instant_price && Number(motorhome.instant_price) > 0;
+        const hasInstantBuy = kitchen.instant_price && Number(kitchen.instant_price) > 0;
         const saleChannelLabel =
-          motorhome.sale_channel === "instant_price" ? "Festpreis (Sofortkauf)" :
-          motorhome.sale_channel === "station" ? "Ankaufstation" :
+          kitchen.sale_channel === "instant_price" ? "Festpreis (Sofortkauf)" :
+          kitchen.sale_channel === "station" ? "Ankaufstation" :
           hasInstantBuy ? "H\u00e4ndler-Auktion + Sofortkauf" :
-          motorhome.sale_channel === "auction" ? "H\u00e4ndler-Auktion" :
-          motorhome.sale_channel || "\u2013";
+          kitchen.sale_channel === "auction" ? "H\u00e4ndler-Auktion" :
+          kitchen.sale_channel || "\u2013";
 
         vehicleInfo = infoBox(
           "Ihr Fahrzeug bei CaravanWert",
           `${detailRow("Fahrzeug", vehicleName)}
-           ${motorhome.body_type ? detailRow("Aufbauart", motorhome.body_type) : ""}
-           ${motorhome.mileage ? detailRow("Kilometerstand", `${Number(motorhome.mileage).toLocaleString("de-DE")} km`) : ""}
+           ${kitchen.body_type ? detailRow("Aufbauart", kitchen.body_type) : ""}
+           ${kitchen.mileage ? detailRow("Kilometerstand", `${Number(kitchen.mileage).toLocaleString("de-DE")} km`) : ""}
            ${detailRow("Verkaufsweg", saleChannelLabel)}`,
           "success",
           settingsData

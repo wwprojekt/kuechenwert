@@ -60,7 +60,7 @@ Deno.serve(async (req) => {
 
     const { data: invoice, error: invoiceError } = await supabase
       .from('invoices')
-      .select(`*, dealer:profiles(salutation, first_name, last_name, company_name, email, company_street, company_city, company_zip, company_country, address_street, address_city, address_zip, address_country, customer_number, vat_id), auction:auctions(motorhome:motorhomes(manufacturer, model)), items:invoice_items(*)`)
+      .select(`*, dealer:profiles(salutation, first_name, last_name, company_name, email, company_street, company_city, company_zip, company_country, address_street, address_city, address_zip, address_country, customer_number, vat_id), auction:auctions(kitchen:kitchens(manufacturer, model)), items:invoice_items(*)`)
       .eq('id', invoiceId).single();
     if (invoiceError || !invoice) throw new Error(`Invoice not found: ${invoiceError?.message}`);
 
@@ -114,8 +114,8 @@ Deno.serve(async (req) => {
       : '';
     const mhName = isPenalty
       ? 'Vertragsstrafe'
-      : (invoice.auction?.motorhome
-        ? `${invoice.auction.motorhome.manufacturer} ${invoice.auction.motorhome.model}` : 'Vermittlungsprovision');
+      : (invoice.auction?.kitchen
+        ? `${invoice.auction.kitchen.manufacturer} ${invoice.auction.kitchen.model}` : 'Vermittlungsprovision');
 
     let agbVersionStr = '';
     if (isPenalty) {

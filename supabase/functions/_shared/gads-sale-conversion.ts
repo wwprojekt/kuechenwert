@@ -7,7 +7,7 @@
  *
  * Behaviour:
  * - Requires a confirmed sale (caller decides; we only run when invoked).
- * - Skips silently if no GCLID/GBRAID/WBRAID is present on the motorhome
+ * - Skips silently if no GCLID/GBRAID/WBRAID is present on the kitchen
  *   (we have no way to attribute the sale to a Google Ads click).
  * - Skips silently if any of the required Edge Function secrets is missing.
  * - Uploads to action ID `GADS_SALE_CONVERSION_ACTION_ID` ("Fahrzeug Verkauft").
@@ -20,7 +20,7 @@
  * existing admin-summary.
  */
 
-interface MotorhomeClickIds {
+interface KitchenClickIds {
   gclid?: string | null;
   gbraid?: string | null;
   wbraid?: string | null;
@@ -41,14 +41,14 @@ export interface UploadSaleConversionParams {
   /** Source for log prefix, e.g. "close-auction", "instant-buy". */
   source: string;
   auctionId: string;
-  motorhomeId: string;
+  kitchenId: string;
   sellerId: string | null | undefined;
   /** Dealer (buyer) ID — used for commission calculation. */
   dealerId: string;
   /** Final sale price in EUR. */
   saleAmount: number;
-  /** Click IDs that were stored on the motorhome at sale time. */
-  clickIds: MotorhomeClickIds;
+  /** Click IDs that were stored on the kitchen at sale time. */
+  clickIds: KitchenClickIds;
 }
 
 export interface UploadSaleConversionResult {
@@ -67,12 +67,12 @@ const LOGIN_CUSTOMER_ID_FALLBACK = '9746508145';
 export async function uploadSaleConversionToGoogleAds(
   params: UploadSaleConversionParams,
 ): Promise<UploadSaleConversionResult> {
-  const { supabase, source, auctionId, motorhomeId, sellerId, dealerId, saleAmount, clickIds } = params;
+  const { supabase, source, auctionId, kitchenId, sellerId, dealerId, saleAmount, clickIds } = params;
   const log = (msg: string, ...rest: unknown[]) => console.log(`[gads-sale][${source}] ${msg}`, ...rest);
   const errLog = (msg: string, ...rest: unknown[]) => console.error(`[gads-sale][${source}] ${msg}`, ...rest);
 
   if (!clickIds.gclid && !clickIds.gbraid && !clickIds.wbraid) {
-    log('No GCLID/GBRAID/WBRAID on motorhome, skipping Google Ads sale upload.');
+    log('No GCLID/GBRAID/WBRAID on kitchen, skipping Google Ads sale upload.');
     return { attempted: false, success: false, skipped: 'no_click_id' };
   }
 
@@ -184,7 +184,7 @@ export async function uploadSaleConversionToGoogleAds(
     const gadsResult = await gadsResponse.json().catch(() => null);
     log(
       `Google Ads sale upload: HTTP ${gadsResponse.status} ` +
-        `(commission €${commissionAmount.toFixed(2)} of sale €${saleAmount}, motorhome ${motorhomeId})`,
+        `(commission €${commissionAmount.toFixed(2)} of sale €${saleAmount}, kitchen ${kitchenId})`,
     );
 
     if (!gadsResponse.ok) {

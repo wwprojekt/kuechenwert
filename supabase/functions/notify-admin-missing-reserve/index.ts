@@ -16,7 +16,7 @@ serve(async (_req: Request): Promise<Response> => {
 
     const { data: rows, error } = await supabase
       .from("auctions")
-      .select("id, motorhome_id, starting_bid, end_time, status, motorhomes!inner(manufacturer, model, year)")
+      .select("id, kitchen_id, starting_bid, end_time, status, kitchens!inner(manufacturer, model, year)")
       .in("status", ["active", "kaufchance"])
       .is("seller_initial_reserve", null)
       .order("start_time", { ascending: true });
@@ -31,7 +31,7 @@ serve(async (_req: Request): Promise<Response> => {
 
     const tableRows = rows
       .map((r: any) => {
-        const m = r.motorhomes;
+        const m = r.kitchens;
         const endTime = new Date(r.end_time).toLocaleString("de-DE", {
           timeZone: "Europe/Berlin",
           day: "2-digit",
@@ -45,7 +45,7 @@ serve(async (_req: Request): Promise<Response> => {
           <td style="padding:8px;border:1px solid #ddd;font-family:monospace;font-size:12px;">${r.id}</td>
           <td style="padding:8px;border:1px solid #ddd;text-align:right;">${r.starting_bid ?? "-"} €</td>
           <td style="padding:8px;border:1px solid #ddd;">${endTime}</td>
-          <td style="padding:8px;border:1px solid #ddd;"><a href="https://caravanwert.de/admin/motorhomes/${r.motorhome_id}" style="color:#0066cc;">Bearbeiten →</a></td>
+          <td style="padding:8px;border:1px solid #ddd;"><a href="https://caravanwert.de/admin/kitchens/${r.kitchen_id}" style="color:#0066cc;">Bearbeiten →</a></td>
         </tr>`;
       })
       .join("\n");

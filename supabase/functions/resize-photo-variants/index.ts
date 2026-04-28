@@ -1,7 +1,7 @@
 /**
  * Edge Function: resize-photo-variants
  *
- * Verarbeitet `motorhome_photos`-Rows mit `processed_at IS NULL` und generiert
+ * Verarbeitet `kitchen_photos`-Rows mit `processed_at IS NULL` und generiert
  * pro Foto zwei verkleinerte JPEG-Variants:
  *   • card_url    →  ~480 px Breite, JPEG q80    (Listings/Cards)
  *   • medium_url  →  ~1024 px Breite, JPEG q82  (Detail-Seite)
@@ -13,8 +13,8 @@
  *     dauerhaft fehlschlägt (Frontend `card_url ?? url`)
  *
  * Variants landen im selben Bucket unter:
- *   motorhome-photos/{motorhome_id}/variants/{photo_id}_card.jpg
- *   motorhome-photos/{motorhome_id}/variants/{photo_id}_medium.jpg
+ *   kitchen-photos/{kitchen_id}/variants/{photo_id}_card.jpg
+ *   kitchen-photos/{kitchen_id}/variants/{photo_id}_medium.jpg
  *
  * Die {photo_id} im Pfad sorgt dafür, dass beim Re-Processing dieselben
  * Pfade entstehen — `upsert: true` sorgt für Idempotenz.
@@ -56,7 +56,7 @@ import {
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-const BUCKET = "motorhome-photos";
+const BUCKET = "kitchen-photos";
 
 // Card-Variant: passend für 480x320 Card-Slots auf /kaufen + Listings.
 // Wir resizen nur auf BREITE 480 — Höhe folgt dem Aspect-Ratio. Das
@@ -108,7 +108,7 @@ interface ProcessResult {
 
 interface PhotoRow {
   id: string;
-  motorhome_id: string;
+  kitchen_id: string;
   url: string;
   processing_attempts: number | null;
 }
@@ -171,10 +171,10 @@ Deno.serve(async (req: Request) => {
   const adminClient = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
   // Pick die zu verarbeitenden Rows. Im Cron-Modus: älteste unprozessierte
-  // Photos zuerst (FIFO über den Partial-Index `idx_motorhome_photos_unprocessed`).
+  // Photos zuerst (FIFO über den Partial-Index `idx_kitchen_photos_unprocessed`).
   let query = adminClient
-    .from("motorhome_photos")
-    .select("id, motorhome_id, url, processing_attempts");
+    .from("kitchen_photos")
+    .select("id, kitchen_id, url, processing_attempts");
 
   if (body.photoIds && body.photoIds.length > 0) {
     query = query.in("id", body.photoIds);
@@ -222,7 +222,7 @@ Deno.serve(async (req: Request) => {
       if (message.startsWith("UNSUPPORTED:")) {
         result.skippedUnsupported++;
         await adminClient
-          .from("motorhome_photos")
+          .from("kitchen_photos")
           .update({
             processed_at: new Date().toISOString(),
             processing_error: message,
@@ -235,7 +235,7 @@ Deno.serve(async (req: Request) => {
       result.failed++;
       result.errors.push({ id: row.id, message });
       await adminClient
-        .from("motorhome_photos")
+        .from("kitchen_photos")
         .update({
           processing_attempts: (row.processing_attempts ?? 0) + 1,
           processing_error: message.slice(0, 500),
@@ -287,9 +287,9 @@ async function processPhoto(
     throw new Error("UNSUPPORTED: decoded image has zero dimensions");
   }
 
-  const motorhomeId = row.motorhome_id;
+  const kitchenId = row.kitchen_id;
   const photoId = row.id;
-  const variantsPrefix = `${motorhomeId}/variants/${photoId}`;
+  const variantsPrefix = `${kitchenId}/variants/${photoId}`;
 
   const cardUrl = await generateAndUploadVariant(
     adminClient,
@@ -308,7 +308,7 @@ async function processPhoto(
   );
 
   const { error: updateError } = await adminClient
-    .from("motorhome_photos")
+    .from("kitchen_photos")
     .update({
       card_url: cardUrl,
       medium_url: mediumUrl,

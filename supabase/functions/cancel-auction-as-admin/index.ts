@@ -19,7 +19,7 @@ import { edgeLogger, logEdgeError } from '../_shared/edgeLogger.ts';
  *
  * Order of operations:
  *   1. Auth: caller must be admin
- *   2. Load auction + motorhome + seller (need email + display title)
+ *   2. Load auction + kitchen + seller (need email + display title)
  *   3. Snapshot affected parties BEFORE any state change:
  *        - distinct bidder_ids from `bids`
  *        - distinct buyer_ids from open `post_auction_offers`
@@ -175,7 +175,7 @@ Deno.serve(async (req) => {
   const { data: auction, error: auctionErr } = await supabaseAdmin
     .from('auctions')
     .select(
-      'id, status, current_bid, starting_bid, end_time, motorhome_id, motorhome:motorhomes(manufacturer, model, year, seller_id, seller:profiles!motorhomes_seller_id_fkey(id, email, first_name, last_name, company_name))',
+      'id, status, current_bid, starting_bid, end_time, kitchen_id, kitchen:kitchens(manufacturer, model, year, seller_id, seller:profiles!kitchens_seller_id_fkey(id, email, first_name, last_name, company_name))',
     )
     .eq('id', auctionId)
     .single();
@@ -194,20 +194,20 @@ Deno.serve(async (req) => {
     );
   }
 
-  const motorhome = (auction as unknown as {
-    motorhome: {
+  const kitchen = (auction as unknown as {
+    kitchen: {
       manufacturer: string | null;
       model: string | null;
       year: number | null;
       seller_id: string | null;
       seller: ProfileLite | null;
     } | null;
-  }).motorhome;
-  const seller = motorhome?.seller ?? null;
-  const vehicleTitle = motorhome
-    ? `${motorhome.manufacturer ?? ''} ${motorhome.model ?? ''}`.trim() || 'Inserat'
+  }).kitchen;
+  const seller = kitchen?.seller ?? null;
+  const vehicleTitle = kitchen
+    ? `${kitchen.manufacturer ?? ''} ${kitchen.model ?? ''}`.trim() || 'Inserat'
     : 'Inserat';
-  const yearSuffix = motorhome?.year ? ` (${motorhome.year})` : '';
+  const yearSuffix = kitchen?.year ? ` (${kitchen.year})` : '';
 
   // ─── Snapshot affected parties BEFORE any change ───────────────────────
   const { data: bidsRows } = await supabaseAdmin
@@ -285,7 +285,7 @@ Deno.serve(async (req) => {
     if (inv?.bidder_id) bidderIds.add(inv.bidder_id);
   }
   // Don't notify the seller via the bidder template
-  if (motorhome?.seller_id) bidderIds.delete(motorhome.seller_id);
+  if (kitchen?.seller_id) bidderIds.delete(kitchen.seller_id);
 
   let bidderProfiles: ProfileLite[] = [];
   if (bidderIds.size > 0) {
@@ -444,8 +444,8 @@ Deno.serve(async (req) => {
       entity_id: auctionId,
       details: {
         vehicle_title: vehicleTitle,
-        motorhome_id: auction.motorhome_id,
-        seller_id: motorhome?.seller_id ?? null,
+        kitchen_id: auction.kitchen_id,
+        seller_id: kitchen?.seller_id ?? null,
         seller_email: seller?.email ?? null,
         previous_status: auction.status,
         current_bid: Number(auction.current_bid || 0),

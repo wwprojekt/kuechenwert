@@ -88,29 +88,29 @@ Deno.serve(async (req) => {
       throw new Error('newInvoiceNet, newInvoiceTaxRate, newInvoiceTaxAmount, newInvoiceGross are required');
     }
 
-    // ─── 0. Lade Auction + Motorhome + Käufer (sold_to) ───────────
+    // ─── 0. Lade Auction + Kitchen + Käufer (sold_to) ───────────
     const { data: auction, error: auctionErr } = await supabase
       .from('auctions')
-      .select('id, motorhome_id, current_bid')
+      .select('id, kitchen_id, current_bid')
       .eq('id', auctionId)
       .single();
     if (auctionErr || !auction) throw new Error(`Auction not found: ${auctionErr?.message}`);
 
-    const { data: motorhome, error: mhErr } = await supabase
-      .from('motorhomes')
+    const { data: kitchen, error: mhErr } = await supabase
+      .from('kitchens')
       .select('id, manufacturer, model, seller_id, sold_to')
-      .eq('id', auction.motorhome_id)
+      .eq('id', auction.kitchen_id)
       .single();
-    if (mhErr || !motorhome) throw new Error(`Motorhome not found: ${mhErr?.message}`);
+    if (mhErr || !kitchen) throw new Error(`Kitchen not found: ${mhErr?.message}`);
 
-    const buyerId = motorhome.sold_to;
-    const sellerId = motorhome.seller_id;
+    const buyerId = kitchen.sold_to;
+    const sellerId = kitchen.seller_id;
     if (!buyerId || !sellerId) {
-      throw new Error('Motorhome has no sold_to or seller_id set');
+      throw new Error('Kitchen has no sold_to or seller_id set');
     }
-    summary.auction = { auctionId, motorhomeId: motorhome.id, buyerId, sellerId };
+    summary.auction = { auctionId, kitchenId: kitchen.id, buyerId, sellerId };
 
-    const motorhomeName = `${motorhome.manufacturer ?? ''} ${motorhome.model ?? ''}`.trim();
+    const kitchenName = `${kitchen.manufacturer ?? ''} ${kitchen.model ?? ''}`.trim();
 
     // ─── 1. Alte Verträge canceln + PDFs aus Storage löschen ────
     const { data: oldContracts } = await supabase
@@ -250,7 +250,7 @@ Deno.serve(async (req) => {
         payment_terms_days: payTerms,
         due_date: new Date(Date.now() + payTerms * 24 * 60 * 60 * 1000).toISOString().slice(0, 10),
         invoice_date: new Date().toISOString().slice(0, 10),
-        notes: `${isReverseCharge ? 'Reverse Charge (§13b UStG): ' : 'Provision: '}${motorhomeName} (Korrektur ${reason})`,
+        notes: `${isReverseCharge ? 'Reverse Charge (§13b UStG): ' : 'Provision: '}${kitchenName} (Korrektur ${reason})`,
         reverse_charge: isReverseCharge,
         dealer_country: dealerCountry,
         invoice_type: 'commission',
@@ -262,7 +262,7 @@ Deno.serve(async (req) => {
 
     const { error: itemErr } = await supabase.from('invoice_items').insert({
       invoice_id: newInvoiceId,
-      description: `Vermittlungsprovision - ${motorhomeName}`,
+      description: `Vermittlungsprovision - ${kitchenName}`,
       quantity: 1,
       unit_price: newInvoiceNet,
       net_amount: newInvoiceNet,
@@ -305,7 +305,7 @@ Deno.serve(async (req) => {
         {
           body: {
             auctionId,
-            motorhomeId: motorhome.id,
+            kitchenId: kitchen.id,
             buyerId,
             sellerId,
             salePrice: newSalePrice,
@@ -325,7 +325,7 @@ Deno.serve(async (req) => {
       errors.push(`generate-purchase-contract throw: ${(e as Error).message}`);
     }
 
-    // Der Vertrags-Generator setzt motorhomes.contract_url + contract_number selbst.
+    // Der Vertrags-Generator setzt kitchens.contract_url + contract_number selbst.
 
     // ─── 9. Vertrag an Verkäufer + Käufer mailen ────────────────
     if (contractPdfBase64 && contractNumber && RESEND_API_KEY) {
@@ -358,14 +358,14 @@ Deno.serve(async (req) => {
           `
             ${paragraph(`${isSeller ? 'Hallo' : 'Sehr geehrte/r'} ${recipientName},`)}
             ${paragraph(
-              `wir mussten den Kaufvertrag für ${motorhomeName} korrigieren. Anbei erhalten Sie den neuen, gültigen Kaufvertrag. Frühere Versionen sind hiermit ungültig.`,
+              `wir mussten den Kaufvertrag für ${kitchenName} korrigieren. Anbei erhalten Sie den neuen, gültigen Kaufvertrag. Frühere Versionen sind hiermit ungültig.`,
             )}
             ${infoBox(
               'Korrigierte Vertragsdetails',
               `
                 ${detailRow('Neuer Kaufpreis', `€${Number(newSalePrice).toLocaleString('de-DE')}`)}
                 ${detailRow('Neue Vertragsnr.', contractNumber)}
-                ${detailRow('Fahrzeug', motorhomeName)}
+                ${detailRow('Fahrzeug', kitchenName)}
                 ${detailRow('Grund der Korrektur', reason)}
               `,
               'success',
@@ -378,7 +378,7 @@ Deno.serve(async (req) => {
             ${paragraph(`Mit freundlichen Grüßen,<br>Ihr ${settingsData.site_name} Team`)}
           `,
         );
-        const subject = `Korrigierter Kaufvertrag ${contractNumber} – ${motorhomeName}`;
+        const subject = `Korrigierter Kaufvertrag ${contractNumber} – ${kitchenName}`;
         const res = await fetch('https://api.resend.com/emails', {
           method: 'POST',
           headers: {
@@ -462,12 +462,12 @@ Deno.serve(async (req) => {
           supabase,
           resendApiKey: RESEND_API_KEY,
           settingsData: settings || { site_name: 'CaravanWert', contact_email: 'info@caravanwert.de' },
-          motorhomeId: motorhome.id,
+          kitchenId: kitchen.id,
           buyerId,
           sellerId,
           contractNumber,
           salePrice: Number(newSalePrice),
-          vehicleName: motorhomeName,
+          vehicleName: kitchenName,
           sellerProfile: sellerProfile2,
           buyerProfile: buyerProfile2,
           source: 'admin-correct-sale',

@@ -40,7 +40,7 @@ interface AuctionEmailRequest {
     // weder den Status (eigene Entscheidung) noch die nächsten Schritte
     // (manuell neu inserieren) kommuniziert hat.
     | "seller_chose_to_end";
-  motorhomeModel: string;
+  kitchenModel: string;
   auctionUrl: string;
   currentBid?: string;
   yourBid?: string;
@@ -64,7 +64,7 @@ interface AuctionEmailRequest {
   roundNumber?: string;       // e.g. "2"  – currently active round number
   extendedUntil?: string;     // formatted new end_time after auto-extension
   sellerName?: string;        // used for admin_festpreis_needs_price body
-  motorhomeId?: string;       // optional, for admin deep-link
+  kitchenId?: string;       // optional, for admin deep-link
   // Phase-4 Audit-Fix #6/#10: Soft-Brake & Festpreis-Cap Felder
   softBrakeReason?: 'max_rounds_reached' | 'marketing_phase_expired' | 'auto_relist_off';
   isAuctionType?: boolean;    // true=Auktion, false=Festpreis (für Soft-Brake-Mail)
@@ -83,10 +83,10 @@ const handler = async (req: Request): Promise<Response> => {
 
   try {
     const {
-      email, name, type, motorhomeModel, auctionUrl, currentBid, yourBid, endTime,
+      email, name, type, kitchenModel, auctionUrl, currentBid, yourBid, endTime,
       customerNumber: passedCustNum, rank, expiresAt, reservePrice, topBiddersCount,
       offerAmount, buyerName, sellerResponse, counterAmount, isFestpreis, listingEnded,
-      roundNumber, extendedUntil, sellerName, motorhomeId,
+      roundNumber, extendedUntil, sellerName, kitchenId,
       softBrakeReason, isAuctionType, softCapDate,
     }: AuctionEmailRequest = await req.json();
 
@@ -149,7 +149,7 @@ const handler = async (req: Request): Promise<Response> => {
           ${customerBadge(custNum)}
           ${paragraph('Ihr Wohnmobil wurde erfolgreich in die Auktion aufgenommen und ist jetzt für Händler sichtbar.')}
           ${infoBox('Fahrzeugdetails', `
-            ${detailRow('Fahrzeug', motorhomeModel)}
+            ${detailRow('Fahrzeug', kitchenModel)}
             ${currentBid ? detailRow('Startgebot', currentBid) : ''}
             ${endTime ? detailRow('Auktionsende', endTime) : ''}
           `, 'success', settingsData)}
@@ -165,7 +165,7 @@ const handler = async (req: Request): Promise<Response> => {
           ${customerBadge(custNum)}
           ${paragraph('Eine neue Auktion, die Ihren Kriterien entspricht, ist jetzt verfügbar:')}
           ${infoBox('Fahrzeugdetails', `
-            ${detailRow('Fahrzeug', motorhomeModel)}
+            ${detailRow('Fahrzeug', kitchenModel)}
             ${currentBid ? detailRow('Startgebot', currentBid) : ''}
             ${endTime ? detailRow('Endet am', endTime) : ''}
           `, 'info', settingsData)}
@@ -180,7 +180,7 @@ const handler = async (req: Request): Promise<Response> => {
           ${customerBadge(custNum)}
           ${paragraph('Auf Ihr Wohnmobil wurde ein neues Gebot abgegeben:')}
           ${infoBox('Gebotsdetails', `
-            ${detailRow('Fahrzeug', motorhomeModel)}
+            ${detailRow('Fahrzeug', kitchenModel)}
             ${currentBid ? detailRow('Aktuelles Höchstgebot', currentBid) : ''}
           `, 'success', settingsData)}
           ${button('Auktion ansehen', auctionUrl, settingsData)}
@@ -194,7 +194,7 @@ const handler = async (req: Request): Promise<Response> => {
           ${customerBadge(custNum)}
           ${paragraph('Ein anderer Händler hat ein höheres Gebot abgegeben:')}
           ${infoBox('Gebotsdetails', `
-            ${detailRow('Fahrzeug', motorhomeModel)}
+            ${detailRow('Fahrzeug', kitchenModel)}
             ${yourBid ? detailRow('Ihr Gebot', yourBid) : ''}
             ${currentBid ? detailRow('Aktuelles Höchstgebot', currentBid) : ''}
           `, 'warning', settingsData)}
@@ -209,7 +209,7 @@ const handler = async (req: Request): Promise<Response> => {
           ${customerBadge(custNum)}
           ${paragraph('<strong>Herzlichen Glückwunsch! Sie haben die Auktion gewonnen!</strong>')}
           ${infoBox('Auktionsdetails', `
-            ${detailRow('Fahrzeug', motorhomeModel)}
+            ${detailRow('Fahrzeug', kitchenModel)}
             ${currentBid ? detailRow('Ihr Gebot', currentBid) : ''}
           `, 'success', settingsData)}
           ${paragraph('Wir werden uns in Kürze mit den nächsten Schritten zur Abwicklung bei Ihnen melden.')}
@@ -231,7 +231,7 @@ const handler = async (req: Request): Promise<Response> => {
               : 'Die Auktion für folgendes Fahrzeug wurde beendet:')
           )}
           ${infoBox(isFestpreis ? 'Angebotsdetails' : 'Auktionsdetails', `
-            ${detailRow('Fahrzeug', motorhomeModel)}
+            ${detailRow('Fahrzeug', kitchenModel)}
             ${yourBid ? detailRow(isFestpreis ? 'Ihr Angebot' : 'Ihr Gebot', yourBid) : ''}
             ${currentBid && !listingEnded ? detailRow(isFestpreis ? 'Verkaufspreis' : 'Höchstgebot', currentBid) : ''}
           `, 'default', settingsData)}
@@ -247,7 +247,7 @@ const handler = async (req: Request): Promise<Response> => {
           ${customerBadge(custNum)}
           ${paragraph('<strong>Großartige Neuigkeiten!</strong> Ihr Wohnmobil wurde über unsere Plattform erfolgreich an einen geprüften Händler verkauft.')}
           ${infoBox('Verkaufsdetails', `
-            ${detailRow('Fahrzeug', motorhomeModel)}
+            ${detailRow('Fahrzeug', kitchenModel)}
             ${currentBid ? detailRow('Verkaufspreis', currentBid) : ''}
           `, 'success', settingsData)}
           ${paragraph('Wir werden uns in Kürze bei Ihnen melden, um die nächsten Schritte zu besprechen:')}
@@ -266,7 +266,7 @@ const handler = async (req: Request): Promise<Response> => {
           ${customerBadge(custNum)}
           ${paragraph('Ihre Auktion für das folgende Fahrzeug ist leider ohne Verkauf beendet worden:')}
           ${infoBox('Auktionsdetails', `
-            ${detailRow('Fahrzeug', motorhomeModel)}
+            ${detailRow('Fahrzeug', kitchenModel)}
             ${currentBid ? detailRow('Höchstes Gebot', currentBid) : detailRow('Gebote', 'Keine Gebote eingegangen')}
           `, 'default', settingsData)}
           ${paragraph(currentBid 
@@ -282,14 +282,14 @@ const handler = async (req: Request): Promise<Response> => {
         break;
 
       case "kaufchance_invite":
-        subject = `Kaufchance: ${motorhomeModel} – Ihr Angebot ist gefragt!`;
+        subject = `Kaufchance: ${kitchenModel} – Ihr Angebot ist gefragt!`;
         emailContent = `
           ${paragraph(`Hallo ${name},`)}
           ${customerBadge(custNum)}
           ${paragraph('<strong>Sie haben eine exklusive Kaufchance!</strong>')}
           ${paragraph('Die Auktion für das folgende Fahrzeug wurde beendet, ohne dass das Mindestgebot erreicht wurde. Als einer der Höchstbieter haben Sie die Möglichkeit, dem Verkäufer ein neues Angebot zu unterbreiten.')}
           ${infoBox('Fahrzeugdetails', `
-            ${detailRow('Fahrzeug', motorhomeModel)}
+            ${detailRow('Fahrzeug', kitchenModel)}
             ${yourBid ? detailRow('Ihr höchstes Gebot', yourBid) : ''}
             ${currentBid ? detailRow('Höchstes Gebot insgesamt', currentBid) : ''}
             ${rank ? detailRow('Ihre Position', `Platz ${rank} von ${topBiddersCount || '2'} eingeladenen Bietern`) : ''}
@@ -308,13 +308,13 @@ const handler = async (req: Request): Promise<Response> => {
         break;
 
       case "seller_kaufchance":
-        subject = `Kaufchance für Ihr Fahrzeug: ${motorhomeModel}`;
+        subject = `Kaufchance für Ihr Fahrzeug: ${kitchenModel}`;
         emailContent = `
           ${paragraph(`Hallo ${name},`)}
           ${customerBadge(custNum)}
           ${paragraph('Die Auktion für Ihr Fahrzeug wurde beendet. Leider wurde das Mindestgebot nicht erreicht – <strong>aber es gibt gute Neuigkeiten!</strong>')}
           ${infoBox('Auktionsergebnis', `
-            ${detailRow('Fahrzeug', motorhomeModel)}
+            ${detailRow('Fahrzeug', kitchenModel)}
             ${currentBid ? detailRow('Höchstes Gebot', currentBid) : ''}
             ${reservePrice ? detailRow('Ihr Mindestgebot', reservePrice) : ''}
           `, 'info', settingsData)}
@@ -334,13 +334,13 @@ const handler = async (req: Request): Promise<Response> => {
         break;
 
       case "seller_relisted":
-        subject = `Gute Neuigkeiten: ${motorhomeModel} – Erneute Auktion gestartet!`;
+        subject = `Gute Neuigkeiten: ${kitchenModel} – Erneute Auktion gestartet!`;
         emailContent = `
           ${paragraph(`Hallo ${name},`)}
           ${customerBadge(custNum)}
           ${paragraph('<strong>Gute Neuigkeiten!</strong> Ihr Fahrzeug wurde erneut in unsere H&auml;ndler-Auktion aufgenommen.')}
           ${infoBox('Auktionsdetails', `
-            ${detailRow('Fahrzeug', motorhomeModel)}
+            ${detailRow('Fahrzeug', kitchenModel)}
             ${endTime ? detailRow('Neues Auktionsende', endTime) : ''}
           `, 'success', settingsData)}
           ${paragraph('Ihr Fahrzeug ist ab sofort wieder f&uuml;r alle gepr&uuml;ften H&auml;ndler sichtbar und es k&ouml;nnen neue Gebote abgegeben werden.')}
@@ -354,7 +354,7 @@ const handler = async (req: Request): Promise<Response> => {
 
       case "seller_new_offer":
         // WICHTIG: Kein buyerName hier! Verkäufer darf Händler-Identität erst nach Kaufvertrag erfahren.
-        subject = isFestpreis ? `Neuer Preisvorschlag f\u00fcr ${motorhomeModel}` : `Neues Kaufangebot f\u00fcr ${motorhomeModel}`;
+        subject = isFestpreis ? `Neuer Preisvorschlag f\u00fcr ${kitchenModel}` : `Neues Kaufangebot f\u00fcr ${kitchenModel}`;
         emailContent = `
           ${paragraph(`Hallo ${name},`)}
           ${customerBadge(custNum)}
@@ -364,7 +364,7 @@ const handler = async (req: Request): Promise<Response> => {
             : 'Ein Händler hat während der Kaufchance-Phase ein Angebot für Ihr Fahrzeug abgegeben.'
           )}
           ${infoBox('Angebotsdetails', `
-            ${detailRow('Fahrzeug', motorhomeModel)}
+            ${detailRow('Fahrzeug', kitchenModel)}
             ${offerAmount ? detailRow('Angebotsbetrag', offerAmount) : ''}
             ${currentBid ? detailRow(isFestpreis ? 'Ihr Festpreis' : 'Letztes Auktionsgebot', currentBid) : ''}
           `, 'success', settingsData)}
@@ -377,12 +377,12 @@ const handler = async (req: Request): Promise<Response> => {
         break;
 
       case "admin_new_offer":
-        subject = `[Admin] ${isFestpreis ? 'Neuer Preisvorschlag' : 'Neues Kaufangebot'} f\u00fcr ${motorhomeModel}`;
+        subject = `[Admin] ${isFestpreis ? 'Neuer Preisvorschlag' : 'Neues Kaufangebot'} f\u00fcr ${kitchenModel}`;
         emailContent = `
           ${paragraph(`Hallo ${name},`)}
           ${paragraph(isFestpreis ? '<strong>Ein neuer Preisvorschlag ist eingegangen.</strong>' : '<strong>Ein neues Kaufangebot ist eingegangen.</strong>')}
           ${infoBox('Angebotsdetails', `
-            ${detailRow('Fahrzeug', motorhomeModel)}
+            ${detailRow('Fahrzeug', kitchenModel)}
             ${offerAmount ? detailRow('Angebotsbetrag', offerAmount) : ''}
             ${buyerName ? detailRow('H\u00e4ndler', buyerName) : ''}
             ${currentBid ? detailRow(isFestpreis ? 'Festpreis' : 'Letztes Auktionsgebot', currentBid) : ''}
@@ -392,13 +392,13 @@ const handler = async (req: Request): Promise<Response> => {
         break;
 
       case "buyer_offer_rejected":
-        subject = `Ihr Angebot f\u00fcr ${motorhomeModel} wurde abgelehnt`;
+        subject = `Ihr Angebot f\u00fcr ${kitchenModel} wurde abgelehnt`;
         emailContent = `
           ${paragraph(`Hallo ${name},`)}
           ${customerBadge(custNum)}
           ${paragraph('Leider wurde Ihr Kaufangebot f\u00fcr das folgende Fahrzeug abgelehnt:')}
           ${infoBox('Angebotsdetails', `
-            ${detailRow('Fahrzeug', motorhomeModel)}
+            ${detailRow('Fahrzeug', kitchenModel)}
             ${offerAmount ? detailRow('Ihr Angebot', offerAmount) : ''}
             ${sellerResponse ? detailRow('Begr\u00fcndung', sellerResponse) : ''}
           `, 'warning', settingsData)}
@@ -414,14 +414,14 @@ const handler = async (req: Request): Promise<Response> => {
         break;
 
       case "buyer_counter_offer":
-        subject = `Gegenangebot f\u00fcr ${motorhomeModel} \u2013 Ihre Reaktion ist gefragt!`;
+        subject = `Gegenangebot f\u00fcr ${kitchenModel} \u2013 Ihre Reaktion ist gefragt!`;
         emailContent = `
           ${paragraph(`Hallo ${name},`)}
           ${customerBadge(custNum)}
           ${paragraph('<strong>Der Verk\u00e4ufer hat ein Gegenangebot gemacht!</strong>')}
           ${paragraph('Ihr Kaufangebot wurde nicht direkt angenommen, aber der Verk\u00e4ufer m\u00f6chte mit Ihnen verhandeln.')}
           ${infoBox('Verhandlungsdetails', `
-            ${detailRow('Fahrzeug', motorhomeModel)}
+            ${detailRow('Fahrzeug', kitchenModel)}
             ${offerAmount ? detailRow('Ihr Angebot', offerAmount) : ''}
             ${counterAmount ? detailRow('Gegenangebot des Verk\u00e4ufers', counterAmount) : ''}
             ${sellerResponse ? detailRow('Nachricht', sellerResponse) : ''}
@@ -438,14 +438,14 @@ const handler = async (req: Request): Promise<Response> => {
         break;
 
       case "seller_buyer_rejected":
-        subject = `Gegenangebot abgelehnt: ${motorhomeModel}`;
+        subject = `Gegenangebot abgelehnt: ${kitchenModel}`;
         emailContent = `
           ${paragraph(`Hallo ${name},`)}
           ${customerBadge(custNum)}
           ${paragraph('<strong>Ein H\u00e4ndler hat Ihr Gegenangebot abgelehnt.</strong>')}
           ${paragraph('Der H\u00e4ndler hat sich entschieden, Ihr Gegenangebot f\u00fcr das folgende Fahrzeug nicht anzunehmen.')}
           ${infoBox('Verhandlungsdetails', `
-            ${detailRow('Fahrzeug', motorhomeModel)}
+            ${detailRow('Fahrzeug', kitchenModel)}
             ${offerAmount ? detailRow('Angebot des H\u00e4ndlers', offerAmount) : ''}
             ${counterAmount ? detailRow('Ihr Gegenangebot', counterAmount) : ''}
             ${buyerName ? detailRow('H\u00e4ndler', buyerName) : ''}
@@ -461,13 +461,13 @@ const handler = async (req: Request): Promise<Response> => {
         break;
 
       case "kaufchance_expired":
-        subject = `Kaufchance abgelaufen: ${motorhomeModel}`;
+        subject = `Kaufchance abgelaufen: ${kitchenModel}`;
         emailContent = `
           ${paragraph(`Hallo ${name},`)}
           ${customerBadge(custNum)}
           ${paragraph('Die Kaufchance-Phase f\u00fcr das folgende Fahrzeug ist leider abgelaufen, ohne dass eine Einigung erzielt wurde.')}
           ${infoBox('Details', `
-            ${detailRow('Fahrzeug', motorhomeModel)}
+            ${detailRow('Fahrzeug', kitchenModel)}
             ${detailRow('Status', 'Kaufchance abgelaufen')}
           `, 'warning', settingsData)}
           ${paragraph('Offene Angebote wurden automatisch als abgelaufen markiert.')}
@@ -488,13 +488,13 @@ const handler = async (req: Request): Promise<Response> => {
         // RPC `toggle_auto_relist` nur in den Stati `kaufchance` oder
         // `active` (instant_price) erlaubt ist – der Auktions-Datensatz
         // selbst ist hier bereits `ended` und nicht mehr toggle-bar.
-        subject = `Auktion beendet wie gewünscht: ${motorhomeModel}`;
+        subject = `Auktion beendet wie gewünscht: ${kitchenModel}`;
         emailContent = `
           ${paragraph(`Hallo ${name},`)}
           ${customerBadge(custNum)}
           ${paragraph('Sie haben in der Kaufchance-Phase die <strong>Auto-Wiedereinstellung deaktiviert</strong>. Die 24-stündige Verhandlungsphase ist nun abgelaufen und Ihre Auktion ist – wie von Ihnen gewünscht – endgültig beendet.')}
           ${infoBox('Status Ihres Inserats', `
-            ${detailRow('Fahrzeug', motorhomeModel)}
+            ${detailRow('Fahrzeug', kitchenModel)}
             ${reservePrice ? detailRow('Letzter Mindestpreis', reservePrice) : ''}
             ${roundNumber ? detailRow('Erreichte Runde', String(roundNumber)) : ''}
             ${detailRow('Status', 'Beendet (auf Ihren Wunsch)')}
@@ -510,13 +510,13 @@ const handler = async (req: Request): Promise<Response> => {
       }
 
       case "seller_auto_relisted":
-        subject = `Neue Auktionsrunde gestartet: ${motorhomeModel}`;
+        subject = `Neue Auktionsrunde gestartet: ${kitchenModel}`;
         emailContent = `
           ${paragraph(`Hallo ${name},`)}
           ${customerBadge(custNum)}
           ${paragraph('Die Kaufchance-Phase f\u00fcr Ihr Fahrzeug ist abgelaufen, ohne dass eine Einigung erzielt wurde. <strong>Gem\u00e4\u00df unseren AGB wurde Ihr Fahrzeug automatisch erneut in die Auktion aufgenommen.</strong>')}
           ${infoBox('Neue Auktion', `
-            ${detailRow('Fahrzeug', motorhomeModel)}
+            ${detailRow('Fahrzeug', kitchenModel)}
             ${currentBid ? detailRow('Auktionsrunde', currentBid) : ''}
             ${endTime ? detailRow('Neues Auktionsende', endTime) : ''}
             ${reservePrice ? detailRow('Neuer Mindestpreis', reservePrice) : ''}
@@ -530,13 +530,13 @@ const handler = async (req: Request): Promise<Response> => {
         break;
 
       case "auction_relisted":
-        subject = `Neue Chance: ${motorhomeModel} \u2013 erneut in der Auktion!`;
+        subject = `Neue Chance: ${kitchenModel} \u2013 erneut in der Auktion!`;
         emailContent = `
           ${paragraph(`Hallo ${name},`)}
           ${customerBadge(custNum)}
           ${paragraph('<strong>Gute Neuigkeiten!</strong> Ein Fahrzeug, f\u00fcr das Sie sich interessiert haben, ist erneut in der Auktion verf\u00fcgbar.')}
           ${infoBox('Auktionsdetails', `
-            ${detailRow('Fahrzeug', motorhomeModel)}
+            ${detailRow('Fahrzeug', kitchenModel)}
             ${currentBid ? detailRow('Auktionsrunde', currentBid) : ''}
             ${endTime ? detailRow('Auktionsende', endTime) : ''}
           `, 'info', settingsData)}
@@ -552,13 +552,13 @@ const handler = async (req: Request): Promise<Response> => {
         // verlängert (kein Käufer hat den Festpreis akzeptiert). Verkäufer
         // wird informiert + zum Preis-Senken angeregt.
         const round = roundNumber || '2';
-        subject = `Ihr Festpreis-Inserat wurde verlängert: ${motorhomeModel}`;
+        subject = `Ihr Festpreis-Inserat wurde verlängert: ${kitchenModel}`;
         emailContent = `
           ${paragraph(`Hallo ${name},`)}
           ${customerBadge(custNum)}
           ${paragraph(`Ihr Festpreis-Inserat wurde leider noch nicht verkauft und deshalb <strong>automatisch um ${MARKETING_CONFIG.INSTANT_PRICE_DURATION_DAYS} Tage verlängert</strong>. Sie befinden sich nun in <strong>Runde ${round}</strong>.`)}
           ${infoBox('Inserat-Details', `
-            ${detailRow('Fahrzeug', motorhomeModel)}
+            ${detailRow('Fahrzeug', kitchenModel)}
             ${currentBid ? detailRow('Aktueller Festpreis', currentBid) : ''}
             ${extendedUntil ? detailRow('Neues Ablaufdatum', extendedUntil) : (endTime ? detailRow('Neues Ablaufdatum', endTime) : '')}
             ${detailRow('Runde', String(round))}
@@ -575,14 +575,14 @@ const handler = async (req: Request): Promise<Response> => {
       case "admin_festpreis_needs_price": {
         // Admin-Hilferuf: Festpreis-Inserat ist abgelaufen, hat aber NULL/0 als
         // instant_price. Admin muss manuell einen Preis setzen.
-        subject = `[Admin] Festpreis fehlt: ${motorhomeModel} – manuelle Aktion nötig`;
+        subject = `[Admin] Festpreis fehlt: ${kitchenModel} – manuelle Aktion nötig`;
         emailContent = `
           ${paragraph(`Hallo ${name},`)}
           ${paragraph('<strong>Ein Festpreis-Inserat ist abgelaufen, hat aber keinen Festpreis hinterlegt.</strong> Bitte setzen Sie manuell einen Festpreis im Admin-Dashboard, damit das Inserat wieder verkauft werden kann.')}
           ${infoBox('Inserat-Details', `
-            ${detailRow('Fahrzeug', motorhomeModel)}
+            ${detailRow('Fahrzeug', kitchenModel)}
             ${sellerName ? detailRow('Verkäufer', sellerName) : ''}
-            ${motorhomeId ? detailRow('Motorhome-ID', motorhomeId) : ''}
+            ${kitchenId ? detailRow('Kitchen-ID', kitchenId) : ''}
             ${detailRow('Status', 'Aktiv (24h Sichtbarkeit) – instant_price = NULL/0')}
           `, 'warning', settingsData)}
           ${paragraph('<strong>Was passiert ohne Aktion?</strong> Das Inserat bleibt 24 Stunden aktiv sichtbar und wird danach beendet. Es gibt keine weitere automatische Verlängerung.')}
@@ -596,13 +596,13 @@ const handler = async (req: Request): Promise<Response> => {
         // erinnert, dass das Inserat noch nicht verkauft wurde, und bekommt
         // konkrete Handlungsempfehlungen.
         const round = roundNumber || '2';
-        subject = `Runde ${round}: ${motorhomeModel} – Tipps für einen schnelleren Verkauf`;
+        subject = `Runde ${round}: ${kitchenModel} – Tipps für einen schnelleren Verkauf`;
         emailContent = `
           ${paragraph(`Hallo ${name},`)}
           ${customerBadge(custNum)}
           ${paragraph(`Ihr Festpreis-Inserat befindet sich bereits in <strong>Runde ${round}</strong>. Damit es schneller verkauft wird, haben wir ein paar Empfehlungen für Sie zusammengestellt.`)}
           ${infoBox('Inserat-Details', `
-            ${detailRow('Fahrzeug', motorhomeModel)}
+            ${detailRow('Fahrzeug', kitchenModel)}
             ${currentBid ? detailRow('Aktueller Festpreis', currentBid) : ''}
             ${detailRow('Runde', String(round))}
             ${endTime ? detailRow('Aktuelles Ablaufdatum', endTime) : ''}
@@ -618,13 +618,13 @@ const handler = async (req: Request): Promise<Response> => {
       case "seller_auction_round_warning": {
         // Soft brake: Auktion ist in Runde >=2 → Verkäufer wird sanft erinnert.
         const round = roundNumber || '2';
-        subject = `Runde ${round}: Auktion ${motorhomeModel} – Mindestpreis prüfen`;
+        subject = `Runde ${round}: Auktion ${kitchenModel} – Mindestpreis prüfen`;
         emailContent = `
           ${paragraph(`Hallo ${name},`)}
           ${customerBadge(custNum)}
           ${paragraph(`Ihre Auktion läuft bereits in <strong>Runde ${round}</strong>. Bisher wurde noch keine Einigung erzielt. Damit Ihr Fahrzeug zügig den passenden Käufer findet, hier ein paar Hinweise.`)}
           ${infoBox('Auktion-Details', `
-            ${detailRow('Fahrzeug', motorhomeModel)}
+            ${detailRow('Fahrzeug', kitchenModel)}
             ${currentBid ? detailRow('Aktuelles Höchstgebot', currentBid) : detailRow('Gebote', 'Noch keine Gebote in dieser Runde')}
             ${reservePrice ? detailRow('Aktueller Mindestpreis', reservePrice) : ''}
             ${detailRow('Runde', String(round))}
@@ -650,13 +650,13 @@ const handler = async (req: Request): Promise<Response> => {
           marketing_phase_expired: `Die vereinbarte Marketing-Phase für Ihr ${channelLabel} ist abgelaufen.`,
           auto_relist_off: `Die Auto-Wiedereinstellung Ihres ${channelLabel}s ist deaktiviert und die aktuelle Runde ist beendet.`,
         };
-        subject = `Marketing-Phase abgeschlossen: ${motorhomeModel} – wie geht es weiter?`;
+        subject = `Marketing-Phase abgeschlossen: ${kitchenModel} – wie geht es weiter?`;
         emailContent = `
           ${paragraph(`Hallo ${name},`)}
           ${customerBadge(custNum)}
           ${paragraph(`<strong>${reasonText[reason] || reasonText.max_rounds_reached}</strong>`)}
           ${infoBox('Inserat-Status', `
-            ${detailRow('Fahrzeug', motorhomeModel)}
+            ${detailRow('Fahrzeug', kitchenModel)}
             ${roundNumber ? detailRow('Erreichte Runde', String(roundNumber)) : ''}
             ${reservePrice ? detailRow('Letzter Mindestpreis', reservePrice) : ''}
             ${detailRow('Status', 'Beendet – keine automatische Wiedereinstellung')}
@@ -676,13 +676,13 @@ const handler = async (req: Request): Promise<Response> => {
         // Phase-4 Audit-Fix #10: Festpreis hat die 30-Tage-Marketing-Phase
         // erreicht. Eigene Mail (statt generic seller_not_sold), erklärt den
         // Cap und führt zu den nächsten Schritten.
-        subject = `Ihr Festpreis-Inserat ist beendet: ${motorhomeModel}`;
+        subject = `Ihr Festpreis-Inserat ist beendet: ${kitchenModel}`;
         emailContent = `
           ${paragraph(`Hallo ${name},`)}
           ${customerBadge(custNum)}
           ${paragraph(`Ihr Festpreis-Inserat hat die vereinbarte Marketing-Phase von <strong>${MARKETING_CONFIG.INSTANT_PRICE_MAX_TOTAL_DAYS} Tagen</strong> erreicht und ist nun beendet.`)}
           ${infoBox('Inserat-Übersicht', `
-            ${detailRow('Fahrzeug', motorhomeModel)}
+            ${detailRow('Fahrzeug', kitchenModel)}
             ${currentBid ? detailRow('Letzter Festpreis', currentBid) : ''}
             ${roundNumber ? detailRow('Verlängerungs-Runden', String(roundNumber)) : ''}
             ${detailRow('Status', 'Beendet – Marketing-Phase abgeschlossen')}
@@ -701,13 +701,13 @@ const handler = async (req: Request): Promise<Response> => {
         // Erklärt das neue Phase-4-System, kündigt 60-Tage Soft-Cap transparent
         // an, weist auf Dashboard-Toggles hin (Verkäufer kann freiwillig
         // dynamic_pricing + auto_relist nutzen).
-        subject = `Wichtige Info zu Ihrem Inserat: ${motorhomeModel} – neue Vermarktungs-Optionen`;
+        subject = `Wichtige Info zu Ihrem Inserat: ${kitchenModel} – neue Vermarktungs-Optionen`;
         emailContent = `
           ${paragraph(`Hallo ${name},`)}
           ${customerBadge(custNum)}
           ${paragraph('<strong>Wir haben unser Vermarktungs-System verbessert</strong>, damit Ihr Fahrzeug schneller den passenden Käufer findet. Diese Mail informiert Sie über die Änderungen, die Ihr aktives Inserat betreffen.')}
           ${infoBox('Ihr Inserat', `
-            ${detailRow('Fahrzeug', motorhomeModel)}
+            ${detailRow('Fahrzeug', kitchenModel)}
             ${reservePrice ? detailRow('Aktueller Mindestpreis', reservePrice) : ''}
             ${detailRow('Status', 'Aktiv – nach bisheriger Logik')}
           `, 'info', settingsData)}
@@ -734,7 +734,7 @@ const handler = async (req: Request): Promise<Response> => {
           ${customerBadge(custNum)}
           ${paragraph('Eine Auktion, für die Sie geboten haben, endet in Kürze:')}
           ${infoBox('Auktionsdetails', `
-            ${detailRow('Fahrzeug', motorhomeModel)}
+            ${detailRow('Fahrzeug', kitchenModel)}
             ${yourBid ? detailRow('Ihr Gebot', yourBid) : ''}
             ${currentBid ? detailRow('Aktuelles Höchstgebot', currentBid) : ''}
             ${endTime ? detailRow('Endet am', endTime) : ''}
@@ -780,7 +780,7 @@ const handler = async (req: Request): Promise<Response> => {
       const dedupMarker = [
         auctionUrl ? `dedup:${auctionUrl}` : '',
         roundNumber ? `round:${roundNumber}` : '',
-        motorhomeId ? `motorhome:${motorhomeId}` : '',
+        kitchenId ? `kitchen:${kitchenId}` : '',
       ].filter(Boolean).join('|');
 
       await supabase.from('admin_emails').insert({

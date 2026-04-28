@@ -18,9 +18,9 @@ interface AutoConvertRequest {
   anonymousId?: string;
 }
 
-// Helper: Map wizard form_data fields to motorhome DB fields
+// Helper: Map wizard form_data fields to kitchen DB fields
 // IMPORTANT: Field names must match what useWizardForm.ts stores in form_data
-function mapWizardToMotorhome(formData: Record<string, any>) {
+function mapWizardToKitchen(formData: Record<string, any>) {
   const isWohnwagen = formData.vehicleType === "Wohnwagen";
 
   return {
@@ -135,7 +135,7 @@ const handler = async (req: Request): Promise<Response> => {
 
     // --- Ownership verification ---
     // Before this check existed, anyone who guessed a session UUID could
-    // trigger conversion and create a user + motorhome out of someone else's
+    // trigger conversion and create a user + kitchen out of someone else's
     // draft. We require either:
     //   - the service-role bearer (trusted internal call: cron safety-net,
     //     admin recovery, auto-convert chain). These callers ARE the system,
@@ -235,24 +235,24 @@ const handler = async (req: Request): Promise<Response> => {
     }
 
     if (session.status === "converted") {
-      // Safety check: verify a motorhome actually exists for this user.
+      // Safety check: verify a kitchen actually exists for this user.
       // If not, the previous conversion partially failed → allow re-conversion.
       if (session.user_id) {
-        const { data: existingMotorhome } = await adminClient
-          .from("motorhomes")
+        const { data: existingKitchen } = await adminClient
+          .from("kitchens")
           .select("id")
           .eq("seller_id", session.user_id)
           .limit(1)
           .maybeSingle();
 
-        if (existingMotorhome) {
+        if (existingKitchen) {
           return new Response(
-            JSON.stringify({ message: "Session already converted", motorhomeId: existingMotorhome.id }),
+            JSON.stringify({ message: "Session already converted", kitchenId: existingKitchen.id }),
             { status: 200, headers }
           );
         }
-        // No motorhome found despite "converted" status → partial failure, continue
-        edgeLogger.warn(`Session ${body.sessionId} marked as converted but no motorhome found for user ${session.user_id}. Re-converting...`);
+        // No kitchen found despite "converted" status → partial failure, continue
+        edgeLogger.warn(`Session ${body.sessionId} marked as converted but no kitchen found for user ${session.user_id}. Re-converting...`);
       } else {
         return new Response(
           JSON.stringify({ message: "Session already converted" }),
@@ -441,13 +441,13 @@ const handler = async (req: Request): Promise<Response> => {
       }
     }
 
-    // 3. Create Motorhome
-    const mappedData = mapWizardToMotorhome(formData);
+    // 3. Create Kitchen
+    const mappedData = mapWizardToKitchen(formData);
 
     // Invariant: a sale_channel='instant_price' listing MUST carry a strictly
     // positive instant_price. Without this guard we silently created the bug
     // class fixed by hotfix e29b40cb (Sofortkauf listing with no price).
-    // The DB also enforces this via the motorhomes_instant_price_positive
+    // The DB also enforces this via the kitchens_instant_price_positive
     // CHECK constraint (NOT VALID for legacy rows); we fail early here so
     // the user sees a meaningful error instead of a generic 500.
     if (
@@ -518,7 +518,7 @@ const handler = async (req: Request): Promise<Response> => {
     const bodyType = mappedData.body_type || "Kastenwagen";
     const condition = mappedData.condition || "Gut";
 
-    const motorhomePayload = {
+    const kitchenPayload = {
       ...mappedData,
       seller_id: sellerId,
       manufacturer,
@@ -534,33 +534,33 @@ const handler = async (req: Request): Promise<Response> => {
       msclkid: session.msclkid || null,
     };
 
-    const { data: motorhome, error: insertError } = await adminClient
-      .from("motorhomes")
-      .insert(motorhomePayload)
+    const { data: kitchen, error: insertError } = await adminClient
+      .from("kitchens")
+      .insert(kitchenPayload)
       .select("id")
       .single();
 
     if (insertError) {
-      throw new Error(`Failed to create motorhome: ${insertError.message}`);
+      throw new Error(`Failed to create kitchen: ${insertError.message}`);
     }
 
-    // 3b. Transfer photos from wizard_temp to motorhome_photos
+    // 3b. Transfer photos from wizard_temp to kitchen_photos
     const photoUrls: string[] = formData.photoUrls || [];
     if (photoUrls.length > 0) {
       const photoRecords = photoUrls.map((url: string, index: number) => ({
-        motorhome_id: motorhome.id,
+        kitchen_id: kitchen.id,
         url: url,
         display_order: index,
       }));
 
       const { error: photosError } = await adminClient
-        .from("motorhome_photos")
+        .from("kitchen_photos")
         .insert(photoRecords);
 
       if (photosError) {
-        edgeLogger.error("Failed to insert motorhome photos:", photosError.message);
+        edgeLogger.error("Failed to insert kitchen photos:", photosError.message);
       } else {
-        edgeLogger.info(`Inserted ${photoRecords.length} photos for motorhome ${motorhome.id}`);
+        edgeLogger.info(`Inserted ${photoRecords.length} photos for kitchen ${kitchen.id}`);
       }
 
       // Move photos from wizard_temp/{sessionId}/ to {sellerId}/
@@ -573,18 +573,18 @@ const handler = async (req: Request): Promise<Response> => {
             const oldPath = `wizard_temp/${body.sessionId}/${fileName}`;
             const newPath = `${sellerId}/${fileName}`;
             await adminClient.storage
-              .from("motorhome-photos")
+              .from("kitchen-photos")
               .move(oldPath, newPath);
 
-            // Update the photo URL in motorhome_photos
+            // Update the photo URL in kitchen_photos
             const newPublicUrl = adminClient.storage
-              .from("motorhome-photos")
+              .from("kitchen-photos")
               .getPublicUrl(newPath).data.publicUrl;
 
             await adminClient
-              .from("motorhome_photos")
+              .from("kitchen_photos")
               .update({ url: newPublicUrl })
-              .eq("motorhome_id", motorhome.id)
+              .eq("kitchen_id", kitchen.id)
               .eq("url", url);
           }
         }
@@ -607,11 +607,11 @@ const handler = async (req: Request): Promise<Response> => {
     //     Aktivierung gesetzt (Phase 3/4), nicht beim Draft-Insert.
     //   * starting_bid: 40-60 % vom Reserve (compute_random_starting_bid RPC),
     //     damit Händler den Reserve nicht reverse-engineeren können.
-    if (motorhomePayload.sale_channel === "auction" || motorhomePayload.sale_channel === "instant_price") {
-      const isInstantOnly = motorhomePayload.sale_channel === "instant_price";
+    if (kitchenPayload.sale_channel === "auction" || kitchenPayload.sale_channel === "instant_price") {
+      const isInstantOnly = kitchenPayload.sale_channel === "instant_price";
       const reserveForAuction = isInstantOnly
-        ? motorhomePayload.instant_price
-        : motorhomePayload.reserve_price;
+        ? kitchenPayload.instant_price
+        : kitchenPayload.reserve_price;
 
       // Channel-Default für dynamic_pricing nutzen, wenn der User nichts geändert hat.
       const dynamicPricingForInsert = formData.dynamicPricing != null
@@ -653,12 +653,12 @@ const handler = async (req: Request): Promise<Response> => {
       }
 
       const { error: auctionInsertErr } = await adminClient.from("auctions").insert({
-        motorhome_id: motorhome.id,
+        kitchen_id: kitchen.id,
         starting_bid: startingBid,
         reserve_price: reserveForAuction,
         status: "draft",
         seller_initial_reserve: reserveForAuction,
-        seller_initial_instant_price: isInstantOnly ? motorhomePayload.instant_price : null,
+        seller_initial_instant_price: isInstantOnly ? kitchenPayload.instant_price : null,
         dynamic_pricing: dynamicPricingForInsert,
         agb_version_at_start: agbVersion,
       });
@@ -669,7 +669,7 @@ const handler = async (req: Request): Promise<Response> => {
 
     // 5. Update Wizard Session
     const timestamp = new Date().toLocaleDateString("de-DE", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" });
-    const convertNote = `[${timestamp}] Automatisch als Wohnmobil angelegt (ID: ${motorhome.id})`;
+    const convertNote = `[${timestamp}] Automatisch als Wohnmobil angelegt (ID: ${kitchen.id})`;
     
     await adminClient
       .from("wizard_sessions")
@@ -694,7 +694,7 @@ const handler = async (req: Request): Promise<Response> => {
       body: JSON.stringify({
         email: customerEmail,
         customerName: customerName,
-        motorhomeId: motorhome.id,
+        kitchenId: kitchen.id,
         sessionId: body.sessionId,
         hasPassword: body.hasPassword || false,
       }),
@@ -714,7 +714,7 @@ const handler = async (req: Request): Promise<Response> => {
     return new Response(
       JSON.stringify({
         success: true,
-        motorhomeId: motorhome.id,
+        kitchenId: kitchen.id,
         userId: sellerId,
       }),
       { status: 200, headers }

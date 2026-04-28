@@ -8,7 +8,7 @@ interface AppointmentPinProps {
   pin: string;
   appointmentDate: string;
   stationName: string;
-  motorhomeModel: string;
+  kitchenModel: string;
 }
 
 export const AppointmentPin = ({
@@ -17,7 +17,7 @@ export const AppointmentPin = ({
   pin,
   appointmentDate,
   stationName,
-  motorhomeModel,
+  kitchenModel,
 }: AppointmentPinProps) => (
   <EmailLayout 
     preview="Ihre PIN für die Fahrzeugübergabe"
@@ -48,7 +48,7 @@ export const AppointmentPin = ({
     </InfoBox>
 
     <InfoBox title="Termindetails">
-      <DetailRow label="Fahrzeug" value={motorhomeModel} />
+      <DetailRow label="Fahrzeug" value={kitchenModel} />
       <DetailRow label="Datum & Uhrzeit" value={appointmentDate} />
       <DetailRow label="Ankaufstation" value={stationName} />
     </InfoBox>

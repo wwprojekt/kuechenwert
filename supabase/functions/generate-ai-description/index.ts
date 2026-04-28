@@ -5,7 +5,7 @@ import { getCorsHeaders, handleCorsPreflightRequest } from '../_shared/cors.ts';
 /**
  * Edge Function: generate-ai-description
  *
- * Generates a professional motorhome sales description using OpenAI GPT-4.
+ * Generates a professional kitchen sales description using OpenAI GPT-4.
  * Requires authentication to prevent unauthorized API cost accumulation.
  *
  * Auth: Requires a valid JWT token (any authenticated user: dealer or admin).

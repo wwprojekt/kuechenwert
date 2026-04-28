@@ -39,7 +39,7 @@ const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
  * Auth: service_role oder authentifizierter Admin (wie andere Cron-Funktionen).
  */
 
-type MotorhomeRow = {
+type KitchenRow = {
   id: string;
   manufacturer: string | null;
   model: string | null;
@@ -59,7 +59,7 @@ type AuctionRow = {
   created_at: string;
   end_time: string;
   status: string;
-  motorhomes: MotorhomeRow | MotorhomeRow[] | null;
+  kitchens: KitchenRow | KitchenRow[] | null;
 };
 
 type DealerAlertRow = {
@@ -83,7 +83,7 @@ type PrefsRow = {
   quiet_hours_end: string | null;
 };
 
-function matches(alert: DealerAlertRow, m: MotorhomeRow): boolean {
+function matches(alert: DealerAlertRow, m: KitchenRow): boolean {
   const price = m.instant_price != null ? Number(m.instant_price) : null;
   if (alert.min_price != null && (price == null || price < Number(alert.min_price))) return false;
   if (alert.max_price != null && (price == null || price > Number(alert.max_price))) return false;
@@ -143,10 +143,10 @@ const handler = async (req: Request): Promise<Response> => {
       .from("auctions")
       .select(`
         id, created_at, end_time, status,
-        motorhomes!inner (
+        kitchens!inner (
           id, manufacturer, model, year, body_type, mileage, city, country,
           seller_id, sale_channel, instant_price,
-          photos:motorhome_photos(url, display_order)
+          photos:kitchen_photos(url, display_order)
         )
       `)
       .eq("status", "active")
@@ -155,9 +155,9 @@ const handler = async (req: Request): Promise<Response> => {
 
     if (auctionsError) throw new Error(`Auctions fetch: ${auctionsError.message}`);
 
-    const instantBuyAuctions: Array<{ auction: AuctionRow; m: MotorhomeRow }> = [];
+    const instantBuyAuctions: Array<{ auction: AuctionRow; m: KitchenRow }> = [];
     for (const a of (auctions || []) as AuctionRow[]) {
-      const mRaw = a.motorhomes;
+      const mRaw = a.kitchens;
       const m = Array.isArray(mRaw) ? mRaw[0] : mRaw;
       if (!m) continue;
       if (m.sale_channel !== "instant_price") continue;

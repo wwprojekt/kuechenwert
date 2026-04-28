@@ -18,7 +18,7 @@ interface SendEmailRequest {
   recipient_name?: string;
   attachments?: Array<{ filename: string; content: string; type?: string }>;
   scheduled_at?: string;
-  plain_answer?: string; // Die reine Admin-Antwort ohne Kontext-Text (für vehicle_questions)
+  plain_answer?: string; // Die reine Admin-Antwort ohne Kontext-Text (für kitchen_questions)
 }
 
 const handler = async (req: Request): Promise<Response> => {
@@ -242,7 +242,7 @@ const handler = async (req: Request): Promise<Response> => {
         // Speichere nur die reine Admin-Antwort, nicht den vollen E-Mail-Body mit Kontext
         const answerText = plain_answer || body_html.replace(/<[^>]*>/g, '');
         await supabase
-          .from('vehicle_questions')
+          .from('kitchen_questions')
           .update({
             answer: answerText,
             answered_at: new Date().toISOString(),

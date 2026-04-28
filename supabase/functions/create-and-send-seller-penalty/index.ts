@@ -27,7 +27,7 @@ import { edgeLogger, logEdgeError } from '../_shared/edgeLogger.ts';
  *   sellerId: string (required),
  *   reason: 'anderweitiger_verkauf' | 'vorzeitige_ruecknahme' | 'falsche_angaben',
  *   auctionId?: string,
- *   motorhomeId?: string,
+ *   kitchenId?: string,
  *   notes?: string,
  *   sendEmail?: boolean (default true)
  * }
@@ -48,7 +48,7 @@ interface RequestBody {
   sellerId: string;
   reason: 'anderweitiger_verkauf' | 'vorzeitige_ruecknahme' | 'falsche_angaben';
   auctionId?: string | null;
-  motorhomeId?: string | null;
+  kitchenId?: string | null;
   notes?: string | null;
   sendEmail?: boolean;
 }
@@ -116,7 +116,7 @@ Deno.serve(async (req) => {
   const sellerId = body.sellerId?.trim();
   const reason = body.reason;
   const auctionId = body.auctionId?.trim() || null;
-  const motorhomeId = body.motorhomeId?.trim() || null;
+  const kitchenId = body.kitchenId?.trim() || null;
   const notes = body.notes?.trim() || null;
   const sendEmail = body.sendEmail !== false;
 
@@ -146,7 +146,7 @@ Deno.serve(async (req) => {
     {
       seller_id_param: sellerId,
       auction_id_param: auctionId,
-      motorhome_id_param: motorhomeId,
+      kitchen_id_param: kitchenId,
       penalty_reason_param: reason,
       notes_param: notes,
     },
@@ -161,7 +161,7 @@ Deno.serve(async (req) => {
       category: 'invoice',
       originalError: rpcError,
       userId: user.id,
-      metadata: { sellerId, reason, auctionId, motorhomeId },
+      metadata: { sellerId, reason, auctionId, kitchenId },
     });
     return new Response(
       JSON.stringify({
@@ -272,7 +272,7 @@ Deno.serve(async (req) => {
         gross_amount: invoiceRow?.gross_amount ?? 399.0,
         penalty_reason: reason,
         auction_id: auctionId,
-        motorhome_id: motorhomeId,
+        kitchen_id: kitchenId,
         notes,
         send_email_requested: sendEmail,
         email_sent: emailSent,

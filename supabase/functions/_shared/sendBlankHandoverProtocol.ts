@@ -42,7 +42,7 @@ export interface SendBlankHandoverProtocolArgs {
   /** Resolved site_settings row (or sensible fallback). */
   settingsData: SettingsLike;
 
-  motorhomeId: string;
+  kitchenId: string;
   buyerId: string;
   sellerId: string;
   contractNumber: string;
@@ -95,7 +95,7 @@ export async function sendBlankHandoverProtocol(
         metadata: {
           source: args.source,
           contractNumber: args.contractNumber,
-          motorhomeId: args.motorhomeId,
+          kitchenId: args.kitchenId,
           buyerId: args.buyerId,
           sellerId: args.sellerId,
           info: result.info,
@@ -117,7 +117,7 @@ async function sendBlankHandoverProtocolInner(
 ): Promise<SendBlankHandoverProtocolResult> {
   const {
     supabase, resendApiKey, settingsData,
-    motorhomeId, buyerId, sellerId, contractNumber, salePrice,
+    kitchenId, buyerId, sellerId, contractNumber, salePrice,
     vehicleName, sellerProfile, buyerProfile, source,
     recipients: recipientFilter = 'both',
   } = args;
@@ -125,7 +125,7 @@ async function sendBlankHandoverProtocolInner(
   if (!resendApiKey) {
     return { ok: false, info: 'skipped: RESEND_API_KEY missing' };
   }
-  if (!motorhomeId || !buyerId || !sellerId || !contractNumber) {
+  if (!kitchenId || !buyerId || !sellerId || !contractNumber) {
     return { ok: false, info: 'skipped: missing required ids' };
   }
 
@@ -160,7 +160,7 @@ async function sendBlankHandoverProtocolInner(
           'Authorization': `Bearer ${serviceRoleKey}`,
           'apikey': serviceRoleKey,
         },
-        body: JSON.stringify({ motorhomeId, buyerId, sellerId, contractNumber, salePrice }),
+        body: JSON.stringify({ kitchenId, buyerId, sellerId, contractNumber, salePrice }),
       },
     );
     if (!res.ok) {

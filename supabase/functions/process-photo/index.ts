@@ -1,7 +1,7 @@
 /**
  * Edge Function: process-photo
  *
- * Generiert pro `motorhome_photos`-Row zwei pre-resized WebP-Variants:
+ * Generiert pro `kitchen_photos`-Row zwei pre-resized WebP-Variants:
  *   • card_url   →  480 px Breite, WebP q80   (Listings/Cards)
  *   • medium_url → 1024 px Breite, WebP q82  (Detail-Seite)
  *
@@ -56,7 +56,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.100.1";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-const BUCKET = "motorhome-photos";
+const BUCKET = "kitchen-photos";
 
 const CARD_WIDTH = 480;
 const CARD_QUALITY = 80;
@@ -216,8 +216,8 @@ async function encodeWebp(image: ImageData, quality: number): Promise<Uint8Array
 }
 
 // ─── Storage-Helpers ──────────────────────────────────────────────────────
-function variantPath(motorhomeId: string, photoId: string, size: "card" | "medium"): string {
-  return `${motorhomeId}/variants/${photoId}_${size}.webp`;
+function variantPath(kitchenId: string, photoId: string, size: "card" | "medium"): string {
+  return `${kitchenId}/variants/${photoId}_${size}.webp`;
 }
 
 function publicUrl(path: string): string {
@@ -241,8 +241,8 @@ async function processOnePhoto(adminClient: any, photoId: string): Promise<Proce
   const t0 = performance.now();
 
   const { data: photo, error: photoErr } = await adminClient
-    .from("motorhome_photos")
-    .select("id, motorhome_id, url, processing_attempts")
+    .from("kitchen_photos")
+    .select("id, kitchen_id, url, processing_attempts")
     .eq("id", photoId)
     .single();
 
@@ -320,8 +320,8 @@ async function processOnePhoto(adminClient: any, photoId: string): Promise<Proce
   }
 
   // ── Upload variants to storage ───────────────────────────────────────────
-  const cardPath = variantPath(photo.motorhome_id, photo.id, "card");
-  const mediumPath = variantPath(photo.motorhome_id, photo.id, "medium");
+  const cardPath = variantPath(photo.kitchen_id, photo.id, "card");
+  const mediumPath = variantPath(photo.kitchen_id, photo.id, "medium");
 
   const cardUpload = await adminClient.storage.from(BUCKET).upload(
     cardPath,
@@ -348,7 +348,7 @@ async function processOnePhoto(adminClient: any, photoId: string): Promise<Proce
 
   // ── DB update ────────────────────────────────────────────────────────────
   const { error: updateErr } = await adminClient
-    .from("motorhome_photos")
+    .from("kitchen_photos")
     .update({
       card_url: cardUrl,
       medium_url: mediumUrl,
@@ -377,7 +377,7 @@ async function processOnePhoto(adminClient: any, photoId: string): Promise<Proce
 // deno-lint-ignore no-explicit-any
 async function markFailed(adminClient: any, photo: { id: string; processing_attempts: number | null }, reason: string) {
   await adminClient
-    .from("motorhome_photos")
+    .from("kitchen_photos")
     .update({
       processing_error: reason,
       processing_attempts: (photo.processing_attempts ?? 0) + 1,
@@ -391,19 +391,19 @@ async function selectBatch(adminClient: any, batchSize: number, priority: string
     // Active-Covers: priorisiere display_order=0 von Auctions mit status='active'.
     // Nutzt eine RPC oder explizites Join-Query.
     const { data, error } = await adminClient
-      .from("motorhome_photos")
-      .select("id, motorhome_id, motorhome:motorhomes!inner(auctions!inner(status))")
+      .from("kitchen_photos")
+      .select("id, kitchen_id, kitchen:kitchens!inner(auctions!inner(status))")
       .is("processed_at", null)
       .lt("processing_attempts", 5)
       .eq("display_order", 0)
-      .eq("motorhome.auctions.status", "active")
+      .eq("kitchen.auctions.status", "active")
       .limit(batchSize);
     if (error) throw new Error(`active_covers query: ${error.message}`);
     return (data ?? []).map((r: { id: string }) => r.id);
   }
   // FIFO fallback
   const { data, error } = await adminClient
-    .from("motorhome_photos")
+    .from("kitchen_photos")
     .select("id")
     .is("processed_at", null)
     .lt("processing_attempts", 5)
@@ -430,9 +430,9 @@ Deno.serve(async (req) => {
     const { data, error } = await adminClient.rpc("photo_processing_stats").single();
     if (error) {
       // Fallback if RPC doesn't exist: inline aggregation
-      const { count: total } = await adminClient.from("motorhome_photos").select("*", { count: "exact", head: true });
-      const { count: done } = await adminClient.from("motorhome_photos").select("*", { count: "exact", head: true }).not("processed_at", "is", null);
-      const { count: errored } = await adminClient.from("motorhome_photos").select("*", { count: "exact", head: true }).gte("processing_attempts", 5);
+      const { count: total } = await adminClient.from("kitchen_photos").select("*", { count: "exact", head: true });
+      const { count: done } = await adminClient.from("kitchen_photos").select("*", { count: "exact", head: true }).not("processed_at", "is", null);
+      const { count: errored } = await adminClient.from("kitchen_photos").select("*", { count: "exact", head: true }).gte("processing_attempts", 5);
       return jsonResponse(req, 200, {
         total: total ?? 0,
         done: done ?? 0,

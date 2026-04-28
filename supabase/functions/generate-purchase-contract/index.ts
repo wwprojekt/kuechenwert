@@ -25,7 +25,7 @@ import { checkServiceRoleOrAdmin } from '../_shared/auth.ts';
 
 interface ContractRequest {
   auctionId: string;
-  motorhomeId: string;
+  kitchenId: string;
   buyerId: string;   // dealer
   sellerId: string;  // private seller
   salePrice: number; // winning bid amount
@@ -215,7 +215,7 @@ function fitImageToBox(
 }
 
 /** Plain-text export of listing fields for contract annex (German labels). */
-function buildMotorhomeListingAppendix(m: Record<string, unknown>): string {
+function buildKitchenListingAppendix(m: Record<string, unknown>): string {
   const out: string[] = [];
   const add = (label: string, val: unknown) => {
     if (val === null || val === undefined || val === '') return;
@@ -356,22 +356,22 @@ Deno.serve(async (req) => {
     // ─── Initialize Supabase client ──────────────────────────────
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
-    const { auctionId, motorhomeId, buyerId, sellerId, salePrice }: ContractRequest = await req.json();
+    const { auctionId, kitchenId, buyerId, sellerId, salePrice }: ContractRequest = await req.json();
 
-    if (!auctionId || !motorhomeId || !buyerId || !sellerId || !salePrice) {
-      throw new Error('All fields are required: auctionId, motorhomeId, buyerId, sellerId, salePrice');
+    if (!auctionId || !kitchenId || !buyerId || !sellerId || !salePrice) {
+      throw new Error('All fields are required: auctionId, kitchenId, buyerId, sellerId, salePrice');
     }
 
     console.log('Generating purchase contract for auction:', auctionId);
 
     // ─── Fetch all required data ───────────────────────────────────
-    const { data: motorhome, error: mhError } = await supabase
-      .from('motorhomes')
+    const { data: kitchen, error: mhError } = await supabase
+      .from('kitchens')
       .select('*')
-      .eq('id', motorhomeId)
+      .eq('id', kitchenId)
       .single();
 
-    if (mhError || !motorhome) throw new Error(`Motorhome not found: ${mhError?.message}`);
+    if (mhError || !kitchen) throw new Error(`Kitchen not found: ${mhError?.message}`);
 
     const { data: sellerRoles } = await supabase
       .from('user_roles')
@@ -380,9 +380,9 @@ Deno.serve(async (req) => {
     const sellerIsDealer = (sellerRoles ?? []).some((r) => r.role === 'dealer');
 
     const { data: photoRows } = await supabase
-      .from('motorhome_photos')
+      .from('kitchen_photos')
       .select('url, is_primary, display_order')
-      .eq('motorhome_id', motorhomeId)
+      .eq('kitchen_id', kitchenId)
       .order('is_primary', { ascending: false })
       .order('display_order', { ascending: true });
 
@@ -391,8 +391,8 @@ Deno.serve(async (req) => {
     if (coverUrl) {
       coverForPdf = await fetchCoverImageForPdf(coverUrl);
     }
-    const listingAppendixText = buildMotorhomeListingAppendix(
-      motorhome as unknown as Record<string, unknown>,
+    const listingAppendixText = buildKitchenListingAppendix(
+      kitchen as unknown as Record<string, unknown>,
     );
 
     const { data: seller, error: sellerError } = await supabase
@@ -451,15 +451,15 @@ Deno.serve(async (req) => {
     const buyerTaxId = buyer.tax_id || '';
     const buyerCustomerNumber = buyer.customer_number || '';
 
-    const vehicleName = `${motorhome.manufacturer} ${motorhome.model}`;
-    const vin = motorhome.vehicle_identification_number || 'Nicht angegeben';
-    const licensePlate = motorhome.license_plate || 'Nicht angegeben';
-    const firstReg = formatMonthYear(motorhome.first_registration);
-    const mileage = motorhome.mileage ? `${motorhome.mileage.toLocaleString('de-DE')} km` : 'Nicht angegeben';
-    const bodyType = motorhome.body_type || 'Nicht angegeben';
-    const year = motorhome.year ? String(motorhome.year) : 'Nicht angegeben';
-    const fuelType = motorhome.fuel_type || 'Nicht angegeben';
-    const weight = motorhome.weight_kg ? `${motorhome.weight_kg.toLocaleString('de-DE')} kg` : 'Nicht angegeben';
+    const vehicleName = `${kitchen.manufacturer} ${kitchen.model}`;
+    const vin = kitchen.vehicle_identification_number || 'Nicht angegeben';
+    const licensePlate = kitchen.license_plate || 'Nicht angegeben';
+    const firstReg = formatMonthYear(kitchen.first_registration);
+    const mileage = kitchen.mileage ? `${kitchen.mileage.toLocaleString('de-DE')} km` : 'Nicht angegeben';
+    const bodyType = kitchen.body_type || 'Nicht angegeben';
+    const year = kitchen.year ? String(kitchen.year) : 'Nicht angegeben';
+    const fuelType = kitchen.fuel_type || 'Nicht angegeben';
+    const weight = kitchen.weight_kg ? `${kitchen.weight_kg.toLocaleString('de-DE')} kg` : 'Nicht angegeben';
 
     const today = todayFormatted();
     const timestamp = isoTimestamp();
@@ -650,17 +650,17 @@ Deno.serve(async (req) => {
     sectionTitle('§ 3 Kaufpreis und Zahlung');
 
     paragraphText(`Der Kaufpreis beträgt ${formatCurrency(salePrice)} (in Worten: ${numberToWords(salePrice)}).`);
-    const isDirectFestpreis = motorhome.sale_type === 'instant';
-    const isPriceProposal = motorhome.sale_type === 'price_proposal';
-    const isFestpreisOrProposal = isDirectFestpreis || isPriceProposal || motorhome.sale_channel === 'instant_price';
+    const isDirectFestpreis = kitchen.sale_type === 'instant';
+    const isPriceProposal = kitchen.sale_type === 'price_proposal';
+    const isFestpreisOrProposal = isDirectFestpreis || isPriceProposal || kitchen.sale_channel === 'instant_price';
     paragraphText(isPriceProposal
       ? 'Der Kaufpreis wurde durch Preisverhandlung über die Plattform ' + siteName + ' vereinbart und ist von beiden Parteien als verbindlich anerkannt.'
-      : isDirectFestpreis || motorhome.sale_channel === 'instant_price'
+      : isDirectFestpreis || kitchen.sale_channel === 'instant_price'
         ? 'Der Kaufpreis entspricht dem auf der Plattform ' + siteName + ' veröffentlichten Festpreis und ist von beiden Parteien als verbindlich anerkannt.'
         : 'Der Kaufpreis wurde im Rahmen einer Online-Auktion über die Plattform ' + siteName + ' ermittelt und ist von beiden Parteien als verbindlich anerkannt.'
     );
     if (sellerIsDealer) {
-      const ma = motorhome.mwst_ausweisbar;
+      const ma = kitchen.mwst_ausweisbar;
       if (ma === true) {
         paragraphText(
           'Der Verkäufer handelt gewerblich. Im Inserat ist angegeben, dass die Umsatzsteuer auf der Kaufrechnung gesondert ausgewiesen wird. Der zwischen den Parteien vereinbarte Kaufpreis bezieht sich auf diese Angabe; die konkrete steuerliche Abrechnung ergibt sich aus der Rechnung des Verkäufers.',
@@ -695,8 +695,8 @@ Deno.serve(async (req) => {
 
     paragraphText('Das Fahrzeug wird unter Ausschluss jeglicher Sachmängelhaftung verkauft. Dieser Ausschluss gilt nicht für Schadensersatzansprüche aus Verletzung des Lebens, des Körpers oder der Gesundheit und bei vorsätzlich oder grob fahrlässig verursachten Schäden des Verkäufers.');
     paragraphText('Der Verkäufer versichert, dass ihm keine verdeckten Mängel bekannt sind, die er dem Käufer nicht mitgeteilt hat. Bekannte Mängel und Schäden sind im Inserat auf ' + siteName + ' dokumentiert.');
-    if (motorhome.has_damage && motorhome.damage_summary) {
-      paragraphText(`Bekannte Schäden/Mängel: ${motorhome.damage_summary}`);
+    if (kitchen.has_damage && kitchen.damage_summary) {
+      paragraphText(`Bekannte Schäden/Mängel: ${kitchen.damage_summary}`);
     }
     y += 1;
 
@@ -704,8 +704,8 @@ Deno.serve(async (req) => {
     sectionTitle('§ 6 Sonstige Vereinbarungen');
 
     paragraphText('Der Verkäufer versichert, dass das Fahrzeug sein Eigentum ist und frei von Rechten Dritter (z.B. Pfandrechte, Sicherungsübereignungen). Das Fahrzeug ist nicht als gestohlen gemeldet.');
-    paragraphText(`${motorhome.accident_free ? 'Der Verkäufer versichert, dass das Fahrzeug unfallfrei ist.' : 'Der Verkäufer hat angegeben, dass das Fahrzeug nicht unfallfrei ist. Details sind im Inserat dokumentiert.'}`);
-    paragraphText(`Anzahl der Vorbesitzer: ${motorhome.previous_owners !== null && motorhome.previous_owners !== undefined ? motorhome.previous_owners : 'Nicht angegeben'}.`);
+    paragraphText(`${kitchen.accident_free ? 'Der Verkäufer versichert, dass das Fahrzeug unfallfrei ist.' : 'Der Verkäufer hat angegeben, dass das Fahrzeug nicht unfallfrei ist. Details sind im Inserat dokumentiert.'}`);
+    paragraphText(`Anzahl der Vorbesitzer: ${kitchen.previous_owners !== null && kitchen.previous_owners !== undefined ? kitchen.previous_owners : 'Nicht angegeben'}.`);
     paragraphText('Der Verkäufer verpflichtet sich, das Fahrzeug bis zur Übergabe ordnungsgemäß zu versichern und keine wesentlichen Veränderungen am Fahrzeug vorzunehmen.');
     y += 1;
 
@@ -917,11 +917,11 @@ Deno.serve(async (req) => {
     const contractUrl = signedData.signedUrl;
     const buyerContractUrl = buyerSignedData?.signedUrl || contractUrl;
 
-    // Update motorhome record with contract URL and number
+    // Update kitchen record with contract URL and number
     await supabase
-      .from('motorhomes')
+      .from('kitchens')
       .update({ contract_url: contractUrl, contract_number: contractNumber })
-      .eq('id', motorhomeId);
+      .eq('id', kitchenId);
 
     // ─── Store contract in purchase_contracts table ────────────────
     const { error: insertError } = await supabase
@@ -929,7 +929,7 @@ Deno.serve(async (req) => {
       .insert({
         contract_number: contractNumber,
         auction_id: auctionId,
-        motorhome_id: motorhomeId,
+        kitchen_id: kitchenId,
         buyer_id: buyerId,
         seller_id: sellerId,
         sale_price: salePrice,

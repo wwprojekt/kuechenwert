@@ -31,7 +31,7 @@ const handler = async (req: Request): Promise<Response> => {
       .from('appointments')
       .select(`
         id, appointment_date, status, seller_id, reminder_sent,
-        motorhomes (manufacturer, model, year),
+        kitchens (manufacturer, model, year),
         purchase_stations (name, address, city, postal_code)
       `)
       .gte('appointment_date', now.toISOString())
@@ -46,7 +46,7 @@ const handler = async (req: Request): Promise<Response> => {
           .from('appointments')
           .select(`
             id, appointment_date, status, seller_id,
-            motorhomes (manufacturer, model, year),
+            kitchens (manufacturer, model, year),
             purchase_stations (name, address, city, postal_code)
           `)
           .gte('appointment_date', now.toISOString())
@@ -110,7 +110,7 @@ async function processAppointments(
       if (!profile?.email) continue;
 
       const name = [profile.first_name, profile.last_name].filter(Boolean).join(' ');
-      const motorhome = apt.motorhomes as any;
+      const kitchen = apt.kitchens as any;
       const station = apt.purchase_stations as any;
 
       // appointment_date is a full ISO datetime string (includes time)
@@ -129,7 +129,7 @@ async function processAppointments(
         ${infoBox('Termindetails', `
           ${detailRow('Datum', formattedDate)}
           ${detailRow('Uhrzeit', formattedTime + ' Uhr')}
-          ${motorhome ? detailRow('Fahrzeug', `${motorhome.manufacturer} ${motorhome.model} (${motorhome.year})`) : ''}
+          ${kitchen ? detailRow('Fahrzeug', `${kitchen.manufacturer} ${kitchen.model} (${kitchen.year})`) : ''}
           ${station ? detailRow('Station', station.name) : ''}
           ${station?.address ? detailRow('Adresse', `${station.address}, ${station.postal_code} ${station.city}`) : ''}
         `, 'info', settingsData)}

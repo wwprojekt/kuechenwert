@@ -56,9 +56,9 @@ const handler = async (req: Request): Promise<Response> => {
       .from('auctions')
       .select(`
         id, current_bid, starting_bid, end_time, created_at,
-        motorhomes!left (
+        kitchens!left (
           id, manufacturer, model, year, body_type, mileage, city, seller_id, sale_channel, instant_price,
-          photos:motorhome_photos(url, display_order)
+          photos:kitchen_photos(url, display_order)
         )
       `)
       .eq('status', 'active')
@@ -200,7 +200,7 @@ const handler = async (req: Request): Promise<Response> => {
         const bidAuctionIds = new Set((dealerBids || []).map(b => b.auction_id));
 
         // Exclude dealer's OWN auctions (where they are the seller)
-        const isNotOwnAuction = (a: any) => !a.motorhomes?.seller_id || a.motorhomes.seller_id !== dealer.user_id;
+        const isNotOwnAuction = (a: any) => !a.kitchens?.seller_id || a.kitchens.seller_id !== dealer.user_id;
 
         // Filter: auctions the dealer hasn't bid on yet (prioritize these)
         const unbidNewAuctions = newAuctions.filter(a => isNotOwnAuction(a) && !bidAuctionIds.has(a.id));
@@ -224,7 +224,7 @@ const handler = async (req: Request): Promise<Response> => {
             `⏰ ${biddedEndingSoon.length} Ihrer Auktionen ${biddedEndingSoon.length === 1 ? 'endet' : 'enden'} bald!`,
             (() => {
               const endingCards = biddedEndingSoon.slice(0, 3).map((a: any) => {
-                const m = a.motorhomes;
+                const m = a.kitchens;
                 if (!m) return '';
                 const auctionUrl = `https://caravanwert.de/auktion/${a.id}`;
                 const title = `${m.manufacturer || '?'} ${m.model || ''} (${m.year ?? '–'})`.trim();
@@ -254,7 +254,7 @@ const handler = async (req: Request): Promise<Response> => {
           emailContent += paragraph(`<strong>🆕 ${unbidNewAuctions.length} neue Inserat${unbidNewAuctions.length > 1 ? 'e' : ''} seit gestern:</strong>`);
 
           for (const auction of displayAuctions) {
-            const m = auction.motorhomes as any;
+            const m = auction.kitchens as any;
             if (!m) continue;
             const auctionUrl = `https://caravanwert.de/auktion/${auction.id}`;
             const title = `${m.manufacturer || '?'} ${m.model || ''} (${m.year ?? '–'})`.trim();
@@ -284,7 +284,7 @@ const handler = async (req: Request): Promise<Response> => {
         if (unbidEndingSoon.length > 0 && biddedEndingSoon.length === 0) {
           emailContent += paragraph(`<strong>⏳ ${unbidEndingSoon.length} Inserat${unbidEndingSoon.length > 1 ? 'e enden' : ' endet'} in den nächsten 24 Stunden:</strong>`);
           for (const auction of unbidEndingSoon.slice(0, 3)) {
-            const m = auction.motorhomes as any;
+            const m = auction.kitchens as any;
             if (!m) continue;
             const auctionUrl = `https://caravanwert.de/auktion/${auction.id}`;
             const title = `${m.manufacturer || '?'} ${m.model || ''} (${m.year ?? '–'})`.trim();

@@ -29,7 +29,7 @@ Deno.serve(async (req) => {
     // Get auction details
     const { data: auction, error: auctionError } = await supabase
       .from('auctions')
-      .select(`*, motorhome:motorhomes(*)`)
+      .select(`*, kitchen:kitchens(*)`)
       .eq('id', auctionId)
       .single();
 
@@ -81,9 +81,9 @@ Deno.serve(async (req) => {
       support_phone: '',
     };
 
-    const motorhome = auction.motorhome;
+    const kitchen = auction.kitchen;
     const winnerName = `${winnerProfile.first_name} ${winnerProfile.last_name}`;
-    const isInstantBuy = motorhome.sale_channel === 'instant_price' || motorhome.sale_type === 'instant';
+    const isInstantBuy = kitchen.sale_channel === 'instant_price' || kitchen.sale_type === 'instant';
 
     // Build email content with email-builder
     const content = `
@@ -93,10 +93,10 @@ Deno.serve(async (req) => {
         : '<strong>Herzlichen Gl&uuml;ckwunsch!</strong> Sie haben die Auktion erfolgreich gewonnen.'
       )}
 
-      ${infoBox(`${motorhome.manufacturer} ${motorhome.model}`, `
-        ${detailRow('Baujahr', String(motorhome.year))}
-        ${detailRow('Kilometerstand', `${motorhome.mileage?.toLocaleString() || '–'} km`)}
-        ${detailRow('Aufbauart', motorhome.body_type || '–')}
+      ${infoBox(`${kitchen.manufacturer} ${kitchen.model}`, `
+        ${detailRow('Baujahr', String(kitchen.year))}
+        ${detailRow('Kilometerstand', `${kitchen.mileage?.toLocaleString() || '–'} km`)}
+        ${detailRow('Aufbauart', kitchen.body_type || '–')}
       `, 'success')}
 
       ${amountDisplay(isInstantBuy ? 'Kaufpreis' : 'Ihr Gebot', `&euro;${Number(amount).toLocaleString()}`)}

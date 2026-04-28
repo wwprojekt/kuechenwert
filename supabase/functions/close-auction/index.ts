@@ -13,7 +13,7 @@ import { MARKETING_CONFIG, computeNextReducedReserve } from '../_shared/marketin
  * Edge Function: close-auction
  * 
  * Closes an auction after it has ended. Determines the outcome:
- * - Sold: Reserve price met → update motorhome, create invoice, generate purchase contract, send emails
+ * - Sold: Reserve price met → update kitchen, create invoice, generate purchase contract, send emails
  * - Kaufchance: Reserve not met but bids exist → invite top-2 bidders for negotiation
  * - Ended: No bids → notify seller
  * 
@@ -206,7 +206,7 @@ Deno.serve(async (req) => {
       .from('auctions')
       .select(`
         *,
-        motorhome:motorhomes(*),
+        kitchen:kitchens(*),
         bids(*)
       `)
       .eq('id', auctionId)
@@ -225,7 +225,7 @@ Deno.serve(async (req) => {
     }
 
     // Festpreis-only listings: no bidding/Kaufchance logic — just end cleanly
-    if (auction.motorhome?.sale_channel === 'instant_price') {
+    if (auction.kitchen?.sale_channel === 'instant_price') {
       console.log(`Closing instant-price listing ${auctionId} — no Kaufchance/bid logic`);
       const now = new Date().toISOString();
 
@@ -233,14 +233,14 @@ Deno.serve(async (req) => {
         .update({ status: 'ended', updated_at: now })
         .eq('id', auctionId);
 
-      if (auction.motorhome?.id) {
-        // Bug-fix #1: motorhomes.status CHECK constraint forbids 'ended'
+      if (auction.kitchen?.id) {
+        // Bug-fix #1: kitchens.status CHECK constraint forbids 'ended'
         // (allowed: available, active, sold, pending, not_sold, reserved).
         // 'not_sold' matches the semantics used by end-kaufchance and
         // AdminPostAuctionOffers.handleEndKaufchance for "offered, not transacted".
-        await supabase.from('motorhomes')
+        await supabase.from('kitchens')
           .update({ status: 'not_sold', updated_at: now })
-          .eq('id', auction.motorhome.id);
+          .eq('id', auction.kitchen.id);
       }
 
       // Expire any pending price proposals and notify proposers
@@ -258,7 +258,7 @@ Deno.serve(async (req) => {
       if (expireOffersErr) console.error(`Failed to expire offers for ${auctionId}:`, expireOffersErr);
 
       if (expiredOffers && expiredOffers.length > 0) {
-        const motorhomeName = `${auction.motorhome?.manufacturer || ''} ${auction.motorhome?.model || ''}`.trim();
+        const kitchenName = `${auction.kitchen?.manufacturer || ''} ${auction.kitchen?.model || ''}`.trim();
         for (const eo of expiredOffers) {
           try {
             const { data: profile } = await supabase
@@ -272,7 +272,7 @@ Deno.serve(async (req) => {
                   email: profile.email,
                   name: profile.company_name || profile.first_name || profile.email.split('@')[0],
                   type: 'lost',
-                  motorhomeModel: motorhomeName,
+                  kitchenModel: kitchenName,
                   auctionUrl: 'https://caravanwert.de/kaufen',
                   yourBid: `€${Number(eo.offer_amount).toLocaleString('de-DE')}`,
                   isFestpreis: true,
@@ -307,22 +307,22 @@ Deno.serve(async (req) => {
 
     // Determine auction outcome
     let newStatus = 'ended';
-    let motorhomeStatus = 'available';
+    let kitchenStatus = 'available';
     let soldTo: string | null = null;
     let isKaufchance = false;
 
-    // CRITICAL FIX: Use auction.reserve_price, but fallback to motorhome.reserve_price
+    // CRITICAL FIX: Use auction.reserve_price, but fallback to kitchen.reserve_price
     // This prevents selling below the seller's minimum price even if the admin forgot
     // to set the reserve_price on the auction itself.
     const effectiveReservePrice = auction.reserve_price
-      ?? auction.motorhome?.reserve_price
+      ?? auction.kitchen?.reserve_price
       ?? null;
 
     if (effectiveReservePrice && !auction.reserve_price) {
       console.warn(
-        `WARN: Auction ${auctionId} has no reserve_price set, using motorhome reserve_price: ${effectiveReservePrice}`
+        `WARN: Auction ${auctionId} has no reserve_price set, using kitchen reserve_price: ${effectiveReservePrice}`
       );
-      // Auto-fix: write the motorhome reserve_price back to the auction for consistency
+      // Auto-fix: write the kitchen reserve_price back to the auction for consistency
       await supabase
         .from('auctions')
         .update({ reserve_price: effectiveReservePrice })
@@ -336,7 +336,7 @@ Deno.serve(async (req) => {
 
       if (reserveMet) {
         newStatus = 'sold';
-        motorhomeStatus = 'sold';
+        kitchenStatus = 'sold';
         soldTo = highestBid.bidder_id;
         console.log('Auction sold to:', soldTo, 'for:', highestBid.amount, '(reserve:', effectiveReservePrice, ')');
       } else {
@@ -377,7 +377,7 @@ Deno.serve(async (req) => {
     // Wenn alle erfüllt: relist; sonst klassisches "ended".
     // (Soft-Brake-Mail kommt in Phase 6 – hier loggen wir nur den Grund.)
     const isNoBidsAuctionEnding =
-      newStatus === 'ended' && !highestBid && auction.motorhome?.sale_channel === 'auction';
+      newStatus === 'ended' && !highestBid && auction.kitchen?.sale_channel === 'auction';
     const sellerInitialReserveNum = auction.seller_initial_reserve != null
       ? Number(auction.seller_initial_reserve)
       : null;
@@ -452,30 +452,30 @@ Deno.serve(async (req) => {
           errors.push(`Auto-Relist fehlgeschlagen: ${relistErr.message}`);
           // Fall through to normal "ended" path as defensive fallback
         } else {
-          // Motorhome-Status synchronisieren
-          if (auction.motorhome?.id) {
+          // Kitchen-Status synchronisieren
+          if (auction.kitchen?.id) {
             const { error: mhErr } = await supabase
-              .from('motorhomes')
+              .from('kitchens')
               .update({
                 status: 'active',
                 reserve_price: newReserve,
                 updated_at: nowIso,
               })
-              .eq('id', auction.motorhome.id);
-            if (mhErr) console.error(`Motorhome sync after relist ${auctionId}:`, mhErr);
+              .eq('id', auction.kitchen.id);
+            if (mhErr) console.error(`Kitchen sync after relist ${auctionId}:`, mhErr);
           }
 
           // Verkäufer informieren (gleicher Template-Type wie bei Kaufchance-Relist
           // in check-expired-auctions, damit alle Auto-Relist-Mails konsistent sind)
-          if (auction.motorhome?.seller_id) {
+          if (auction.kitchen?.seller_id) {
             try {
               const { data: sellerProfile } = await supabase
                 .from('profiles')
                 .select('email, first_name')
-                .eq('id', auction.motorhome.seller_id)
+                .eq('id', auction.kitchen.seller_id)
                 .single();
               if (sellerProfile?.email) {
-                const dashboardUrl = `https://caravanwert.de/dashboard/listings/${auction.motorhome.id}`;
+                const dashboardUrl = `https://caravanwert.de/dashboard/listings/${auction.kitchen.id}`;
                 const endTimeFmt = endTime.toLocaleDateString('de-DE', {
                   day: '2-digit', month: '2-digit', year: 'numeric',
                   hour: '2-digit', minute: '2-digit',
@@ -487,7 +487,7 @@ Deno.serve(async (req) => {
                     email: sellerProfile.email,
                     name: sellerProfile.first_name || sellerProfile.email.split('@')[0],
                     type: 'seller_auto_relisted',
-                    motorhomeModel: motorhomeName,
+                    kitchenModel: kitchenName,
                     auctionUrl: dashboardUrl,
                     endTime: endTimeFmt,
                     reservePrice: reserveFmt,
@@ -502,7 +502,7 @@ Deno.serve(async (req) => {
                       email: sellerProfile.email,
                       name: sellerProfile.first_name || sellerProfile.email.split('@')[0],
                       type: 'seller_auction_round_warning',
-                      motorhomeModel: motorhomeName,
+                      kitchenModel: kitchenName,
                       auctionUrl: dashboardUrl,
                       endTime: endTimeFmt,
                       reservePrice: reserveFmt,
@@ -552,15 +552,15 @@ Deno.serve(async (req) => {
           `seller_initial_reserve=${sellerInitialReserveNum} reason=${reason}`
         );
 
-        if (auction.motorhome?.seller_id && reason !== 'unknown') {
+        if (auction.kitchen?.seller_id && reason !== 'unknown') {
           try {
             const { data: sellerProfile } = await supabase
               .from('profiles')
               .select('email, first_name')
-              .eq('id', auction.motorhome.seller_id)
+              .eq('id', auction.kitchen.seller_id)
               .single();
             if (sellerProfile?.email) {
-              const dashboardUrl = `https://caravanwert.de/dashboard/listings/${auction.motorhome.id}`;
+              const dashboardUrl = `https://caravanwert.de/dashboard/listings/${auction.kitchen.id}`;
               const reserveFmt = effectiveReservePrice
                 ? `€${Number(effectiveReservePrice).toLocaleString('de-DE')}`
                 : '—';
@@ -569,7 +569,7 @@ Deno.serve(async (req) => {
                   email: sellerProfile.email,
                   name: sellerProfile.first_name || sellerProfile.email.split('@')[0],
                   type: 'seller_soft_brake',
-                  motorhomeModel: motorhomeName,
+                  kitchenModel: kitchenName,
                   auctionUrl: dashboardUrl,
                   roundNumber: String(currentRound),
                   reservePrice: reserveFmt,
@@ -603,7 +603,7 @@ Deno.serve(async (req) => {
       throw updateAuctionError;
     }
 
-    const motorhomeName = `${auction.motorhome?.manufacturer || ''} ${auction.motorhome?.model || ''}`.trim();
+    const kitchenName = `${auction.kitchen?.manufacturer || ''} ${auction.kitchen?.model || ''}`.trim();
     const auctionUrl = `https://caravanwert.de/auktion/${auctionId}`;
 
     // ═══════════════════════════════════════════════════════════════════════════
@@ -685,7 +685,7 @@ Deno.serve(async (req) => {
                 email: bidderProfile.email,
                 name: bidderProfile.company_name || bidderProfile.first_name || bidderProfile.email.split('@')[0],
                 type: 'kaufchance_invite',
-                motorhomeModel: motorhomeName,
+                kitchenModel: kitchenName,
                 auctionUrl,
                 yourBid: `€${bidder.highestBid.toLocaleString()}`,
                 currentBid: `€${Number(highestBid!.amount).toLocaleString()}`,
@@ -709,12 +709,12 @@ Deno.serve(async (req) => {
       }
 
       // Notify seller about kaufchance phase
-      if (auction.motorhome?.seller_id) {
+      if (auction.kitchen?.seller_id) {
         try {
           const { data: sellerProfile } = await supabase
             .from('profiles')
             .select('email, first_name')
-            .eq('id', auction.motorhome.seller_id)
+            .eq('id', auction.kitchen.seller_id)
             .single();
 
           if (sellerProfile?.email) {
@@ -723,8 +723,8 @@ Deno.serve(async (req) => {
                 email: sellerProfile.email,
                 name: sellerProfile.first_name || sellerProfile.email.split('@')[0],
                 type: 'seller_kaufchance',
-                motorhomeModel: motorhomeName,
-                auctionUrl: `https://caravanwert.de/dashboard/listings/${auction.motorhome.id}`,
+                kitchenModel: kitchenName,
+                auctionUrl: `https://caravanwert.de/dashboard/listings/${auction.kitchen.id}`,
                 currentBid: `€${Number(highestBid!.amount).toLocaleString()}`,
                 reservePrice: `€${Number(effectiveReservePrice).toLocaleString()}`,
                 topBiddersCount: String(topBidders.length),
@@ -751,7 +751,7 @@ Deno.serve(async (req) => {
         ${paragraph('<strong>Eine Auktion ist in die Kaufchance-Phase eingetreten.</strong>')}
         ${infoBox('Auktionsergebnis', `
           ${detailRow('Status', '🔔 KAUFCHANCE')}
-          ${detailRow('Fahrzeug', motorhomeName)}
+          ${detailRow('Fahrzeug', kitchenName)}
           ${detailRow('Mindestgebot', `€${Number(effectiveReservePrice).toLocaleString()}`)}
           ${detailRow('Höchstes Gebot', `€${Number(highestBid!.amount).toLocaleString()}`)}
           ${detailRow('Differenz', `€${(Number(effectiveReservePrice) - Number(highestBid!.amount)).toLocaleString()}`)}
@@ -776,7 +776,7 @@ Deno.serve(async (req) => {
 
       adminContent += button('Kaufchancen verwalten', `https://caravanwert.de/admin/offers`);
 
-      await sendAdminEmail(supabase, `Kaufchance gestartet: ${motorhomeName}`, adminContent);
+      await sendAdminEmail(supabase, `Kaufchance gestartet: ${kitchenName}`, adminContent);
 
       return new Response(
         JSON.stringify({
@@ -794,21 +794,21 @@ Deno.serve(async (req) => {
     // ═══════════════════════════════════════════════════════════════════════════
     // ─── SOLD FLOW ─────────────────────────────────────────────────────────────
     // ═══════════════════════════════════════════════════════════════════════════
-    if (motorhomeStatus === 'sold' && soldTo) {
-      // Update motorhome status
-      const { error: updateMotorhomeError } = await supabase
-        .from('motorhomes')
+    if (kitchenStatus === 'sold' && soldTo) {
+      // Update kitchen status
+      const { error: updateKitchenError } = await supabase
+        .from('kitchens')
         .update({
-          status: motorhomeStatus,
+          status: kitchenStatus,
           sold_to: soldTo,
           sold_at: new Date().toISOString(),
           sale_type: 'auction',
         })
-        .eq('id', auction.motorhome.id);
+        .eq('id', auction.kitchen.id);
 
-      if (updateMotorhomeError) {
-        console.error('Error updating motorhome status:', updateMotorhomeError);
-        errors.push(`Motorhome-Status-Update fehlgeschlagen: ${updateMotorhomeError.message}`);
+      if (updateKitchenError) {
+        console.error('Error updating kitchen status:', updateKitchenError);
+        errors.push(`Kitchen-Status-Update fehlgeschlagen: ${updateKitchenError.message}`);
       }
 
       // Send winner notification
@@ -904,9 +904,9 @@ Deno.serve(async (req) => {
         const { data: contractResult, error: contractError } = await supabase.functions.invoke('generate-purchase-contract', {
           body: {
             auctionId,
-            motorhomeId: auction.motorhome.id,
+            kitchenId: auction.kitchen.id,
             buyerId: soldTo,
-            sellerId: auction.motorhome.seller_id,
+            sellerId: auction.kitchen.seller_id,
             salePrice: Number(highestBid!.amount),
           },
         });
@@ -926,7 +926,7 @@ Deno.serve(async (req) => {
           const { data: sellerProfile } = await supabase
             .from('profiles')
             .select('email, first_name, last_name')
-            .eq('id', auction.motorhome.seller_id)
+            .eq('id', auction.kitchen.seller_id)
             .single();
 
           const { data: buyerProfile } = await supabase
@@ -952,7 +952,7 @@ Deno.serve(async (req) => {
                 ${paragraph('Anbei erhalten Sie den Kaufvertrag für Ihr verkauftes Fahrzeug.')}
                 ${infoBox('Vertragsdetails', `
                   ${detailRow('Vertragsnr.', contractNumber)}
-                  ${detailRow('Fahrzeug', motorhomeName)}
+                  ${detailRow('Fahrzeug', kitchenName)}
                   ${detailRow('Kaufpreis', `€${Number(highestBid!.amount).toLocaleString()}`)}
                 `, 'success')}
                 ${paragraph('Bitte prüfen Sie den Vertrag sorgfältig. Bei Fragen stehen wir Ihnen gerne zur Verfügung.')}
@@ -968,7 +968,7 @@ Deno.serve(async (req) => {
                 body: JSON.stringify({
                   from: `${settingsData.site_name} <info@caravanwert.de>`,
                   to: [sellerProfile.email],
-                  subject: `Kaufvertrag ${contractNumber} – ${motorhomeName}`,
+                  subject: `Kaufvertrag ${contractNumber} – ${kitchenName}`,
                   html: contractEmailHtml,
                   attachments: [{
                     filename: `${contractNumber}.pdf`,
@@ -989,7 +989,7 @@ Deno.serve(async (req) => {
                   sender_name: settingsData.site_name,
                   recipient_email: sellerProfile.email,
                   recipient_name: sellerName,
-                  subject: `Kaufvertrag ${contractNumber} – ${motorhomeName}`,
+                  subject: `Kaufvertrag ${contractNumber} – ${kitchenName}`,
                   body_html: contractEmailHtml,
                   body_text: '',
                   email_type: 'purchase_contract',
@@ -1011,7 +1011,7 @@ Deno.serve(async (req) => {
                   recipientEmail: sellerProfile.email,
                   recipientName: sellerName,
                   contractNumber,
-                  vehicleName: motorhomeName,
+                  vehicleName: kitchenName,
                   salePrice: Number(highestBid!.amount),
                   downloadUrl: sellerContractUrl,
                   party: 'seller',
@@ -1036,7 +1036,7 @@ Deno.serve(async (req) => {
                 ${paragraph('Anbei erhalten Sie den Kaufvertrag für das ersteigerte Fahrzeug.')}
                 ${infoBox('Vertragsdetails', `
                   ${detailRow('Vertragsnr.', contractNumber)}
-                  ${detailRow('Fahrzeug', motorhomeName)}
+                  ${detailRow('Fahrzeug', kitchenName)}
                   ${detailRow('Kaufpreis', `€${Number(highestBid!.amount).toLocaleString()}`)}
                 `, 'success')}
                 ${paragraph('Bitte prüfen Sie den Vertrag sorgfältig. Die Rechnung über die Vermittlungsprovision erhalten Sie in einer separaten E-Mail.')}
@@ -1052,7 +1052,7 @@ Deno.serve(async (req) => {
                 body: JSON.stringify({
                   from: `${settingsData.site_name} <info@caravanwert.de>`,
                   to: [buyerProfile.email],
-                  subject: `Kaufvertrag ${contractNumber} – ${motorhomeName}`,
+                  subject: `Kaufvertrag ${contractNumber} – ${kitchenName}`,
                   html: contractEmailHtml,
                   attachments: [{
                     filename: `${contractNumber}.pdf`,
@@ -1073,7 +1073,7 @@ Deno.serve(async (req) => {
                   sender_name: settingsData.site_name,
                   recipient_email: buyerProfile.email,
                   recipient_name: buyerName,
-                  subject: `Kaufvertrag ${contractNumber} – ${motorhomeName}`,
+                  subject: `Kaufvertrag ${contractNumber} – ${kitchenName}`,
                   body_html: contractEmailHtml,
                   body_text: '',
                   email_type: 'purchase_contract',
@@ -1095,7 +1095,7 @@ Deno.serve(async (req) => {
                   recipientEmail: buyerProfile.email,
                   recipientName: buyerName,
                   contractNumber,
-                  vehicleName: motorhomeName,
+                  vehicleName: kitchenName,
                   salePrice: Number(highestBid!.amount),
                   downloadUrl: buyerContractUrl,
                   party: 'buyer',
@@ -1127,7 +1127,7 @@ Deno.serve(async (req) => {
           const { data: sellerProfile2 } = await supabase
             .from('profiles')
             .select('email, first_name, last_name, company_name')
-            .eq('id', auction.motorhome.seller_id)
+            .eq('id', auction.kitchen.seller_id)
             .maybeSingle();
           const { data: buyerProfile2 } = await supabase
             .from('profiles')
@@ -1144,12 +1144,12 @@ Deno.serve(async (req) => {
             supabase,
             resendApiKey: RESEND_API_KEY,
             settingsData: settings2 || { site_name: 'CaravanWert', contact_email: 'info@caravanwert.de' },
-            motorhomeId: auction.motorhome.id,
+            kitchenId: auction.kitchen.id,
             buyerId: soldTo!,
-            sellerId: auction.motorhome.seller_id,
+            sellerId: auction.kitchen.seller_id,
             contractNumber,
             salePrice: Number(highestBid!.amount),
-            vehicleName: motorhomeName,
+            vehicleName: kitchenName,
             sellerProfile: sellerProfile2,
             buyerProfile: buyerProfile2,
             source: 'close-auction',
@@ -1169,15 +1169,15 @@ Deno.serve(async (req) => {
           supabase,
           source: 'close-auction',
           auctionId,
-          motorhomeId: auction.motorhome.id,
-          sellerId: auction.motorhome.seller_id,
+          kitchenId: auction.kitchen.id,
+          sellerId: auction.kitchen.seller_id,
           dealerId: soldTo!,
           saleAmount: Number(highestBid!.amount),
           clickIds: {
-            gclid: auction.motorhome?.gclid,
-            gbraid: auction.motorhome?.gbraid,
-            wbraid: auction.motorhome?.wbraid,
-            msclkid: auction.motorhome?.msclkid,
+            gclid: auction.kitchen?.gclid,
+            gbraid: auction.kitchen?.gbraid,
+            wbraid: auction.kitchen?.wbraid,
+            msclkid: auction.kitchen?.msclkid,
           },
         });
         if (saleResult.attempted && !saleResult.success) {
@@ -1192,13 +1192,13 @@ Deno.serve(async (req) => {
           supabase,
           source: 'close-auction',
           auctionId,
-          motorhomeId: auction.motorhome.id,
-          motorhomeCreatedAt: auction.motorhome?.created_at,
-          sellerId: auction.motorhome.seller_id,
+          kitchenId: auction.kitchen.id,
+          kitchenCreatedAt: auction.kitchen?.created_at,
+          sellerId: auction.kitchen.seller_id,
           dealerId: soldTo!,
           saleAmount: Number(highestBid!.amount),
           clickIds: {
-            msclkid: auction.motorhome?.msclkid,
+            msclkid: auction.kitchen?.msclkid,
           },
         });
         if (bingResult.attempted && !bingResult.success) {
@@ -1221,7 +1221,7 @@ Deno.serve(async (req) => {
         ${paragraph('<strong>Eine Auktion wurde erfolgreich abgeschlossen.</strong>')}
         ${infoBox('Auktionsergebnis', `
           ${detailRow('Status', '✅ VERKAUFT')}
-          ${detailRow('Fahrzeug', motorhomeName)}
+          ${detailRow('Fahrzeug', kitchenName)}
           ${detailRow('Zuschlagspreis', `€${Number(highestBid!.amount).toLocaleString()}`)}
           ${detailRow('Mindestgebot', effectiveReservePrice ? `€${Number(effectiveReservePrice).toLocaleString()}` : 'Keines')}
           ${detailRow('Anzahl Gebote', String(auction.bids?.length || 0))}
@@ -1242,7 +1242,7 @@ Deno.serve(async (req) => {
 
       adminContent += button('Im Admin-Dashboard ansehen', `https://caravanwert.de/admin/auctions`);
 
-      await sendAdminEmail(supabase, `Auktion verkauft: ${motorhomeName} für €${Number(highestBid!.amount).toLocaleString()}`, adminContent);
+      await sendAdminEmail(supabase, `Auktion verkauft: ${kitchenName} für €${Number(highestBid!.amount).toLocaleString()}`, adminContent);
     }
 
     // ─── Notify losing bidders ───────────────────────────────────
@@ -1272,7 +1272,7 @@ Deno.serve(async (req) => {
               email: loserProfile.email,
               name: loserProfile.first_name || loserProfile.email.split('@')[0],
               type: 'lost',
-              motorhomeModel: motorhomeName,
+              kitchenModel: kitchenName,
               auctionUrl,
               yourBid: `€${loserHighestBid.toLocaleString()}`,
               currentBid: `€${Number(highestBid.amount).toLocaleString()}`,
@@ -1283,11 +1283,11 @@ Deno.serve(async (req) => {
     }
 
     // ─── Notify seller about auction end (FIXED: correct templates) ──
-    if (auction.motorhome?.seller_id && (newStatus === 'sold' || newStatus === 'ended')) {
+    if (auction.kitchen?.seller_id && (newStatus === 'sold' || newStatus === 'ended')) {
       const { data: sellerProfile } = await supabase
         .from('profiles')
         .select('email, first_name')
-        .eq('id', auction.motorhome.seller_id)
+        .eq('id', auction.kitchen.seller_id)
         .single();
 
       if (sellerProfile?.email) {
@@ -1298,8 +1298,8 @@ Deno.serve(async (req) => {
             email: sellerProfile.email,
             name: sellerProfile.first_name || sellerProfile.email.split('@')[0],
             type: sellerType,
-            motorhomeModel: motorhomeName,
-            auctionUrl: `https://caravanwert.de/dashboard/listings/${auction.motorhome.id}`,
+            kitchenModel: kitchenName,
+            auctionUrl: `https://caravanwert.de/dashboard/listings/${auction.kitchen.id}`,
             currentBid: highestBid ? `€${Number(highestBid.amount).toLocaleString()}` : undefined,
           },
         }).catch((e: any) => console.error('Error sending seller end notification:', e));
@@ -1312,7 +1312,7 @@ Deno.serve(async (req) => {
         ${paragraph('<strong>Eine Auktion ist ohne Verkauf beendet worden.</strong>')}
         ${infoBox('Auktionsergebnis', `
           ${detailRow('Status', '⚠️ NICHT VERKAUFT')}
-          ${detailRow('Fahrzeug', motorhomeName)}
+          ${detailRow('Fahrzeug', kitchenName)}
           ${detailRow('Mindestgebot', effectiveReservePrice ? `€${Number(effectiveReservePrice).toLocaleString()}` : 'Keines')}
           ${detailRow('Höchstes Gebot', highestBid ? `€${Number(highestBid.amount).toLocaleString()}` : 'Keine Gebote')}
           ${detailRow('Anzahl Gebote', String(auction.bids?.length || 0))}
@@ -1322,7 +1322,7 @@ Deno.serve(async (req) => {
       `;
       adminContent += button('Im Admin-Dashboard ansehen', `https://caravanwert.de/admin/auctions`);
 
-      await sendAdminEmail(supabase, `Auktion beendet ohne Verkauf: ${motorhomeName}`, adminContent);
+      await sendAdminEmail(supabase, `Auktion beendet ohne Verkauf: ${kitchenName}`, adminContent);
     }
 
     if (errors.length > 0) {

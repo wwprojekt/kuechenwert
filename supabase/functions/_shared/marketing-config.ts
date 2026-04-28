@@ -70,7 +70,7 @@ export const MARKETING_CONFIG = {
   // ──────────────────────────────────────────────────────────────────
   // Email Anti-Spam
   // ──────────────────────────────────────────────────────────────────
-  /** Cooldown in Tagen pro (User, Motorhome) für price_drop-Mails */
+  /** Cooldown in Tagen pro (User, Kitchen) für price_drop-Mails */
   PRICE_DROP_NOTIFICATION_COOLDOWN_DAYS_PER_FAVORITE: 7,
   /** Sollen Verlängerungen Favoriten-Notifications triggern? */
   EXTENSION_NOTIFICATIONS_TO_FAVORITES: false,

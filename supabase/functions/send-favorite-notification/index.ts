@@ -19,10 +19,10 @@ Deno.serve(async (req) => {
     const resendKey = Deno.env.get("RESEND_API_KEY")!;
     const supabase = createClient(supabaseUrl, serviceKey);
 
-    const { motorhome_id, auction_id, event_type, new_price, auction_title, is_festpreis } = await req.json();
+    const { kitchen_id, auction_id, event_type, new_price, auction_title, is_festpreis } = await req.json();
 
-    if (!motorhome_id || !event_type) {
-      return new Response(JSON.stringify({ error: "motorhome_id and event_type required" }), {
+    if (!kitchen_id || !event_type) {
+      return new Response(JSON.stringify({ error: "kitchen_id and event_type required" }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
@@ -46,11 +46,11 @@ Deno.serve(async (req) => {
       ? Number(new_price).toLocaleString("de-DE", { style: "currency", currency: "EUR" })
       : "–";
 
-    // Get all users who have this motorhome as favorite
+    // Get all users who have this kitchen as favorite
     const { data: favorites, error: favError } = await supabase
       .from("user_favorites")
       .select("user_id")
-      .eq("motorhome_id", motorhome_id);
+      .eq("kitchen_id", kitchen_id);
 
     if (favError || !favorites?.length) {
       return new Response(JSON.stringify({ success: true, sent: 0, message: "No favorites found" }), {
@@ -259,7 +259,7 @@ Deno.serve(async (req) => {
           sender_name: "CaravanWert",
           recipient_email: `${sent} Favoriten-Nutzer`,
           subject: `[Auto] Favoriten-Benachrichtigung: ${event_type}`,
-          body_html: `Automatische Favoriten-Benachrichtigung für ${auction_title || motorhome_id}. ${sent} gesendet, ${skipped} übersprungen (Anti-Spam).`,
+          body_html: `Automatische Favoriten-Benachrichtigung für ${auction_title || kitchen_id}. ${sent} gesendet, ${skipped} übersprungen (Anti-Spam).`,
           body_text: '',
           email_type: 'favorite_notification',
           direction: "outbound",

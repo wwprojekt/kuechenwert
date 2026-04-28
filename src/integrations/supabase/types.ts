@@ -4778,74 +4778,6 @@ export type Database = {
           },
         ]
       }
-      purchase_inquiries: {
-        Row: {
-          body_type: string | null
-          condition: string | null
-          created_at: string | null
-          customer_email: string
-          customer_name: string
-          customer_phone: string | null
-          description: string | null
-          id: string
-          kitchen_type: string
-          manufacturer: string | null
-          mileage: number | null
-          model: string | null
-          price_expectation: number | null
-          station_id: string
-          status: string
-          updated_at: string | null
-          year: number | null
-        }
-        Insert: {
-          body_type?: string | null
-          condition?: string | null
-          created_at?: string | null
-          customer_email: string
-          customer_name: string
-          customer_phone?: string | null
-          description?: string | null
-          id?: string
-          kitchen_type?: string
-          manufacturer?: string | null
-          mileage?: number | null
-          model?: string | null
-          price_expectation?: number | null
-          station_id: string
-          status?: string
-          updated_at?: string | null
-          year?: number | null
-        }
-        Update: {
-          body_type?: string | null
-          condition?: string | null
-          created_at?: string | null
-          customer_email?: string
-          customer_name?: string
-          customer_phone?: string | null
-          description?: string | null
-          id?: string
-          kitchen_type?: string
-          manufacturer?: string | null
-          mileage?: number | null
-          model?: string | null
-          price_expectation?: number | null
-          station_id?: string
-          status?: string
-          updated_at?: string | null
-          year?: number | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "purchase_inquiries_station_id_fkey"
-            columns: ["station_id"]
-            isOneToOne: false
-            referencedRelation: "purchase_stations"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       purchase_stations: {
         Row: {
           accepts_cash_payment: boolean | null
@@ -5667,192 +5599,6 @@ export type Database = {
           },
         ]
       }
-      value_assessment_leads: {
-        Row: {
-          admin_estimated_value: number | null
-          admin_notes: string | null
-          admin_valued_at: string | null
-          admin_valued_by: string | null
-          ai_comparable_count: number | null
-          ai_confidence: number | null
-          ai_estimated_at: string | null
-          ai_estimated_value: number | null
-          ai_reasoning: string | null
-          ai_source: string | null
-          algorithm_value_max: number | null
-          algorithm_value_min: number | null
-          body_type: string | null
-          brand_tier: string | null
-          condition: string | null
-          contacted_at: string | null
-          created_at: string | null
-          disposition: string | null
-          done_email_count: number | null
-          done_email_last_sent: string | null
-          email: string
-          estimated_value_max: number | null
-          estimated_value_min: number | null
-          id: string
-          is_viewed: boolean
-          kitchen_type: string | null
-          manufacturer: string | null
-          message: string | null
-          mileage: number | null
-          model: string | null
-          name: string
-          no_answer_email_count: number | null
-          no_answer_email_last_sent: string | null
-          phone: string | null
-          source: string
-          status: string | null
-          wrong_number_email_count: number | null
-          wrong_number_email_last_sent: string | null
-          year: number | null
-        }
-        Insert: {
-          admin_estimated_value?: number | null
-          admin_notes?: string | null
-          admin_valued_at?: string | null
-          admin_valued_by?: string | null
-          ai_comparable_count?: number | null
-          ai_confidence?: number | null
-          ai_estimated_at?: string | null
-          ai_estimated_value?: number | null
-          ai_reasoning?: string | null
-          ai_source?: string | null
-          algorithm_value_max?: number | null
-          algorithm_value_min?: number | null
-          body_type?: string | null
-          brand_tier?: string | null
-          condition?: string | null
-          contacted_at?: string | null
-          created_at?: string | null
-          disposition?: string | null
-          done_email_count?: number | null
-          done_email_last_sent?: string | null
-          email: string
-          estimated_value_max?: number | null
-          estimated_value_min?: number | null
-          id?: string
-          is_viewed?: boolean
-          kitchen_type?: string | null
-          manufacturer?: string | null
-          message?: string | null
-          mileage?: number | null
-          model?: string | null
-          name: string
-          no_answer_email_count?: number | null
-          no_answer_email_last_sent?: string | null
-          phone?: string | null
-          source: string
-          status?: string | null
-          wrong_number_email_count?: number | null
-          wrong_number_email_last_sent?: string | null
-          year?: number | null
-        }
-        Update: {
-          admin_estimated_value?: number | null
-          admin_notes?: string | null
-          admin_valued_at?: string | null
-          admin_valued_by?: string | null
-          ai_comparable_count?: number | null
-          ai_confidence?: number | null
-          ai_estimated_at?: string | null
-          ai_estimated_value?: number | null
-          ai_reasoning?: string | null
-          ai_source?: string | null
-          algorithm_value_max?: number | null
-          algorithm_value_min?: number | null
-          body_type?: string | null
-          brand_tier?: string | null
-          condition?: string | null
-          contacted_at?: string | null
-          created_at?: string | null
-          disposition?: string | null
-          done_email_count?: number | null
-          done_email_last_sent?: string | null
-          email?: string
-          estimated_value_max?: number | null
-          estimated_value_min?: number | null
-          id?: string
-          is_viewed?: boolean
-          kitchen_type?: string | null
-          manufacturer?: string | null
-          message?: string | null
-          mileage?: number | null
-          model?: string | null
-          name?: string
-          no_answer_email_count?: number | null
-          no_answer_email_last_sent?: string | null
-          phone?: string | null
-          source?: string
-          status?: string | null
-          wrong_number_email_count?: number | null
-          wrong_number_email_last_sent?: string | null
-          year?: number | null
-        }
-        Relationships: []
-      }
-      wertrechner_reviews: {
-        Row: {
-          comment: string | null
-          created_at: string
-          id: string
-          ip_hash: string | null
-          kitchen_type: string | null
-          moderated_at: string | null
-          moderated_by: string | null
-          published_at: string | null
-          rating: number
-          rejection_reason: string | null
-          reviewer_email: string | null
-          reviewer_location: string | null
-          reviewer_name: string | null
-          session_id: string | null
-          status: string
-          updated_at: string
-          user_agent: string | null
-        }
-        Insert: {
-          comment?: string | null
-          created_at?: string
-          id?: string
-          ip_hash?: string | null
-          kitchen_type?: string | null
-          moderated_at?: string | null
-          moderated_by?: string | null
-          published_at?: string | null
-          rating: number
-          rejection_reason?: string | null
-          reviewer_email?: string | null
-          reviewer_location?: string | null
-          reviewer_name?: string | null
-          session_id?: string | null
-          status?: string
-          updated_at?: string
-          user_agent?: string | null
-        }
-        Update: {
-          comment?: string | null
-          created_at?: string
-          id?: string
-          ip_hash?: string | null
-          kitchen_type?: string | null
-          moderated_at?: string | null
-          moderated_by?: string | null
-          published_at?: string | null
-          rating?: number
-          rejection_reason?: string | null
-          reviewer_email?: string | null
-          reviewer_location?: string | null
-          reviewer_name?: string | null
-          session_id?: string | null
-          status?: string
-          updated_at?: string
-          user_agent?: string | null
-        }
-        Relationships: []
-      }
       wizard_sessions: {
         Row: {
           admin_called_at: string | null
@@ -6464,10 +6210,6 @@ export type Database = {
           timed_out: boolean
         }[]
       }
-      admin_moderate_wertrechner_review: {
-        Args: { p_action: string; p_reason?: string; p_review_id: string }
-        Returns: Json
-      }
       admin_search_listings: {
         Args: { search_term?: string }
         Returns: {
@@ -6530,7 +6272,6 @@ export type Database = {
       cleanup_expired_sessions: { Args: never; Returns: number }
       cleanup_old_error_logs: { Args: never; Returns: undefined }
       cleanup_old_notifications: { Args: never; Returns: undefined }
-      cleanup_wertrechner_review_pii: { Args: never; Returns: number }
       compute_random_starting_bid: {
         Args: { p_reserve_price: number }
         Returns: number
@@ -6567,10 +6308,6 @@ export type Database = {
           p_user_id?: string
         }
         Returns: string
-      }
-      enqueue_google_review_candidates: {
-        Args: { p_max_inserts?: number; p_min_age_days?: number }
-        Returns: Json
       }
       enqueue_google_review_for_email: {
         Args: { p_email: string }
@@ -6733,19 +6470,6 @@ export type Database = {
       get_public_platform_stats: { Args: never; Returns: Json }
       get_request_anonymous_id: { Args: never; Returns: string }
       get_vapid_keys: { Args: never; Returns: Json }
-      get_wertrechner_review_stats: { Args: never; Returns: Json }
-      get_wertrechner_reviews_public: {
-        Args: { p_limit?: number; p_offset?: number }
-        Returns: {
-          comment: string
-          created_at: string
-          id: string
-          rating: number
-          reviewer_location: string
-          reviewer_name: string
-          vehicle_type: string
-        }[]
-      }
       handle_autobid_atomic: {
         Args: {
           p_auction_id: string
@@ -6763,28 +6487,6 @@ export type Database = {
         Returns: boolean
       }
       hash_review_ip: { Args: { p_ip: string }; Returns: string }
-      insert_value_assessment_lead: {
-        Args: {
-          p_algorithm_value_max?: number
-          p_algorithm_value_min?: number
-          p_body_type?: string
-          p_brand_tier?: string
-          p_condition?: string
-          p_email: string
-          p_estimated_value_max?: number
-          p_estimated_value_min?: number
-          p_manufacturer?: string
-          p_message?: string
-          p_mileage?: number
-          p_model?: string
-          p_name: string
-          p_phone?: string
-          p_source: string
-          p_vehicle_type?: string
-          p_year?: number
-        }
-        Returns: string
-      }
       lift_dealer_restriction: {
         Args: { dealer_id_param: string }
         Returns: boolean
@@ -6940,21 +6642,6 @@ export type Database = {
         Args: { p_motorhome_id: string }
         Returns: Json
       }
-      submit_wertrechner_review: {
-        Args: {
-          p_comment?: string
-          p_honeypot?: string
-          p_ip_hash?: string
-          p_rating: number
-          p_reviewer_email?: string
-          p_reviewer_location?: string
-          p_reviewer_name?: string
-          p_session_id?: string
-          p_user_agent?: string
-          p_vehicle_type?: string
-        }
-        Returns: Json
-      }
       toggle_auto_relist: {
         Args: { p_auction_id: string; p_value: boolean }
         Returns: boolean
@@ -6966,17 +6653,6 @@ export type Database = {
       track_google_review_click: { Args: { p_token: string }; Returns: boolean }
       try_acquire_cron_lock: {
         Args: { p_key: string; p_ttl_minutes?: number }
-        Returns: boolean
-      }
-      update_ai_valuation: {
-        Args: {
-          p_ai_confidence: number
-          p_ai_reasoning: string
-          p_ai_source: string
-          p_ai_value: number
-          p_comparable_count: number
-          p_lead_id: string
-        }
         Returns: boolean
       }
       update_dealer_level: { Args: { p_dealer_id: string }; Returns: undefined }

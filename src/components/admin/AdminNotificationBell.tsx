@@ -28,6 +28,7 @@ export function useAdminNotificationCounts() {
       const sessionValid = await ensureValidRLSSession();
       if (!sessionValid) return null;
 
+      const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
       const [
         wizardRes, valuationRes, supportRes, contactRes,
         dealerRes, questionsRes, unreadEmailsRes, reviewsRes,
@@ -35,7 +36,8 @@ export function useAdminNotificationCounts() {
         wertrechnerReviewsRes,
       ] = await Promise.all([
         supabase.from("wizard_sessions").select("*", { count: "exact", head: true }).is("disposition", null).or("is_viewed.is.null,is_viewed.eq.false"),
-        supabase.from("value_assessment_leads").select("*", { count: "exact", head: true }).is("disposition", null).or("is_viewed.is.null,is_viewed.eq.false"),
+        // leads-Tabelle hat kein is_viewed/disposition – wir zeigen stattdessen die letzten 24h an neuen Funnel-B/C-Leads
+        supabase.from("leads").select("*", { count: "exact", head: true }).neq("funnel_type", "angebot").gte("created_at", twentyFourHoursAgo),
         supabase.from("support_messages").select("*", { count: "exact", head: true }).is("admin_response", null),
         supabase.from("contact_messages").select("*", { count: "exact", head: true }).or("status.eq.new,status.is.null"),
         supabase.from("dealer_applications").select("*", { count: "exact", head: true }).eq("status", "pending"),

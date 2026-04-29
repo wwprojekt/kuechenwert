@@ -36,14 +36,18 @@ const STORAGE_RENDER_MARKER = '/storage/v1/render/image/public/';
  * Upload. Folge: Cloudflare CDN bypassed den Edge-Cache (`REVALIDATED` auf
  * jedem Request) → 700ms-2.4s Latenz pro Bild bei jedem Page-Load.
  *
- * Lösung: Worker `caravanwert.de/img/<bucket>/<path>` proxied das Bild und
- * überschreibt Cache-Control mit `max-age=31536000, immutable`. Cloudflare
- * cached dann 1 Jahr im Edge → <50ms HIT global.
+ * Loesung: Worker `caravanwert.de/img/<bucket>/<path>` proxiede das Bild und
+ * ueberschrieb Cache-Control mit `max-age=31536000, immutable`. Cloudflare
+ * cachte dann 1 Jahr im Edge → <50ms HIT global.
  *
- * In DEV (Vite localhost) bleibt es bei Original-URLs, da der Worker nur auf
- * caravanwert.de läuft.
+ * KuechenWert hat (noch) keinen eigenen Worker, deshalb ist der Proxy aktuell
+ * ausgeschaltet (IMAGE_PROXY_HOST=null). Die Public-Storage-URLs werden direkt
+ * ausgeliefert; Supabase Image Transformation greift per Fallback unten und
+ * CF-Edge cached die /render/image/-URLs ueber deren Response-Header. Sobald
+ * ein KuechenWert-Worker auf kuechenwert24.de/img/* steht, einfach den Host
+ * hier setzen.
  */
-const IMAGE_PROXY_HOST = import.meta.env.DEV ? null : 'https://caravanwert.de';
+const IMAGE_PROXY_HOST: string | null = null;
 
 /**
  * Erlaubte Resize-Breiten. MUSS deckungsgleich mit `ALLOWED_RESIZE_WIDTHS`

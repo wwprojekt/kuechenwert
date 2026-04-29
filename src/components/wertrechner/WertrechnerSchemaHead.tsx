@@ -8,6 +8,7 @@ import {
   useWertrechnerReviewStats,
   WERTRECHNER_SCHEMA_MIN_REVIEWS,
 } from "@/hooks/useWertrechnerReviewStats";
+import { BRAND } from "@/lib/brand";
 
 /**
  * Injects a `WebApplication` JSON-LD schema into the page head for pages
@@ -32,7 +33,7 @@ export function WertrechnerSchemaHead() {
   const { stats } = useWertrechnerReviewStats();
   const location = useLocation();
 
-  const pageUrl = `https://caravanwert.de${location.pathname}`;
+  const pageUrl = `${BRAND.baseUrl}${location.pathname}`;
   const schema = generateWertrechnerSchema({
     pageUrl,
     averageRating: stats.average,

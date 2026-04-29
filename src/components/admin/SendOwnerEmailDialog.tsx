@@ -7,6 +7,7 @@
 import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { invokeWithAuth, SessionExpiredError } from "@/lib/sessionGuard";
+import { BRAND } from "@/lib/brand";
 import { toast } from "sonner";
 import {
   Mail,
@@ -98,7 +99,7 @@ export function SendOwnerEmailDialog({
       icon: <Camera className="w-4 h-4" />,
       color: "bg-amber-50 border-amber-200 hover:bg-amber-100",
       subject: `${vehicleLabel} – Fotos für die Vermarktung benötigt`,
-      body: `um Ihr Fahrzeug ${vehicleLabel} bestmöglich an geprüfte Händler vermitteln zu können, benötigen wir noch aussagekräftige Fotos.\n\nBitte laden Sie mindestens 5–10 Fotos hoch:\n• Außenansicht von vorne, seitlich und hinten\n• Innenraum – Wohnbereich, Küche und Bad\n• Cockpit und Armaturenbrett\n• Schlafbereich und Stauraum\n• Eventuelle Gebrauchsspuren oder Schäden (Transparenz schafft Vertrauen)\n\nSo einfach geht's:\n1. Melden Sie sich unter https://caravanwert.de/login an\n2. Öffnen Sie Ihr Dashboard unter „Meine Inserate"\n3. Klicken Sie bei Ihrem Fahrzeug auf „Bearbeiten" und laden Sie die Fotos hoch\n\nGute Fotos machen den Unterschied: Inserate mit hochwertigen Bildern erzielen erfahrungsgemäß deutlich bessere Ergebnisse und schnellere Vermittlungen.\n\nBei Fragen stehen wir Ihnen jederzeit gerne zur Verfügung.`,
+      body: `um Ihr Fahrzeug ${vehicleLabel} bestmöglich an geprüfte Händler vermitteln zu können, benötigen wir noch aussagekräftige Fotos.\n\nBitte laden Sie mindestens 5–10 Fotos hoch:\n• Außenansicht von vorne, seitlich und hinten\n• Innenraum – Wohnbereich, Küche und Bad\n• Cockpit und Armaturenbrett\n• Schlafbereich und Stauraum\n• Eventuelle Gebrauchsspuren oder Schäden (Transparenz schafft Vertrauen)\n\nSo einfach geht's:\n1. Melden Sie sich unter ${BRAND.baseUrl}/login an\n2. Öffnen Sie Ihr Dashboard unter „Meine Inserate"\n3. Klicken Sie bei Ihrem Fahrzeug auf „Bearbeiten" und laden Sie die Fotos hoch\n\nGute Fotos machen den Unterschied: Inserate mit hochwertigen Bildern erzielen erfahrungsgemäß deutlich bessere Ergebnisse und schnellere Vermittlungen.\n\nBei Fragen stehen wir Ihnen jederzeit gerne zur Verfügung.`,
     },
     {
       id: "documents",

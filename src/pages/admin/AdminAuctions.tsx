@@ -4,6 +4,7 @@ import { logger } from "@/lib/logger";
 import { supabase } from "@/integrations/supabase/client";
 import { invokeWithAuth, ensureValidRLSSession } from "@/lib/sessionGuard";
 import { cancelAuctionAsAdmin } from "@/lib/adminAuctionCancel";
+import { BRAND } from "@/lib/brand";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -159,7 +160,7 @@ async function sendRelistNotification(kitchenId: string, endTime: Date) {
         name: sellerName,
         type: "seller_relisted",
         kitchenModel: vehicleName,
-        auctionUrl: "https://caravanwert.de/dashboard",
+        auctionUrl: `${BRAND.baseUrl}/dashboard`,
         endTime: formattedEndTime,
         customerNumber: seller.customer_number || undefined,
       },

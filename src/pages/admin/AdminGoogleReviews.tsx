@@ -444,7 +444,7 @@ export default function AdminGoogleReviews() {
               <Input
                 id="test-email"
                 type="email"
-                placeholder="ihre-test@caravanwert.de"
+                placeholder="ihre-test@kuechenwert.de"
                 value={testEmail}
                 onChange={(e) => setTestEmail(e.target.value)}
                 className="flex-1"

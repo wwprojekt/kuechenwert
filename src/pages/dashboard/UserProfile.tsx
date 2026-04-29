@@ -13,6 +13,7 @@ import { useToast } from "@/hooks/use-toast";
 import { User, Mail, Phone, Building, Save, MapPin, CheckCircle, AlertCircle, RefreshCw, Lock } from "lucide-react";
 import { useUserRole } from "@/hooks/useUserRole";
 import { ensureValidRLSSession } from "@/lib/sessionGuard";
+import { BRAND } from "@/lib/brand";
 
 export default function UserProfile() {
   const { user } = useAuth();
@@ -174,8 +175,8 @@ export default function UserProfile() {
               <p className="text-amber-800 dark:text-amber-300">
                 Als genehmigter Händler können Sie Ihre Stammdaten nicht mehr selbst ändern.
                 Bitte wenden Sie sich für Anpassungen an{" "}
-                <a href="mailto:info@caravanwert.de" className="underline font-medium">
-                  info@caravanwert.de
+                <a href={`mailto:${BRAND.supportEmail}`} className="underline font-medium">
+                  {BRAND.supportEmail}
                 </a>
                 .
               </p>

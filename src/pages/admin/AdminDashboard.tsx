@@ -52,16 +52,18 @@ function useDashboardStats() {
         auctionsRes,
         usersRes,
         wizardRes,
-        valuationRes,
+        leadsRes,
       ] = await Promise.all([
         supabase.from("kitchens").select("*", { count: "exact", head: true }),
         supabase.from("auctions").select("status"),
         supabase.from("profiles").select("*", { count: "exact", head: true }),
         supabase.from("wizard_sessions").select("*", { count: "exact", head: true }).eq("status", "completed"),
-        supabase.from("value_assessment_leads").select("*", { count: "exact", head: true }),
+        // "totalValuations" zeigt jetzt die Gesamtzahl aller Funnel-Leads an
+        // (Funnel A Wizard-Submits, Funnel B Reverse-Auction, Funnel C AI-Planer).
+        supabase.from("leads").select("*", { count: "exact", head: true }),
       ]);
 
-      const errors = [kitchensRes.error, auctionsRes.error, usersRes.error, wizardRes.error, valuationRes.error].filter(Boolean);
+      const errors = [kitchensRes.error, auctionsRes.error, usersRes.error, wizardRes.error, leadsRes.error].filter(Boolean);
       if (errors.length > 0) {
         console.error("Dashboard stats errors:", errors);
         throw new Error(`${errors.length} Dashboard-Abfragen fehlgeschlagen`);
@@ -75,7 +77,7 @@ function useDashboardStats() {
         totalAuctions: auctionsRes.data?.length || 0,
         totalUsers: usersRes.count || 0,
         completedWizards: wizardRes.count || 0,
-        totalValuations: valuationRes.count || 0,
+        totalValuations: leadsRes.count || 0,
       };
     },
     refetchInterval: 90000,
@@ -97,10 +99,10 @@ function useActionItems() {
 
       const items: ActionItem[] = [];
 
-      // 1. Neue Wizard-Anfragen (abgeschlossen, noch nicht angesehen, ohne Disposition)
+      // 1. Neue Wizard-Anfragen (Funnel A, abgeschlossen, noch nicht angesehen, ohne Disposition)
       const { data: newWizards } = await supabase
         .from("wizard_sessions")
-        .select("id, customer_name, customer_email, vehicle_summary, completed_at, is_viewed, status, form_data")
+        .select("id, customer_name, customer_email, kitchen_summary, completed_at, is_viewed, status, form_data")
         .eq("status", "completed")
         .or("is_viewed.is.null,is_viewed.eq.false")
         .is("disposition", null)
@@ -110,48 +112,63 @@ function useActionItems() {
       if (newWizards) {
         for (const w of newWizards) {
           const fd = w.form_data as Record<string, unknown> | null;
-          const vehicle = w.vehicle_summary
-            || (fd ? `${fd.manufacturer || ""} ${fd.model || ""}`.trim() : "")
-            || "Unbekanntes Fahrzeug";
+          const summary = w.kitchen_summary
+            || (fd ? `${fd.kitchen_style || ""} ${fd.kitchen_form || ""}`.trim() : "")
+            || "Traumküche (ohne Details)";
           items.push({
             id: `wizard-${w.id}`,
             type: "wizard",
-            title: `Neue Wizard-Anfrage: ${vehicle}`,
+            title: `Neue Funnel-A-Anfrage: ${summary}`,
             subtitle: w.customer_name || w.customer_email || "Unbekannter Kunde",
             time: w.completed_at || "",
             link: "/admin/leads",
             priority: "high",
             icon: FileText,
             iconColor: "text-blue-600 bg-blue-100",
-            badge: "Neu",
+            badge: "Funnel A",
             badgeColor: "bg-blue-500",
           });
         }
       }
 
-      // 2. Neue Bewertungsanfragen (nicht angesehen, ohne Disposition)
-      const { data: newValuations } = await supabase
-        .from("value_assessment_leads")
-        .select("id, name, email, manufacturer, model, year, created_at, is_viewed")
-        .or("is_viewed.is.null,is_viewed.eq.false")
-        .is("disposition", null)
+      // 2. Neue Leads (alle Funnel, letzte 24 h, noch nicht im Wizard-Block abgedeckt).
+      // leads hat keine is_viewed/disposition-Spalte, also blenden wir einfach die
+      // letzten Einträge ein, wenn sie nicht aus Funnel A stammen (Funnel A ist
+      // schon oben durch wizard_sessions).
+      const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+      const { data: recentLeads } = await supabase
+        .from("leads")
+        .select("id, funnel_type, first_name, last_name, email, postal_code, kitchen_style, kitchen_form, budget_midpoint, created_at")
+        .gte("created_at", twentyFourHoursAgo)
+        .neq("funnel_type", "angebot")
         .order("created_at", { ascending: false })
         .limit(10);
 
-      if (newValuations) {
-        for (const v of newValuations) {
-          const vehicle = `${v.manufacturer || ""} ${v.model || ""} ${v.year || ""}`.trim() || "Kein Fahrzeug";
+      if (recentLeads) {
+        for (const l of recentLeads) {
+          const typeLabel =
+            l.funnel_type === "traumkueche"
+              ? "Traumküchen-KI"
+              : l.funnel_type === "preis_unterbieten"
+              ? "Preis-Unterbietung"
+              : "Lead";
+          const summary =
+            [l.kitchen_style, l.kitchen_form].filter(Boolean).join(" · ")
+            || (l.budget_midpoint ? `Budget ${l.budget_midpoint.toLocaleString("de-DE")} €` : "ohne Details");
           items.push({
-            id: `valuation-${v.id}`,
+            id: `lead-${l.id}`,
             type: "lead",
-            title: `Bewertungsanfrage: ${vehicle}`,
-            subtitle: v.name || v.email || "Unbekannt",
-            time: v.created_at || "",
+            title: `${typeLabel}: ${summary}`,
+            subtitle:
+              [l.first_name, l.last_name].filter(Boolean).join(" ")
+              || l.email
+              || (l.postal_code ? `PLZ ${l.postal_code}` : "Unbekannt"),
+            time: l.created_at || "",
             link: "/admin/leads",
             priority: "medium",
             icon: TrendingUp,
             iconColor: "text-emerald-600 bg-emerald-100",
-            badge: "Bewertung",
+            badge: typeLabel,
             badgeColor: "bg-emerald-500",
           });
         }
@@ -639,18 +656,20 @@ function useUnreadCounts() {
       const sessionValid = await ensureValidRLSSession();
       if (!sessionValid) return { openSupport: 0, newContacts: 0, newWizards: 0, newValuations: 0, pendingDealers: 0, openQuestions: 0, totalMessages: 0, totalAnfragen: 0 };
 
+      const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
       const [
         supportRes,
         contactRes,
         wizardRes,
-        valuationRes,
+        recentLeadsRes,
         dealerRes,
         questionsRes,
       ] = await Promise.all([
         supabase.from("support_messages").select("*", { count: "exact", head: true }).or("status.eq.open,status.is.null"),
         supabase.from("contact_messages").select("*", { count: "exact", head: true }).eq("status", "new"),
         supabase.from("wizard_sessions").select("*", { count: "exact", head: true }).eq("status", "completed").or("is_viewed.is.null,is_viewed.eq.false").is("disposition", null),
-        supabase.from("value_assessment_leads").select("*", { count: "exact", head: true }).or("is_viewed.is.null,is_viewed.eq.false").is("disposition", null),
+        // Funnel B + C Leads der letzten 24 h (Funnel A geht via wizard_sessions).
+        supabase.from("leads").select("*", { count: "exact", head: true }).neq("funnel_type", "angebot").gte("created_at", twentyFourHoursAgo),
         supabase.from("dealer_applications").select("*", { count: "exact", head: true }).eq("status", "pending"),
         supabase.from("kitchen_questions").select("*", { count: "exact", head: true }).is("answer", null),
       ]);
@@ -659,11 +678,11 @@ function useUnreadCounts() {
         openSupport: supportRes.count || 0,
         newContacts: contactRes.count || 0,
         newWizards: wizardRes.count || 0,
-        newValuations: valuationRes.count || 0,
+        newValuations: recentLeadsRes.count || 0,
         pendingDealers: dealerRes.count || 0,
         openQuestions: questionsRes.count || 0,
         totalMessages: (supportRes.count || 0) + (contactRes.count || 0),
-        totalAnfragen: (wizardRes.count || 0) + (valuationRes.count || 0),
+        totalAnfragen: (wizardRes.count || 0) + (recentLeadsRes.count || 0),
       };
     },
     refetchInterval: 120000,

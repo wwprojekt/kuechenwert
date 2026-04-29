@@ -14,6 +14,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { invokeWithAuth } from "@/lib/sessionGuard";
+import { BRAND } from "@/lib/brand";
 import { Mail, Loader2 } from "lucide-react";
 
 /**
@@ -106,7 +107,7 @@ export function PriceChangeRequestDialog({
         Number(reserveNum) > Number(currentReserve)
       ) {
         throw new Error(
-          `Der Mindestpreis kann nur gesenkt, nicht erhöht werden (aktuell ${fmtEuro(currentReserve)}). Für eine Erhöhung kontaktieren Sie bitte info@caravanwert.de.`,
+          `Der Mindestpreis kann nur gesenkt, nicht erhöht werden (aktuell ${fmtEuro(currentReserve)}). Für eine Erhöhung kontaktieren Sie bitte ${BRAND.supportEmail}.`,
         );
       }
       if (
@@ -116,7 +117,7 @@ export function PriceChangeRequestDialog({
         Number(instantNum) > Number(currentInstant)
       ) {
         throw new Error(
-          `Der Sofortpreis kann nur gesenkt, nicht erhöht werden (aktuell ${fmtEuro(currentInstant)}). Für eine Erhöhung kontaktieren Sie bitte info@caravanwert.de.`,
+          `Der Sofortpreis kann nur gesenkt, nicht erhöht werden (aktuell ${fmtEuro(currentInstant)}). Für eine Erhöhung kontaktieren Sie bitte ${BRAND.supportEmail}.`,
         );
       }
 
@@ -154,7 +155,7 @@ export function PriceChangeRequestDialog({
       const err = error as { message?: string; code?: string };
       toast({
         title: "Anfrage konnte nicht gesendet werden",
-        description: err?.message || "Bitte versuchen Sie es später erneut oder schreiben Sie an info@caravanwert.de.",
+        description: err?.message || `Bitte versuchen Sie es später erneut oder schreiben Sie an ${BRAND.supportEmail}.`,
         variant: "destructive",
       });
     },

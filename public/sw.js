@@ -413,7 +413,7 @@ self.addEventListener('pushsubscriptionchange', (event) => {
   event.waitUntil(
     self.registration.pushManager.subscribe(event.oldSubscription.options)
       .then((subscription) => {
-        return fetch('https://zcrwqxsyptjwkuxfacvq.supabase.co/functions/v1/save-push-subscription', {
+        return fetch('https://gzqayoalwtmypndrmqes.supabase.co/functions/v1/save-push-subscription', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(subscription),

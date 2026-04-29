@@ -496,14 +496,11 @@ export function ConvertToKitchenDialog({
             admin_notes: `${(session as any).admin_notes ? (session as any).admin_notes + "\n" : ""}${convertNote}`,
           } as any)
           .eq("id", session.id);
-      } else if (sourceType === "valuation") {
-        await supabase
-          .from("value_assessment_leads")
-          .update({
-            status: "converted",
-          } as any)
-          .eq("id", session.id);
       }
+      // sourceType === "valuation" betraf die gedroppte Caravan-Tabelle
+      // value_assessment_leads; fuer KuechenWert wird dieser Convert-Pfad
+      // nicht mehr aufgerufen (leads landen in der neuen `leads`-Tabelle und
+      // werden nicht mehr in Kitchen-Listings ueberfuehrt).
 
       return { kitchenId: kitchen.id, saleChannel: formData.sale_channel };
     },

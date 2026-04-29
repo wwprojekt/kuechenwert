@@ -1,4 +1,4 @@
-name = "caravanwert-prerender"
+name = "kuechenwert-prerender"
 main = "dist/index.js"
 compatibility_date = "2026-03-22"
 compatibility_flags = ["nodejs_compat"]
@@ -13,14 +13,20 @@ kv_namespaces = [
 CF_ACCOUNT_ID = "4e101512091f867faf40ab7798abee0c"
 # Supabase: URL + ANON_KEY sind public (im Frontend-Bundle ausgeliefert).
 # Keine Geheimnisse — Rotation würde sowieso einen Frontend-Rebuild erfordern.
-SUPABASE_URL = "https://zcrwqxsyptjwkuxfacvq.supabase.co"
-SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpjcndxeHN5cHRqd2t1eGZhY3ZxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQwMzgwMzcsImV4cCI6MjA4OTYxNDAzN30.5-ds7Fw1392_iyRLKpXVtTkOyZ0-bDIcTivdGEOFrhc"
+SUPABASE_URL = "https://gzqayoalwtmypndrmqes.supabase.co"
+SUPABASE_ANON_KEY = "sb_publishable_y310eCMmlhSjvXbOKDgY1Q_p2v56GAz"
 
 # Routes
+# Hinweis: Der Worker ist aktuell NICHT deployed fuer KuechenWert — das
+# Image-Proxy ist in src/lib/imageTransform.ts auf null geschaltet.
+# Die Routes sind vorkonfiguriert, falls der Worker spaeter (fuer Prerender /
+# Image-Proxy) aktiviert wird. Domain kuechenwert.de ist ueber Cloudflare
+# proxied; kuechenwert24.de laeuft ueber Dokploy/Traefik (nicht via CF) und ist
+# daher bewusst nicht als Worker-Route eingetragen.
 [[routes]]
-pattern = "caravanwert.de/*"
-zone_name = "caravanwert.de"
+pattern = "kuechenwert.de/*"
+zone_name = "kuechenwert.de"
 
 [[routes]]
-pattern = "www.caravanwert.de/*"
-zone_name = "caravanwert.de"
+pattern = "www.kuechenwert.de/*"
+zone_name = "kuechenwert.de"

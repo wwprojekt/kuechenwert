@@ -2,6 +2,7 @@ import { useParams, Link, useNavigate, useSearchParams } from "react-router-dom"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
+import { BRAND } from "@/lib/brand";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -1883,8 +1884,8 @@ export default function ListingDetail() {
             {/* Hinweis: Zurück in Auktion */}
             <div className="p-4 rounded-lg border border-dashed border-muted-foreground/30 bg-muted/20">
               <p className="text-sm text-muted-foreground">
-                Wenn kein passendes Angebot dabei ist, kann Ihr Wohnmobil erneut in eine Auktion gegeben werden.
-                Bitte kontaktieren Sie uns unter <strong>info@caravanwert.de</strong> oder warten Sie, bis unser Team sich bei Ihnen meldet.
+                Wenn kein passendes Angebot dabei ist, kann Ihre Küche erneut in eine Auktion gegeben werden.
+                Bitte kontaktieren Sie uns unter <strong>{BRAND.supportEmail}</strong> oder warten Sie, bis unser Team sich bei Ihnen meldet.
               </p>
             </div>
           </CardContent>

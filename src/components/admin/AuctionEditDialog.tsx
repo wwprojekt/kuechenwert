@@ -3,6 +3,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { logger } from "@/lib/logger";
 import { supabase } from "@/integrations/supabase/client";
 import { invokeWithAuth, SessionExpiredError } from "@/lib/sessionGuard";
+import { BRAND } from "@/lib/brand";
 import {
   Dialog,
   DialogContent,
@@ -143,7 +144,7 @@ async function sendRelistNotificationFromDialog(kitchenId: string) {
         name: sellerName,
         type: "seller_relisted",
         kitchenModel: vehicleName,
-        auctionUrl: "https://caravanwert.de/dashboard",
+        auctionUrl: `${BRAND.baseUrl}/dashboard`,
         endTime: formattedEndTime,
         customerNumber: seller.customer_number || undefined,
       },

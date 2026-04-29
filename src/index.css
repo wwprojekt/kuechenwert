@@ -22,12 +22,16 @@
      dynamisch injecten.
    - Gradienten duerfen `hsl()` nutzen, da sie nicht durch Tailwind laufen.
 
-   AKTUELLER STAND (KuechenWert v2, Phase 3 in Arbeit):
-   - Primary: Cyan/Tuerkis (191deg, 68% Saettigung, 38% Helligkeit) – vom
-     Caravanwert-Fork geerbt. Finale Kuechen-Farbpalette siehe Todo
-     `phase3-globals-css` (wird in einer kommenden Phase auf warme Kueche-
-     Toene umgestellt).
-   - Secondary: dunkles Blau-Grau.
+   AKTUELLER STAND (KuechenWert v2, "Forest Sage + Brass"):
+   - Primary: Forest Sage (160deg, 32% Saettigung, 30% Helligkeit) – tiefes,
+     warmes Salbei-Gruen. Orientiert sich am aktuellen Kuechen-Top-Trend
+     (Nolte "Verde Alpi", Schueller "Country Green", SieMatic "Urban").
+     Wirkt edel, nachhaltig, passt zu Holz + Naturstein.
+   - Accent: Brass/Kupfer (28deg, 55% Saettigung, 52% Helligkeit) – warmer
+     Metallic-Akzent fuer CTAs und Highlights. Ergaenzt Sage kontrastreich.
+   - Secondary: dunkles Warm-Anthrazit (30deg, 8% Saettigung, 18% Helligkeit).
+   - Background: weiches Creme (35deg, 25% Saettigung, 97% Helligkeit),
+     waermer als kuehles Grau – transportiert Wohlfuehl-Faktor einer Kueche.
    - Font: Fira Sans.
    - Brand-Meta (Name, Logo, Domain): siehe src/lib/brand/config.ts.
 
@@ -46,54 +50,58 @@ html, body, #root {
 
 @layer base {
   :root {
-    --background: 210 20% 96%;
-    --foreground: 210 24% 16%;
+    /* Warmes Creme statt kuehlem Grau */
+    --background: 35 25% 97%;
+    --foreground: 30 8% 18%;
 
-    --card: 210 14% 97%;
-    --card-foreground: 210 24% 16%;
+    --card: 35 20% 99%;
+    --card-foreground: 30 8% 18%;
 
-    --popover: 210 14% 97%;
-    --popover-foreground: 210 24% 16%;
+    --popover: 35 20% 99%;
+    --popover-foreground: 30 8% 18%;
 
-    --primary: 191 68% 38%;
-    --primary-light: 191 68% 43%;
-    --primary-dark: 191 68% 32%;
+    /* Forest Sage – tiefes Salbei-Gruen */
+    --primary: 160 32% 30%;
+    --primary-light: 160 30% 38%;
+    --primary-dark: 160 34% 22%;
     --primary-foreground: 0 0% 100%;
 
-    --secondary: 210 24% 16%;
+    /* Warm-Anthrazit fuer starke Kontrast-Elemente (Header, Footer) */
+    --secondary: 30 8% 18%;
     --secondary-foreground: 0 0% 100%;
 
-    --muted: 210 20% 93%;
-    --muted-foreground: 210 12% 46%;
+    --muted: 35 20% 93%;
+    --muted-foreground: 30 8% 42%;
 
-    --accent: 191 68% 38%;
+    /* Brass/Kupfer – warmer Metallic-Akzent */
+    --accent: 28 55% 52%;
     --accent-foreground: 0 0% 100%;
 
-    --destructive: 0 84% 60%;
+    --destructive: 0 72% 52%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 210 20% 90%;
-    --input: 210 20% 92%;
-    --ring: 191 68% 38%;
+    --border: 35 15% 88%;
+    --input: 35 18% 92%;
+    --ring: 160 32% 30%;
 
     --radius: 0.375rem;
-    
-    --gradient-hero: linear-gradient(135deg, hsl(191 68% 43%) 0%, hsl(191 68% 32%) 100%);
-    --gradient-hero-hover: linear-gradient(135deg, hsl(191 68% 46%) 0%, hsl(191 68% 35%) 100%);
-    --gradient-secondary: linear-gradient(135deg, hsl(210 24% 16%) 0%, hsl(210 30% 24%) 100%);
-    --gradient-subtle: linear-gradient(180deg, hsl(210 20% 96%) 0%, hsl(210 25% 94%) 100%);
-    --gradient-accent: linear-gradient(135deg, hsl(191 68% 38%) 0%, hsl(200 68% 35%) 100%);
-    --gradient-mesh: radial-gradient(at 40% 20%, hsl(191 68% 43% / 0.3) 0px, transparent 50%),
-                     radial-gradient(at 80% 0%, hsl(191 68% 38% / 0.2) 0px, transparent 50%),
-                     radial-gradient(at 0% 50%, hsl(210 60% 50% / 0.15) 0px, transparent 50%);
-    
+
+    --gradient-hero: linear-gradient(135deg, hsl(160 30% 38%) 0%, hsl(160 34% 22%) 100%);
+    --gradient-hero-hover: linear-gradient(135deg, hsl(160 32% 42%) 0%, hsl(160 36% 26%) 100%);
+    --gradient-secondary: linear-gradient(135deg, hsl(30 8% 18%) 0%, hsl(30 10% 26%) 100%);
+    --gradient-subtle: linear-gradient(180deg, hsl(35 25% 97%) 0%, hsl(35 28% 94%) 100%);
+    --gradient-accent: linear-gradient(135deg, hsl(28 55% 52%) 0%, hsl(24 55% 44%) 100%);
+    --gradient-mesh: radial-gradient(at 40% 20%, hsl(160 30% 38% / 0.22) 0px, transparent 50%),
+                     radial-gradient(at 80% 0%, hsl(28 55% 52% / 0.16) 0px, transparent 50%),
+                     radial-gradient(at 0% 50%, hsl(35 40% 85% / 0.4) 0px, transparent 50%);
+
     --shadow-sm: 0 2px 4px 0 rgb(0 0 0 / 0.04);
     --shadow-md: 0 4px 12px -2px rgb(0 0 0 / 0.08);
     --shadow-lg: 0 12px 32px -8px rgb(0 0 0 / 0.12);
     --shadow-xl: 0 24px 48px -12px rgb(0 0 0 / 0.18);
     --shadow-2xl: 0 32px 64px -16px rgb(0 0 0 / 0.24);
-    --shadow-glow: 0 0 32px hsl(191 68% 38% / 0.35);
-    --shadow-glow-sm: 0 0 16px hsl(191 68% 38% / 0.25);
+    --shadow-glow: 0 0 32px hsl(160 32% 30% / 0.32);
+    --shadow-glow-sm: 0 0 16px hsl(160 32% 30% / 0.22);
     
     --transition-base: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     --transition-bounce: all 0.5s cubic-bezier(0.68, -0.55, 0.265, 1.55);
@@ -116,37 +124,38 @@ html, body, #root {
   }
 
   .dark {
-    --background: 210 24% 16%;
-    --foreground: 0 0% 98%;
+    --background: 30 10% 12%;
+    --foreground: 35 20% 96%;
 
-    --card: 210 30% 20%;
-    --card-foreground: 0 0% 98%;
+    --card: 30 10% 16%;
+    --card-foreground: 35 20% 96%;
 
-    --popover: 210 30% 20%;
-    --popover-foreground: 0 0% 98%;
+    --popover: 30 10% 16%;
+    --popover-foreground: 35 20% 96%;
 
-    --primary: 191 68% 45%;
-    --primary-foreground: 0 0% 100%;
+    /* Im Dark-Mode heller gesetztes Sage, damit AA-Kontrast bleibt */
+    --primary: 160 32% 52%;
+    --primary-foreground: 30 10% 12%;
 
-    --secondary: 210 30% 24%;
-    --secondary-foreground: 0 0% 98%;
+    --secondary: 30 10% 20%;
+    --secondary-foreground: 35 20% 96%;
 
-    --muted: 210 30% 24%;
-    --muted-foreground: 210 12% 65%;
+    --muted: 30 10% 20%;
+    --muted-foreground: 35 15% 70%;
 
-    --accent: 191 68% 45%;
-    --accent-foreground: 0 0% 100%;
+    --accent: 28 55% 60%;
+    --accent-foreground: 30 10% 12%;
 
-    --destructive: 0 84% 60%;
+    --destructive: 0 72% 58%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 210 30% 24%;
-    --input: 210 30% 24%;
-    --ring: 191 68% 45%;
-    
-    --gradient-hero: linear-gradient(135deg, hsl(191 68% 48%) 0%, hsl(191 68% 38%) 100%);
-    --gradient-secondary: linear-gradient(135deg, hsl(210 30% 20%) 0%, hsl(210 35% 28%) 100%);
-    --gradient-subtle: linear-gradient(180deg, hsl(210 24% 16%) 0%, hsl(210 30% 20%) 100%);
+    --border: 30 10% 22%;
+    --input: 30 10% 20%;
+    --ring: 160 32% 52%;
+
+    --gradient-hero: linear-gradient(135deg, hsl(160 32% 48%) 0%, hsl(160 36% 32%) 100%);
+    --gradient-secondary: linear-gradient(135deg, hsl(30 10% 16%) 0%, hsl(30 12% 24%) 100%);
+    --gradient-subtle: linear-gradient(180deg, hsl(30 10% 12%) 0%, hsl(30 12% 16%) 100%);
     --sidebar-background: 240 5.9% 10%;
     --sidebar-foreground: 240 4.8% 95.9%;
     --sidebar-primary: 224.3 76.3% 48%;

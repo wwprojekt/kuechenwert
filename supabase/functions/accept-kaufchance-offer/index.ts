@@ -1,4 +1,4 @@
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.100.1';
+﻿import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.100.1';
 import { getCorsHeaders, handleCorsPreflightRequest } from '../_shared/cors.ts';
 import { buildEmailLayout, paragraph, infoBox, detailRow, warningBox, button } from '../_shared/email-builder.ts';
 import { logEdgeError } from '../_shared/edgeLogger.ts';
@@ -212,7 +212,7 @@ Deno.serve(async (req) => {
 
     const buyerId = offer.buyer_id;
     const kitchenName = `${auction.kitchen?.manufacturer || ''} ${auction.kitchen?.model || ''}`.trim();
-    const auctionUrl = `https://caravanwert.de/auktion/${auction.id}`;
+    const auctionUrl = `https://kuechenwert24.de/auktion/${auction.id}`;
 
     console.log(`Accepting Kaufchance offer: ${offerId}, buyer: ${buyerId}, price: €${salePrice}`);
 
@@ -430,7 +430,7 @@ Deno.serve(async (req) => {
           .limit(1)
           .maybeSingle();
 
-        const settingsData = settings || { site_name: 'CaravanWert', contact_email: 'info@caravanwert.de' };
+        const settingsData = settings || { site_name: 'KuechenWert', contact_email: 'info@kuechenwert.de' };
 
         // Contract email to seller
         if (sellerProfile?.email && contractPdfBase64) {
@@ -455,7 +455,7 @@ Deno.serve(async (req) => {
                 'Authorization': `Bearer ${RESEND_API_KEY}`,
               },
               body: JSON.stringify({
-                from: `${settingsData.site_name} <info@caravanwert.de>`,
+                from: `${settingsData.site_name} <info@kuechenwert.de>`,
                 to: [sellerProfile.email],
                 subject: `Kaufvertrag ${contractNumber} – ${kitchenName}`,
                 html,
@@ -474,7 +474,7 @@ Deno.serve(async (req) => {
 
             try {
               const { error: logError } = await supabase.from('admin_emails').insert({
-                sender_email: 'info@caravanwert.de',
+                sender_email: 'info@kuechenwert.de',
                 sender_name: settingsData.site_name,
                 recipient_email: sellerProfile.email,
                 recipient_name: sellerName,
@@ -524,7 +524,7 @@ Deno.serve(async (req) => {
                 'Authorization': `Bearer ${RESEND_API_KEY}`,
               },
               body: JSON.stringify({
-                from: `${settingsData.site_name} <info@caravanwert.de>`,
+                from: `${settingsData.site_name} <info@kuechenwert.de>`,
                 to: [buyerProfile.email],
                 subject: `Kaufvertrag ${contractNumber} – ${kitchenName}`,
                 html,
@@ -543,7 +543,7 @@ Deno.serve(async (req) => {
 
             try {
               const { error: logError } = await supabase.from('admin_emails').insert({
-                sender_email: 'info@caravanwert.de',
+                sender_email: 'info@kuechenwert.de',
                 sender_name: settingsData.site_name,
                 recipient_email: buyerProfile.email,
                 recipient_name: buyerName,
@@ -597,7 +597,7 @@ Deno.serve(async (req) => {
         const protoResult = await sendBlankHandoverProtocol({
           supabase,
           resendApiKey: RESEND_API_KEY,
-          settingsData: settings2 || { site_name: 'CaravanWert', contact_email: 'info@caravanwert.de' },
+          settingsData: settings2 || { site_name: 'KuechenWert', contact_email: 'info@kuechenwert.de' },
           kitchenId: auction.kitchen.id,
           buyerId,
           sellerId: auction.kitchen.seller_id,
@@ -646,7 +646,7 @@ Deno.serve(async (req) => {
               name: sellerProfile.first_name || sellerProfile.email.split('@')[0],
               type: 'seller_sold',
               kitchenModel: kitchenName,
-              auctionUrl: `https://caravanwert.de/dashboard/listings/${auction.kitchen?.id}`,
+              auctionUrl: `https://kuechenwert24.de/dashboard/listings/${auction.kitchen?.id}`,
               currentBid: `€${salePrice.toLocaleString('de-DE')}`,
             },
           });
@@ -686,7 +686,7 @@ Deno.serve(async (req) => {
                   name: profile.company_name || profile.first_name || profile.email.split('@')[0],
                   type: 'lost',
                   kitchenModel: kitchenName,
-                  auctionUrl: 'https://caravanwert.de/kaufen',
+                  auctionUrl: 'https://kuechenwert24.de/kaufen',
                   yourBid: `€${Number(inv.highest_bid).toLocaleString('de-DE')}`,
                   currentBid: `€${salePrice.toLocaleString('de-DE')}`,
                   isFestpreis: isFestpreisProposal,
@@ -721,7 +721,7 @@ Deno.serve(async (req) => {
                   name: profile.company_name || profile.first_name || profile.email.split('@')[0],
                   type: 'lost',
                   kitchenModel: kitchenName,
-                  auctionUrl: 'https://caravanwert.de/kaufen',
+                  auctionUrl: 'https://kuechenwert24.de/kaufen',
                   yourBid: `€${Number(ro.offer_amount).toLocaleString('de-DE')}`,
                   currentBid: `€${salePrice.toLocaleString('de-DE')}`,
                   isFestpreis: isFestpreisProposal,
@@ -751,7 +751,7 @@ Deno.serve(async (req) => {
         .limit(1)
         .maybeSingle();
 
-      const settingsData = settings || { site_name: 'CaravanWert', contact_email: 'info@caravanwert.de' };
+      const settingsData = settings || { site_name: 'KuechenWert', contact_email: 'info@kuechenwert.de' };
 
       // Get admin emails
       const recipients: string[] = [];
@@ -775,7 +775,7 @@ Deno.serve(async (req) => {
       }
 
       if (recipients.length === 0) {
-        recipients.push('info@caravanwert.de');
+        recipients.push('info@kuechenwert.de');
       }
 
       const saleLabel = isFestpreisProposal ? 'Preisvorschlag' : 'Kaufchance';
@@ -804,7 +804,7 @@ Deno.serve(async (req) => {
         adminContent += warningBox(`<strong>⚠️ ${errors.length} Fehler aufgetreten:</strong><br>${errors.map(e => `• ${e}`).join('<br>')}`);
       }
 
-      adminContent += button('Im Admin-Dashboard ansehen', `https://caravanwert.de/admin/auctions`);
+      adminContent += button('Im Admin-Dashboard ansehen', `https://kuechenwert24.de/admin/auctions`);
 
       const adminSubject = `[Admin] ${saleLabel} angenommen: ${kitchenName} für €${salePrice.toLocaleString('de-DE')}`;
       const html = buildEmailLayout(settingsData, `${saleLabel} angenommen: ${kitchenName} für €${salePrice.toLocaleString('de-DE')}`, adminContent);
@@ -817,7 +817,7 @@ Deno.serve(async (req) => {
             'Authorization': `Bearer ${RESEND_API_KEY}`,
           },
           body: JSON.stringify({
-            from: `${settingsData.site_name} System <info@caravanwert.de>`,
+            from: `${settingsData.site_name} System <info@kuechenwert.de>`,
             to: recipients,
             subject: adminSubject,
             html,
@@ -828,7 +828,7 @@ Deno.serve(async (req) => {
       // Log admin email
       try {
         await supabase.from('admin_emails').insert({
-          sender_email: 'info@caravanwert.de',
+          sender_email: 'info@kuechenwert.de',
           sender_name: `${settingsData.site_name} System`,
           recipient_email: recipients[0],
           recipient_name: 'Admin',

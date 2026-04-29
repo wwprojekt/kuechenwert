@@ -1,4 +1,4 @@
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.100.1';
+﻿import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.100.1';
 import { z } from 'https://deno.land/x/zod@v3.22.4/mod.ts';
 import { getCorsHeaders, handleCorsPreflightRequest } from '../_shared/cors.ts';
 
@@ -140,7 +140,7 @@ Deno.serve(async (req: Request): Promise<Response> => {
     ) {
       return jsonResponse(
         {
-          error: `Der Mindestpreis kann nur gesenkt, nicht erhoeht werden (aktuell: ${fmtPrice(currentReserveForCompare)}, gewuenscht: ${fmtPrice(requestedReserve)}). Fuer Erhoehungen wenden Sie sich an info@caravanwert.de.`,
+          error: `Der Mindestpreis kann nur gesenkt, nicht erhoeht werden (aktuell: ${fmtPrice(currentReserveForCompare)}, gewuenscht: ${fmtPrice(requestedReserve)}). Fuer Erhoehungen wenden Sie sich an info@kuechenwert.de.`,
           code: 'PRICE_RAISE_NOT_ALLOWED',
         },
         400,
@@ -154,7 +154,7 @@ Deno.serve(async (req: Request): Promise<Response> => {
     ) {
       return jsonResponse(
         {
-          error: `Der Sofortpreis kann nur gesenkt, nicht erhoeht werden (aktuell: ${fmtPrice(currentInstantForCompare)}, gewuenscht: ${fmtPrice(requestedInstant)}). Fuer Erhoehungen wenden Sie sich an info@caravanwert.de.`,
+          error: `Der Sofortpreis kann nur gesenkt, nicht erhoeht werden (aktuell: ${fmtPrice(currentInstantForCompare)}, gewuenscht: ${fmtPrice(requestedInstant)}). Fuer Erhoehungen wenden Sie sich an info@kuechenwert.de.`,
           code: 'PRICE_RAISE_NOT_ALLOWED',
         },
         400,
@@ -171,7 +171,7 @@ Deno.serve(async (req: Request): Promise<Response> => {
     if (existing) {
       return jsonResponse(
         {
-          error: 'Es gibt bereits eine offene Preisänderungs-Anfrage für dieses Inserat. Bitte warten Sie auf die Bearbeitung oder kontaktieren Sie info@caravanwert.de.',
+          error: 'Es gibt bereits eine offene Preisänderungs-Anfrage für dieses Inserat. Bitte warten Sie auf die Bearbeitung oder kontaktieren Sie info@kuechenwert.de.',
           code: 'PENDING_REQUEST_EXISTS',
           existingRequestId: existing.id,
         },
@@ -221,7 +221,7 @@ Deno.serve(async (req: Request): Promise<Response> => {
 <body style="font-family:Arial,Helvetica,sans-serif;background:#f5f5f5;margin:0;padding:24px;color:#374151;">
   <div style="max-width:760px;margin:0 auto;background:#ffffff;border-radius:8px;padding:32px;box-shadow:0 1px 3px rgba(0,0,0,0.08);">
     <div style="border-bottom:3px solid #1f8aa2;padding-bottom:16px;margin-bottom:24px;">
-      <h1 style="margin:0;color:#1f8aa2;font-size:22px;">CaravanWert · Admin-Aufgabe</h1>
+      <h1 style="margin:0;color:#1f8aa2;font-size:22px;">KuechenWert · Admin-Aufgabe</h1>
     </div>
     <h2 style="color:#1f8aa2;margin-top:0;font-size:20px;">Preisänderungs-Anfrage vom Verkäufer</h2>
     <p style="font-size:15px;line-height:1.6;">Ein Verkäufer hat eine Preisanpassung beantragt. Bitte prüfen und entweder annehmen (Preis im Admin-Inserat ändern und Status auf <code>applied</code>) oder ablehnen (<code>admin_note</code> setzen, Status <code>rejected</code>).</p>
@@ -244,13 +244,13 @@ Deno.serve(async (req: Request): Promise<Response> => {
     <blockquote style="border-left:3px solid #1f8aa2;padding:8px 16px;background:#f9fafb;margin:8px 0;font-style:italic;color:#374151;">${(reason || '').replace(/[<>]/g, '')}</blockquote>
 
     <p style="margin-top:24px;">
-      <a href="https://caravanwert.de/admin/kitchens/${kitchenId}" style="display:inline-block;background:#1f8aa2;color:#ffffff;text-decoration:none;padding:10px 20px;border-radius:6px;font-weight:600;font-size:14px;">Inserat im Admin öffnen →</a>
+      <a href="https://kuechenwert24.de/admin/kitchens/${kitchenId}" style="display:inline-block;background:#1f8aa2;color:#ffffff;text-decoration:none;padding:10px 20px;border-radius:6px;font-weight:600;font-size:14px;">Inserat im Admin öffnen →</a>
     </p>
 
     <p style="margin-top:16px;font-size:12px;color:#9ca3af;">Anfrage-ID: <code>${inserted.id}</code> · Eingang: ${new Date(inserted.created_at).toLocaleString('de-DE', { timeZone: 'Europe/Berlin' })}</p>
 
     <hr style="margin:32px 0;border:none;border-top:1px solid #e5e7eb;">
-    <p style="font-size:12px;color:#9ca3af;text-align:center;">CaravanWert · Automatische Admin-Aufgabe</p>
+    <p style="font-size:12px;color:#9ca3af;text-align:center;">KuechenWert · Automatische Admin-Aufgabe</p>
   </div>
 </body>
 </html>`;
@@ -262,11 +262,11 @@ Deno.serve(async (req: Request): Promise<Response> => {
             'Authorization': `Bearer ${RESEND_API_KEY}`,
           },
           body: JSON.stringify({
-            from: 'CaravanWert <info@caravanwert.de>',
-            to: ['info@caravanwert.de'],
+            from: 'KuechenWert <info@kuechenwert.de>',
+            to: ['info@kuechenwert.de'],
             subject,
             html,
-            reply_to: sellerEmail !== 'unbekannt' ? sellerEmail : 'info@caravanwert.de',
+            reply_to: sellerEmail !== 'unbekannt' ? sellerEmail : 'info@kuechenwert.de',
           }),
         });
 
@@ -276,9 +276,9 @@ Deno.serve(async (req: Request): Promise<Response> => {
         } else {
           const resendResult = await resendResp.json();
           await adminClient.from('admin_emails').insert({
-            sender_email: 'info@caravanwert.de',
-            sender_name: 'CaravanWert',
-            recipient_email: 'info@caravanwert.de',
+            sender_email: 'info@kuechenwert.de',
+            sender_name: 'KuechenWert',
+            recipient_email: 'info@kuechenwert.de',
             subject,
             body_html: html,
             body_text: html.replace(/<[^>]+>/g, ''),

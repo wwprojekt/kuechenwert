@@ -1,4 +1,4 @@
-import * as React from 'npm:react@18.3.1';
+﻿import * as React from 'npm:react@18.3.1';
 import { Text } from 'npm:@react-email/components@0.0.22';
 import { EmailLayout, InfoBox, DetailRow, CTAButton } from '../email-components.tsx';
 
@@ -159,7 +159,7 @@ const getContent = (type: NotificationType, props: AuctionNotificationProps) => 
             <Text style={{ fontSize: '16px', lineHeight: '26px' }}>
               Entdecken Sie weitere verfügbare Wohnmobile in unserer Plattform.
             </Text>
-            <CTAButton href="https://caravanwert.de/kaufen" text="Weitere Auktionen" />
+            <CTAButton href="https://kuechenwert24.de/kaufen" text="Weitere Auktionen" />
           </>
         ),
       };

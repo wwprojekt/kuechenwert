@@ -1,4 +1,4 @@
-import "jsr:@supabase/functions-js/edge-runtime.d.ts";
+﻿import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.4";
 import { getCorsHeaders, handleCorsPreflightRequest } from "../_shared/cors.ts";
 import { checkServiceRoleOrAdmin } from "../_shared/auth.ts";
@@ -66,7 +66,7 @@ async function createVapidAuth(
   const payload = b64urlEncode(new TextEncoder().encode(JSON.stringify({
     aud: audience,
     exp: Math.floor(Date.now() / 1000) + 86400,
-    sub: "mailto:info@caravanwert.de",
+    sub: "mailto:info@kuechenwert.de",
   })));
 
   const sigInput = new TextEncoder().encode(`${header}.${payload}`);
@@ -213,11 +213,11 @@ Deno.serve(async (req) => {
     }
 
     const payload = JSON.stringify({
-      title: title || "CaravanWert",
+      title: title || "KuechenWert",
       body: body || "",
       icon: icon || "/logo.png",
       badge: "/favicon.png",
-      url: url || "https://caravanwert.de",
+      url: url || "https://kuechenwert24.de",
       tag: tag || "default",
       data: data || {},
     });

@@ -1,4 +1,4 @@
-import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
+﻿import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.100.1';
 import { buildEmailLayout, paragraph, greeting, button, infoBox, detailRow, amountDisplay, customerBadge } from '../_shared/email-builder.ts';
 import { checkServiceRoleOrAdmin } from '../_shared/auth.ts';
@@ -80,9 +80,9 @@ const handler = async (req: Request): Promise<Response> => {
     // Fetch site settings
     const { data: settings } = await supabase.from('site_settings').select('*').single();
     const settingsData = settings || {
-      site_name: 'CaravanWert',
+      site_name: 'KuechenWert',
       site_description: 'Deutschlands führende Wohnmobil-Handelsplattform',
-      contact_email: 'info@caravanwert.de',
+      contact_email: 'info@kuechenwert.de',
       support_phone: '+49 511 51532476',
     };
 
@@ -148,7 +148,7 @@ const handler = async (req: Request): Promise<Response> => {
           ${amountDisplay('Offener Betrag', amount)}
           ${paragraph('Sollte sich Ihre Zahlung mit dieser Erinnerung &uuml;berschnitten haben, betrachten Sie diese Nachricht bitte als gegenstandslos.')}
           ${paragraph(`Falls Sie Fragen zur Rechnung haben oder eine Ratenzahlung vereinbaren m&ouml;chten, kontaktieren Sie uns gerne unter <a href="mailto:${settingsData.contact_email}" style="color: #1f8aa2;">${settingsData.contact_email}</a> oder telefonisch unter <a href="tel:${settingsData.support_phone.replace(/\s/g, '')}" style="color: #1f8aa2;">${settingsData.support_phone}</a>.`)}
-          ${button('Rechnung ansehen', 'https://caravanwert.de/dashboard', settingsData)}
+          ${button('Rechnung ansehen', 'https://kuechenwert24.de/dashboard', settingsData)}
         `;
 
         const html = buildEmailLayout(settingsData, subject, emailContent);
@@ -160,11 +160,11 @@ const handler = async (req: Request): Promise<Response> => {
             "Authorization": `Bearer ${RESEND_API_KEY}`,
           },
           body: JSON.stringify({
-            from: `${settingsData.site_name} <info@caravanwert.de>`,
+            from: `${settingsData.site_name} <info@kuechenwert.de>`,
             to: [profile.email],
             subject,
             html,
-            reply_to: 'info@caravanwert.de',
+            reply_to: 'info@kuechenwert.de',
           }),
         });
 
@@ -178,7 +178,7 @@ const handler = async (req: Request): Promise<Response> => {
         // Log in admin_emails for System tab
         try {
           await supabase.from('admin_emails').insert({
-            sender_email: 'info@caravanwert.de',
+            sender_email: 'info@kuechenwert.de',
             sender_name: settingsData.site_name,
             recipient_email: profile.email,
             recipient_name: recipientName || null,

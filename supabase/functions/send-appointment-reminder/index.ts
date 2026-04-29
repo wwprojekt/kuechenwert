@@ -1,4 +1,4 @@
-import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
+﻿import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.100.1';
 import { buildEmailLayout, paragraph, greeting, button, infoBox, detailRow } from '../_shared/email-builder.ts';
 
@@ -89,9 +89,9 @@ async function processAppointments(
   // Fetch site settings
   const { data: settings } = await supabase.from('site_settings').select('*').single();
   const settingsData = settings || {
-    site_name: 'CaravanWert',
+    site_name: 'KuechenWert',
     site_description: 'Deutschlands führende Wohnmobil-Handelsplattform',
-    contact_email: 'info@caravanwert.de',
+    contact_email: 'info@kuechenwert.de',
     support_phone: '+49 511 51532476',
   };
 
@@ -141,7 +141,7 @@ async function processAppointments(
           &bull; Serviceheft / Wartungsnachweise<br>
           &bull; G&uuml;ltiger Personalausweis oder Reisepass
         `)}
-        ${button('Termin ansehen', 'https://caravanwert.de/dashboard', settingsData)}
+        ${button('Termin ansehen', 'https://kuechenwert24.de/dashboard', settingsData)}
         ${paragraph(`Falls Sie den Termin nicht wahrnehmen k&ouml;nnen, kontaktieren Sie uns bitte unter <a href="tel:${settingsData.support_phone.replace(/\s/g, '')}" style="color: #1f8aa2;">${settingsData.support_phone}</a>.`)}
       `;
 
@@ -154,11 +154,11 @@ async function processAppointments(
           "Authorization": `Bearer ${RESEND_API_KEY}`,
         },
         body: JSON.stringify({
-          from: `${settingsData.site_name} <info@caravanwert.de>`,
+          from: `${settingsData.site_name} <info@kuechenwert.de>`,
           to: [profile.email],
           subject,
           html,
-          reply_to: 'info@caravanwert.de',
+          reply_to: 'info@kuechenwert.de',
         }),
       });
 
@@ -172,7 +172,7 @@ async function processAppointments(
       // Log in admin_emails for System tab
       try {
         await supabase.from('admin_emails').insert({
-          sender_email: 'info@caravanwert.de',
+          sender_email: 'info@kuechenwert.de',
           sender_name: settingsData.site_name,
           recipient_email: profile.email,
           recipient_name: name || null,

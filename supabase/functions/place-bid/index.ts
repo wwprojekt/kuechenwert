@@ -1,4 +1,4 @@
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.100.1';
+﻿import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.100.1';
 import { z } from 'https://deno.land/x/zod@v3.22.4/mod.ts';
 import { checkRateLimit, createRateLimitErrorResponse, createRateLimitHeaders, RATE_LIMITS } from '../_shared/rate-limiter.ts';
 import { getCorsHeaders, handleCorsPreflightRequest } from '../_shared/cors.ts';
@@ -283,7 +283,7 @@ Deno.serve(async (req) => {
           userId: previousBids[0].bidder_id,
           title: 'Sie wurden überboten!',
           body: `Ihr Gebot auf ${kitchenName || 'eine Auktion'} wurde überboten. Neuer Preis: €${amount.toLocaleString('de-DE')}`,
-          url: `https://caravanwert.de/auktion/${auctionId}`,
+          url: `https://kuechenwert24.de/auktion/${auctionId}`,
           tag: 'outbid',
         },
       }).catch((e) => console.error('Error sending outbid push:', e));
@@ -317,7 +317,7 @@ Deno.serve(async (req) => {
               name: sellerProfile.first_name || sellerProfile.email.split('@')[0],
               type: 'new_bid',
               kitchenModel: kitchenName,
-              auctionUrl: `https://caravanwert.de/auktion/${auctionId}`,
+              auctionUrl: `https://kuechenwert24.de/auktion/${auctionId}`,
               currentBid: `€${amount.toLocaleString('de-DE')}`,
             },
           }).catch((e) => console.error('Error sending seller notification:', e));

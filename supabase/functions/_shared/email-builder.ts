@@ -1,6 +1,11 @@
-// Email template builder – CaravanWert Branding
-// Professionelles Design mit Logo, Website-Farben (Teal/Cyan #1f8aa2)
-// Konsistent mit caravanwert.de
+// Email template builder – KuechenWert Branding
+// Professionelles Design mit Logo, Website-Farben (Forest Sage / Brass)
+// Konsistent mit kuechenwert24.de
+//
+// BRAND-Meta (Name/Domain/URLs/Logo) kommen aus brand-config.ts,
+// damit wir bei Rebrand nur EINE Stelle anfassen muessen.
+
+import { BRAND as BRAND_META, BRAND_URLS, BRAND_LOGO_URLS } from "./brand-config.ts";
 
 export interface Settings {
   site_name: string;
@@ -12,11 +17,11 @@ export interface Settings {
 }
 
 const BRAND = {
-  // Primärfarben – identisch mit der Website (HSL 191, 68%, 38%)
-  primary: '#1f8aa2',
-  primaryLight: '#239cb8',
-  primaryDark: '#1a7489',
-  primaryDarker: '#0f4f5c',
+  // Primaerfarben – Forest Sage (HSL 160 32 30)
+  primary: '#336753',
+  primaryLight: '#4a8066',
+  primaryDark: '#2a5544',
+  primaryDarker: '#19372b',
 
   // Text
   heading: '#111827',
@@ -24,13 +29,13 @@ const BRAND = {
   textLight: '#6b7280',
   textMuted: '#9ca3af',
 
-  // Hintergründe
+  // Hintergruende
   white: '#ffffff',
-  bgLight: '#f8fafc',
-  bgGray: '#f1f5f9',
-  footerBg: '#0f4f5c',
-  footerText: '#94a3b8',
-  footerLink: '#67e8f9',
+  bgLight: '#f8f5ef',
+  bgGray: '#eef1ec',
+  footerBg: '#19372b',
+  footerText: '#b8c2b8',
+  footerLink: '#c9aa7a',
 
   // Rahmen
   border: '#e2e8f0',
@@ -52,13 +57,15 @@ const BRAND = {
 
   // Sonstiges
   font: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif",
-  logoUrl: 'https://zcrwqxsyptjwkuxfacvq.supabase.co/storage/v1/object/public/branding/logo-email.png',
+  // Liegt als Platzhalter in public/logo-email.png. Solange es das nicht
+  // gibt, fallback: alt-Text ("KuechenWert") greift im Mail-Client.
+  logoUrl: BRAND_LOGO_URLS.email,
 };
 
 export const buildEmailLayout = (settings: Settings, title: string, content: string) => {
-  const siteName = settings.site_name || 'CaravanWert';
-  const siteDesc = settings.site_description || 'Deutschlands führende Wohnmobil-Handelsplattform';
-  const contactEmail = settings.contact_email || 'info@caravanwert.de';
+  const siteName = settings.site_name || BRAND_META.name;
+  const siteDesc = settings.site_description || BRAND_META.tagline;
+  const contactEmail = settings.contact_email || BRAND_META.supportEmail;
   const supportPhone = settings.support_phone || '+49 511 51532476';
   const year = new Date().getFullYear();
 
@@ -92,7 +99,7 @@ export const buildEmailLayout = (settings: Settings, title: string, content: str
           <tr>
             <td style="background: linear-gradient(135deg, ${BRAND.primaryDarker} 0%, ${BRAND.primary} 50%, ${BRAND.primaryLight} 100%); padding: 32px 40px; text-align: center;">
               <!--[if mso]><table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%"><tr><td style="background-color: ${BRAND.primary}; padding: 32px 40px; text-align: center;"><![endif]-->
-              <a href="https://caravanwert.de" style="text-decoration: none; display: inline-block;">
+              <a href="${BRAND_URLS.home}" style="text-decoration: none; display: inline-block;">
                 <img src="${BRAND.logoUrl}" alt="${siteName}" width="220" style="display: block; margin: 0 auto; max-width: 220px; height: auto;" />
               </a>
               <!--[if mso]></td></tr></table><![endif]-->
@@ -152,13 +159,13 @@ export const buildEmailLayout = (settings: Settings, title: string, content: str
                 <tr>
                   <td align="center" style="padding-bottom: 16px;">
                     <p style="margin: 0; font-size: 12px;">
-                      <a href="https://caravanwert.de" style="color: ${BRAND.footerLink}; text-decoration: none; font-weight: 500;">Website</a>
+                      <a href="${BRAND_URLS.home}" style="color: ${BRAND.footerLink}; text-decoration: none; font-weight: 500;">Website</a>
                       &nbsp;&nbsp;&bull;&nbsp;&nbsp;
-                      <a href="https://caravanwert.de/datenschutz" style="color: ${BRAND.footerLink}; text-decoration: none; font-weight: 500;">Datenschutz</a>
+                      <a href="${BRAND_URLS.privacy}" style="color: ${BRAND.footerLink}; text-decoration: none; font-weight: 500;">Datenschutz</a>
                       &nbsp;&nbsp;&bull;&nbsp;&nbsp;
-                      <a href="https://caravanwert.de/impressum" style="color: ${BRAND.footerLink}; text-decoration: none; font-weight: 500;">Impressum</a>
+                      <a href="${BRAND_URLS.imprint}" style="color: ${BRAND.footerLink}; text-decoration: none; font-weight: 500;">Impressum</a>
                       &nbsp;&nbsp;&bull;&nbsp;&nbsp;
-                      <a href="https://caravanwert.de/faq" style="color: ${BRAND.footerLink}; text-decoration: none; font-weight: 500;">FAQ</a>
+                      <a href="${BRAND_META.baseUrl}/faq" style="color: ${BRAND.footerLink}; text-decoration: none; font-weight: 500;">FAQ</a>
                     </p>
                   </td>
                 </tr>

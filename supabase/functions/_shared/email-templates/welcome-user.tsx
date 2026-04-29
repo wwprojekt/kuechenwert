@@ -1,4 +1,4 @@
-import * as React from 'npm:react@18.3.1';
+﻿import * as React from 'npm:react@18.3.1';
 import { Text } from 'npm:@react-email/components@0.0.22';
 import { EmailLayout, InfoBox, CTAButton } from '../email-components.tsx';
 
@@ -39,7 +39,7 @@ export const WelcomeUser = ({
       <Text style={{ fontSize: '14px', margin: '4px 0' }}>• Professionelle Beratung und Support</Text>
     </InfoBox>
 
-    <CTAButton href="https://caravanwert.de/verkaufen" text="Jetzt Wohnmobil verkaufen" />
+    <CTAButton href="https://kuechenwert24.de/verkaufen" text="Jetzt Wohnmobil verkaufen" />
 
     <Text style={{ fontSize: '14px', lineHeight: '22px', color: '#666', margin: '24px 0' }}>
       Bei Fragen stehen wir Ihnen jederzeit gerne zur Verfügung. Unser Support-Team erreichen Sie unter {settings.contact_email} oder telefonisch unter {settings.support_phone}.

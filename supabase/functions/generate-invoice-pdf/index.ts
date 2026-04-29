@@ -1,4 +1,4 @@
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.100.1';
+﻿import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.100.1';
 import { getCorsHeaders, handleCorsPreflightRequest } from '../_shared/cors.ts';
 // @deno-types="https://esm.sh/jspdf@2.5.2"
 import { jsPDF } from 'https://esm.sh/jspdf@2.5.2';
@@ -66,15 +66,15 @@ Deno.serve(async (req) => {
 
     const { data: settings } = await supabase.from('site_settings').select('*').limit(1).maybeSingle();
 
-    const siteName = settings?.site_name || 'CaravanWert';
+    const siteName = settings?.site_name || 'KuechenWert';
     const siteDesc = settings?.site_description || 'Deutschlands führende Wohnmobil-Handelsplattform';
     const addr = settings?.address || 'Hannoversche Straße 106';
     const cityS = settings?.city || 'Hannover';
     const zipS = settings?.zip_code || '30627';
     const countryS = settings?.country || 'Deutschland';
-    const contactEmail = settings?.contact_email || 'info@caravanwert.de';
+    const contactEmail = settings?.contact_email || 'info@kuechenwert.de';
     const phoneS = settings?.support_phone || '0511 / 51532476';
-    const website = 'www.caravanwert.de';
+    const website = 'www.kuechenwert24.de';
     const bankIban = settings?.bank_iban || '';
     const bankBic = settings?.bank_bic || '';
     const bankName = settings?.bank_name || '';

@@ -1,4 +1,4 @@
-import * as React from 'npm:react@18.3.1';
+﻿import * as React from 'npm:react@18.3.1';
 import { Text } from 'npm:@react-email/components@0.0.22';
 import { EmailLayout, InfoBox, DetailRow, CTAButton } from '../email-components.tsx';
 
@@ -70,7 +70,7 @@ export const DealerNotification = ({
                 <Text style={{ fontSize: '14px', margin: '4px 0' }}>✓ Entdecken Sie aktuelle Auktionen</Text>
                 <Text style={{ fontSize: '14px', margin: '4px 0' }}>✓ Geben Sie Ihr erstes Gebot ab</Text>
               </InfoBox>
-              <CTAButton href="https://caravanwert.de/dashboard" text="Zum Händler-Portal" />
+              <CTAButton href="https://kuechenwert24.de/dashboard" text="Zum Händler-Portal" />
             </>
           ),
         };

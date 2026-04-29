@@ -1,4 +1,4 @@
-// One-shot admin notification: lists active/kaufchance auctions with NULL
+﻿// One-shot admin notification: lists active/kaufchance auctions with NULL
 // seller_initial_reserve (legacy gap before AGB v7 hardening). Will be
 // invoked once and then removed from the project. Internal use only —
 // no public auth contract required.
@@ -45,7 +45,7 @@ serve(async (_req: Request): Promise<Response> => {
           <td style="padding:8px;border:1px solid #ddd;font-family:monospace;font-size:12px;">${r.id}</td>
           <td style="padding:8px;border:1px solid #ddd;text-align:right;">${r.starting_bid ?? "-"} €</td>
           <td style="padding:8px;border:1px solid #ddd;">${endTime}</td>
-          <td style="padding:8px;border:1px solid #ddd;"><a href="https://caravanwert.de/admin/kitchens/${r.kitchen_id}" style="color:#0066cc;">Bearbeiten →</a></td>
+          <td style="padding:8px;border:1px solid #ddd;"><a href="https://kuechenwert24.de/admin/kitchens/${r.kitchen_id}" style="color:#0066cc;">Bearbeiten →</a></td>
         </tr>`;
       })
       .join("\n");
@@ -59,7 +59,7 @@ serve(async (_req: Request): Promise<Response> => {
 <body style="font-family:Arial,Helvetica,sans-serif;background:#f5f5f5;margin:0;padding:24px;color:#374151;">
   <div style="max-width:760px;margin:0 auto;background:#ffffff;border-radius:8px;padding:32px;box-shadow:0 1px 3px rgba(0,0,0,0.08);">
     <div style="border-bottom:3px solid #1f8aa2;padding-bottom:16px;margin-bottom:24px;">
-      <h1 style="margin:0;color:#1f8aa2;font-size:22px;">CaravanWert · Admin-Alarm</h1>
+      <h1 style="margin:0;color:#1f8aa2;font-size:22px;">KuechenWert · Admin-Alarm</h1>
     </div>
     <h2 style="color:#d32f2f;margin-top:0;font-size:20px;">⚠️ Risiko: ${rows.length} aktive Auktionen ohne Mindestpreis</h2>
     <p style="font-size:15px;line-height:1.6;">Folgende Auktionen laufen derzeit <strong>ohne <code>seller_initial_reserve</code></strong>. Die AGB §6.4 c) Reduktionsboden-Logik kann hier nicht greifen – theoretisch wären Verkäufe ab dem Startpreis (z. B. 50&nbsp;€) möglich.</p>
@@ -79,7 +79,7 @@ serve(async (_req: Request): Promise<Response> => {
     <p style="margin-top:24px;font-size:13px;color:#555;line-height:1.6;"><strong>Hintergrund:</strong> Mit AGB v7 (in Kraft seit ${todayDe}) greift bei Auktionen die automatische Preisanpassung mit Reduktionsboden -6&nbsp;% vom Wunsch-Mindestpreis. Ohne <code>seller_initial_reserve</code> existiert kein Anker und kein Boden.</p>
     <p style="font-size:13px;color:#555;line-height:1.6;">Neue Inserate sind ab sofort durch UI- und Backend-Validierung gegen NULL-Mindestpreise geschützt (Wizard, Händler-Erstellung, Verkäufer-Edit, Edge Function, DB-CHECK-Constraint). Diese E-Mail betrifft nur Altbestand.</p>
     <hr style="margin:32px 0;border:none;border-top:1px solid #e5e7eb;">
-    <p style="font-size:12px;color:#9ca3af;text-align:center;">CaravanWert · Automatischer System-Alarm · ${todayDe}</p>
+    <p style="font-size:12px;color:#9ca3af;text-align:center;">KuechenWert · Automatischer System-Alarm · ${todayDe}</p>
   </div>
 </body>
 </html>`;
@@ -91,11 +91,11 @@ serve(async (_req: Request): Promise<Response> => {
         "Authorization": `Bearer ${RESEND_API_KEY}`,
       },
       body: JSON.stringify({
-        from: "CaravanWert <info@caravanwert.de>",
-        to: ["info@caravanwert.de"],
+        from: "KuechenWert <info@kuechenwert.de>",
+        to: ["info@kuechenwert.de"],
         subject,
         html,
-        reply_to: "info@caravanwert.de",
+        reply_to: "info@kuechenwert.de",
       }),
     });
 
@@ -106,9 +106,9 @@ serve(async (_req: Request): Promise<Response> => {
     const resendResult = await resendResp.json();
 
     await supabase.from("admin_emails").insert({
-      sender_email: "info@caravanwert.de",
-      sender_name: "CaravanWert",
-      recipient_email: "info@caravanwert.de",
+      sender_email: "info@kuechenwert.de",
+      sender_name: "KuechenWert",
+      recipient_email: "info@kuechenwert.de",
       subject,
       body_html: html,
       body_text: html.replace(/<[^>]+>/g, ""),

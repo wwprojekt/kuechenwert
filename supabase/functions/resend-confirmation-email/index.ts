@@ -1,4 +1,4 @@
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.100.1';
+﻿import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.100.1';
 import { getCorsHeaders, handleCorsPreflightRequest } from '../_shared/cors.ts';
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
@@ -98,7 +98,7 @@ Deno.serve(async (req: Request) => {
         type: 'magiclink',
         email: targetEmail,
         options: {
-          redirectTo: `${SUPABASE_URL.replace('.supabase.co', '')}.supabase.co/auth/v1/verify?redirect_to=https://caravanwert.de/dashboard`,
+          redirectTo: `${SUPABASE_URL.replace('.supabase.co', '')}.supabase.co/auth/v1/verify?redirect_to=https://kuechenwert24.de/dashboard`,
         },
       });
 

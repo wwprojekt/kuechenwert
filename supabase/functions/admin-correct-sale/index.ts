@@ -1,4 +1,4 @@
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.100.1';
+﻿import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.100.1';
 import { getCorsHeaders, handleCorsPreflightRequest } from '../_shared/cors.ts';
 import { checkServiceRoleOrAdmin } from '../_shared/auth.ts';
 import {
@@ -341,9 +341,9 @@ Deno.serve(async (req) => {
         .single();
 
       const settingsData = {
-        site_name: settings?.site_name ?? 'CaravanWert',
+        site_name: settings?.site_name ?? 'KuechenWert',
         site_description: settings?.site_description ?? 'Deutschlands führende Wohnmobil-Handelsplattform',
-        contact_email: settings?.contact_email ?? 'info@caravanwert.de',
+        contact_email: settings?.contact_email ?? 'info@kuechenwert.de',
         support_phone: settings?.support_phone ?? '',
       };
 
@@ -386,7 +386,7 @@ Deno.serve(async (req) => {
             Authorization: `Bearer ${RESEND_API_KEY}`,
           },
           body: JSON.stringify({
-            from: `${settingsData.site_name} <info@caravanwert.de>`,
+            from: `${settingsData.site_name} <info@kuechenwert.de>`,
             to: [recipientEmail],
             subject,
             html,
@@ -398,7 +398,7 @@ Deno.serve(async (req) => {
         }
         const result = await res.json();
         await supabase.from('admin_emails').insert({
-          sender_email: 'info@caravanwert.de',
+          sender_email: 'info@kuechenwert.de',
           sender_name: settingsData.site_name,
           recipient_email: recipientEmail,
           recipient_name: recipientName,
@@ -461,7 +461,7 @@ Deno.serve(async (req) => {
         const protoResult = await sendBlankHandoverProtocol({
           supabase,
           resendApiKey: RESEND_API_KEY,
-          settingsData: settings || { site_name: 'CaravanWert', contact_email: 'info@caravanwert.de' },
+          settingsData: settings || { site_name: 'KuechenWert', contact_email: 'info@kuechenwert.de' },
           kitchenId: kitchen.id,
           buyerId,
           sellerId,

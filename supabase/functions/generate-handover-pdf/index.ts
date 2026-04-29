@@ -1,4 +1,4 @@
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+﻿import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.100.1';
 import { getCorsHeaders, handleCorsPreflightRequest } from '../_shared/cors.ts';
 import { checkServiceRoleOrAdmin } from '../_shared/auth.ts';
@@ -55,13 +55,13 @@ serve(async (req) => {
       .maybeSingle();
 
     const companyInfo = {
-      siteName: settings?.site_name || 'CaravanWert',
+      siteName: settings?.site_name || 'KuechenWert',
       legalName: 'WohnWert GmbH',
       address: settings?.address || settings?.company_address || 'Hannoversche Str. 106',
       zip: settings?.zip_code || settings?.company_postal_code || '30627',
       city: settings?.city || settings?.company_city || 'Hannover',
       phone: settings?.support_phone || '0511 / 51532476',
-      email: settings?.contact_email || 'info@caravanwert.de',
+      email: settings?.contact_email || 'info@kuechenwert.de',
       managingDirector: settings?.managing_director || 'Mona Kareem-Ameen',
       hrbNumber: settings?.hrb_number || '210321',
       court: 'Amtsgericht Hildesheim',
@@ -235,7 +235,7 @@ function generateProtocolHTML(appointment: any, company: CompanyInfo): string {
   <button class="print-button no-print" onclick="window.print()">Als PDF drucken / speichern</button>
 
   <div class="header">
-    <div class="logo">CaravanWert</div>
+    <div class="logo">KuechenWert</div>
     <h2>Übergabeprotokoll</h2>
   </div>
 

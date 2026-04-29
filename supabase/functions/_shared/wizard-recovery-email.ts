@@ -1,8 +1,8 @@
-// Shared builder for wizard recovery emails.
+﻿// Shared builder for wizard recovery emails.
 //
 // Wird sowohl vom 5-Minuten-Cron (`process-abandoned-wizards`) als auch vom
 // manuellen Admin-Trigger (`send-wizard-resume-email`) verwendet, damit beide
-// Wege identisch aussehen und gleichzeitig vom CaravanWert-Branding profitieren.
+// Wege identisch aussehen und gleichzeitig vom KuechenWert-Branding profitieren.
 //
 // Designziele:
 //   1. 100 % Brand-Konsistenz mit `_shared/email-builder.ts` (Teal #1f8aa2,
@@ -118,12 +118,12 @@ function vehicleTypeLabel(session: WizardSession): string {
 
 function buildResumeUrl(session: WizardSession, source: string): string {
   if (session.resume_token) {
-    return `https://caravanwert.de/verkaufen/wizard?token=${encodeURIComponent(
+    return `https://kuechenwert24.de/verkaufen/wizard?token=${encodeURIComponent(
       session.resume_token,
     )}&source=${source}`;
   }
   const step = effectiveStep(session);
-  return `https://caravanwert.de/verkaufen/wizard?step=${step}&source=${source}`;
+  return `https://kuechenwert24.de/verkaufen/wizard?step=${step}&source=${source}`;
 }
 
 /**
@@ -242,7 +242,7 @@ function trustBlock(stepsRemaining: number): string {
  * ("Ihre Daten sind gespeichert") + niedrige Resthurde ("nur noch X Schritte").
  *
  * @param session Wizard-Session aus DB
- * @param settings Site-Settings (CaravanWert-Defaults im Caller setzen)
+ * @param settings Site-Settings (KuechenWert-Defaults im Caller setzen)
  * @param customMessage Optional: vom Admin manuell mitgegebene Nachricht
  *        (nur send-wizard-resume-email Pfad). Wird oberhalb der CTA gerendert.
  */

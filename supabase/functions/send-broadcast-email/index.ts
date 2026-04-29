@@ -1,4 +1,4 @@
-import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
+﻿import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.100.1';
 import { buildEmailLayout, paragraph } from '../_shared/email-builder.ts';
 import { getCorsHeaders, handleCorsPreflightRequest } from '../_shared/cors.ts';
@@ -199,9 +199,9 @@ const handler = async (req: Request): Promise<Response> => {
     // Fetch site settings
     const { data: settings } = await supabase.from('site_settings').select('*').single();
     const settingsData = settings || {
-      site_name: 'CaravanWert',
+      site_name: 'KuechenWert',
       site_description: 'Deutschlands führende Wohnmobil-Handelsplattform',
-      contact_email: 'info@caravanwert.de',
+      contact_email: 'info@kuechenwert.de',
       support_phone: '+49 511 51532476',
     };
 
@@ -209,7 +209,7 @@ const handler = async (req: Request): Promise<Response> => {
     if (test_mode && test_email) {
       let emailContent = body_html;
       if (include_unsubscribe) {
-        emailContent += paragraph(`<span style="font-size: 11px; color: #9ca3af;">Sie erhalten diese E-Mail, weil Sie bei CaravanWert registriert sind. <a href="https://caravanwert.de/dashboard/profile" style="color: #1f8aa2; text-decoration: underline;">E-Mail-Einstellungen verwalten</a> | <a href="https://caravanwert.de/dashboard/profile" style="color: #1f8aa2; text-decoration: underline;">Von Rundmails abmelden</a></span>`);
+        emailContent += paragraph(`<span style="font-size: 11px; color: #9ca3af;">Sie erhalten diese E-Mail, weil Sie bei KuechenWert registriert sind. <a href="https://kuechenwert24.de/dashboard/profile" style="color: #1f8aa2; text-decoration: underline;">E-Mail-Einstellungen verwalten</a> | <a href="https://kuechenwert24.de/dashboard/profile" style="color: #1f8aa2; text-decoration: underline;">Von Rundmails abmelden</a></span>`);
       }
       const html = buildEmailLayout(settingsData, subject, emailContent);
 
@@ -220,13 +220,13 @@ const handler = async (req: Request): Promise<Response> => {
           "Authorization": `Bearer ${RESEND_API_KEY}`,
         },
         body: JSON.stringify({
-          from: `${settingsData.site_name} <info@caravanwert.de>`,
+          from: `${settingsData.site_name} <info@kuechenwert.de>`,
           to: [test_email],
           subject: `[TEST] ${subject}`,
           html,
-          reply_to: 'info@caravanwert.de',
+          reply_to: 'info@kuechenwert.de',
           headers: {
-            'List-Unsubscribe': '<https://caravanwert.de/dashboard/profile>',
+            'List-Unsubscribe': '<https://kuechenwert24.de/dashboard/profile>',
             'List-Unsubscribe-Post': 'List-Unsubscribe=One-Click',
           },
         }),
@@ -258,7 +258,7 @@ const handler = async (req: Request): Promise<Response> => {
     // Build email HTML with optional unsubscribe link
     let emailContent = body_html;
     if (include_unsubscribe) {
-      emailContent += paragraph(`<span style="font-size: 11px; color: #9ca3af;">Sie erhalten diese E-Mail, weil Sie bei CaravanWert registriert sind. <a href="https://caravanwert.de/dashboard/profile" style="color: #1f8aa2; text-decoration: underline;">E-Mail-Einstellungen verwalten</a> | <a href="https://caravanwert.de/dashboard/profile" style="color: #1f8aa2; text-decoration: underline;">Von Rundmails abmelden</a></span>`);
+      emailContent += paragraph(`<span style="font-size: 11px; color: #9ca3af;">Sie erhalten diese E-Mail, weil Sie bei KuechenWert registriert sind. <a href="https://kuechenwert24.de/dashboard/profile" style="color: #1f8aa2; text-decoration: underline;">E-Mail-Einstellungen verwalten</a> | <a href="https://kuechenwert24.de/dashboard/profile" style="color: #1f8aa2; text-decoration: underline;">Von Rundmails abmelden</a></span>`);
     }
     const html = buildEmailLayout(settingsData, subject, emailContent);
 
@@ -274,16 +274,16 @@ const handler = async (req: Request): Promise<Response> => {
       const promises = batch.map(async (recipient) => {
         try {
           const resendPayload: any = {
-            from: `${settingsData.site_name} <info@caravanwert.de>`,
+            from: `${settingsData.site_name} <info@kuechenwert.de>`,
             to: [recipient.email],
             subject,
             html,
-            reply_to: 'info@caravanwert.de',
+            reply_to: 'info@kuechenwert.de',
           };
 
           if (include_unsubscribe) {
             resendPayload.headers = {
-              'List-Unsubscribe': '<https://caravanwert.de/dashboard/profile>',
+              'List-Unsubscribe': '<https://kuechenwert24.de/dashboard/profile>',
               'List-Unsubscribe-Post': 'List-Unsubscribe=One-Click',
             };
           }
@@ -306,7 +306,7 @@ const handler = async (req: Request): Promise<Response> => {
 
           // Log each email
           await supabase.from('admin_emails').insert({
-            sender_email: 'info@caravanwert.de',
+            sender_email: 'info@kuechenwert.de',
             sender_name: settingsData.site_name,
             recipient_email: recipient.email,
             recipient_name: recipient.name,

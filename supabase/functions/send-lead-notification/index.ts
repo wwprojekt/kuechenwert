@@ -1,4 +1,4 @@
-import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
+﻿import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.100.1";
 import {
   buildEmailLayout,
@@ -139,9 +139,9 @@ const handler = async (req: Request): Promise<Response> => {
       .single();
 
     const settingsData = settings || {
-      site_name: "CaravanWert",
+      site_name: "KuechenWert",
       site_description: "Deutschlands führende Wohnmobil-Handelsplattform",
-      contact_email: "info@caravanwert.de",
+      contact_email: "info@kuechenwert.de",
       support_phone: "0511 / 51532476",
     };
 
@@ -164,11 +164,11 @@ const handler = async (req: Request): Promise<Response> => {
       const userSubjects: Record<string, string> = {
       wertermittlung: "Ihre Anfrage zur Wertermittlung",
       wertrechner: `Ihre Wertschätzung${manufacturer ? ` für Ihren ${manufacturer}${model ? " " + model : ""}` : ""} – so holen Sie den besten Preis heraus`,
-      wizard: "Ihre Verkaufsanfrage bei CaravanWert",
-      kontakt: "Ihre Kontaktanfrage bei CaravanWert",
-      dealer: "Ihre Händler-Bewerbung bei CaravanWert",
+      wizard: "Ihre Verkaufsanfrage bei KuechenWert",
+      kontakt: "Ihre Kontaktanfrage bei KuechenWert",
+      dealer: "Ihre Händler-Bewerbung bei KuechenWert",
     };
-    const userSubject = userSubjects[type] || "Ihre Anfrage bei CaravanWert";
+    const userSubject = userSubjects[type] || "Ihre Anfrage bei KuechenWert";
 
     // Wertrechner bekommt einen dedizierten, conversion-optimierten Inhalt mit
     // CTA zum Verkaufs-Wizard. Die bisherigen Daten werden als Prefill-Query
@@ -238,7 +238,7 @@ const handler = async (req: Request): Promise<Response> => {
       if (email) wizardParams.set("customerEmail", email);
       if (phone) wizardParams.set("customerPhone", phone);
 
-      const wizardUrl = `https://caravanwert.de/verkaufen/wizard?${wizardParams.toString()}`;
+      const wizardUrl = `https://kuechenwert24.de/verkaufen/wizard?${wizardParams.toString()}`;
 
       const estimateRow = (estimatedMin && estimatedMax)
         ? amountDisplay(
@@ -260,7 +260,7 @@ const handler = async (req: Request): Promise<Response> => {
         mappedCondition ? detailRow("Zustand", escHtml(mappedCondition)) : "",
       ].filter(Boolean).join("");
 
-      // Hinweis: Die Signatur ("Mit freundlichen Grüßen / Ihr CaravanWert Team")
+      // Hinweis: Die Signatur ("Mit freundlichen Grüßen / Ihr KuechenWert Team")
       // liefert buildEmailLayout bereits als eigenen Block — hier KEINE zweite
       // Signatur hinzufügen, sonst doppelt.
       userContent = `
@@ -323,7 +323,7 @@ const handler = async (req: Request): Promise<Response> => {
         ${paragraph(
           "Falls Sie Fragen haben, können Sie uns jederzeit kontaktieren."
         )}
-        ${button("Zur Website", "https://caravanwert.de", settingsData)}
+        ${button("Zur Website", "https://kuechenwert24.de", settingsData)}
         ${paragraph(`Mit freundlichen Grüßen,<br>Ihr ${settingsData.site_name} Team`)}
       `;
     }
@@ -338,7 +338,7 @@ const handler = async (req: Request): Promise<Response> => {
         Authorization: `Bearer ${RESEND_API_KEY}`,
       },
       body: JSON.stringify({
-        from: `${settingsData.site_name} <info@caravanwert.de>`,
+        from: `${settingsData.site_name} <info@kuechenwert.de>`,
         to: [email],
         subject: userSubject,
         html: userHtml,
@@ -355,7 +355,7 @@ const handler = async (req: Request): Promise<Response> => {
       try { userResult = await userEmailResponse.json(); } catch { /* non-JSON body */ }
       try {
         await supabase.from('admin_emails').insert({
-          sender_email: 'info@caravanwert.de',
+          sender_email: 'info@kuechenwert.de',
           sender_name: settingsData.site_name,
           recipient_email: email,
           recipient_name: name || null,

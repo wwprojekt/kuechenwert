@@ -1,4 +1,4 @@
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.100.1";
+﻿import { createClient } from "https://esm.sh/@supabase/supabase-js@2.100.1";
 import { buildEmailLayout, paragraph, button, detailRow, infoBox, greeting } from "../_shared/email-builder.ts";
 import { getCorsHeaders, handleCorsPreflightRequest } from '../_shared/cors.ts';
 import { checkServiceRoleOrAdmin } from '../_shared/auth.ts';
@@ -35,9 +35,9 @@ Deno.serve(async (req) => {
       .single();
 
     const settings = settingsData || {
-      site_name: "CaravanWert",
+      site_name: "KuechenWert",
       site_description: "Deutschlands führende Wohnmobil-Handelsplattform",
-      contact_email: "info@caravanwert.de",
+      contact_email: "info@kuechenwert.de",
       support_phone: "+49 511 51532476",
     };
 
@@ -139,7 +139,7 @@ Deno.serve(async (req) => {
           paragraph(is_festpreis
             ? `Wenn Sie dieses Fahrzeug nicht verpassen möchten, sichern Sie es sich jetzt zum Festpreis.`
             : `Wenn Sie dieses Fahrzeug nicht verpassen möchten, geben Sie jetzt Ihr Gebot ab.`),
-          button(is_festpreis ? "Jetzt ansehen" : "Jetzt Gebot abgeben", `https://caravanwert.de/auktion/${auction_id}`),
+          button(is_festpreis ? "Jetzt ansehen" : "Jetzt Gebot abgeben", `https://kuechenwert24.de/auktion/${auction_id}`),
         ].join("");
       } else if (event_type === "auction_ending") {
         subject = is_festpreis ? `Ihr Favorit endet bald – ${vehicleName}` : `Ihr Favorit endet bald – ${vehicleName}`;
@@ -155,7 +155,7 @@ Deno.serve(async (req) => {
           paragraph(is_festpreis
             ? `Verpassen Sie nicht Ihre Chance – sichern Sie sich dieses Fahrzeug zum Festpreis, bevor das Inserat endet.`
             : `Verpassen Sie nicht Ihre Chance – geben Sie jetzt Ihr Gebot ab, bevor die Auktion endet.`),
-          button(is_festpreis ? "Jetzt ansehen" : "Zur Auktion", `https://caravanwert.de/auktion/${auction_id}`),
+          button(is_festpreis ? "Jetzt ansehen" : "Zur Auktion", `https://kuechenwert24.de/auktion/${auction_id}`),
         ].join("");
       } else if (event_type === "auction_ended") {
         subject = is_festpreis ? `Inserat beendet – ${vehicleName}` : `Auktion beendet – ${vehicleName}`;
@@ -169,7 +169,7 @@ Deno.serve(async (req) => {
             detailRow(is_festpreis ? "Festpreis" : "Endpreis", formattedPrice),
           ].join(""), "info"),
           paragraph(`Entdecken Sie weitere spannende Angebote auf unserer Plattform.`),
-          button("Weitere Angebote entdecken", `https://caravanwert.de/kaufen`),
+          button("Weitere Angebote entdecken", `https://kuechenwert24.de/kaufen`),
         ].join("");
       } else {
         continue;
@@ -189,8 +189,8 @@ Deno.serve(async (req) => {
         );
         if (deferUntil) {
           const { error: queueErr } = await supabase.from("admin_emails").insert({
-            sender_email: "info@caravanwert.de",
-            sender_name: "CaravanWert",
+            sender_email: "info@kuechenwert.de",
+            sender_name: "KuechenWert",
             recipient_email: user.email,
             recipient_id: user.id,
             subject,
@@ -219,7 +219,7 @@ Deno.serve(async (req) => {
             "Content-Type": "application/json",
           },
           body: JSON.stringify({
-            from: "CaravanWert <info@caravanwert.de>",
+            from: "KuechenWert <info@kuechenwert.de>",
             to: [user.email],
             subject,
             html,
@@ -231,8 +231,8 @@ Deno.serve(async (req) => {
           // Per-user log for dedup (email_type: favorite_price_change for anti-spam check).
           // Store the FULL HTML so the Email Center preview is meaningful.
           supabase.from("admin_emails").insert({
-            sender_email: "info@caravanwert.de",
-            sender_name: "CaravanWert",
+            sender_email: "info@kuechenwert.de",
+            sender_name: "KuechenWert",
             recipient_email: user.email,
             recipient_id: user.id,
             subject,
@@ -255,8 +255,8 @@ Deno.serve(async (req) => {
     if (sent > 0) {
       try {
         await supabase.from("admin_emails").insert({
-          sender_email: "info@caravanwert.de",
-          sender_name: "CaravanWert",
+          sender_email: "info@kuechenwert.de",
+          sender_name: "KuechenWert",
           recipient_email: `${sent} Favoriten-Nutzer`,
           subject: `[Auto] Favoriten-Benachrichtigung: ${event_type}`,
           body_html: `Automatische Favoriten-Benachrichtigung für ${auction_title || kitchen_id}. ${sent} gesendet, ${skipped} übersprungen (Anti-Spam).`,

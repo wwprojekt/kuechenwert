@@ -1,4 +1,4 @@
-import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
+﻿import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.100.1";
 import { getCorsHeaders, handleCorsPreflightRequest } from "../_shared/cors.ts";
 import { checkServiceRoleOrAdmin } from "../_shared/auth.ts";
@@ -84,9 +84,9 @@ const handler = async (req: Request): Promise<Response> => {
       .single();
 
     const settingsData = settings || {
-      site_name: "CaravanWert",
+      site_name: "KuechenWert",
       site_description: "Deutschlands führende Wohnmobil-Handelsplattform",
-      contact_email: "info@caravanwert.de",
+      contact_email: "info@kuechenwert.de",
       support_phone: "0511 / 51532476",
     };
 
@@ -103,11 +103,11 @@ const handler = async (req: Request): Promise<Response> => {
         Authorization: `Bearer ${RESEND_API_KEY}`,
       },
       body: JSON.stringify({
-        from: `CaravanWert <info@caravanwert.de>`,
+        from: `KuechenWert <info@kuechenwert.de>`,
         to: [recipientEmail],
         subject,
         html,
-        reply_to: "info@caravanwert.de",
+        reply_to: "info@kuechenwert.de",
       }),
     });
 
@@ -130,8 +130,8 @@ const handler = async (req: Request): Promise<Response> => {
 
     try {
       await supabase.from("admin_emails").insert({
-        sender_email: "info@caravanwert.de",
-        sender_name: "CaravanWert",
+        sender_email: "info@kuechenwert.de",
+        sender_name: "KuechenWert",
         recipient_email: recipientEmail,
         subject,
         body_html: html,

@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Brand-Konfiguration (Edge Functions)
  *
  * SPIEGEL von src/lib/brand/config.ts
@@ -10,14 +10,14 @@
  * Webhook-Signaturen und generierten PDFs (Rechnungen, Kaufvertraege,
  * Uebergabeprotokolle) verwendet werden.
  *
- * Stand der Werte: aktuell noch "CaravanWert"-Branding aus dem
+ * Stand der Werte: aktuell noch "KuechenWert"-Branding aus dem
  * Caravanwert-Fork. Phase 3 ersetzt diese Werte durch echte
  * KuechenWert-Werte.
  */
 
 export const BRAND = {
   name: "KüchenWert",
-  // Marke der WohnWert GmbH (dieselbe Firma betreibt auch CaravanWert).
+  // Marke der WohnWert GmbH (dieselbe Firma betreibt auch KuechenWert).
   legalName: "WohnWert GmbH",
   tagline: "Küchen einfach verkaufen & kaufen",
   domain: "kuechenwert24.de",

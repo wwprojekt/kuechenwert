@@ -1,4 +1,4 @@
-import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
+﻿import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.100.1";
 import {
   buildEmailLayout,
@@ -127,9 +127,9 @@ const handler = async (req: Request): Promise<Response> => {
   try {
     const { data: settings } = await supabase.from("site_settings").select("*").single();
     const settingsData = settings || {
-      site_name: "CaravanWert",
+      site_name: "KuechenWert",
       site_description: "Deutschlands führende Wohnmobil-Handelsplattform",
-      contact_email: "info@caravanwert.de",
+      contact_email: "info@kuechenwert.de",
       support_phone: "+49 511 51532476",
     };
 
@@ -260,7 +260,7 @@ const handler = async (req: Request): Promise<Response> => {
         const userName = [profile.first_name, profile.last_name].filter(Boolean).join(" ") || profile.email.split("@")[0];
         const vehicleTitle = `${m.manufacturer || "?"} ${m.model || ""} (${m.year ?? "–"})`.trim();
         const price = formatPrice(m.instant_price);
-        const auctionUrl = `https://caravanwert.de/auktion/${auction.id}`;
+        const auctionUrl = `https://kuechenwert24.de/auktion/${auction.id}`;
         const details =
           detailRow("Festpreis", `<strong style="color: #d97706;">${price}</strong>`) +
           (m.body_type ? detailRow("Aufbauart", m.body_type) : "") +
@@ -275,7 +275,7 @@ const handler = async (req: Request): Promise<Response> => {
           button("Jetzt kaufen", auctionUrl, settingsData) +
           paragraph(
             `<span style="font-size: 12px; color: #6b7280;">Sie erhalten diese E-Mail, weil Sie einen Sofortkauf-Alert konfiguriert haben. ` +
-              `<a href="https://caravanwert.de/dashboard/profile" style="color: #1f8aa2;">Alert-Filter anpassen</a></span>`
+              `<a href="https://kuechenwert24.de/dashboard/profile" style="color: #1f8aa2;">Alert-Filter anpassen</a></span>`
           );
 
         const subject = `Neuer Sofortkauf: ${m.manufacturer || ""} ${m.model || ""} – ${price}`.trim();
@@ -311,7 +311,7 @@ const handler = async (req: Request): Promise<Response> => {
 
         if (deferUntil) {
           const { error: queueErr } = await supabase.from("admin_emails").insert({
-            sender_email: "info@caravanwert.de",
+            sender_email: "info@kuechenwert.de",
             sender_name: settingsData.site_name,
             recipient_email: profile.email,
             recipient_name: userName || null,
@@ -343,13 +343,13 @@ const handler = async (req: Request): Promise<Response> => {
               Authorization: `Bearer ${RESEND_API_KEY}`,
             },
             body: JSON.stringify({
-              from: `${settingsData.site_name} <info@caravanwert.de>`,
+              from: `${settingsData.site_name} <info@kuechenwert.de>`,
               to: [profile.email],
               subject,
               html,
-              reply_to: "info@caravanwert.de",
+              reply_to: "info@kuechenwert.de",
               headers: {
-                "List-Unsubscribe": "<https://caravanwert.de/dashboard/profile>",
+                "List-Unsubscribe": "<https://kuechenwert24.de/dashboard/profile>",
               },
             }),
           });
@@ -361,7 +361,7 @@ const handler = async (req: Request): Promise<Response> => {
           const resendResult = await emailResponse.json();
 
           await supabase.from("admin_emails").insert({
-            sender_email: "info@caravanwert.de",
+            sender_email: "info@kuechenwert.de",
             sender_name: settingsData.site_name,
             recipient_email: profile.email,
             recipient_name: userName || null,

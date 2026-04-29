@@ -1,4 +1,4 @@
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.100.1';
+﻿import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.100.1';
 import {
   buildEmailLayout,
   paragraph,
@@ -92,11 +92,11 @@ async function sendMail(
         Authorization: `Bearer ${RESEND_API_KEY}`,
       },
       body: JSON.stringify({
-        from: `${settingsData.site_name} <info@caravanwert.de>`,
+        from: `${settingsData.site_name} <info@kuechenwert.de>`,
         to: [recipientEmail],
         subject,
         html,
-        reply_to: 'info@caravanwert.de',
+        reply_to: 'info@kuechenwert.de',
       }),
     });
     if (!res.ok) {
@@ -306,9 +306,9 @@ Deno.serve(async (req) => {
   if (sendEmail) {
     const { data: settings } = await supabaseAdmin.from('site_settings').select('*').single();
     const settingsData: SettingsLike = (settings as SettingsLike | null) ?? {
-      site_name: 'CaravanWert',
+      site_name: 'KuechenWert',
       site_description: 'Deutschlands führende Wohnmobil-Handelsplattform',
-      contact_email: 'info@caravanwert.de',
+      contact_email: 'info@kuechenwert.de',
       support_phone: '+49 511 51532476',
     };
 
@@ -336,7 +336,7 @@ Deno.serve(async (req) => {
           'Alle laufenden Festpreis-Angebote und Kaufchance-Einladungen wurden automatisch beendet. Die Bieter wurden separat informiert.',
         )}
         ${paragraph(
-          'Falls Sie Ihr Fahrzeug erneut anbieten möchten, können Sie es im Verkäufer-Dashboard reaktivieren oder bei Fragen unter <a href="mailto:info@caravanwert.de" style="color:#1f8aa2;">info@caravanwert.de</a> auf uns zukommen.',
+          'Falls Sie Ihr Fahrzeug erneut anbieten möchten, können Sie es im Verkäufer-Dashboard reaktivieren oder bei Fragen unter <a href="mailto:info@kuechenwert.de" style="color:#1f8aa2;">info@kuechenwert.de</a> auf uns zukommen.',
         )}
       `;
       const html = buildEmailLayout(settingsData, subject, content);
@@ -346,7 +346,7 @@ Deno.serve(async (req) => {
       if (result.ok) {
         try {
           await supabaseAdmin.from('admin_emails').insert({
-            sender_email: 'info@caravanwert.de',
+            sender_email: 'info@kuechenwert.de',
             sender_name: settingsData.site_name,
             recipient_email: seller.email,
             recipient_name: displayName(seller),
@@ -387,10 +387,10 @@ Deno.serve(async (req) => {
         )}
         ${reason ? infoBox('Grund des Abbruchs', paragraph(reason), 'info') : ''}
         ${paragraph(
-          'Schauen Sie sich gerne in unseren <a href="https://caravanwert.de/kaufen" style="color:#1f8aa2;">aktuellen Auktionen</a> nach einem ähnlichen Fahrzeug um.',
+          'Schauen Sie sich gerne in unseren <a href="https://kuechenwert24.de/kaufen" style="color:#1f8aa2;">aktuellen Auktionen</a> nach einem ähnlichen Fahrzeug um.',
         )}
         ${paragraph(
-          'Bei Rückfragen erreichen Sie uns unter <a href="mailto:info@caravanwert.de" style="color:#1f8aa2;">info@caravanwert.de</a>.',
+          'Bei Rückfragen erreichen Sie uns unter <a href="mailto:info@kuechenwert.de" style="color:#1f8aa2;">info@kuechenwert.de</a>.',
         )}
       `;
       const html = buildEmailLayout(settingsData, subject, content);
@@ -399,7 +399,7 @@ Deno.serve(async (req) => {
         bidderMailsSent += 1;
         try {
           await supabaseAdmin.from('admin_emails').insert({
-            sender_email: 'info@caravanwert.de',
+            sender_email: 'info@kuechenwert.de',
             sender_name: settingsData.site_name,
             recipient_email: profile.email,
             recipient_name: displayName(profile),

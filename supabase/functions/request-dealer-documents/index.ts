@@ -1,4 +1,4 @@
-import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
+﻿import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.100.1';
 import { buildEmailLayout, infoBox, paragraph, button, list, warningBox } from '../_shared/email-builder.ts';
 import { getCorsHeaders, handleCorsPreflightRequest } from '../_shared/cors.ts';
@@ -50,9 +50,9 @@ const handler = async (req: Request): Promise<Response> => {
       .single();
 
     const settingsData = settings || {
-      site_name: 'CaravanWert',
+      site_name: 'KuechenWert',
       site_description: 'Deutschlands führende Wohnmobil-Handelsplattform',
-      contact_email: 'info@caravanwert.de',
+      contact_email: 'info@kuechenwert.de',
       support_phone: '+49 511 51532476',
     };
 
@@ -79,10 +79,10 @@ const handler = async (req: Request): Promise<Response> => {
         'Klicken Sie auf "Dokumente für Verifizierung"',
         'Laden Sie die erforderlichen Dokumente hoch',
       ])}
-      ${button('Zum Händler-Dashboard', 'https://caravanwert.de/dashboard')}
+      ${button('Zum Händler-Dashboard', 'https://kuechenwert24.de/dashboard')}
       ${paragraph('Ihre Dokumente werden vertraulich behandelt und nur zur Verifizierung Ihres Händlerkontos verwendet. Nach der Prüfung erhalten Sie eine E-Mail-Benachrichtigung.')}
       ${paragraph(`Bei Fragen stehen wir Ihnen gerne unter <a href="mailto:${settingsData.contact_email}" style="color: #1f8aa2;">${settingsData.contact_email}</a> oder telefonisch unter <strong>${settingsData.support_phone}</strong> zur Verfügung.`)}
-      ${paragraph('Mit freundlichen Grüßen,<br>Ihr CaravanWert-Team')}
+      ${paragraph('Mit freundlichen Grüßen,<br>Ihr KuechenWert-Team')}
     `;
 
     const subject = `Dokumente für Ihre Händler-Verifizierung erforderlich – ${settingsData.site_name}`;
@@ -96,11 +96,11 @@ const handler = async (req: Request): Promise<Response> => {
         Authorization: `Bearer ${RESEND_API_KEY}`,
       },
       body: JSON.stringify({
-        from: `${settingsData.site_name} <info@caravanwert.de>`,
+        from: `${settingsData.site_name} <info@kuechenwert.de>`,
         to: [dealer_email],
         subject: subject,
         html: html,
-        reply_to: 'info@caravanwert.de',
+        reply_to: 'info@kuechenwert.de',
       }),
     });
 
@@ -148,7 +148,7 @@ const handler = async (req: Request): Promise<Response> => {
     // can group/filter dealer document requests separately from generic 'auto' mails.
     try {
       await supabase.from('admin_emails').insert({
-        sender_email: 'info@caravanwert.de',
+        sender_email: 'info@kuechenwert.de',
         sender_name: settingsData.site_name,
         recipient_email: dealer_email,
         recipient_name: dealer_name,

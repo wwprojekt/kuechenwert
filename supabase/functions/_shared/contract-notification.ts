@@ -1,4 +1,4 @@
-// deno-lint-ignore-file no-explicit-any
+﻿// deno-lint-ignore-file no-explicit-any
 import {
   buildEmailLayout,
   paragraph,
@@ -32,7 +32,7 @@ export async function sendContractSentNotification(opts: {
   downloadUrl: string;
   party: 'seller' | 'buyer';
 }): Promise<{ success: boolean; error?: string; resendId?: string }> {
-  const siteName = opts.settingsData?.site_name || 'CaravanWert';
+  const siteName = opts.settingsData?.site_name || 'KuechenWert';
   const subject = `Bestätigung: Kaufvertrag ${opts.contractNumber} versendet`;
   const intro =
     opts.party === 'buyer'
@@ -62,7 +62,7 @@ export async function sendContractSentNotification(opts: {
         'Authorization': `Bearer ${opts.resendApiKey}`,
       },
       body: JSON.stringify({
-        from: `${siteName} <info@caravanwert.de>`,
+        from: `${siteName} <info@kuechenwert.de>`,
         to: [opts.recipientEmail],
         subject,
         html,
@@ -80,7 +80,7 @@ export async function sendContractSentNotification(opts: {
 
     try {
       await opts.supabase.from('admin_emails').insert({
-        sender_email: 'info@caravanwert.de',
+        sender_email: 'info@kuechenwert.de',
         sender_name: siteName,
         recipient_email: opts.recipientEmail,
         recipient_name: opts.recipientName,

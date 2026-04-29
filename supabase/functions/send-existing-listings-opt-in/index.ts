@@ -1,4 +1,4 @@
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.100.1';
+﻿import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.100.1';
 import { getCorsHeaders, handleCorsPreflightRequest } from '../_shared/cors.ts';
 import { checkServiceRoleOrAdmin } from '../_shared/auth.ts';
 import { logEdgeError } from '../_shared/edgeLogger.ts';
@@ -191,7 +191,7 @@ Deno.serve(async (req) => {
         }
 
         // Mail mit Dashboard-Link senden
-        const dashboardUrl = `https://caravanwert.de/dashboard/listings/${mh.id}`;
+        const dashboardUrl = `https://kuechenwert24.de/dashboard/listings/${mh.id}`;
         const reserveFmt = `€${effectiveReserve.toLocaleString('de-DE')}`;
 
         const sellerNameStr = sellerProfile.company_name

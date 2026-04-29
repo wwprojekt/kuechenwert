@@ -1,8 +1,8 @@
-/**
+﻿/**
  * Shared CORS configuration for all Edge Functions.
  *
  * Allowed origins:
- * - Production: https://caravanwert.de and https://www.caravanwert.de
+ * - Production: https://kuechenwert24.de and https://www.kuechenwert24.de
  * - Staging/Preview: Netlify deploy previews (*.netlify.app)
  * - Development: localhost on any port
  *
@@ -28,9 +28,9 @@ const ALLOWED_ORIGINS: string[] = [
   'https://www.kuechenwert.de',
   'https://kuechenwert24.de',
   'https://www.kuechenwert24.de',
-  // Legacy-Umleitungs-Domains (CaravanWert-Erbe, kann spaeter raus)
-  'https://caravanwert.de',
-  'https://www.caravanwert.de',
+  // Legacy-Umleitungs-Domains (KuechenWert-Erbe, kann spaeter raus)
+  'https://kuechenwert24.de',
+  'https://www.kuechenwert24.de',
 ];
 
 /**

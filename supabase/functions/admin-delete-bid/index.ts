@@ -1,4 +1,4 @@
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.100.1';
+﻿import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.100.1';
 import {
   buildEmailLayout,
   paragraph,
@@ -47,7 +47,7 @@ import { edgeLogger, logEdgeError } from '../_shared/edgeLogger.ts';
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL') ?? '';
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
 const RESEND_API_KEY = Deno.env.get('RESEND_API_KEY') ?? '';
-const SITE_URL = Deno.env.get('PUBLIC_SITE_URL') ?? 'https://caravanwert.de';
+const SITE_URL = Deno.env.get('PUBLIC_SITE_URL') ?? 'https://kuechenwert24.de';
 
 interface RequestBody {
   bidId: string;
@@ -71,9 +71,9 @@ interface SettingsLike {
 }
 
 const fallbackSettings: SettingsLike = {
-  site_name: 'CaravanWert',
+  site_name: 'KuechenWert',
   site_description: 'Deutschlands führende Wohnmobil-Handelsplattform',
-  contact_email: 'info@caravanwert.de',
+  contact_email: 'info@kuechenwert.de',
   support_phone: '+49 511 51532476',
 };
 
@@ -108,11 +108,11 @@ async function sendMail(
         Authorization: `Bearer ${RESEND_API_KEY}`,
       },
       body: JSON.stringify({
-        from: `${settings.site_name} <info@caravanwert.de>`,
+        from: `${settings.site_name} <info@kuechenwert.de>`,
         to: [recipientEmail],
         subject,
         html,
-        reply_to: 'info@caravanwert.de',
+        reply_to: 'info@kuechenwert.de',
       }),
     });
     if (!res.ok) {
@@ -283,7 +283,7 @@ Deno.serve(async (req) => {
     if (result.ok) {
       try {
         await supabaseAdmin.from('admin_emails').insert({
-          sender_email: 'info@caravanwert.de',
+          sender_email: 'info@kuechenwert.de',
           sender_name: settings.site_name,
           recipient_email: recipientEmail,
           recipient_name: displayName(bidder),

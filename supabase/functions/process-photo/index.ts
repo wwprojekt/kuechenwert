@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Edge Function: process-photo
  *
  * Generiert pro `kitchen_photos`-Row zwei pre-resized WebP-Variants:
@@ -98,8 +98,8 @@ const VARIANT_CACHE_CONTROL = "31536000, immutable";
 
 // ─── CORS ──────────────────────────────────────────────────────────────────
 const ALLOWED_ORIGINS = [
-  "https://caravanwert.de",
-  "https://www.caravanwert.de",
+  "https://kuechenwert24.de",
+  "https://www.kuechenwert24.de",
 ];
 
 function isAllowedOrigin(origin: string | null): boolean {

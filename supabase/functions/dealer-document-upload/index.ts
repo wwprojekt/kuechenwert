@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Edge Function: dealer-document-upload
  * 
  * Handles document uploads for dealer registration and post-registration
@@ -39,8 +39,8 @@ const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
 // --- Inline CORS (same as _shared/cors.ts) ---
 const ALLOWED_ORIGINS: string[] = [
-  'https://caravanwert.de',
-  'https://www.caravanwert.de',
+  'https://kuechenwert24.de',
+  'https://www.kuechenwert24.de',
 ];
 
 function isAllowedOrigin(origin: string | null): boolean {

@@ -1,4 +1,4 @@
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.100.1';
+﻿import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.100.1';
 import { getCorsHeaders, handleCorsPreflightRequest } from '../_shared/cors.ts';
 import { checkServiceRoleOrAdmin } from '../_shared/auth.ts';
 import { logEdgeError } from '../_shared/edgeLogger.ts';
@@ -198,7 +198,7 @@ Deno.serve(async (req) => {
                           name: profile.company_name || profile.first_name || profile.email.split('@')[0],
                           type: 'lost',
                           kitchenModel: kitchenName,
-                          auctionUrl: 'https://caravanwert.de/kaufen',
+                          auctionUrl: 'https://kuechenwert24.de/kaufen',
                           yourBid: `€${Number(eo.offer_amount).toLocaleString('de-DE')}`,
                           isFestpreis: true,
                           listingEnded: true,
@@ -227,7 +227,7 @@ Deno.serve(async (req) => {
                   const { data: sellerProfile } = await supabase
                     .from('profiles').select('email, first_name').eq('id', mh.seller_id).single();
                   if (sellerProfile?.email) {
-                    const dashboardUrl = `https://caravanwert.de/dashboard/listings/${mh.id}`;
+                    const dashboardUrl = `https://kuechenwert24.de/dashboard/listings/${mh.id}`;
                     await supabase.functions.invoke('send-auction-notification', {
                       body: {
                         email: sellerProfile.email,
@@ -358,7 +358,7 @@ Deno.serve(async (req) => {
                       hour: '2-digit', minute: '2-digit',
                     });
                     const sellerNameStr = sellerProfile.first_name || sellerProfile.email.split('@')[0];
-                    const dashboardUrl = `https://caravanwert.de/dashboard/listings/${mh.id}`;
+                    const dashboardUrl = `https://kuechenwert24.de/dashboard/listings/${mh.id}`;
                     // Wenn dynamic_pricing den Preis gerade gesenkt hat, kommunizieren
                     // wir den NEUEN Preis – sonst wirkt die Mail wie "alte Daten".
                     const effectiveInstantPrice = nextInstantPrice ?? instantPriceNum;
@@ -479,7 +479,7 @@ Deno.serve(async (req) => {
             try {
               const { data: settings } = await supabase
                 .from('site_settings').select('contact_email, site_name').limit(1).maybeSingle();
-              const adminEmail = settings?.contact_email || 'info@caravanwert.de';
+              const adminEmail = settings?.contact_email || 'info@kuechenwert.de';
 
               // Lookup seller name for richer admin context
               let sellerNameStr: string | undefined;
@@ -507,7 +507,7 @@ Deno.serve(async (req) => {
                   // /admin/auctions does not let admins set the missing instant_price;
                   // /admin/kitchens/<id> opens the edit row where price + sale_channel
                   // can be corrected in one click.
-                  auctionUrl: `https://caravanwert.de/admin/kitchens/${mh.id}`,
+                  auctionUrl: `https://kuechenwert24.de/admin/kitchens/${mh.id}`,
                   kitchenId: mh.id,
                   sellerName: sellerNameStr,
                 },
@@ -823,7 +823,7 @@ Deno.serve(async (req) => {
                     .from('profiles').select('email, first_name').eq('id', mh.seller_id).single();
                   if (sellerProfile?.email) {
                     const sellerNameStr = sellerProfile.first_name || sellerProfile.email.split('@')[0];
-                    const dashboardUrl = `https://caravanwert.de/dashboard/listings/${mh.id}`;
+                    const dashboardUrl = `https://kuechenwert24.de/dashboard/listings/${mh.id}`;
 
                     await supabase.functions.invoke('send-auction-notification', {
                       body: {
@@ -873,7 +873,7 @@ Deno.serve(async (req) => {
                         name: profile.company_name || profile.first_name || profile.email.split('@')[0],
                         type: 'auction_relisted',
                         kitchenModel: kitchenName,
-                        auctionUrl: `https://caravanwert.de/auktion/${kaufchance.id}`,
+                        auctionUrl: `https://kuechenwert24.de/auktion/${kaufchance.id}`,
                         endTime: endTimeFormatted,
                         currentBid: `Runde ${newRound}`,
                       },
@@ -898,7 +898,7 @@ Deno.serve(async (req) => {
                         name: profile.company_name || profile.first_name || profile.email.split('@')[0],
                         type: 'auction_relisted',
                         kitchenModel: kitchenName,
-                        auctionUrl: `https://caravanwert.de/auktion/${kaufchance.id}`,
+                        auctionUrl: `https://kuechenwert24.de/auktion/${kaufchance.id}`,
                         endTime: endTimeFormatted,
                         currentBid: `Runde ${newRound}`,
                       },
@@ -971,7 +971,7 @@ Deno.serve(async (req) => {
                           name: profile.company_name || profile.first_name || profile.email.split('@')[0],
                           type: 'kaufchance_expired',
                           kitchenModel: kitchenName,
-                          auctionUrl: `https://caravanwert.de/auktion/${kaufchance.id}`,
+                          auctionUrl: `https://kuechenwert24.de/auktion/${kaufchance.id}`,
                         },
                       }).catch((e: any) => console.error(`Failed to notify bidder ${inv.bidder_id}:`, e));
                     }
@@ -986,7 +986,7 @@ Deno.serve(async (req) => {
                   const { data: sellerProfile } = await supabase
                     .from('profiles').select('email, first_name').eq('id', mh.seller_id).single();
                   if (sellerProfile?.email) {
-                    const dashboardUrl = `https://caravanwert.de/dashboard/listings/${mh.id}`;
+                    const dashboardUrl = `https://kuechenwert24.de/dashboard/listings/${mh.id}`;
 
                     if (softBrakeReason) {
                       // 3-Buttons Soft-Brake-Mail (Auktion) — NEU + BESTAND
@@ -1104,7 +1104,7 @@ Deno.serve(async (req) => {
                     name: profile.company_name || profile.first_name || profile.email.split('@')[0],
                     type: 'lost',
                     kitchenModel: kitchenName,
-                    auctionUrl: 'https://caravanwert.de/kaufen',
+                    auctionUrl: 'https://kuechenwert24.de/kaufen',
                     yourBid: `€${Number(o.offer_amount).toLocaleString('de-DE')}`,
                     isFestpreis: true,
                     listingEnded: true,

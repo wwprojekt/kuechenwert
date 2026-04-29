@@ -1,4 +1,4 @@
-/**
+﻿/**
  * bing-ads-campaign-fix
  * ─────────────────────
  * Verwaltet importierte Bing-Ads-Kampagnen via Microsoft Advertising
@@ -1453,8 +1453,8 @@ Deno.serve(async (req) => {
           tracking_template_missing: !campaign.TrackingUrlTemplate,
           disapproved_ads_total: allDisapprovedAds,
           disapproved_keywords_total: allDisapprovedKws,
-          unexpected_keyword_url_hosts: Array.from(allKwHosts).filter((h) => !h.includes('caravanwert.de')),
-          unexpected_ad_url_hosts: Array.from(allAdHosts).filter((h) => !h.includes('caravanwert.de')),
+          unexpected_keyword_url_hosts: Array.from(allKwHosts).filter((h) => !h.includes('kuechenwert24.de')),
+          unexpected_ad_url_hosts: Array.from(allAdHosts).filter((h) => !h.includes('kuechenwert24.de')),
           adgroup_default_bid_min: allBids.length ? Math.min(...allBids) : null,
           adgroup_default_bid_max: allBids.length ? Math.max(...allBids) : null,
         },

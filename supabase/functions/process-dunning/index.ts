@@ -1,4 +1,4 @@
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.100.1';
+﻿import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.100.1';
 import { buildEmailLayout, paragraph, infoBox, detailRow, amountDisplay, warningBox, customerBadge } from '../_shared/email-builder.ts';
 import { getCorsHeaders, handleCorsPreflightRequest } from '../_shared/cors.ts';
 import { checkServiceRoleOrAdmin } from '../_shared/auth.ts';
@@ -59,9 +59,9 @@ Deno.serve(async (req) => {
       .maybeSingle();
 
     const settingsData = settings || {
-      site_name: 'CaravanWert',
+      site_name: 'KuechenWert',
       site_description: 'Ihr Wohnmobil-Marktplatz',
-      contact_email: 'info@caravanwert.de',
+      contact_email: 'info@kuechenwert.de',
       support_phone: '',
     };
 
@@ -472,7 +472,7 @@ Deno.serve(async (req) => {
       `)}
 
       ${level === 1 ? paragraph('Falls Sie bereits bezahlt haben, betrachten Sie diese Nachricht als gegenstandslos.') : ''}
-      ${paragraph('Mit freundlichen Gr&uuml;&szlig;en<br>Ihr CaravanWert Team')}
+      ${paragraph('Mit freundlichen Gr&uuml;&szlig;en<br>Ihr KuechenWert Team')}
     `;
 
     const emailHtml = buildEmailLayout(settingsData, levelTitles[level] || 'Zahlungserinnerung', content);
@@ -484,7 +484,7 @@ Deno.serve(async (req) => {
         Authorization: `Bearer ${resendApiKey}`,
       },
       body: JSON.stringify({
-        from: `${settingsData.site_name || 'CaravanWert'} <info@caravanwert.de>`,
+        from: `${settingsData.site_name || 'KuechenWert'} <info@kuechenwert.de>`,
         to: [invoice.dealer.email],
         subject: reminder.subject,
         html: emailHtml,
@@ -501,7 +501,7 @@ Deno.serve(async (req) => {
     // Log in admin_emails for System tab
     try {
       await supabase.from('admin_emails').insert({
-        sender_email: 'info@caravanwert.de',
+        sender_email: 'info@kuechenwert.de',
         sender_name: settingsData.site_name,
         recipient_email: invoice.dealer.email,
         recipient_name: recipientName || null,

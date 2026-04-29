@@ -1,4 +1,4 @@
-import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
+﻿import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.100.1';
 import { buildEmailLayout, infoBox, detailRow, list, paragraph } from '../_shared/email-builder.ts';
 import { getCorsHeaders, handleCorsPreflightRequest } from '../_shared/cors.ts';
@@ -42,9 +42,9 @@ const handler = async (req: Request): Promise<Response> => {
       .single();
 
     const settingsData = settings || {
-      site_name: 'CaravanWert',
+      site_name: 'KuechenWert',
       site_description: 'Deutschlands führende Wohnmobil-Handelsplattform',
-      contact_email: 'info@caravanwert.de',
+      contact_email: 'info@kuechenwert.de',
       support_phone: '0511 / 51532476',
     };
 
@@ -85,7 +85,7 @@ const handler = async (req: Request): Promise<Response> => {
         "Authorization": `Bearer ${RESEND_API_KEY}`,
       },
       body: JSON.stringify({
-        from: `${settingsData.site_name} <info@caravanwert.de>`,
+        from: `${settingsData.site_name} <info@kuechenwert.de>`,
         to: [email],
         subject: 'Terminbestätigung - Wohnmobil-Übergabe',
         html,
@@ -103,7 +103,7 @@ const handler = async (req: Request): Promise<Response> => {
     // Log in admin_emails for System tab
     try {
       await supabase.from('admin_emails').insert({
-        sender_email: 'info@caravanwert.de',
+        sender_email: 'info@kuechenwert.de',
         sender_name: settingsData.site_name,
         recipient_email: email,
         recipient_name: name || null,

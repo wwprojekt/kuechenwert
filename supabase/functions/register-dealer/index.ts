@@ -1,4 +1,4 @@
-import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
+﻿import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.100.1";
 import { getCorsHeaders, handleCorsPreflightRequest } from "../_shared/cors.ts";
 import { edgeLogger } from "../_shared/edgeLogger.ts";
@@ -20,7 +20,7 @@ const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
  * 2. Generates a signup confirmation link (NOT a magic link – so the user
  *    must still log in with their password after confirming)
  * 3. Calls send-dealer-notification (type: application_received) with the
- *    confirmation URL embedded in a professional CaravanWert-branded email
+ *    confirmation URL embedded in a professional KuechenWert-branded email
  *
  * The result: The dealer receives exactly ONE email – a beautiful,
  * branded "Bewerbung eingegangen + E-Mail bestätigen" email.
@@ -198,7 +198,7 @@ const handler = async (req: Request): Promise<Response> => {
     // We use type: "signup" so that when the user clicks the link,
     // Supabase sets email_confirmed_at. The user then needs to log in
     // with their password (unlike magiclink which auto-logs in).
-    const redirectUrl = "https://caravanwert.de/login";
+    const redirectUrl = "https://kuechenwert24.de/login";
     const { data: linkData, error: linkError } = await supabase.auth.admin.generateLink({
       type: "signup",
       email,

@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Edge Function: resize-photo-variants
  *
  * Verarbeitet `kitchen_photos`-Rows mit `processed_at IS NULL` und generiert
@@ -73,8 +73,8 @@ const MAX_BATCH_SIZE = 25;
 const DEFAULT_BATCH_SIZE = 10;
 
 const ALLOWED_ORIGINS = [
-  "https://caravanwert.de",
-  "https://www.caravanwert.de",
+  "https://kuechenwert24.de",
+  "https://www.kuechenwert24.de",
 ];
 
 function isAllowedOrigin(origin: string | null): boolean {

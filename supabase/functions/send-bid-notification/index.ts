@@ -1,4 +1,4 @@
-import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
+﻿import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.100.1';
 import { buildEmailLayout, detailRow, paragraph, customerBadge, auctionEmailCard, pickPrimaryPhotoUrl, button } from '../_shared/email-builder.ts';
 import { getCorsHeaders, handleCorsPreflightRequest } from '../_shared/cors.ts';
@@ -106,9 +106,9 @@ const handler = async (req: Request): Promise<Response> => {
       .maybeSingle();
 
     const settingsData = settings || {
-      site_name: 'CaravanWert',
+      site_name: 'KuechenWert',
       site_description: 'Deutschlands führende Wohnmobil-Handelsplattform',
-      contact_email: 'info@caravanwert.de',
+      contact_email: 'info@kuechenwert.de',
       support_phone: '0511 / 51532476',
     };
 
@@ -123,7 +123,7 @@ const handler = async (req: Request): Promise<Response> => {
     const kitchenName = `${m.manufacturer || ''} ${m.model || ''}`.trim() || 'Fahrzeug';
     const vehicleTitle = `${m.manufacturer || '?'} ${m.model || ''} (${m.year ?? '–'})`.trim();
     const userName = profile.first_name || profile.email.split('@')[0];
-    const auctionUrl = `https://caravanwert.de/auktion/${auctionId}`;
+    const auctionUrl = `https://kuechenwert24.de/auktion/${auctionId}`;
     const photoUrl = pickPrimaryPhotoUrl(m.photos);
     const highBid = auction.current_bid != null
       ? `€${Number(auction.current_bid).toLocaleString('de-DE')}`
@@ -174,7 +174,7 @@ const handler = async (req: Request): Promise<Response> => {
     // ist transactional (unmittelbare Bestaetigung der Aktion) und geht sofort.
     if (outbidDeferUntil) {
       const { error: queueErr } = await supabase.from('admin_emails').insert({
-        sender_email: 'info@caravanwert.de',
+        sender_email: 'info@kuechenwert.de',
         sender_name: settingsData.site_name,
         recipient_email: profile.email,
         recipient_name: userName || null,
@@ -204,7 +204,7 @@ const handler = async (req: Request): Promise<Response> => {
         "Authorization": `Bearer ${RESEND_API_KEY}`,
       },
       body: JSON.stringify({
-        from: `${settingsData.site_name} <info@caravanwert.de>`,
+        from: `${settingsData.site_name} <info@kuechenwert.de>`,
         to: [profile.email],
         subject,
         html,
@@ -222,7 +222,7 @@ const handler = async (req: Request): Promise<Response> => {
     // Log in admin_emails for System tab
     try {
       await supabase.from('admin_emails').insert({
-        sender_email: 'info@caravanwert.de',
+        sender_email: 'info@kuechenwert.de',
         sender_name: settingsData.site_name,
         recipient_email: profile.email,
         recipient_name: userName || null,

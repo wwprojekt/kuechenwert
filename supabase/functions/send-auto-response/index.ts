@@ -1,4 +1,4 @@
-import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
+﻿import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.100.1';
 import { buildEmailLayout, paragraph, greeting, infoBox, list } from '../_shared/email-builder.ts';
 import { checkServiceRoleOrAdmin } from '../_shared/auth.ts';
@@ -9,7 +9,7 @@ const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
 /**
  * Auto-Responder – wird vom inbound-webhook aufgerufen.
- * Sendet eine automatische Bestätigung wenn eine E-Mail an info@caravanwert.de eingeht.
+ * Sendet eine automatische Bestätigung wenn eine E-Mail an info@kuechenwert.de eingeht.
  */
 
 const handler = async (req: Request): Promise<Response> => {
@@ -31,7 +31,7 @@ const handler = async (req: Request): Promise<Response> => {
     }
 
     // Don't auto-respond to noreply addresses or our own emails
-    const skipPatterns = ['noreply', 'no-reply', 'mailer-daemon', 'postmaster', 'info@caravanwert.de', 'caravanwert.de'];
+    const skipPatterns = ['noreply', 'no-reply', 'mailer-daemon', 'postmaster', 'info@kuechenwert.de', 'kuechenwert24.de'];
     if (skipPatterns.some(p => sender_email.toLowerCase().includes(p))) {
       return new Response(JSON.stringify({ message: "Skipped auto-response for system address" }), {
         status: 200, headers: { "Content-Type": "application/json" },
@@ -59,9 +59,9 @@ const handler = async (req: Request): Promise<Response> => {
     // Fetch site settings
     const { data: settings } = await supabase.from('site_settings').select('*').single();
     const settingsData = settings || {
-      site_name: 'CaravanWert',
+      site_name: 'KuechenWert',
       site_description: 'Deutschlands führende Wohnmobil-Handelsplattform',
-      contact_email: 'info@caravanwert.de',
+      contact_email: 'info@kuechenwert.de',
       support_phone: '+49 511 51532476',
     };
 
@@ -76,9 +76,9 @@ const handler = async (req: Request): Promise<Response> => {
       `, 'info', settingsData)}
       ${paragraph('In der Zwischenzeit finden Sie Antworten auf h&auml;ufige Fragen m&ouml;glicherweise in unserem FAQ-Bereich:')}
       ${list([
-        '<a href="https://caravanwert.de/faq" style="color: #1f8aa2;">H&auml;ufig gestellte Fragen</a>',
-        '<a href="https://caravanwert.de/verkaufen" style="color: #1f8aa2;">Wohnmobil verkaufen &ndash; So funktioniert&apos;s</a>',
-        '<a href="https://caravanwert.de/haendler" style="color: #1f8aa2;">H&auml;ndler werden</a>',
+        '<a href="https://kuechenwert24.de/faq" style="color: #1f8aa2;">H&auml;ufig gestellte Fragen</a>',
+        '<a href="https://kuechenwert24.de/verkaufen" style="color: #1f8aa2;">Wohnmobil verkaufen &ndash; So funktioniert&apos;s</a>',
+        '<a href="https://kuechenwert24.de/haendler" style="color: #1f8aa2;">H&auml;ndler werden</a>',
       ])}
       ${paragraph('<em>Dies ist eine automatische Best&auml;tigung. Bitte antworten Sie nicht auf diese E-Mail.</em>')}
     `;
@@ -92,7 +92,7 @@ const handler = async (req: Request): Promise<Response> => {
         "Authorization": `Bearer ${RESEND_API_KEY}`,
       },
       body: JSON.stringify({
-        from: `${settingsData.site_name} <info@caravanwert.de>`,
+        from: `${settingsData.site_name} <info@kuechenwert.de>`,
         to: [sender_email],
         subject,
         html,
@@ -108,7 +108,7 @@ const handler = async (req: Request): Promise<Response> => {
 
     // Log in admin_emails
     await supabase.from('admin_emails').insert({
-      sender_email: 'info@caravanwert.de',
+      sender_email: 'info@kuechenwert.de',
       sender_name: settingsData.site_name,
       recipient_email: sender_email,
       recipient_name: sender_name || null,

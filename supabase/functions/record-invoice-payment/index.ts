@@ -1,4 +1,4 @@
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.100.1';
+﻿import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.100.1';
 import {
   buildEmailLayout,
   paragraph,
@@ -377,9 +377,9 @@ Deno.serve(async (req) => {
     try {
       const { data: settings } = await supabaseAdmin.from('site_settings').select('*').single();
       const settingsData = settings || {
-        site_name: 'CaravanWert',
+        site_name: 'KuechenWert',
         site_description: 'Deutschlands führende Wohnmobil-Handelsplattform',
-        contact_email: 'info@caravanwert.de',
+        contact_email: 'info@kuechenwert.de',
         support_phone: '+49 511 51532476',
       };
 
@@ -443,11 +443,11 @@ Deno.serve(async (req) => {
           Authorization: `Bearer ${RESEND_API_KEY}`,
         },
         body: JSON.stringify({
-          from: `${settingsData.site_name} <info@caravanwert.de>`,
+          from: `${settingsData.site_name} <info@kuechenwert.de>`,
           to: [recipientEmail],
           subject,
           html,
-          reply_to: 'info@caravanwert.de',
+          reply_to: 'info@kuechenwert.de',
         }),
       });
 
@@ -459,7 +459,7 @@ Deno.serve(async (req) => {
 
         // log into admin_emails for the email center
         await supabaseAdmin.from('admin_emails').insert({
-          sender_email: 'info@caravanwert.de',
+          sender_email: 'info@kuechenwert.de',
           sender_name: settingsData.site_name,
           recipient_email: recipientEmail,
           recipient_name: recipientName,

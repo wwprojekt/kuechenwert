@@ -1,4 +1,4 @@
-// Follow this setup guide to integrate the Deno language server with your editor:
+﻿// Follow this setup guide to integrate the Deno language server with your editor:
 // https://deno.land/manual/getting_started/setup_your_environment
 // This enables autocomplete, go to definition, etc.
 
@@ -25,7 +25,7 @@ serve(async (req) => {
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
     const supabase = createClient(supabaseUrl, supabaseKey)
 
-    const baseUrl = 'https://caravanwert.de'
+    const baseUrl = 'https://kuechenwert24.de'
     const today = new Date().toISOString().split('T')[0]
 
     // Static pages with priorities

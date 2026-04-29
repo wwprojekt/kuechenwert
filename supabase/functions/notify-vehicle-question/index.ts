@@ -1,4 +1,4 @@
-import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
+﻿import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.100.1';
 import { buildEmailLayout, paragraph } from '../_shared/email-builder.ts';
 import { getCorsHeaders, handleCorsPreflightRequest } from '../_shared/cors.ts';
@@ -6,7 +6,7 @@ import { getCorsHeaders, handleCorsPreflightRequest } from '../_shared/cors.ts';
 const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY");
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-const ADMIN_EMAIL = Deno.env.get("ADMIN_EMAIL") || "info@caravanwert.de";
+const ADMIN_EMAIL = Deno.env.get("ADMIN_EMAIL") || "info@kuechenwert.de";
 
 /**
  * Sendet eine Admin-Benachrichtigung wenn eine neue Fahrzeugfrage eingereicht wird.
@@ -37,9 +37,9 @@ const handler = async (req: Request): Promise<Response> => {
     // Fetch site settings for email branding
     const { data: settings } = await supabase.from('site_settings').select('*').single();
     const settingsData = settings || {
-      site_name: 'CaravanWert',
+      site_name: 'KuechenWert',
       site_description: 'Deutschlands führende Wohnmobil-Handelsplattform',
-      contact_email: 'info@caravanwert.de',
+      contact_email: 'info@kuechenwert.de',
       support_phone: '+49 511 51532476',
     };
 
@@ -90,7 +90,7 @@ const handler = async (req: Request): Promise<Response> => {
       <blockquote style="border-left: 3px solid #1f8aa2; padding: 12px 16px; margin: 16px 0; background-color: #f8fafc; border-radius: 0 8px 8px 0;">
         <p style="margin: 0; color: #374151; font-style: italic;">${question}</p>
       </blockquote>
-      <p>Bitte beantworten Sie die Frage im <a href="https://caravanwert.de/admin/questions" style="color: #1f8aa2; font-weight: bold;">Admin-Bereich → Fahrzeugfragen</a>.</p>
+      <p>Bitte beantworten Sie die Frage im <a href="https://kuechenwert24.de/admin/questions" style="color: #1f8aa2; font-weight: bold;">Admin-Bereich → Fahrzeugfragen</a>.</p>
     `;
 
     const subject = `[Neue Fahrzeugfrage] ${vehicle_title}`;
@@ -104,7 +104,7 @@ const handler = async (req: Request): Promise<Response> => {
         'Authorization': `Bearer ${RESEND_API_KEY}`,
       },
       body: JSON.stringify({
-        from: `${settingsData.site_name} System <info@caravanwert.de>`,
+        from: `${settingsData.site_name} System <info@kuechenwert.de>`,
         to: recipients,
         subject,
         html,
@@ -124,7 +124,7 @@ const handler = async (req: Request): Promise<Response> => {
     // Failure to log must not break the user-visible API response.
     try {
       await supabase.from('admin_emails').insert({
-        sender_email: 'info@caravanwert.de',
+        sender_email: 'info@kuechenwert.de',
         sender_name: `${settingsData.site_name} System`,
         recipient_email: recipients.join(', '),
         subject,

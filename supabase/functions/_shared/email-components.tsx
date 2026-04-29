@@ -1,4 +1,4 @@
-import * as React from 'npm:react@18.3.1';
+﻿import * as React from 'npm:react@18.3.1';
 import {
   Body,
   Container,
@@ -73,15 +73,15 @@ export const EmailLayout = ({
               </Link>
             </Text>
             <Text style={footerText}>
-              <Link href="https://caravanwert.de" style={footerLink}>
+              <Link href="https://kuechenwert24.de" style={footerLink}>
                 Website besuchen
               </Link>
               {' | '}
-              <Link href="https://caravanwert.de/datenschutz" style={footerLink}>
+              <Link href="https://kuechenwert24.de/datenschutz" style={footerLink}>
                 Datenschutz
               </Link>
               {' | '}
-              <Link href="https://caravanwert.de/impressum" style={footerLink}>
+              <Link href="https://kuechenwert24.de/impressum" style={footerLink}>
                 Impressum
               </Link>
             </Text>

@@ -1,4 +1,4 @@
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.100.1';
+﻿import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.100.1';
 import { getCorsHeaders, handleCorsPreflightRequest } from '../_shared/cors.ts';
 // @deno-types="https://esm.sh/jspdf@2.5.2"
 import { jsPDF } from 'https://esm.sh/jspdf@2.5.2';
@@ -143,8 +143,8 @@ Deno.serve(async (req) => {
       .limit(1)
       .maybeSingle();
 
-    const siteName = settings?.site_name || 'CaravanWert';
-    const contactEmail = settings?.contact_email || 'info@caravanwert.de';
+    const siteName = settings?.site_name || 'KuechenWert';
+    const contactEmail = settings?.contact_email || 'info@kuechenwert.de';
     const contactPhone = settings?.contact_phone || '';
 
     const doc = new jsPDF({ unit: 'mm', format: 'a4', orientation: 'portrait' });
@@ -159,7 +159,7 @@ Deno.serve(async (req) => {
     doc.setTextColor(255, 255, 255);
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(16);
-    doc.text('CaravanWert', margin, 14);
+    doc.text('KuechenWert', margin, 14);
     doc.setFont('helvetica', 'normal');
     doc.setFontSize(8);
     doc.text('Wohnmobile & Wohnwagen', margin, 19);

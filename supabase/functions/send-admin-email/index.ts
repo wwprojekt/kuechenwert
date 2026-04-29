@@ -1,4 +1,4 @@
-import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
+﻿import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.100.1';
 import { buildEmailLayout, paragraph, greeting } from '../_shared/email-builder.ts';
 import { getCorsHeaders, handleCorsPreflightRequest } from '../_shared/cors.ts';
@@ -82,9 +82,9 @@ const handler = async (req: Request): Promise<Response> => {
     // Fetch site settings
     const { data: settings } = await supabase.from('site_settings').select('*').single();
     const settingsData = settings || {
-      site_name: 'CaravanWert',
+      site_name: 'KuechenWert',
       site_description: 'Deutschlands führende Wohnmobil-Handelsplattform',
-      contact_email: 'info@caravanwert.de',
+      contact_email: 'info@kuechenwert.de',
       support_phone: '+49 511 51532476',
     };
 
@@ -105,7 +105,7 @@ const handler = async (req: Request): Promise<Response> => {
       const { data: emailRecord, error: insertError } = await supabase
         .from('admin_emails')
         .insert({
-          sender_email: 'info@caravanwert.de',
+          sender_email: 'info@kuechenwert.de',
           sender_name: settingsData.site_name,
         recipient_email: cleanTo,
         recipient_name: recipient_name || null,
@@ -139,13 +139,13 @@ const handler = async (req: Request): Promise<Response> => {
 
     // Build Resend payload
     const resendPayload: any = {
-      from: `${settingsData.site_name} <info@caravanwert.de>`,
+      from: `${settingsData.site_name} <info@kuechenwert.de>`,
       to: [cleanTo],
       cc: ccList,
       bcc: bccList,
       subject,
       html,
-      reply_to: 'info@caravanwert.de',
+      reply_to: 'info@kuechenwert.de',
     };
 
     // Add attachments if provided
@@ -209,7 +209,7 @@ const handler = async (req: Request): Promise<Response> => {
     const { data: emailRecord, error: insertError } = await supabase
       .from('admin_emails')
       .insert({
-        sender_email: 'info@caravanwert.de',
+        sender_email: 'info@kuechenwert.de',
         sender_name: settingsData.site_name,
         recipient_email: cleanTo,
         recipient_name: recipient_name || null,

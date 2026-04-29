@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Shared helper: uploadSaleConversionToBingAds
  *
  * Phase 2 (server-side) Pendant zu `uploadSaleConversionToGoogleAds`.
@@ -165,7 +165,7 @@ export async function uploadSaleConversionToBingAds(
   // --- Bug-Schutz #1 (no_msclkid) ---
   // Bing erlaubt zwar Conversion ohne msclkid wenn man hashedEmail liefert,
   // aber dann ist die Attribution nur über Enhanced-Conversion-Match möglich
-  // — viel ungenauer. Für CaravanWert lohnt sich das nicht: ohne msclkid
+  // — viel ungenauer. Für KuechenWert lohnt sich das nicht: ohne msclkid
   // schicken wir nichts. Das ist die saubere, klare Regel.
   if (!clickIds.msclkid) {
     log('No MSCLKID auf kitchen, skipping Bing sale upload.');

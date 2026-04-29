@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Shared helper: sendBlankHandoverProtocol
  *
  * Generates a BLANK handover-protocol PDF (via the
@@ -203,7 +203,7 @@ async function sendBlankHandoverProtocolInner(
   // ─── 3. Send to seller + buyer (in sequence, isolated) ────────────────
   const subject = `Übergabeprotokoll zum Kaufvertrag ${contractNumber} – ${vehicleName}`;
   const filename = `${contractNumber}_uebergabeprotokoll.pdf`;
-  const fromAddr = `${settingsData.site_name || 'CaravanWert'} <info@caravanwert.de>`;
+  const fromAddr = `${settingsData.site_name || 'KuechenWert'} <info@kuechenwert.de>`;
 
   const allRecipients: { profile: ProfileLike | null | undefined; party: 'seller' | 'buyer'; salutation: string; intro: string; instructions: string }[] = [
     {
@@ -261,7 +261,7 @@ async function sendBlankHandoverProtocolInner(
         ${paragraph('<strong>Hinweis zur Verwendung:</strong>')}
         ${paragraph(r.instructions)}
         ${paragraph('Das Protokoll ist <strong>kein Ersatz für den Kaufvertrag</strong>, sondern dokumentiert ergänzend den tatsächlichen Zustand und Umfang bei der Schlüsselübergabe.')}
-        ${paragraph(`Mit freundlichen Grüßen,<br>Ihr ${settingsData.site_name || 'CaravanWert'} Team`)}
+        ${paragraph(`Mit freundlichen Grüßen,<br>Ihr ${settingsData.site_name || 'KuechenWert'} Team`)}
       `,
     );
 
@@ -290,8 +290,8 @@ async function sendBlankHandoverProtocolInner(
 
       try {
         await supabase.from('admin_emails').insert({
-          sender_email: 'info@caravanwert.de',
-          sender_name: settingsData.site_name || 'CaravanWert',
+          sender_email: 'info@kuechenwert.de',
+          sender_name: settingsData.site_name || 'KuechenWert',
           recipient_email: email,
           recipient_name: recipientName,
           subject,

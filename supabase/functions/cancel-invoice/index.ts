@@ -1,4 +1,4 @@
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.100.1';
+﻿import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.100.1';
 import {
   buildEmailLayout,
   paragraph,
@@ -28,7 +28,7 @@ import { edgeLogger, logEdgeError } from '../_shared/edgeLogger.ts';
  *   5. Insert audit_logs entry
  *
  * Note: This does NOT generate a separate Stornorechnung PDF (negative amount
- * invoice). For most CaravanWert use-cases (cancellation BEFORE the dealer
+ * invoice). For most KuechenWert use-cases (cancellation BEFORE the dealer
  * has booked the invoice in their accounting) the email + status change is
  * sufficient. A formal Stornorechnung PDF is a separate, larger feature.
  */
@@ -193,9 +193,9 @@ Deno.serve(async (req) => {
     try {
       const { data: settings } = await supabaseAdmin.from('site_settings').select('*').single();
       const settingsData = settings || {
-        site_name: 'CaravanWert',
+        site_name: 'KuechenWert',
         site_description: 'Deutschlands führende Wohnmobil-Handelsplattform',
-        contact_email: 'info@caravanwert.de',
+        contact_email: 'info@kuechenwert.de',
         support_phone: '+49 511 51532476',
       };
 
@@ -248,7 +248,7 @@ Deno.serve(async (req) => {
           'Bitte verwenden Sie diese E-Mail als Beleg für Ihre Buchhaltung. Falls Sie die ursprüngliche Rechnung bereits gebucht haben, stornieren Sie den Vorgang bitte ebenfalls in Ihrer Buchhaltung.',
         )}
         ${paragraph(
-          'Bei Rückfragen sind wir unter <a href="mailto:info@caravanwert.de" style="color:#1f8aa2;">info@caravanwert.de</a> für Sie da.',
+          'Bei Rückfragen sind wir unter <a href="mailto:info@kuechenwert.de" style="color:#1f8aa2;">info@kuechenwert.de</a> für Sie da.',
         )}
       `;
 
@@ -261,11 +261,11 @@ Deno.serve(async (req) => {
           Authorization: `Bearer ${RESEND_API_KEY}`,
         },
         body: JSON.stringify({
-          from: `${settingsData.site_name} <info@caravanwert.de>`,
+          from: `${settingsData.site_name} <info@kuechenwert.de>`,
           to: [recipientEmail],
           subject,
           html,
-          reply_to: 'info@caravanwert.de',
+          reply_to: 'info@kuechenwert.de',
         }),
       });
 
@@ -276,7 +276,7 @@ Deno.serve(async (req) => {
         emailSent = true;
 
         await supabaseAdmin.from('admin_emails').insert({
-          sender_email: 'info@caravanwert.de',
+          sender_email: 'info@kuechenwert.de',
           sender_name: settingsData.site_name,
           recipient_email: recipientEmail,
           recipient_name: recipientName,

@@ -1,4 +1,4 @@
-import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
+﻿import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.100.1";
 import {
   buildEmailLayout,
@@ -85,9 +85,9 @@ const handler = async (req: Request): Promise<Response> => {
       .single();
 
     const settingsData = settings || {
-      site_name: "CaravanWert",
+      site_name: "KuechenWert",
       site_description: "Deutschlands führende Wohnmobil-Handelsplattform",
-      contact_email: "info@caravanwert.de",
+      contact_email: "info@kuechenwert.de",
       support_phone: "+49 511 51532476",
     };
 
@@ -115,7 +115,7 @@ const handler = async (req: Request): Promise<Response> => {
           kitchen.sale_channel || "\u2013";
 
         vehicleInfo = infoBox(
-          "Ihr Fahrzeug bei CaravanWert",
+          "Ihr Fahrzeug bei KuechenWert",
           `${detailRow("Fahrzeug", vehicleName)}
            ${kitchen.body_type ? detailRow("Aufbauart", kitchen.body_type) : ""}
            ${kitchen.mileage ? detailRow("Kilometerstand", `${Number(kitchen.mileage).toLocaleString("de-DE")} km`) : ""}
@@ -132,8 +132,8 @@ const handler = async (req: Request): Promise<Response> => {
     // Otherwise, the setup=password parameter triggers a password-setting dialog
     const hasPassword = body.hasPassword || false;
     const redirectUrl = hasPassword
-      ? "https://caravanwert.de/dashboard"
-      : "https://caravanwert.de/dashboard?setup=password";
+      ? "https://kuechenwert24.de/dashboard"
+      : "https://kuechenwert24.de/dashboard?setup=password";
 
     const { data: linkData, error: linkError } = await supabase.auth.admin.generateLink({
       type: "magiclink",
@@ -282,11 +282,11 @@ const handler = async (req: Request): Promise<Response> => {
         Authorization: `Bearer ${RESEND_API_KEY}`,
       },
       body: JSON.stringify({
-        from: `${settingsData.site_name} <info@caravanwert.de>`,
+        from: `${settingsData.site_name} <info@kuechenwert.de>`,
         to: [email],
         subject,
         html: emailHtml,
-        reply_to: settingsData.contact_email || "info@caravanwert.de",
+        reply_to: settingsData.contact_email || "info@kuechenwert.de",
       }),
     });
 
@@ -310,7 +310,7 @@ const handler = async (req: Request): Promise<Response> => {
       .maybeSingle();
 
     await supabase.from("admin_emails").insert({
-      sender_email: "info@caravanwert.de",
+      sender_email: "info@kuechenwert.de",
       sender_name: settingsData.site_name,
       recipient_email: email,
       recipient_name: customerName || [recipientProfile?.first_name, recipientProfile?.last_name].filter(Boolean).join(" ") || null,

@@ -1,4 +1,4 @@
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.100.1';
+﻿import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.100.1';
 import { buildEmailLayout, paragraph, infoBox, detailRow, amountDisplay, button, list } from '../_shared/email-builder.ts';
 import { getCorsHeaders, handleCorsPreflightRequest } from '../_shared/cors.ts';
 import { checkServiceRoleOrAdmin } from '../_shared/auth.ts';
@@ -75,9 +75,9 @@ Deno.serve(async (req) => {
       .maybeSingle();
 
     const settingsData = settings || {
-      site_name: 'CaravanWert',
+      site_name: 'KuechenWert',
       site_description: 'Ihr Wohnmobil-Marktplatz',
-      contact_email: 'info@caravanwert.de',
+      contact_email: 'info@kuechenwert.de',
       support_phone: '',
     };
 
@@ -108,10 +108,10 @@ Deno.serve(async (req) => {
         'Fahrzeugdokumentation',
       ])}
 
-      ${button('Zum Dashboard', 'https://caravanwert.de/dashboard')}
+      ${button('Zum Dashboard', 'https://kuechenwert24.de/dashboard')}
 
       ${paragraph(`Falls Sie Fragen haben, erreichen Sie uns unter <a href="mailto:${settingsData.contact_email}" style="color: #2563eb;">${settingsData.contact_email}</a>.`)}
-      ${paragraph('Vielen Dank f&uuml;r Ihr Vertrauen!<br>Ihr CaravanWert Team')}
+      ${paragraph('Vielen Dank f&uuml;r Ihr Vertrauen!<br>Ihr KuechenWert Team')}
     `;
 
     const emailSubject = isInstantBuy
@@ -143,7 +143,7 @@ Deno.serve(async (req) => {
           Authorization: `Bearer ${resendApiKey}`,
         },
         body: JSON.stringify({
-          from: `${settingsData.site_name || 'CaravanWert'} <info@caravanwert.de>`,
+          from: `${settingsData.site_name || 'KuechenWert'} <info@kuechenwert.de>`,
           to: [winnerProfile.email],
           subject: emailSubject,
           html: emailHtml,
@@ -162,7 +162,7 @@ Deno.serve(async (req) => {
       // Log in admin_emails for System tab
       try {
         await supabase.from('admin_emails').insert({
-          sender_email: 'info@caravanwert.de',
+          sender_email: 'info@kuechenwert.de',
           sender_name: settingsData.site_name,
           recipient_email: winnerProfile.email,
           recipient_name: winnerName || null,

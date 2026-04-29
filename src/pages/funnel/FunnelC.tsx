@@ -228,7 +228,7 @@ export default function FunnelC() {
     [spec]
   );
 
-  async function handleGenerate() {
+  async function handleGenerate(variantHint?: string) {
     if (!canGenerate || generating) return;
     setGenerating(true);
     setGenError(null);
@@ -242,6 +242,7 @@ export default function FunnelC() {
           body: {
             session_token: sessionToken ?? undefined,
             spec,
+            user_message: variantHint ? variantHint.trim() : undefined,
             utm,
           },
         }
@@ -318,7 +319,7 @@ export default function FunnelC() {
               spec={spec}
               setSpec={setSpec}
               canGenerate={canGenerate}
-              onGenerate={handleGenerate}
+              onGenerate={() => handleGenerate()}
             />
           )}
 
@@ -329,7 +330,7 @@ export default function FunnelC() {
               genError={genError}
               priceRange={priceRange}
               version={version}
-              onRegenerate={handleGenerate}
+              onRegenerate={(variantHint) => handleGenerate(variantHint)}
               onBack={() => setStep("spec")}
               onContinue={() => setStep("contact")}
             />
@@ -512,6 +513,14 @@ function SpecStepView({
 // Step 2: Render
 // ---------------------------------------------------------------------------
 
+const VARIANT_HINTS: Array<{ label: string; hint: string }> = [
+  { label: "Wärmeres Licht", hint: "warmer Tageslicht-Einfall, goldene Abendstimmung, einladend" },
+  { label: "Dunklere Fronten", hint: "tiefe, dunkle Frontfarbe (Anthrazit / Tannengrün), elegant-matt" },
+  { label: "Mehr Holz", hint: "deutlich mehr sichtbares Holz an Arbeitsplatte und Akzentmöbeln" },
+  { label: "Messing-Akzente", hint: "hochwertige Messing-/Brass-Griffe und -Armaturen als Farbakzent" },
+  { label: "Offener Grundriss", hint: "offene Wohnküche mit Blick in Ess-/Wohnbereich, großzügige Perspektive" },
+];
+
 function RenderStepView({
   generating,
   imageUrl,
@@ -527,7 +536,7 @@ function RenderStepView({
   genError: string | null;
   priceRange: PriceRange | null;
   version: number;
-  onRegenerate: () => void;
+  onRegenerate: (variantHint?: string) => void;
   onBack: () => void;
   onContinue: () => void;
 }) {
@@ -578,6 +587,27 @@ function RenderStepView({
         </div>
       )}
 
+      {imageUrl && !generating && (
+        <div className="mb-6">
+          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">
+            Variante generieren mit …
+          </p>
+          <div className="flex flex-wrap gap-2">
+            {VARIANT_HINTS.map((v) => (
+              <button
+                key={v.label}
+                type="button"
+                onClick={() => onRegenerate(v.hint)}
+                disabled={generating}
+                className="text-sm px-3 py-1.5 rounded-full border hover:border-primary hover:bg-primary/5 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                + {v.label}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
       <div className="flex flex-col sm:flex-row items-center justify-between gap-3">
         <Button variant="ghost" onClick={onBack} disabled={generating}>
           <ArrowLeft className="mr-2 h-4 w-4" />
@@ -586,7 +616,7 @@ function RenderStepView({
         <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
           <Button
             variant="outline"
-            onClick={onRegenerate}
+            onClick={() => onRegenerate()}
             disabled={generating}
             className="h-12 px-6"
           >

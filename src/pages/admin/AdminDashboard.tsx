@@ -16,6 +16,7 @@ import { Separator } from "@/components/ui/separator";
 import { Link } from "react-router-dom";
 import { format, formatDistanceToNow, differenceInHours, differenceInMinutes, differenceInDays, isPast } from "date-fns";
 import { de } from "date-fns/locale";
+import { FunnelCInsightCard } from "@/components/admin/FunnelCInsightCard";
 
 // ============================================================================
 // Types
@@ -1062,6 +1063,9 @@ export default function AdminDashboard() {
           </Link>
         </div>
       )}
+
+      {/* Funnel C – Traumkuechen-KI Widget */}
+      <FunnelCInsightCard />
 
       {/* Performance Metrics (30 Tage) */}
       {metrics && (metrics.totalLeads30d > 0 || metrics.totalSold30d > 0) && (

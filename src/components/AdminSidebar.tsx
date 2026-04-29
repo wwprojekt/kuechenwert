@@ -108,7 +108,7 @@ const menuGroups: MenuGroup[] = [
       { title: "Übersicht", url: "/admin", icon: LayoutDashboard },
       { title: "Leads & Anfragen", url: "/admin/leads", icon: UserPlus, badgeKey: "leads" },
       { title: "Traumküchen-KI", url: "/admin/planner-sessions", icon: Sparkles },
-      { title: "Wohnmobile", url: "/admin/kitchens", icon: Car },
+      { title: "Küchen-Katalog (Legacy)", url: "/admin/kitchens", icon: Database },
       { title: "Auktionen", url: "/admin/auctions", icon: Gavel },
       { title: "Nachauktions-Angebote", url: "/admin/offers", icon: HandshakeIcon, badgeKey: "offers" },
     ],
@@ -120,7 +120,7 @@ const menuGroups: MenuGroup[] = [
     items: [
       { title: "E-Mail-Center", url: "/admin/email", icon: Mail, badgeKey: "unreadEmails" },
       { title: "Support-Nachrichten", url: "/admin/messages", icon: MessageSquare, badgeKey: "support" },
-      { title: "Fahrzeugfragen", url: "/admin/questions", icon: MessageCircle, badgeKey: "questions" },
+      { title: "Produktfragen", url: "/admin/questions", icon: MessageCircle, badgeKey: "questions" },
       { title: "Google-Review-Outreach", url: "/admin/google-reviews", icon: Star },
     ],
   },
@@ -150,7 +150,7 @@ const menuGroups: MenuGroup[] = [
     icon: Wrench,
     defaultOpen: false,
     items: [
-      { title: "Ankaufstationen", url: "/admin/stations", icon: Building2 },
+      { title: "Partner-Showrooms", url: "/admin/stations", icon: Building2 },
       { title: "Termine", url: "/admin/appointments", icon: Calendar, badgeKey: "appointments" },
       { title: "Übergabe", url: "/admin/handover", icon: HandshakeIcon },
       { title: "Reklamationen", url: "/admin/claims", icon: FileWarning, badgeKey: "claims" },

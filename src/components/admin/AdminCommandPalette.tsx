@@ -23,12 +23,12 @@ const ADMIN_PAGES = [
   { title: "Übersicht", path: "/admin", icon: LayoutDashboard, keywords: "dashboard startseite home" },
   { title: "Leads & Anfragen", path: "/admin/leads", icon: UserPlus, keywords: "wizard sessions anfragen kontakt" },
   { title: "Traumküchen-KI (Funnel C)", path: "/admin/planner-sessions", icon: Sparkles, keywords: "ai ki fal flux openai planner renders visualisierung funnel c traumkueche" },
-  { title: "Wohnmobile", path: "/admin/kitchens", icon: Car, keywords: "fahrzeuge kitchen" },
+  { title: "Küchen-Katalog (Legacy)", path: "/admin/kitchens", icon: Car, keywords: "katalog kitchen hersteller modell legacy caravan" },
   { title: "Auktionen", path: "/admin/auctions", icon: Gavel, keywords: "gebote bieten versteigerung" },
   { title: "Nachauktions-Angebote", path: "/admin/offers", icon: Gavel, keywords: "kaufchance angebote" },
   { title: "E-Mail-Center", path: "/admin/email", icon: Mail, keywords: "nachrichten posteingang" },
   { title: "Support-Nachrichten", path: "/admin/messages", icon: MessageCircle, keywords: "support hilfe" },
-  { title: "Fahrzeugfragen", path: "/admin/questions", icon: MessageCircle, keywords: "fragen antworten" },
+  { title: "Produktfragen", path: "/admin/questions", icon: MessageCircle, keywords: "fragen antworten küche legacy" },
   { title: "Benutzer", path: "/admin/users", icon: Users, keywords: "nutzer accounts konten" },
   { title: "Händler", path: "/admin/dealers", icon: Building2, keywords: "dealer bewerbungen" },
   { title: "Händler-Statistik", path: "/admin/dealer-stats", icon: TrendingUp, keywords: "statistik level ranking" },
@@ -38,7 +38,7 @@ const ADMIN_PAGES = [
   { title: "Provisionen", path: "/admin/commissions", icon: Calculator, keywords: "provision staffel" },
   { title: "Kaufverträge", path: "/admin/contracts", icon: FileSignature, keywords: "vertrag dokument" },
   { title: "Finanzen", path: "/admin/financials", icon: CreditCard, keywords: "rechnungen umsatz zahlung" },
-  { title: "Ankaufstationen", path: "/admin/stations", icon: Building2, keywords: "station standort" },
+  { title: "Partner-Showrooms", path: "/admin/stations", icon: Building2, keywords: "station standort showroom küchenstudio" },
   { title: "Termine", path: "/admin/appointments", icon: Calendar, keywords: "besichtigung kalender" },
   { title: "Übergabe", path: "/admin/handover", icon: Calendar, keywords: "übergabe pin" },
   { title: "Reklamationen", path: "/admin/claims", icon: AlertTriangle, keywords: "beschwerde reklamation" },
@@ -156,7 +156,7 @@ export function AdminCommandPalette() {
 
           {/* Daten-Ergebnisse */}
           {searchData?.kitchens && searchData.kitchens.length > 0 && (
-            <CommandGroup heading="Wohnmobile">
+            <CommandGroup heading="Küchen-Katalog">
               {searchData.kitchens.map((m: any) => (
                 <CommandItem key={m.id} onSelect={() => go(`/admin/kitchens/${m.id}`)}>
                   <Car className="mr-2 h-4 w-4 text-green-600" />

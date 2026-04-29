@@ -99,12 +99,12 @@ const AdminGoogleReviews = lazyRetry(() => import("./pages/admin/AdminGoogleRevi
 const AdminContracts = lazyRetry(() => import("./pages/admin/AdminContracts"));
 const AdminDealerStats = lazyRetry(() => import("./pages/admin/AdminDealerStats"));
 
-// SEO Landing Pages (Phase 3.x — Kitchen-Equivalente folgen wenn Markenliste steht).
-// Die alten Caravan/Wohnwagen-Landingpages sind nicht mehr gerouted, damit auf
-// kuechenwert24.de niemals caravan-spezifische Inhalte erscheinen. Die Dateien
-// unter src/pages/landing/Wohnmobil*.tsx bleiben im Repo als Vorlage fuer den
-// spaeteren Kuechen-Rebrand — sie werden wegen Tree-Shaking nicht gebundled,
-// solange hier kein lazy()-Import existiert.
+// SEO Landing Pages (Kuechen-Themen).
+// Die Wohnmobil-/Wohnwagen-/Schwacke-Landing-Pages (17 Pages + 16 Data-Files)
+// wurden beim Caravan-Cleanup komplett entfernt. Kuechen-Landing-Pages werden
+// sobald verfuegbar hier als `lazyRetry`-Chunks registriert und in der
+// Routen-Tabelle weiter unten ergaenzt (`/nobilia-kueche-planen`,
+// `/kueche-guenstig-kaufen-2026`, …).
 
 // Ratgeber detail
 const RatgeberPage = lazyRetry(() => import("./pages/ratgeber/RatgeberPage"));
@@ -294,11 +294,11 @@ const App = () => (
               {/* Unified Dashboard Routes - Smart routing based on user role */}
               <Route path="/dashboard/*" element={<SmartDashboard />} />
               
-              {/* SEO Landing Pages (Kuechen-Versionen folgen in Phase 3.x).
-                  Alte Caravan/Wohnwagen-Routen wurden entfernt, damit auf
-                  kuechenwert24.de keine fachfremden Inhalte ausgeliefert
-                  werden. Die /wohnmobil-*- und /wohnwagen-*-URLs laufen jetzt
-                  auf die NotFound-Route. */}
+              {/* SEO Landing Pages (Kuechen-Themen).
+                  Die Caravan-Landings (/wohnmobil-*, /wohnwagen-*,
+                  /schwacke-liste-*) wurden beim Cleanup entfernt und laufen
+                  in die NotFound-Route. Neue Kuechen-Landing-Pages werden
+                  hier als eigene <Route> eingefuegt. */}
 
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFound />} />

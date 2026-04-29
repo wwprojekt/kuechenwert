@@ -45,8 +45,8 @@ const PageLayout = ({
 
   // Use provided canonical path or current location
   const canonical = getCanonicalUrl(canonicalPath || location.pathname);
-  // Interim OG-Image: Unsplash-Kueche bis eigenes designed ist.
-  // Altes /og-image.png ist noch das CaravanWert-Wohnmobil-Bild.
+  // Interim OG-Image: Unsplash-Kueche bis ein eigenes designed ist. Das alte
+  // /og-image.png (Caravan-Erbe) wurde beim Cleanup entfernt.
   const defaultOgImage =
     "https://images.unsplash.com/photo-1556909114-f6e7ad7d3136?auto=format&fit=crop&w=1200&h=630&q=80";
   const ogImageUrl = ogImage || defaultOgImage;

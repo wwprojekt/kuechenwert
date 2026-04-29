@@ -315,9 +315,9 @@ export function injectStructuredData(data: object | object[]): string {
  *    and avoids duplicate-rating problems.
  *
  * Pages that may emit this schema (calculator IS the primary content):
- *   /wertrechner (canonical), /wohnmobil-wertermittlung-kostenlos,
- *   /was-ist-mein-wohnmobil-wert, /wieviel-ist-mein-wohnmobil-wert,
- *   /wertermittlung
+ *   /kuechenrechner (canonical, Kuechen-Budget-Estimator). Die Caravan-
+ *   Rechner-Landings (/was-ist-mein-wohnmobil-wert, /wohnmobil-wertermittlung-
+ *   kostenlos etc.) wurden beim Cleanup entfernt.
  *
  * Pages that must NOT emit this schema (calculator is secondary):
  *   Homepage, /verkaufen/*, /kaufen/*, /ratgeber/*, /haendler/*, auctions

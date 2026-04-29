@@ -17,8 +17,8 @@
 
 export const BRAND = {
   name: "KüchenWert",
-  // Marke der CaravanWert GmbH (gleiche Firma).
-  legalName: "CaravanWert GmbH",
+  // Marke der WohnWert GmbH (dieselbe Firma betreibt auch CaravanWert).
+  legalName: "WohnWert GmbH",
   tagline: "Küchen einfach verkaufen & kaufen",
   domain: "kuechenwert24.de",
   baseUrl: "https://kuechenwert24.de",

@@ -3,6 +3,7 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { ensureValidRLSSession } from "@/lib/sessionGuard";
 import PageLayout from "@/components/PageLayout";
+import { BRAND } from "@/lib/brand";
 
 type VerifyType = "signup" | "recovery" | "invite" | "magiclink" | "email_change" | "email";
 
@@ -199,15 +200,15 @@ const AuthConfirm = () => {
       setResendStatus("error");
       const errorMsg = err instanceof Error ? err.message : "Unbekannter Fehler";
       setResendMessage(
-        `Der Bestätigungslink konnte nicht gesendet werden: ${errorMsg}. Bitte versuchen Sie es später erneut oder kontaktieren Sie uns unter info@caravanwert.de.`
+        `Der Bestätigungslink konnte nicht gesendet werden: ${errorMsg}. Bitte versuchen Sie es später erneut oder kontaktieren Sie uns unter ${BRAND.supportEmail}.`
       );
     }
   };
 
   return (
     <PageLayout
-      title="E-Mail bestätigen | CaravanWert"
-      description="E-Mail-Bestätigung für Ihr CaravanWert-Konto"
+      title={`E-Mail bestätigen | ${BRAND.name}`}
+      description={`E-Mail-Bestätigung für Ihr ${BRAND.name}-Konto`}
       noIndex={true}
     >
       <div className="min-h-[60vh] flex items-center justify-center px-4">

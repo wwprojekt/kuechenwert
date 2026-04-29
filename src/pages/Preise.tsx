@@ -11,27 +11,28 @@ import { Separator } from "@/components/ui/separator";
 import { Link } from "react-router-dom";
 import { useCommissionFromTiers } from "@/lib/commissionCalculator";
 import { CommissionTierTable } from "@/components/CommissionTierTable";
+import { BRAND } from "@/lib/brand";
 
 const Preise = () => {
   const [calcAmount, setCalcAmount] = useState(15000);
   const calcResult = useCommissionFromTiers(calcAmount);
 
   const sellerFreeServices = [
-    "Verkaufsinserat erstellen",
-    "Verkaufsinserat verlängern für neue Bieterrunde",
+    "Kostenlose Küchen-Bewertung",
+    "Mehrere Angebote von geprüften Küchen-Händlern",
     "Online-Nachverhandlung",
-    "Fahrzeug versteigern",
-    "Keine Verkaufspflicht wenn Mindestgebot nicht erreicht wird",
+    "Reverse-Auktion: Händler bieten um Ihre Küche",
+    "Keine Verkaufspflicht, wenn kein Angebot passt",
     "Vorgefertigter, rechtssicherer Kaufvertrag",
-    "Unterstützung bei der Inseraterstellung",
+    "Unterstützung beim Foto-Upload & Datenerfassung",
     "Telefonischer Kundensupport",
   ];
 
   const buyerFreeServices = [
-    "Unbegrenzte Gebotsabgabe",
-    "Bietagent",
-    "Merkliste und Suchauftrag",
-    "Online Fragen an Verkäufer stellen",
+    "Zugang zu qualifizierten Küchen-Leads",
+    "Eigene Angebote platzieren",
+    "Benachrichtigungen per E-Mail & Dashboard",
+    "Direkte Fragen an den Verkäufer",
     "Online-Nachverhandlung",
     "Vorgefertigter, rechtssicherer Kaufvertrag",
   ];
@@ -39,9 +40,9 @@ const Preise = () => {
   return (
     <PageLayout
       breadcrumbs={true}
-      title="Preise & Leistungen – Wohnmobil-Verkauf"
-      description="Transparente Preise für den Wohnmobil-Verkauf bei CaravanWert. Kostenlose Bewertung, faire Provisionen und keine versteckten Gebühren für Verkäufer und Käufer."
-      keywords="Preise, Kosten, Gebühren, Wohnmobil verkaufen, Provision"
+      title={`Preise & Leistungen – Küchen verkaufen | ${BRAND.name}`}
+      description={`Transparente Preise für den Küchen-Verkauf bei ${BRAND.name}. Kostenlose Bewertung, faire Provisionen und keine versteckten Gebühren für Verkäufer und Händler.`}
+      keywords="Preise, Kosten, Gebühren, Küche verkaufen, Provision, Küchenwert"
       canonicalPath="/preise"
       structuredData={generateBreadcrumbSchema(getBreadcrumbsFromPath("/preise"))}
     >
@@ -179,18 +180,18 @@ const Preise = () => {
               Bereit loszulegen?
             </h2>
             <p className="text-muted-foreground mb-8 text-lg">
-              Verkaufen Sie Ihr Wohnmobil kostenlos oder finden Sie Ihr Traumfahrzeug in unseren Auktionen.
+              Verkaufen Sie Ihre Küche kostenlos oder werden Sie Küchen-Partner und erhalten Sie qualifizierte Leads.
             </p>
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-              <Link to="/verkaufen/wizard">
+              <Link to="/funnel/a">
                 <Button size="lg" className="gap-2">
                   Jetzt kostenlos verkaufen
                   <ArrowRight className="w-4 h-4" />
                 </Button>
               </Link>
-              <Link to="/kaufen">
+              <Link to="/haendler">
                 <Button variant="outline" size="lg" className="gap-2">
-                  Auktionen durchstöbern
+                  Für Händler
                   <ArrowRight className="w-4 h-4" />
                 </Button>
               </Link>

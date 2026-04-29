@@ -75,31 +75,31 @@ export default RelatedContent;
  */
 export const verkaufenRelatedLinks: RelatedLink[] = [
   {
-    title: "Ankaufstationen",
-    description: "Finden Sie eine Ankaufstation in Ihrer Nähe für die persönliche Übergabe",
-    href: "/ankaufstationen",
+    title: "Küchen-Wertrechner",
+    description: "Erhalten Sie in 4 Schritten eine kostenlose Sofort-Schätzung für Ihre Küche",
+    href: "/wertrechner",
   },
   {
-    title: "Ratgeber",
-    description: "Tipps zur optimalen Vorbereitung Ihres Wohnmobils für den Verkauf",
-    href: "/ratgeber",
+    title: "Angebote vergleichen",
+    description: "Mehrere geprüfte Küchen-Händler bieten — Sie vergleichen und entscheiden",
+    href: "/funnel/b",
   },
   {
     title: "FAQ",
-    description: "Antworten auf häufig gestellte Fragen zum Verkaufsprozess",
+    description: "Antworten auf häufig gestellte Fragen zum Küchen-Verkauf",
     href: "/faq",
   },
 ];
 
 export const kaufenRelatedLinks: RelatedLink[] = [
   {
-    title: "Ratgeber",
-    description: "Worauf Sie beim Kauf eines gebrauchten Wohnmobils achten sollten",
-    href: "/ratgeber",
+    title: "Traumküche planen",
+    description: "KI-gestützter Konfigurator entwirft 3 Varianten Ihrer Traumküche",
+    href: "/funnel/c",
   },
   {
     title: "FAQ",
-    description: "Häufig gestellte Fragen zum Kaufprozess und zur Finanzierung",
+    description: "Häufig gestellte Fragen zum Küchen-Kauf und zur Vermittlung",
     href: "/faq",
   },
   {
@@ -111,19 +111,19 @@ export const kaufenRelatedLinks: RelatedLink[] = [
 
 export const haendlerRelatedLinks: RelatedLink[] = [
   {
-    title: "Händler werden",
-    description: "Alle Infos zur Registrierung, Provision und dem Auktionsprozess",
-    href: "/wohnmobil-haendler-werden",
+    title: "Küchen-Händler werden",
+    description: "Alle Infos zur Registrierung, Provision und dem Vermittlungsprozess",
+    href: "/haendler",
   },
   {
     title: "Händler-Registrierung",
-    description: "Jetzt kostenlos registrieren und sofort mitbieten",
+    description: "Jetzt kostenlos als Küchen-Händler registrieren und Leads erhalten",
     href: "/register/haendler",
   },
   {
-    title: "Aktuelle Auktionen",
-    description: "Entdecken Sie aktuelle Wohnmobil-Auktionen",
-    href: "/kaufen",
+    title: "Preise",
+    description: "Transparente Konditionen für Küchen-Händler",
+    href: "/preise",
   },
   {
     title: "Kontakt",
@@ -132,7 +132,7 @@ export const haendlerRelatedLinks: RelatedLink[] = [
   },
   {
     title: "FAQ",
-    description: "Häufig gestellte Fragen zum Händler-Partnerprogramm",
+    description: "Häufig gestellte Fragen zum Küchen-Händler-Partnerprogramm",
     href: "/faq",
   },
 ];

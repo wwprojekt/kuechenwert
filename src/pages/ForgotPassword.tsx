@@ -15,6 +15,7 @@ import { logger } from "@/lib/logger";
 import { handleValidationError } from "@/lib/errorLogService";
 import { Mail, ArrowLeft, Loader2, CheckCircle2 } from "lucide-react";
 import PageLayout from "@/components/PageLayout";
+import { BRAND } from "@/lib/brand";
 
 const emailSchema = z.object({
   email: z.string().trim().email("Bitte geben Sie eine gültige E-Mail-Adresse ein"),
@@ -76,9 +77,9 @@ const ForgotPassword = () => {
 
   return (
     <PageLayout
-      title="Passwort vergessen"
-      description="Setzen Sie Ihr Passwort zurück"
-      keywords="passwort vergessen, passwort zurücksetzen, caravanwert"
+      title={`Passwort vergessen | ${BRAND.name}`}
+      description={`Setzen Sie Ihr ${BRAND.name}-Passwort zurück`}
+      keywords="passwort vergessen, passwort zurücksetzen, küchenwert"
       canonicalPath="/forgot-password"
       noIndex={true}
     >
@@ -88,8 +89,8 @@ const ForgotPassword = () => {
           <div className="text-center">
             <Link to="/" className="inline-block mb-8">
               <img
-                src="/logo.webp"
-                alt="CaravanWert"
+                src="/logo.svg"
+                alt={BRAND.name}
                 className="h-16 w-auto mx-auto"
               />
             </Link>

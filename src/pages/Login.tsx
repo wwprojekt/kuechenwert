@@ -13,6 +13,7 @@ import { handleValidationError, handleAndLogError } from "@/lib/errorLogService"
 import { trackUserLoggedIn } from "@/lib/gadsConversionService";
 import { Mail, Lock, ArrowRight } from "lucide-react";
 import PageLayout from "@/components/PageLayout";
+import { BRAND } from "@/lib/brand";
 
 const signInSchema = z.object({
   email: z.string().trim().email("Bitte geben Sie eine gültige E-Mail-Adresse ein"),
@@ -47,8 +48,8 @@ const Login = () => {
   if (user && roleLoading) {
     return (
       <PageLayout
-        title="Anmelden"
-        description="Melden Sie sich bei CaravanWert an"
+        title={`Anmelden | ${BRAND.name}`}
+        description={`Melden Sie sich bei ${BRAND.name} an`}
         canonicalPath="/login"
         noIndex={true}
       >
@@ -113,9 +114,9 @@ const Login = () => {
 
   return (
     <PageLayout
-      title="Anmelden"
-      description="Melden Sie sich bei CaravanWert an"
-      keywords="anmelden, login, wohnmobil"
+      title={`Anmelden | ${BRAND.name}`}
+      description={`Melden Sie sich bei ${BRAND.name} an`}
+      keywords="anmelden, login, küchenwert, küche verkaufen"
       canonicalPath="/login"
       noIndex={true}
     >
@@ -128,7 +129,7 @@ const Login = () => {
         <div className="w-full max-w-md relative z-10">
           <div className="text-center mb-8 animate-fade-in">
             <Link to="/" className="inline-block mb-6 hover:opacity-90 transition-opacity">
-              <img src="/logo.webp" alt="CaravanWert" className="h-16 w-auto mx-auto" />
+              <img src="/logo.svg" alt={BRAND.name} className="h-16 w-auto mx-auto" />
             </Link>
             <h1 className="text-3xl md:text-4xl font-bold text-foreground mb-3">
               Willkommen zurück

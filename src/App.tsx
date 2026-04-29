@@ -4,9 +4,9 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { ThemeProvider } from "@/components/ThemeProvider";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route, useParams, useLocation } from "react-router-dom";
+import { BrowserRouter, Routes, Route, useParams, useLocation, Navigate } from "react-router-dom";
 import PageTransition from "./components/PageTransition";
-import { ErrorBoundary, AuctionErrorBoundary, FormErrorBoundary } from "./components/ErrorBoundary";
+import { ErrorBoundary, AuctionErrorBoundary } from "./components/ErrorBoundary";
 import { WhatsAppButton } from "./components/WhatsAppButton";
 import CookieBanner from "./components/CookieBanner";
 import ScrollRestoration from "./components/ScrollRestoration";
@@ -35,7 +35,10 @@ const AuthConfirm = lazyRetry(() => import("./pages/AuthConfirm"));
 
 // Core pages
 const Verkaufen = lazyRetry(() => import("./pages/Verkaufen"));
-const VerkaufenWizard = lazyRetry(() => import("./pages/VerkaufenWizard"));
+// VerkaufenWizard (alter Caravan-8-Step-Wizard) ist deaktiviert – die Route
+// /verkaufen/wizard leitet jetzt auf /funnel/a um. Die Datei bleibt vorerst
+// im Repo, falls Teile (Steps, Hooks) fuer Funnel-Features wiederverwendet
+// werden sollen. Kein lazy()-Import => kein Bundle-Chunk.
 const VerkaufenDanke = lazyRetry(() => import("./pages/VerkaufenDanke"));
 const Kaufen = lazyRetry(() => import("./pages/Kaufen"));
 const AuctionDetail = lazyRetry(() => import("./pages/AuctionDetail"));
@@ -94,24 +97,12 @@ const AdminGoogleReviews = lazyRetry(() => import("./pages/admin/AdminGoogleRevi
 const AdminContracts = lazyRetry(() => import("./pages/admin/AdminContracts"));
 const AdminDealerStats = lazyRetry(() => import("./pages/admin/AdminDealerStats"));
 
-// SEO Landing Pages
-const WohnmobilVerkaufen = lazyRetry(() => import("./pages/landing/WohnmobilVerkaufen"));
-const WohnwagenVerkaufen = lazyRetry(() => import("./pages/landing/WohnwagenVerkaufen"));
-const WohnmobilWert = lazyRetry(() => import("./pages/landing/WohnmobilWert"));
-const WohnmobilWertermittlungKostenlos = lazyRetry(() => import("./pages/landing/WohnmobilWertermittlungKostenlos"));
-const WirKaufenDeinWohnmobil = lazyRetry(() => import("./pages/landing/WirKaufenDeinWohnmobil"));
-const WievielWohnmobilWert = lazyRetry(() => import("./pages/landing/WievielWohnmobilWert"));
-const WohnmobilHaendlerWerden = lazyRetry(() => import("./pages/landing/WohnmobilHaendlerWerden"));
-const SchwackeListeWohnmobil = lazyRetry(() => import("./pages/landing/SchwackeListeWohnmobil"));
-const WohnmobilVerkaufspreis = lazyRetry(() => import("./pages/landing/WohnmobilVerkaufspreis"));
-const WannWohnmobilVerkaufen = lazyRetry(() => import("./pages/landing/WannWohnmobilVerkaufen"));
-const Wohnmobilpreise2026 = lazyRetry(() => import("./pages/landing/Wohnmobilpreise2026"));
-const WohnmobilAnkaufRatgeber = lazyRetry(() => import("./pages/landing/WohnmobilAnkaufRatgeber"));
-const FinanziertesWohnmobilVerkaufen = lazyRetry(() => import("./pages/landing/FinanziertesWohnmobilVerkaufen"));
-const WohnwagenVerkaufspreis = lazyRetry(() => import("./pages/landing/WohnwagenVerkaufspreis"));
-const WannWohnwagenVerkaufen = lazyRetry(() => import("./pages/landing/WannWohnwagenVerkaufen"));
-const Wohnwagenpreise2026 = lazyRetry(() => import("./pages/landing/Wohnwagenpreise2026"));
-const FinanziertenWohnwagenVerkaufen = lazyRetry(() => import("./pages/landing/FinanziertenWohnwagenVerkaufen"));
+// SEO Landing Pages (Phase 3.x — Kitchen-Equivalente folgen wenn Markenliste steht).
+// Die alten Caravan/Wohnwagen-Landingpages sind nicht mehr gerouted, damit auf
+// kuechenwert24.de niemals caravan-spezifische Inhalte erscheinen. Die Dateien
+// unter src/pages/landing/Wohnmobil*.tsx bleiben im Repo als Vorlage fuer den
+// spaeteren Kuechen-Rebrand — sie werden wegen Tree-Shaking nicht gebundled,
+// solange hier kein lazy()-Import existiert.
 
 // Ratgeber detail
 const RatgeberPage = lazyRetry(() => import("./pages/ratgeber/RatgeberPage"));
@@ -227,11 +218,8 @@ const App = () => (
               <Route path="/reset-password" element={<ResetPassword />} />
               <Route path="/auth/confirm" element={<AuthConfirm />} />
               <Route path="/verkaufen" element={<Verkaufen />} />
-              <Route path="/verkaufen/wizard" element={
-                <FormErrorBoundary>
-                  <VerkaufenWizard />
-                </FormErrorBoundary>
-              } />
+              {/* Alte Caravan-Wizard-Route leitet auf den neuen Kuechen-Funnel um. */}
+              <Route path="/verkaufen/wizard" element={<Navigate to="/funnel/a" replace />} />
               <Route path="/verkaufen/danke" element={<VerkaufenDanke />} />
               <Route path="/ankaufstationen" element={<Ankaufstationen />} />
               <Route path="/wertermittlung" element={<Wertermittlung />} />
@@ -298,24 +286,11 @@ const App = () => (
               {/* Unified Dashboard Routes - Smart routing based on user role */}
               <Route path="/dashboard/*" element={<SmartDashboard />} />
               
-              {/* SEO Landing Pages */}
-              <Route path="/wohnmobil-verkaufen" element={<WohnmobilVerkaufen />} />
-              <Route path="/wohnwagen-verkaufen" element={<WohnwagenVerkaufen />} />
-              <Route path="/was-ist-mein-wohnmobil-wert" element={<WohnmobilWert />} />
-              <Route path="/wohnmobil-wertermittlung-kostenlos" element={<WohnmobilWertermittlungKostenlos />} />
-              <Route path="/wir-kaufen-dein-wohnmobil" element={<WirKaufenDeinWohnmobil />} />
-              <Route path="/wieviel-ist-mein-wohnmobil-wert" element={<WievielWohnmobilWert />} />
-              <Route path="/wohnmobil-haendler-werden" element={<WohnmobilHaendlerWerden />} />
-              <Route path="/schwacke-liste-wohnmobil" element={<SchwackeListeWohnmobil />} />
-              <Route path="/wohnmobil-verkaufspreis" element={<WohnmobilVerkaufspreis />} />
-              <Route path="/wann-wohnmobil-verkaufen" element={<WannWohnmobilVerkaufen />} />
-              <Route path="/wohnmobilpreise-2026" element={<Wohnmobilpreise2026 />} />
-              <Route path="/wohnmobil-ankauf-ratgeber" element={<WohnmobilAnkaufRatgeber />} />
-              <Route path="/finanziertes-wohnmobil-verkaufen" element={<FinanziertesWohnmobilVerkaufen />} />
-              <Route path="/wohnwagen-verkaufspreis" element={<WohnwagenVerkaufspreis />} />
-              <Route path="/wann-wohnwagen-verkaufen" element={<WannWohnwagenVerkaufen />} />
-              <Route path="/wohnwagenpreise-2026" element={<Wohnwagenpreise2026 />} />
-              <Route path="/finanzierten-wohnwagen-verkaufen" element={<FinanziertenWohnwagenVerkaufen />} />
+              {/* SEO Landing Pages (Kuechen-Versionen folgen in Phase 3.x).
+                  Alte Caravan/Wohnwagen-Routen wurden entfernt, damit auf
+                  kuechenwert24.de keine fachfremden Inhalte ausgeliefert
+                  werden. Die /wohnmobil-*- und /wohnwagen-*-URLs laufen jetzt
+                  auf die NotFound-Route. */}
 
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFound />} />

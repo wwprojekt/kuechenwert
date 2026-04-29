@@ -33,9 +33,11 @@ export function SiteLogo({
   const { settings, loading } = useSettings();
 
   // Logo durch CF-Worker /img/-Proxy leiten (überschreibt Supabase no-cache).
-  // Lokale /logo.png-Fallback wird von proxiedImageUrl unverändert
+  // Lokale /logo.svg-Fallback wird von proxiedImageUrl unverändert
   // durchgereicht (kein Storage-Marker im Pfad).
-  const rawLogoUrl = settings?.logo_url || "/logo.png";
+  // Footer-Variante bekommt weißes Logo (Teal-auf-Weiß) für dunklen BG.
+  const defaultLogo = variant === "footer" ? "/logo-white.svg" : "/logo.svg";
+  const rawLogoUrl = settings?.logo_url || defaultLogo;
   const logoUrl = useMemo(() => proxiedImageUrl(rawLogoUrl), [rawLogoUrl]);
   const siteName = settings?.site_name || BRAND.name;
   const siteTagline = settings?.site_tagline || BRAND.tagline;

@@ -9,6 +9,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { FunctionsHttpError, FunctionsRelayError, FunctionsFetchError } from '@supabase/supabase-js';
 import { parseGermanNumber, formatBidDisplay } from '@/lib/parseGermanNumber';
 import PageLayout from "@/components/PageLayout";
+import { BRAND } from "@/lib/brand/config";
 
 /**
  * Read the parsed Edge Function error body.
@@ -154,7 +155,7 @@ const AuctionDetail = () => {
   const { isPendingDealer, isRejectedDealer } = useDealerPending();
   const isAdmin = primaryRole === 'admin';
   const canSeePrices = isDealer || isAdmin;
-  const siteName = settings?.site_name || 'CaravanWert';
+  const siteName = settings?.site_name || BRAND.name;
   const { toast } = useToast();
   const navigate = useNavigate();
   const { showSessionExpired } = useSessionExpired();
@@ -396,7 +397,7 @@ const AuctionDetail = () => {
           trackVehicleViewed(mh.id, `${mh.manufacturer} ${mh.model} (${mh.year})`);
           trackMetaViewContent({
             content_name: `${mh.manufacturer} ${mh.model} (${mh.year})`,
-            content_category: mh.body_type || 'Wohnmobil',
+            content_category: mh.body_type || 'Küche',
             content_ids: [mh.id],
             content_type: 'vehicle',
             value: trackingValue,
@@ -518,7 +519,7 @@ const AuctionDetail = () => {
       trackVehicleViewed(mh.id, `${mh.manufacturer} ${mh.model} (${mh.year})`);
       trackMetaViewContent({
         content_name: `${mh.manufacturer} ${mh.model} (${mh.year})`,
-        content_category: mh.body_type || 'Wohnmobil',
+        content_category: mh.body_type || 'Küche',
         content_ids: [mh.id],
         content_type: 'vehicle',
         value: trackingValue,
@@ -814,13 +815,13 @@ const AuctionDetail = () => {
           value: kitchen.instant_price,
           currency: 'EUR',
           transaction_id: id,
-          items: [{ id: kitchen.id, name: `${kitchen.manufacturer} ${kitchen.model}`, category: 'Wohnmobil', price: kitchen.instant_price }],
+          items: [{ id: kitchen.id, name: `${kitchen.manufacturer} ${kitchen.model}`, category: 'Küche', price: kitchen.instant_price }],
         });
       } catch { /* tracking should never break the purchase flow */ }
 
       toast({
         title: "Kauf erfolgreich!",
-        description: `Sie haben dieses Wohnmobil für €${kitchen.instant_price.toLocaleString()} gekauft. Wir werden uns in Kürze bei Ihnen melden.`,
+        description: `Sie haben diese Küche für €${kitchen.instant_price.toLocaleString()} gekauft. Wir werden uns in Kürze bei Ihnen melden.`,
       });
 
       // Navigate to listings to show sold status
@@ -1017,7 +1018,7 @@ const AuctionDetail = () => {
           event_label: `bid_placed_${auction.kitchen?.manufacturer}_${auction.kitchen?.model}`,
           value: amount,
           currency: 'EUR',
-          items: [{ id: auction.kitchen?.id, name: `${auction.kitchen?.manufacturer} ${auction.kitchen?.model}`, category: 'Wohnmobil', price: amount }],
+          items: [{ id: auction.kitchen?.id, name: `${auction.kitchen?.manufacturer} ${auction.kitchen?.model}`, category: 'Küche', price: amount }],
         });
       } catch { /* tracking should never break the bid flow */ }
 
@@ -1133,7 +1134,7 @@ const AuctionDetail = () => {
     },
     model: kitchen.model,
     productionDate: kitchen.year?.toString(),
-    image: photos[0]?.url || 'https://caravanwert.de/favicon.png',
+    image: photos[0]?.url || `${BRAND.baseUrl}/logo.svg`,
     offers: {
       '@type': 'Offer',
       price: kitchen.sale_channel === 'instant_price' ? Number(kitchen.instant_price || 0) : currentBid,
@@ -1159,7 +1160,7 @@ const AuctionDetail = () => {
       description={kitchen.sale_channel === 'instant_price'
         ? `${kitchen.manufacturer} ${kitchen.model} - Festpreis: €${Number(kitchen.instant_price || 0).toLocaleString()}`
         : `Auktion für ${kitchen.manufacturer} ${kitchen.model} - Aktuelles Gebot: €${currentBid.toLocaleString()}`}
-      keywords={`${kitchen.sale_channel === 'instant_price' ? 'festpreis' : 'auktion'}, ${kitchen.manufacturer}, ${kitchen.model}, wohnmobil`}
+      keywords={`${kitchen.sale_channel === 'instant_price' ? 'festpreis' : 'auktion'}, ${kitchen.manufacturer}, ${kitchen.model}, küche, küchenwert`}
       canonicalPath={`/auktion/${id}`}
       ogImage={photos[0]?.url}
       structuredData={productSchema}
@@ -1668,11 +1669,11 @@ const AuctionDetail = () => {
                 </div>
               </div>
 
-              {/* === Sektion 1: Fahrzeug-Übersicht ====================== */}
+              {/* === Sektion 1: Küchen-Übersicht ====================== */}
               <Card id="overview" className="p-4 sm:p-6 scroll-mt-20">
                     <h2 className="text-xl sm:text-2xl font-bold mb-4 flex items-center gap-2">
                       <Info className="w-5 h-5 sm:w-6 sm:h-6 text-primary" />
-                      Fahrzeug-Übersicht
+                      Küchen-Übersicht
                     </h2>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                       <div className="space-y-4">
@@ -1753,7 +1754,7 @@ const AuctionDetail = () => {
                       </div>
                     </div>
 
-                    {/* Fahrzeugbeschreibung — auf Mobile bei langen Texten
+                    {/* Küchenbeschreibung — auf Mobile bei langen Texten
                         gekürzt (line-clamp-6) mit "Mehr anzeigen"-Toggle.
                         Auf Tablet+ (sm:) immer komplett. */}
                     {kitchen.description && (
@@ -1820,7 +1821,7 @@ const AuctionDetail = () => {
                           Keine bekannten Mängel
                         </h3>
                         <p className="text-green-700 dark:text-green-300 text-sm">
-                          Der Verkäufer hat angegeben, dass keine wesentlichen Mängel am Fahrzeug bekannt sind.
+                          Der Verkäufer hat angegeben, dass keine wesentlichen Mängel an der Küche bekannt sind.
                         </p>
                       </div>
                     )}
@@ -1931,13 +1932,13 @@ const AuctionDetail = () => {
                     </div>
               </Card>
 
-              {/* === Sektion 3: Fahrzeug-Zustand ========================
+              {/* === Sektion 3: Küchen-Zustand ========================
                    Vier farbige Boxen mit den wichtigsten Zustands-
                    indikatoren. Auf Mobile als 2-Spalten-Grid kompakt. */}
               <Card id="condition" className="p-4 sm:p-6 scroll-mt-20">
                 <h2 className="text-xl sm:text-2xl font-bold mb-4 flex items-center gap-2">
                   <CheckCircle className="w-5 h-5 sm:w-6 sm:h-6 text-primary" />
-                  Fahrzeugzustand
+                  Küchenzustand
                 </h2>
 
                 <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
@@ -2253,7 +2254,7 @@ const AuctionDetail = () => {
                         <>Umsatzsteuer wird auf der Kaufrechnung gesondert ausgewiesen.</>
                       )}
                       {kitchen.mwst_ausweisbar === false && (
-                        <>Verkauf ohne gesonderte Umsatzsteuerausweisung auf der Fahrzeugrechnung (z. B. Differenzbesteuerung oder Kleinunternehmer).</>
+                        <>Verkauf ohne gesonderte Umsatzsteuerausweisung auf der Rechnung (z. B. Differenzbesteuerung oder Kleinunternehmer).</>
                       )}
                       {kitchen.mwst_ausweisbar == null && (
                         <>Angabe zur Umsatzsteuer durch den Verkäufer noch nicht hinterlegt – bei Bedarf beim Verkäufer erfragen.</>
@@ -2562,7 +2563,7 @@ const AuctionDetail = () => {
                           Nur für Händler verfügbar
                         </h3>
                         <p className="text-sm text-amber-700 dark:text-amber-400 mb-4">
-                          Melden Sie sich als Händler an, um dieses Fahrzeug zum Festpreis zu kaufen oder einen Preisvorschlag zu machen.
+                          Melden Sie sich als Händler an, um diese Küche zum Festpreis zu kaufen oder einen Preisvorschlag zu machen.
                         </p>
                         {!user && (
                           <Link to={`/login?redirect=/auktion/${id}`}>

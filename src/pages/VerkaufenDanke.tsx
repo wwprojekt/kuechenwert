@@ -7,6 +7,7 @@ import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { useEffect, useRef, useState } from "react";
 import { logger } from "@/lib/logger";
+import { BRAND } from "@/lib/brand";
 
 type PhotoUploadState = "idle" | "uploading" | "success" | "error";
 
@@ -128,9 +129,9 @@ const VerkaufenDanke = () => {
 
   return (
     <PageLayout
-      title="Fahrzeug erfolgreich eingereicht – CaravanWert"
-      description="Ihr Wohnmobil wurde erfolgreich eingereicht. Prüfen Sie Ihre E-Mails für den Aktivierungslink."
-      keywords="wohnmobil verkaufen, anfrage gesendet, bewertung"
+      title={`Küche erfolgreich eingereicht – ${BRAND.name}`}
+      description="Ihre Küche wurde erfolgreich eingereicht. Prüfen Sie Ihre E-Mails für den Aktivierungslink."
+      keywords="küche verkaufen, anfrage gesendet, bewertung, küchenwert"
       canonicalPath="/verkaufen/danke"
       noIndex
     >
@@ -140,10 +141,10 @@ const VerkaufenDanke = () => {
             <CheckCircle2 className="w-10 h-10 text-green-600 dark:text-green-400" />
           </div>
           <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold text-foreground mb-4">
-            Fahrzeug erfolgreich eingereicht!
+            Küche erfolgreich eingereicht!
           </h1>
           <p className="text-muted-foreground text-base md:text-lg max-w-2xl mx-auto">
-            Ihr Wohnmobil wurde in unser System aufgenommen. Prüfen Sie jetzt Ihr E-Mail-Postfach.
+            Ihre Küche wurde in unser System aufgenommen. Prüfen Sie jetzt Ihr E-Mail-Postfach.
           </p>
         </div>
       </PageHero>
@@ -166,7 +167,7 @@ const VerkaufenDanke = () => {
                     <p className="text-sm text-amber-700 dark:text-amber-400">
                       Wir senden Ihnen in Kürze eine E-Mail mit einem <strong>Aktivierungslink</strong>. 
                       Klicken Sie auf den Link, um direkt in Ihr Dashboard zu gelangen 
-                      und Ihr Fahrzeug zu verwalten.
+                      und Ihre Küchen-Anfrage zu verwalten.
                     </p>
                     <p className="text-xs text-amber-600 dark:text-amber-500 mt-2">
                       Keine E-Mail erhalten? Prüfen Sie Ihren Spam-Ordner oder kontaktieren Sie uns.
@@ -268,7 +269,7 @@ const VerkaufenDanke = () => {
                     <h3 className="font-semibold text-foreground">Konto aktivieren</h3>
                     <p className="text-sm text-muted-foreground mt-1">
                       {user 
-                        ? "Ihr Konto ist bereits aktiv. Sie können Ihr Fahrzeug direkt im Dashboard verwalten."
+                        ? "Ihr Konto ist bereits aktiv. Sie können Ihre Küchen-Anfrage direkt im Dashboard verwalten."
                         : "Klicken Sie auf den Aktivierungslink in Ihrer E-Mail, um direkt in Ihr Dashboard zu gelangen. Sie können sich danach jederzeit mit Ihrer E-Mail und dem gewählten Passwort einloggen."
                       }
                     </p>
@@ -316,11 +317,11 @@ const VerkaufenDanke = () => {
                   +49 511 51532476
                 </a>
                 <a
-                  href="mailto:info@caravanwert.de"
+                  href={`mailto:${BRAND.supportEmail}`}
                   className="flex items-center gap-2 text-sm text-foreground hover:text-primary transition-colors"
                 >
                   <Mail className="w-4 h-4" />
-                  info@caravanwert.de
+                  {BRAND.supportEmail}
                 </a>
               </div>
             </Card>

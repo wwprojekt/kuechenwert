@@ -45,7 +45,10 @@ const PageLayout = ({
 
   // Use provided canonical path or current location
   const canonical = getCanonicalUrl(canonicalPath || location.pathname);
-  const defaultOgImage = `${BRAND.baseUrl}/og-image.png`;
+  // Interim OG-Image: Unsplash-Kueche bis eigenes designed ist.
+  // Altes /og-image.png ist noch das CaravanWert-Wohnmobil-Bild.
+  const defaultOgImage =
+    "https://images.unsplash.com/photo-1556909114-f6e7ad7d3136?auto=format&fit=crop&w=1200&h=630&q=80";
   const ogImageUrl = ogImage || defaultOgImage;
 
   // Determine if breadcrumbs should be shown

@@ -1,14 +1,18 @@
 import { useRef, useState } from "react";
 import { Play } from "lucide-react";
+import { BRAND } from "@/lib/brand";
 
 /**
  * Explainer video embed for the homepage.
  *
  * Asset hosting:
- *   The MP4 lives in the Supabase `public-assets` bucket, NOT in the git
- *   repo. Shipping the 12 MB file inside the Docker image bloated the build
- *   context and stalled Dokploy deploys. Supabase serves the file from
- *   their Cloudflare CDN with 1 y immutable caching.
+ *   The MP4 should live in the KuechenWert Supabase `public-assets` bucket,
+ *   NOT in the git repo. Shipping a >10 MB file inside the Docker image
+ *   bloats the build context and stalls Dokploy deploys.
+ *
+ * TODO(rebrand): Kuechen-Erklaervideo produzieren + Asset in KüchenWert
+ *   Supabase-Bucket hochladen und VIDEO_URL hier umbiegen. Bis dahin ist
+ *   diese Komponente nicht in der Homepage eingebunden.
  *
  * Performance choices:
  *   - preload="none": zero bytes are fetched until the user actively clicks
@@ -19,7 +23,7 @@ import { Play } from "lucide-react";
  */
 
 const EXPLAINER_VIDEO_URL =
-  "https://zcrwqxsyptjwkuxfacvq.supabase.co/storage/v1/object/public/public-assets/erklaervideo.mp4";
+  "https://gzqayoalwtmypndrmqes.supabase.co/storage/v1/object/public/public-assets/erklaervideo.mp4";
 const ExplainerVideo = () => {
   const videoRef = useRef<HTMLVideoElement>(null);
   const [hasStarted, setHasStarted] = useState(false);
@@ -53,10 +57,10 @@ const ExplainerVideo = () => {
             </span>
           </div>
           <h2 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-extrabold text-foreground tracking-tight animate-fade-in animate-delay-100">
-            So funktioniert CaravanWert
+            So funktioniert {BRAND.name}
           </h2>
           <p className="text-base sm:text-lg md:text-xl text-muted-foreground leading-relaxed animate-fade-in animate-delay-200">
-            Sehen Sie in unserem kurzen Erklärvideo, wie Sie Ihr Wohnmobil
+            Sehen Sie in unserem kurzen Erklärvideo, wie Sie Ihre Küche
             einfach, sicher und zum besten Preis verkaufen.
           </p>
         </div>
@@ -75,7 +79,7 @@ const ExplainerVideo = () => {
                 setHasError(false);
               }}
               onError={() => setHasError(true)}
-              aria-label="Erklärvideo: So funktioniert CaravanWert"
+              aria-label={`Erklärvideo: So funktioniert ${BRAND.name}`}
             >
               <source src={EXPLAINER_VIDEO_URL} type="video/mp4" />
               Ihr Browser unterstützt leider keine eingebetteten Videos.

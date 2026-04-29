@@ -20,9 +20,10 @@
          worth the residual benefit for a tiny minority of non-DE visitors. -->
     <meta name="google" content="notranslate" />
     
-    <!-- Favicon — webp for smaller size, png fallback for Apple -->
-    <link rel="icon" type="image/webp" href="/favicon.webp" />
-    <link rel="apple-touch-icon" href="/favicon.png" />
+    <!-- Favicon — SVG als Primary (vektorskaliert, ~1 KB), PNG-Fallback fuer Apple.
+         Altes /favicon.webp war noch das CaravanWert-Logo. -->
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="apple-touch-icon" href="/favicon.svg" />
 
     <!-- Preconnect for critical resources.
          Supabase preconnect (statt nur dns-prefetch) ist kritisch, weil JEDE
@@ -80,9 +81,18 @@
     <meta property="og:title" content="KüchenWert — Küche verkaufen & kaufen" />
     <meta property="og:description" content="Kostenlose Bewertung Ihrer Küche in 2 Minuten. Geprüfte Küchen-Händler bieten — Sie entscheiden." />
     <meta property="og:url" content="https://kuechenwert24.de" />
+    <!-- Interim social-share image (Unsplash) bis eigenes KüchenWert-OG-Bild gestaltet ist.
+         Altes /og-image.png war noch das CaravanWert-Motorhome-Bild. -->
+    <meta property="og:image" content="https://images.unsplash.com/photo-1556909114-f6e7ad7d3136?auto=format&fit=crop&w=1200&h=630&q=80" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content="Moderne Küche — kostenlos bewerten lassen bei KüchenWert" />
 
     <!-- Twitter -->
     <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="KüchenWert — Küche verkaufen & kaufen" />
+    <meta name="twitter:description" content="Kostenlose Bewertung Ihrer Küche in 2 Minuten. Geprüfte Küchen-Händler bieten — Sie entscheiden." />
+    <meta name="twitter:image" content="https://images.unsplash.com/photo-1556909114-f6e7ad7d3136?auto=format&fit=crop&w=1200&h=630&q=80" />
 
     <!-- Structured Data - Organization Schema -->
     <script type="application/ld+json">
@@ -92,8 +102,8 @@
       "name": "KüchenWert",
       "description": "Deutschlands Marktplatz für gebrauchte Küchen — kostenlose Bewertung, geprüfte Küchen-Händler.",
       "url": "https://kuechenwert24.de",
-      "logo": "https://kuechenwert24.de/og-image.png",
-      "image": "https://kuechenwert24.de/og-image.png",
+      "logo": "https://kuechenwert24.de/logo.svg",
+      "image": "https://images.unsplash.com/photo-1556909114-f6e7ad7d3136?auto=format&fit=crop&w=1200&h=630&q=80",
       "telephone": "+49-511-51532476",
       "email": "info@kuechenwert.de",
       "address": {
@@ -164,7 +174,7 @@
         if (ga4Id && window.__TRACKING_BOOT__.loaded.ga4 !== ga4Id) {
           gtag('config', ga4Id, {
             send_page_view: sendPageView !== false,
-            cookie_domain: 'caravanwert.de',
+            cookie_domain: 'kuechenwert24.de',
             cookie_flags: 'SameSite=Lax;Secure',
           });
           window.__TRACKING_BOOT__.loaded.ga4 = ga4Id;

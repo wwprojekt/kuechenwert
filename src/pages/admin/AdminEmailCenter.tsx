@@ -43,6 +43,13 @@ import {
 import { format } from "date-fns";
 import { de } from "date-fns/locale";
 import DOMPurify from "dompurify";
+import { BRAND } from "@/lib/brand/config";
+
+// Email-Logo (interim): das alte Caravan-Logo liegt noch im alten Supabase-
+// Projekt. Bis ein eigenes KuechenWert-Email-Logo in Supabase Storage hochgeladen
+// ist, zeigen wir das lokale Brand-SVG in der Vorschau an. Fuer tatsaechlich
+// gesendete E-Mails wird der Pfad in site_settings.logo_url verwendet.
+const EMAIL_LOGO_URL = `${BRAND.baseUrl}/logo.svg`;
 
 /**
  * Extract the actual error message from a Supabase FunctionsHttpError.
@@ -486,7 +493,7 @@ function InboxTab({ onUnreadCountChange }: { onUnreadCountChange: (count: number
           source: 'support',
           from_name: profile ? `${profile.first_name || ''} ${profile.last_name || ''}`.trim() : 'Unbekannt',
           from_email: profile?.email || '',
-          to_email: 'support@caravanwert.de',
+          to_email: BRAND.supportEmail,
           subject: m.subject,
           preview: (m.message || '').substring(0, 120),
           status: m.status || 'open',
@@ -503,7 +510,7 @@ function InboxTab({ onUnreadCountChange }: { onUnreadCountChange: (count: number
           source: 'contact',
           from_name: c.name,
           from_email: c.email,
-          to_email: 'info@caravanwert.de',
+          to_email: BRAND.supportEmail,
           subject: c.subject,
           preview: (c.message || '').substring(0, 120),
           status: c.status || 'open',
@@ -1058,23 +1065,23 @@ function InboxTab({ onUnreadCountChange }: { onUnreadCountChange: (count: number
         <Dialog open={showPreview} onOpenChange={setShowPreview}>
           <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto">
             <DialogHeader>
-              <DialogTitle>E-Mail-Vorschau (mit CaravanWert-Branding)</DialogTitle>
+              <DialogTitle>E-Mail-Vorschau (mit {BRAND.name}-Branding)</DialogTitle>
               <DialogDescription>So wird die E-Mail beim Empfänger aussehen</DialogDescription>
             </DialogHeader>
             <div className="border rounded-lg overflow-hidden">
               <div style={{
-                background: 'linear-gradient(135deg, #1a5c6e 0%, #1f8aa2 50%, #24a5c0 100%)',
+                background: 'linear-gradient(135deg, #0f766e 0%, #0d9488 50%, #14b8a6 100%)',
                 padding: '24px',
                 textAlign: 'center' as const,
               }}>
-                <img src="https://zcrwqxsyptjwkuxfacvq.supabase.co/storage/v1/object/public/branding/logo-email.png" alt="CaravanWert" style={{ height: '40px', margin: '0 auto' }} />
-                <p style={{ color: '#b2ebf2', fontSize: '12px', marginTop: '8px' }}>Ihre Plattform für den Wohnmobil-Verkauf</p>
+                <img src={EMAIL_LOGO_URL} alt={BRAND.name} style={{ height: '40px', margin: '0 auto' }} />
+                <p style={{ color: '#ccfbf1', fontSize: '12px', marginTop: '8px' }}>{BRAND.tagline}</p>
               </div>
               <div style={{ padding: '32px 24px', background: '#ffffff' }}>
                 <div dangerouslySetInnerHTML={{ __html: sanitizeHtml(previewHtml || '') }} className="prose prose-sm max-w-none" />
               </div>
-              <div style={{ background: '#0f4f5c', padding: '24px', textAlign: 'center' as const, color: '#94a3b8', fontSize: '12px' }}>
-                <p>Mit freundlichen Grüßen – Ihr CaravanWert Team</p>
+              <div style={{ background: '#134e4a', padding: '24px', textAlign: 'center' as const, color: '#94a3b8', fontSize: '12px' }}>
+                <p>Mit freundlichen Grüßen – Ihr {BRAND.name} Team</p>
               </div>
             </div>
           </DialogContent>
@@ -1527,7 +1534,7 @@ function ComposeTab() {
             <Send className="w-5 h-5 text-primary" />
             E-Mail verfassen
           </CardTitle>
-          <CardDescription>Senden Sie eine E-Mail mit CaravanWert-Branding</CardDescription>
+          <CardDescription>Senden Sie eine E-Mail mit {BRAND.name}-Branding</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           {/* Template selection */}
@@ -1706,7 +1713,7 @@ function ComposeTab() {
           </DialogHeader>
           <div className="space-y-4">
             <Textarea
-              placeholder={"Max Mustermann\nGeschäftsführer\nCaravanWert GmbH\nTel: +49 123 456789\ninfo@caravanwert.de"}
+              placeholder={`Max Mustermann\nGeschäftsführer\n${BRAND.legalName}\nTel: +49 123 456789\n${BRAND.supportEmail}`}
               value={signature}
               onChange={(e) => setSignature(e.target.value)}
               rows={6}
@@ -1739,12 +1746,12 @@ function ComposeTab() {
           </DialogHeader>
           <div className="border rounded-lg overflow-hidden">
             <div style={{
-              background: 'linear-gradient(135deg, #1a5c6e 0%, #1f8aa2 50%, #24a5c0 100%)',
+              background: 'linear-gradient(135deg, #0f766e 0%, #0d9488 50%, #14b8a6 100%)',
               padding: '24px',
               textAlign: 'center' as const,
             }}>
-              <img src="https://zcrwqxsyptjwkuxfacvq.supabase.co/storage/v1/object/public/branding/logo-email.png" alt="CaravanWert" style={{ height: '40px', margin: '0 auto' }} />
-              <p style={{ color: '#b2ebf2', fontSize: '12px', marginTop: '8px' }}>Ihre Plattform für den Wohnmobil-Verkauf</p>
+              <img src={EMAIL_LOGO_URL} alt={BRAND.name} style={{ height: '40px', margin: '0 auto' }} />
+              <p style={{ color: '#ccfbf1', fontSize: '12px', marginTop: '8px' }}>{BRAND.tagline}</p>
             </div>
             <div style={{ padding: '32px 24px', background: '#ffffff' }}>
               {recipientName && <p style={{ marginBottom: '16px' }}>Hallo {recipientName},</p>}
@@ -1757,9 +1764,9 @@ function ComposeTab() {
                 </div>
               )}
             </div>
-            <div style={{ background: '#0f4f5c', padding: '24px', textAlign: 'center' as const, color: '#94a3b8', fontSize: '12px' }}>
-              <p style={{ color: '#e2e8f0', marginBottom: '8px' }}>Mit freundlichen Grüßen – Ihr CaravanWert Team</p>
-              <p>CaravanWert | info@caravanwert.de | caravanwert.de</p>
+            <div style={{ background: '#134e4a', padding: '24px', textAlign: 'center' as const, color: '#94a3b8', fontSize: '12px' }}>
+              <p style={{ color: '#e2e8f0', marginBottom: '8px' }}>Mit freundlichen Grüßen – Ihr {BRAND.name} Team</p>
+              <p>{BRAND.name} | {BRAND.supportEmail} | {BRAND.domain}</p>
             </div>
           </div>
         </DialogContent>
@@ -2059,12 +2066,12 @@ function BroadcastTab() {
           </DialogHeader>
           <div className="border rounded-lg overflow-hidden">
             <div style={{
-              background: 'linear-gradient(135deg, #1a5c6e 0%, #1f8aa2 50%, #24a5c0 100%)',
+              background: 'linear-gradient(135deg, #0f766e 0%, #0d9488 50%, #14b8a6 100%)',
               padding: '24px',
               textAlign: 'center' as const,
             }}>
-              <img src="https://zcrwqxsyptjwkuxfacvq.supabase.co/storage/v1/object/public/branding/logo-email.png" alt="CaravanWert" style={{ height: '40px', margin: '0 auto' }} />
-              <p style={{ color: '#b2ebf2', fontSize: '12px', marginTop: '8px' }}>Ihre Plattform für den Wohnmobil-Verkauf</p>
+              <img src={EMAIL_LOGO_URL} alt={BRAND.name} style={{ height: '40px', margin: '0 auto' }} />
+              <p style={{ color: '#ccfbf1', fontSize: '12px', marginTop: '8px' }}>{BRAND.tagline}</p>
             </div>
             <div style={{ padding: '32px 24px', background: '#ffffff' }}>
               <div dangerouslySetInnerHTML={{ __html: sanitizeHtml(bodyHtml || '') }} className="prose prose-sm max-w-none" />
@@ -2072,14 +2079,14 @@ function BroadcastTab() {
             {includeUnsubscribe && (
               <div style={{ padding: '12px 24px', background: '#f8fafc', borderTop: '1px solid #e2e8f0', textAlign: 'center' as const }}>
                 <p style={{ fontSize: '11px', color: '#94a3b8' }}>
-                  Sie erhalten diese E-Mail, weil Sie bei CaravanWert registriert sind.{" "}
-                  <span style={{ color: '#1f8aa2', textDecoration: 'underline' }}>Abmelden</span>
+                  Sie erhalten diese E-Mail, weil Sie bei {BRAND.name} registriert sind.{" "}
+                  <span style={{ color: '#0d9488', textDecoration: 'underline' }}>Abmelden</span>
                 </p>
               </div>
             )}
-            <div style={{ background: '#0f4f5c', padding: '24px', textAlign: 'center' as const, color: '#94a3b8', fontSize: '12px' }}>
-              <p style={{ color: '#e2e8f0', marginBottom: '8px' }}>Mit freundlichen Grüßen – Ihr CaravanWert Team</p>
-              <p>CaravanWert | info@caravanwert.de | caravanwert.de</p>
+            <div style={{ background: '#134e4a', padding: '24px', textAlign: 'center' as const, color: '#94a3b8', fontSize: '12px' }}>
+              <p style={{ color: '#e2e8f0', marginBottom: '8px' }}>Mit freundlichen Grüßen – Ihr {BRAND.name} Team</p>
+              <p>{BRAND.name} | {BRAND.supportEmail} | {BRAND.domain}</p>
             </div>
           </div>
         </DialogContent>
@@ -3457,7 +3464,7 @@ function SettingsTab() {
             <Input
               id="from-email"
               type="email"
-              placeholder="noreply@caravanwert.de"
+              placeholder={BRAND.noReplyEmail}
               value={fromEmail}
               onChange={(e) => setFromEmail(e.target.value)}
             />
@@ -3470,7 +3477,7 @@ function SettingsTab() {
             <Input
               id="contact-email"
               type="email"
-              placeholder="info@caravanwert.de"
+              placeholder={BRAND.supportEmail}
               value={contactEmail}
               onChange={(e) => setContactEmail(e.target.value)}
             />

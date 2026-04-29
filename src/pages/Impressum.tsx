@@ -5,10 +5,11 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { supabase } from "@/integrations/supabase/client";
 import DOMPurify from "dompurify";
 import { useSettings } from "@/contexts/SettingsContext";
+import { BRAND } from "@/lib/brand/config";
 
 const Impressum = () => {
   const { settings } = useSettings();
-  const siteName = settings?.site_name || 'CaravanWert';
+  const siteName = settings?.site_name || BRAND.name;
   const { data: legalPage, isLoading, error } = useQuery({
     queryKey: ["legalPage", "impressum"],
     queryFn: async () => {
@@ -25,18 +26,21 @@ const Impressum = () => {
   });
 
   const supportPhone = settings?.support_phone || '';
-  const contactEmail = settings?.contact_email || '';
+  const contactEmail = settings?.contact_email || BRAND.supportEmail;
   const companyAddress = settings?.company_address || '';
   const companyCity = settings?.company_city || '';
   const companyPostalCode = settings?.company_postal_code || '';
   const companyCountry = settings?.company_country || 'Deutschland';
 
-  // Fallback content if database fetch fails
+  // Fallback content if database fetch fails. Die Marke ${siteName} wird von
+  // der ${BRAND.legalName} betrieben — daher nutzen wir den legalName hier,
+  // nicht den Markennamen.
   const fallbackContent = `
     <h2>Angaben gemäß § 5 TMG</h2>
-    <p>${siteName} GmbH${companyAddress ? `<br>${companyAddress}` : ''}${companyPostalCode || companyCity ? `<br>${companyPostalCode} ${companyCity}` : ''}${companyCountry ? `<br>${companyCountry}` : ''}</p>
+    <p>${BRAND.legalName}${companyAddress ? `<br>${companyAddress}` : ''}${companyPostalCode || companyCity ? `<br>${companyPostalCode} ${companyCity}` : ''}${companyCountry ? `<br>${companyCountry}` : ''}</p>
+    <p>${siteName} ist eine Marke der ${BRAND.legalName}.</p>
     <h2>Kontakt</h2>
-    <p>${supportPhone ? `Telefon: ${supportPhone}<br>` : ''}E-Mail: ${contactEmail || 'kontakt@caravanwert.de'}</p>
+    <p>${supportPhone ? `Telefon: ${supportPhone}<br>` : ''}E-Mail: ${contactEmail}</p>
   `;
 
   return (

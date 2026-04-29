@@ -11,6 +11,7 @@ import { Card } from '@/components/ui/card';
 import { useSettings } from '@/contexts/SettingsContext';
 import { trackWhatsAppClick } from '@/lib/gadsConversionService';
 import { trackMetaWhatsAppClick } from '@/lib/metaPixelService';
+import { BRAND } from '@/lib/brand';
 
 export const WhatsAppButton = () => {
   const [isExpanded, setIsExpanded] = useState(false);
@@ -51,7 +52,7 @@ export const WhatsAppButton = () => {
 
   // Extract phone number and site name from settings
   const phoneNumber = (settings?.whatsapp_number || settings?.support_phone)?.replace(/\D/g, '') || '';
-  const siteName = settings?.site_name || 'CaravanWert';
+  const siteName = settings?.site_name || BRAND.name;
   const whatsappUrl = `https://wa.me/${phoneNumber}?text=Hallo! Ich habe eine Frage zu ${siteName}.`;
 
   const handleWhatsAppClick = () => {
@@ -128,7 +129,7 @@ export const WhatsAppButton = () => {
 export const useWhatsAppLink = (customMessage?: string) => {
   const { settings } = useSettings();
   const phoneNumber = (settings?.whatsapp_number || settings?.support_phone)?.replace(/\D/g, '') || '';
-  const siteName = settings?.site_name || 'CaravanWert';
+  const siteName = settings?.site_name || BRAND.name;
   
   const generateLink = (message: string = `Hallo! Ich habe eine Frage zu ${siteName}.`) => {
     const encodedMessage = encodeURIComponent(message);

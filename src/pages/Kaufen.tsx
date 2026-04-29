@@ -103,7 +103,7 @@ const Kaufen = () => {
       if (retryCount === 0) inFlightRef.current = true;
 
       // ─────────────────────────────────────────────────────────────────
-      // PRIMARY PATH: Edge-Cached Worker (caravanwert.de/api/auctions/active)
+      // PRIMARY PATH: Edge-Cached Worker (/api/auctions/active)
       // ─────────────────────────────────────────────────────────────────
       // Der Worker (CF Edge KV) liefert ein vorgekochtes JSON mit
       // {auctions, bidCounts} aus — typisch <100 ms TTFB ab CF Edge.
@@ -590,30 +590,30 @@ const Kaufen = () => {
   const benefits = [
     {
       icon: Shield,
-      title: "Geprüfte Qualität",
-      description: "Alle Fahrzeuge werden von unseren Experten gründlich geprüft und aufbereitet."
+      title: "Geprüfte Küchen",
+      description: "Alle Küchen werden von unseren Partner-Händlern auf Vollständigkeit und Zustand geprüft."
     },
     {
       icon: Star,
       title: "Große Auswahl",
-      description: "Wohnmobile und Wohnwagen verschiedener Marken und Preisklassen."
+      description: "Gebrauchte Küchen aller Hersteller: Nobilia, Häcker, Nolte, SieMatic, Bulthaup und mehr."
     },
     {
       icon: CheckCircle2,
-      title: "Geprüfte Qualität",
-      description: "Alle Fahrzeuge werden von unseren Händlern sorgfältig geprüft."
+      title: "Ehrliche Beschreibungen",
+      description: "Detailfotos, Maße und Zustandsangaben zu jeder Küche — keine Überraschungen bei Abholung."
     },
     {
       icon: Search,
       title: "Transparente Preise",
-      description: "Faire Preisgestaltung ohne versteckte Kosten oder Überraschungen."
+      description: "Faire Preisgestaltung ohne versteckte Kosten. Demontage und Abholung werden klar kommuniziert."
     }
   ];
 
   // Service structured data
   const serviceSchema = generateServiceSchema(
-    'Wohnmobil Kauf Service',
-    'Auswahl an geprüften Wohnmobilen und Wohnwagen. Faire Preise und persönliche Beratung.'
+    'Küchen Kauf Service',
+    'Auswahl an gebrauchten Markenküchen zu fairen Preisen. Persönliche Beratung und sichere Abwicklung.'
   );
 
   // Stable callback to prevent FilterSidebar useEffect from re-triggering on every render
@@ -643,9 +643,9 @@ const Kaufen = () => {
   return (
     <PageLayout
       breadcrumbs={true}
-      title="Wohnmobil Kaufen"
-      description="Auswahl an geprüften Wohnmobilen und Wohnwagen. Faire Preise und persönliche Beratung."
-      keywords="wohnmobil kaufen, wohnwagen kaufen, camper kaufen, gebrauchte wohnmobile, wohnmobil ankaufstationen"
+      title="Küche kaufen"
+      description="Auswahl an gebrauchten Markenküchen zu fairen Preisen. Qualität, Transparenz und persönliche Beratung."
+      keywords="Küche kaufen, gebrauchte Küche kaufen, Einbauküche gebraucht, Nobilia gebraucht, Häcker gebraucht, Nolte gebraucht, SieMatic gebraucht"
       canonicalPath="/kaufen"
       structuredData={serviceSchema}
     >
@@ -653,10 +653,10 @@ const Kaufen = () => {
       <PageHero size="sm">
         <div className="max-w-3xl mx-auto text-center">
           <h1 className="text-xl sm:text-2xl md:text-3xl md:text-4xl lg:text-5xl font-bold mb-4 leading-tight">
-            Wohnmobile <span className="gradient-text">kaufen</span>
+            Küchen <span className="gradient-text">kaufen</span>
           </h1>
           <p className="text-lg md:text-xl text-muted-foreground mb-6">
-            Entdecken Sie unsere große Auswahl an geprüften Wohnmobilen. Qualität, Transparenz und faire Preise.
+            Entdecken Sie unsere Auswahl an gebrauchten Markenküchen. Qualität, Transparenz und faire Preise — oder planen Sie Ihre Traumküche neu.
           </p>
         </div>
       </PageHero>
@@ -681,8 +681,8 @@ const Kaufen = () => {
                         <Shield className="h-5 w-5 text-primary" />
                       </div>
                       <div>
-                        <p className="font-semibold text-sm">Sie sind Händler? Registrieren Sie sich kostenlos und bieten Sie mit!</p>
-                        <p className="text-xs text-muted-foreground">Keine Gebühren · Provision nur bei Zuschlag · <Link to="/wohnmobil-haendler-werden" className="text-primary hover:underline">Mehr erfahren</Link></p>
+                        <p className="font-semibold text-sm">Sie sind Küchen-Händler? Registrieren Sie sich kostenlos und erhalten Sie passende Leads!</p>
+                        <p className="text-xs text-muted-foreground">Keine Gebühren · Provision nur bei Zuschlag · <Link to="/haendler" className="text-primary hover:underline">Mehr erfahren</Link></p>
                       </div>
                     </div>
                     <Link to="/register/haendler" className="flex-shrink-0">
@@ -772,7 +772,7 @@ const Kaufen = () => {
                 <div className="mb-6 p-4 border-2 border-primary/20 rounded-lg bg-primary/5">
                   <h3 className="font-semibold mb-3">Suchauftrag speichern</h3>
                   <p className="text-sm text-muted-foreground mb-4">
-                    Erhalten Sie eine Benachrichtigung, wenn neue Fahrzeuge Ihren Kriterien entsprechen.
+                    Erhalten Sie eine Benachrichtigung, wenn neue Küchen Ihren Kriterien entsprechen.
                   </p>
                   <div className="space-y-3">
                     <div>
@@ -780,7 +780,7 @@ const Kaufen = () => {
                       <input
                         type="text"
                         className="w-full px-3 py-2 border rounded-md text-sm"
-                        placeholder="z.B. Kastenwagen unter 50.000€"
+                        placeholder="z.B. Nobilia L-Form unter 5.000€"
                         value={saveSearchName}
                         onChange={(e) => setSaveSearchName(e.target.value)}
                       />
@@ -846,7 +846,7 @@ const Kaufen = () => {
 
                             toast({
                               title: 'Suchauftrag gespeichert',
-                              description: 'Sie erhalten Benachrichtigungen bei passenden Fahrzeugen.',
+                              description: 'Sie erhalten Benachrichtigungen bei passenden Küchen.',
                             });
                             setShowSaveSearchDialog(false);
                           } catch (error) {
@@ -947,7 +947,7 @@ const Kaufen = () => {
                       Keine Ergebnisse für Ihre Filterauswahl
                     </p>
                     <p className="text-muted-foreground mb-6">
-                      Versuchen Sie, Ihre Filter anzupassen oder zurückzusetzen, um mehr Fahrzeuge zu finden.
+                      Versuchen Sie, Ihre Filter anzupassen oder zurückzusetzen, um mehr Küchen zu finden.
                     </p>
                     <Button
                       variant="outline"
@@ -998,7 +998,7 @@ const Kaufen = () => {
           <div className="text-center mb-16">
             <h2 className="text-xl sm:text-2xl md:text-3xl md:text-4xl font-bold mb-4">Warum bei uns kaufen?</h2>
             <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-              Vertrauen Sie auf unsere Expertise und profitieren Sie von zahlreichen Vorteilen beim Fahrzeugkauf.
+              Vertrauen Sie auf unsere Expertise und profitieren Sie von zahlreichen Vorteilen beim Küchen-Kauf.
             </p>
           </div>
           
@@ -1027,7 +1027,7 @@ const Kaufen = () => {
             <div className="text-center mb-16">
               <h2 className="text-xl sm:text-2xl md:text-3xl md:text-4xl font-bold mb-4">So kaufen Sie bei uns</h2>
               <p className="text-lg text-muted-foreground">
-                Einfach, transparent und sicher - Ihr Weg zum neuen Wohnmobil in 4 Schritten.
+                Einfach, transparent und sicher — Ihr Weg zur neuen Küche in 4 Schritten.
               </p>
             </div>
 
@@ -1035,23 +1035,23 @@ const Kaufen = () => {
               {[
                 {
                   step: "1",
-                  title: "Fahrzeug aussuchen",
-                  description: "Durchsuchen Sie unsere aktuellen Angebote online oder besuchen Sie uns vor Ort für eine persönliche Beratung."
+                  title: "Küche aussuchen",
+                  description: "Durchsuchen Sie unsere aktuellen Angebote online. Filtern Sie nach Hersteller, Stil, Maßen und Preis."
                 },
                 {
                   step: "2",
-                  title: "Probefahrt vereinbaren",
-                  description: "Testen Sie Ihr Wunschfahrzeug ausgiebig. Unsere Experten beantworten alle Ihre Fragen."
+                  title: "Besichtigung vereinbaren",
+                  description: "Vereinbaren Sie eine Besichtigung beim Vorbesitzer oder beim Händler. Prüfen Sie Zustand und Maße vor Ort."
                 },
                 {
                   step: "3",
-                  title: "Finanzierung klären",
-                  description: "Wir helfen Ihnen bei der Finanzierung und erstellen individuelle Angebote für Sie."
+                  title: "Angebot & Demontage klären",
+                  description: "Wir helfen Ihnen bei Vertrag, Demontage und Transport — transparent und ohne versteckte Kosten."
                 },
                 {
                   step: "4",
-                  title: "Fahrzeug übernehmen",
-                  description: "Nach der Vertragsunterzeichnung können Sie Ihr neues Wohnmobil sofort mitnehmen."
+                  title: "Küche übernehmen",
+                  description: "Nach Abholung und Montage steht Ihrer neuen Traumküche nichts mehr im Weg."
                 }
               ].map((item, index) => (
                 <div key={index} className="flex gap-6 items-start animate-fade-in" style={{ animationDelay: `${index * 0.1}s` }}>
@@ -1073,25 +1073,28 @@ const Kaufen = () => {
       <section className="py-20 bg-muted/30">
         <div className="container">
           <div className="max-w-4xl mx-auto prose prose-lg">
-            <h2 className="text-xl sm:text-2xl md:text-3xl font-bold mb-6">Wohnmobil kaufen - Worauf sollten Sie achten?</h2>
-            
-            <h3 className="text-2xl font-bold mt-8 mb-4">Welches Wohnmobil passt zu mir?</h3>
+            <h2 className="text-xl sm:text-2xl md:text-3xl font-bold mb-6">Küche kaufen — worauf sollten Sie achten?</h2>
+
+            <h3 className="text-2xl font-bold mt-8 mb-4">Welche Küche passt zu mir?</h3>
             <p className="text-muted-foreground leading-relaxed mb-6">
-              Die Wahl des richtigen Wohnmobils hängt von Ihren individuellen Bedürfnissen ab. Berücksichtigen Sie die Anzahl der Reisenden, 
-              Ihre bevorzugten Reiseziele, die geplante Nutzungshäufigkeit und Ihr Budget. Unsere Berater helfen Ihnen gerne, 
-              das perfekte Fahrzeug zu finden.
+              Die Wahl der richtigen Küche hängt von mehreren Faktoren ab: Grundriss und Maße Ihres Raums, Anzahl der Personen im
+              Haushalt, Kochgewohnheiten, Ausstattungsumfang (Kochinsel, Inselhaube, Backofen-Hochschrank) sowie Ihr Budget.
+              Unsere Berater helfen Ihnen gerne, die perfekte Küche zu finden — oder eine neue mit unserem KI-Konfigurator zu planen.
             </p>
 
             <h3 className="text-2xl font-bold mt-8 mb-4">Gebraucht oder neu kaufen?</h3>
             <p className="text-muted-foreground leading-relaxed mb-6">
-              Gebrauchte Wohnmobile bieten ein ausgezeichnetes Preis-Leistungs-Verhältnis. Alle unsere Fahrzeuge werden gründlich geprüft 
-              So erhalten Sie Qualität zum fairen Preis.
+              Gebrauchte Markenküchen (Nobilia, Häcker, Nolte, SieMatic, Bulthaup) bieten oft ein hervorragendes
+              Preis-Leistungs-Verhältnis — typisch 30–60&nbsp;% unter Neupreis. Alle angebotenen Küchen werden von unseren
+              Partner-Händlern vor Übergabe fachlich geprüft. Wer eine komplett neue Lösung wünscht, nutzt unseren KI-Konfigurator
+              unter <a href="/funnel/c" className="text-primary hover:underline">Traumküche planen</a>.
             </p>
 
-            <h3 className="text-2xl font-bold mt-8 mb-4">Welche Finanzierungsmöglichkeiten gibt es?</h3>
+            <h3 className="text-2xl font-bold mt-8 mb-4">Was kostet Demontage und Transport?</h3>
             <p className="text-muted-foreground leading-relaxed mb-6">
-              Wir bieten flexible Finanzierungslösungen an, die auf Ihre persönliche Situation zugeschnitten sind. Von klassischen 
-              Ratenkrediten bis zu Leasing-Modellen - wir finden gemeinsam die beste Option für Sie.
+              Die Kosten für Demontage beim Vorbesitzer und den Transport zur neuen Adresse werden transparent ausgewiesen.
+              In vielen Fällen übernimmt der Händler die komplette Abwicklung — inklusive Montage am neuen Standort gegen
+              Aufpreis. Details sehen Sie direkt bei jedem Inserat.
             </p>
           </div>
         </div>
@@ -1100,7 +1103,7 @@ const Kaufen = () => {
       {/* Related Content for Internal Linking */}
       <RelatedContent
         title="Weitere Informationen"
-        description="Hilfreiche Ressourcen für Ihren Wohnmobil-Kauf"
+        description="Hilfreiche Ressourcen für Ihren Küchen-Kauf"
         links={kaufenRelatedLinks}
       />
 
@@ -1108,14 +1111,14 @@ const Kaufen = () => {
       <section className="py-20 bg-gradient-to-br from-primary via-primary-light to-primary text-primary-foreground">
         <div className="container">
           <div className="max-w-3xl mx-auto text-center">
-            <h2 className="text-xl sm:text-2xl md:text-3xl md:text-4xl font-bold mb-6">Besuchen Sie uns!</h2>
+            <h2 className="text-xl sm:text-2xl md:text-3xl md:text-4xl font-bold mb-6">Nicht fündig geworden?</h2>
             <p className="text-xl mb-8 opacity-95">
-              Vereinbaren Sie noch heute einen Termin für eine Probefahrt oder lassen Sie sich persönlich beraten.
+              Planen Sie Ihre Traumküche mit unserem KI-Konfigurator — 3 individuelle Varianten, vermittelt an den passenden Fachhändler.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <Link to="/kontakt">
+              <Link to="/funnel/c">
                 <Button size="lg" variant="secondary" className="w-full sm:w-auto">
-                  Termin vereinbaren
+                  Traumküche planen
                 </Button>
               </Link>
               {settings?.support_phone && (

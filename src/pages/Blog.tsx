@@ -50,9 +50,9 @@ const BlogPage = () => {
   return (
     <PageLayout
       breadcrumbs={true}
-      title="Blog - Ratgeber & News rund um Wohnmobile"
-      description="Aktuelle Artikel, Tipps und Ratgeber rund um den Kauf und Verkauf von Wohnmobilen. Markttrends, Bewertungstipps und mehr."
-      keywords="Wohnmobil Blog, Wohnmobil Ratgeber, Wohnmobil Tipps, Camper Kaufberatung, Wohnmobil Verkaufstipps"
+      title="Blog – Ratgeber & News rund um gebrauchte Küchen"
+      description="Aktuelle Artikel, Tipps und Ratgeber rund um den Kauf und Verkauf gebrauchter Küchen. Markttrends, Bewertungstipps, Demontage & mehr."
+      keywords="Küchen Blog, Küchen Ratgeber, Küchen Tipps, Küche kaufen Beratung, Küche verkaufen Tipps"
       canonicalPath="/blog"
       structuredData={generateBreadcrumbSchema(getBreadcrumbsFromPath("/blog"))}
     >
@@ -63,7 +63,7 @@ const BlogPage = () => {
             Blog & Ratgeber
           </h1>
           <p className="text-lg text-muted-foreground">
-            Expertenwissen, aktuelle Markttrends und hilfreiche Tipps rund um Wohnmobile - regelmäßig aktualisiert.
+            Expertenwissen, aktuelle Markttrends und hilfreiche Tipps rund um gebrauchte Küchen – regelmäßig aktualisiert.
           </p>
         </div>
       </PageHero>

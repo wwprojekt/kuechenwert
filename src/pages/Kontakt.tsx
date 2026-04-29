@@ -18,6 +18,7 @@ import { trackEvent } from "@/lib/analyticsService";
 import { trackMetaContact, trackMetaLead } from "@/lib/metaPixelService";
 import { useTurnstile } from "@/hooks/useTurnstile";
 import { HoneypotField, useHoneypot } from "@/components/ui/HoneypotField";
+import { BRAND } from "@/lib/brand/config";
 
 const kontaktSchema = z.object({
   name: z.string().trim().min(2, "Bitte geben Sie Ihren Namen ein"),
@@ -30,7 +31,7 @@ const kontaktSchema = z.object({
 const Kontakt = () => {
   const { toast } = useToast();
   const { settings } = useSettings();
-  const siteName = settings?.site_name || 'CaravanWert';
+  const siteName = settings?.site_name || BRAND.name;
   const [formData, setFormData] = useState({
     name: "",
     email: "",
@@ -138,7 +139,7 @@ const Kontakt = () => {
   };
 
   const supportPhone = settings?.support_phone || '';
-  const contactEmail = settings?.contact_email || '';
+  const contactEmail = settings?.contact_email || BRAND.supportEmail;
   const companyAddress = settings?.company_address || '';
   const companyCity = settings?.company_city || '';
   const companyPostalCode = settings?.company_postal_code || '';
@@ -184,7 +185,7 @@ const Kontakt = () => {
       breadcrumbs={true}
       title="Kontakt – Beratung & Support"
       description={`Kontaktieren Sie ${siteName} - Wir sind für Sie da! Telefon, E-Mail oder Kontaktformular. Wir melden uns schnellstmöglich bei Ihnen.`}
-      keywords="kontakt, caravanwert kontakt, wohnmobil ankauf kontakt, beratung wohnmobil"
+      keywords="Kontakt, KüchenWert Kontakt, Küchen-Ankauf Kontakt, Küchen-Beratung, Küche verkaufen Kontakt"
       canonicalPath="/kontakt"
       structuredData={generateBreadcrumbSchema(getBreadcrumbsFromPath("/kontakt"))}
     >

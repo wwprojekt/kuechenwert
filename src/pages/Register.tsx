@@ -16,6 +16,7 @@ import { Mail, Lock, User, Phone, ArrowRight, CheckCircle2, ShieldCheck, MailChe
 import PageLayout from "@/components/PageLayout";
 import { passwordSchema, emailSchema } from "@/lib/validation";
 import { Checkbox } from "@/components/ui/checkbox";
+import { BRAND } from "@/lib/brand";
 
 const signUpSchema = z.object({
   email: emailSchema,
@@ -116,9 +117,9 @@ const Register = () => {
 
   return (
     <PageLayout
-      title="Registrieren"
-      description="Erstellen Sie ein Konto bei CaravanWert"
-      keywords="registrieren, konto erstellen, wohnmobil verkaufen"
+      title={`Registrieren | ${BRAND.name}`}
+      description={`Erstellen Sie ein kostenloses Konto bei ${BRAND.name} und verkaufen Sie Ihre Küche fair und unkompliziert.`}
+      keywords="registrieren, konto erstellen, küche verkaufen, küchenwert"
       canonicalPath="/register/privat"
       noIndex={true}
     >
@@ -133,7 +134,7 @@ const Register = () => {
           {/* Logo header */}
           <div className="text-center mb-8 animate-fade-in">
             <Link to="/" className="inline-block mb-6 hover:opacity-90 transition-opacity">
-              <img src="/logo.webp" alt="CaravanWert" className="h-16 w-auto mx-auto" />
+              <img src="/logo.svg" alt={BRAND.name} className="h-16 w-auto mx-auto" />
             </Link>
             {!isSuccess && (
               <>
@@ -145,7 +146,7 @@ const Register = () => {
                   Konto erstellen
                 </h1>
                 <p className="text-muted-foreground text-lg">
-                  Starten Sie jetzt und verkaufen Sie Ihr Wohnmobil
+                  Starten Sie jetzt und verkaufen Sie Ihre Küche
                 </p>
               </>
             )}
@@ -179,7 +180,7 @@ const Register = () => {
                     <span className="text-xs font-bold text-primary">1</span>
                   </div>
                   <p className="text-sm text-muted-foreground">
-                    Öffnen Sie Ihr E-Mail-Postfach und suchen Sie nach einer E-Mail von CaravanWert
+                    Öffnen Sie Ihr E-Mail-Postfach und suchen Sie nach einer E-Mail von {BRAND.name}
                   </p>
                 </div>
                 <div className="flex items-start gap-3">
@@ -195,7 +196,7 @@ const Register = () => {
                     <span className="text-xs font-bold text-primary">3</span>
                   </div>
                   <p className="text-sm text-muted-foreground">
-                    Nach der Bestätigung können Sie sich anmelden und Ihr Wohnmobil bewerten lassen
+                    Nach der Bestätigung können Sie sich anmelden und Ihre Küche bewerten lassen
                   </p>
                 </div>
               </div>
@@ -205,9 +206,9 @@ const Register = () => {
               </p>
 
               <div className="flex flex-col sm:flex-row gap-3 justify-center">
-                <Link to="/verkaufen/wizard">
+                <Link to="/funnel/a">
                   <Button className="gradient-hero hover:gradient-hero-hover shadow-glow-sm">
-                    Jetzt Wohnmobil verkaufen
+                    Jetzt Küche bewerten
                     <ArrowRight className="w-4 h-4 ml-2" />
                   </Button>
                 </Link>
@@ -396,15 +397,15 @@ const Register = () => {
                   <div className="bg-primary/5 rounded-lg p-4 space-y-2">
                     <div className="flex items-center gap-2 text-sm">
                       <CheckCircle2 className="w-4 h-4 text-primary" />
-                      <span>Kostenlose Bewertung in 24 Stunden</span>
+                      <span>Kostenlose Küchen-Bewertung in 24 Stunden</span>
                     </div>
                     <div className="flex items-center gap-2 text-sm">
                       <CheckCircle2 className="w-4 h-4 text-primary" />
-                      <span>Zugang zu exklusiven Auktionen</span>
+                      <span>Mehrere Angebote von geprüften Küchen-Händlern</span>
                     </div>
                     <div className="flex items-center gap-2 text-sm">
                       <CheckCircle2 className="w-4 h-4 text-primary" />
-                      <span>Direkter Kontakt zu Händlern</span>
+                      <span>Sichere Abwicklung – auch bei Abholung & Demontage</span>
                     </div>
                   </div>
 

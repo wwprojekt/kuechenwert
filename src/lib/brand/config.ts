@@ -18,9 +18,10 @@ export const BRAND = {
   name: "KüchenWert",
 
   // Rechtlicher Firmenname (fuer Impressum / AGB-Verweise).
-  // Hinweis: KüchenWert ist eine Marke der CaravanWert GmbH — gleiche Firma,
-  // gleiche Adresse / HRB / USt-IdNr. Siehe Impressum.
-  legalName: "CaravanWert GmbH",
+  // KüchenWert ist eine Marke der WohnWert GmbH (dieselbe Firma betreibt auch
+  // CaravanWert). Adresse: Hannoversche Str. 106, 30627 Hannover,
+  // HRB 230114 Amtsgericht Hannover, Geschäftsführerin Mona Kareem-Ameen.
+  legalName: "WohnWert GmbH",
 
   // Produkt-Claim / Subline.
   tagline: "Küchen einfach verkaufen & kaufen",

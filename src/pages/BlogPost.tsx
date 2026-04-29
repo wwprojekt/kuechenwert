@@ -12,6 +12,7 @@ import { de } from "date-fns/locale";
 import { Button } from "@/components/ui/button";
 import DOMPurify from "dompurify";
 import { useSettings } from "@/contexts/SettingsContext";
+import { BRAND } from "@/lib/brand/config";
 
 interface BlogPost {
   id: string;
@@ -29,7 +30,7 @@ interface BlogPost {
 const BlogPost = () => {
   const { slug } = useParams();
   const { settings } = useSettings();
-  const siteName = settings?.site_name || 'CaravanWert';
+  const siteName = settings?.site_name || BRAND.name;
 
   const { data: post, isLoading, error } = useQuery({
     queryKey: ['blog-post', slug],
@@ -93,14 +94,16 @@ const BlogPost = () => {
       name: siteName,
       logo: {
         '@type': 'ImageObject',
-        url: 'https://caravanwert.de/favicon.png',
+        url: `${BRAND.baseUrl}/logo.svg`,
       },
     },
-    image: post.featured_image_url || 'https://caravanwert.de/favicon.png',
+    image:
+      post.featured_image_url ||
+      "https://images.unsplash.com/photo-1556909114-f6e7ad7d3136?auto=format&fit=crop&w=1200&h=630&q=80",
     articleSection: post.category,
     mainEntityOfPage: {
       '@type': 'WebPage',
-      '@id': `https://caravanwert.de/blog/${post.slug}`,
+      '@id': `${BRAND.baseUrl}/blog/${post.slug}`,
     },
   };
 
@@ -178,14 +181,14 @@ const BlogPost = () => {
         <div className="container">
           <div className="max-w-2xl mx-auto text-center">
             <h2 className="text-xl sm:text-2xl md:text-3xl font-bold mb-4">
-              Möchten Sie Ihr Wohnmobil verkaufen?
+              Möchten Sie Ihre Küche verkaufen?
             </h2>
             <p className="text-primary-foreground/90 mb-8">
               Starten Sie jetzt mit der kostenlosen Bewertung und erhalten Sie attraktive Angebote.
             </p>
-            <Link to="/verkaufen/wizard">
+            <Link to="/funnel/a">
               <Button size="lg" variant="secondary">
-                Jetzt Verkauf starten
+                Jetzt Küchen-Bewertung starten
               </Button>
             </Link>
           </div>

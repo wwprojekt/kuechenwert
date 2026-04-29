@@ -29,19 +29,24 @@ import iconStation from "@/assets/icon-station.webp";
  * sie ueber die Base-URL einbinden koennen.
  */
 export const BRAND_LOGOS = {
-  /** Standard-Logo farbig auf hellem Hintergrund. */
-  primary: "/logo.webp",
-  /** Standard-Logo 2x fuer HiDPI. */
-  primary2x: "/logo-2x.webp",
-  /** Weisses Logo fuer dunklen Hintergrund. */
-  white: "/logo-white.webp",
-  /** PNG-Version fuer E-Mail-Templates (breiter Client-Support). */
-  email: "/logo-email.png",
-  /** Favicon (png + ico). */
-  faviconIco: "/favicon.ico",
-  faviconPng: "/favicon.png",
-  /** Open-Graph-Sharing-Bild. */
-  ogImage: "/og-image.webp",
+  /** Standard-Logo farbig auf hellem Hintergrund (SVG, vektorskaliert). */
+  primary: "/logo.svg",
+  /** HiDPI-Alias (SVG skaliert automatisch, identisch zu primary). */
+  primary2x: "/logo.svg",
+  /** Weisses Logo fuer dunklen Hintergrund (Teal-auf-Weiss-Variante). */
+  white: "/logo-white.svg",
+  /** E-Mail-Logo. SVG hat in manchen Clients (Outlook Desktop) keinen Support,
+   *  daher bleibt bei E-Mails bis zur Bereitstellung eines PNG-Exports das
+   *  Primary-Logo in Nutzung. */
+  email: "/logo.svg",
+  /** Favicon. SVG als Primary — moderne Browser (Chrome/FF/Safari) unterstuetzen
+   *  SVG-Favicons seit 2020. Apple Touch Icon nutzt denselben Pfad. */
+  faviconIco: "/favicon.svg",
+  faviconPng: "/favicon.svg",
+  /** Open-Graph-Sharing-Bild. Soziale Netze rendern KEIN SVG — daher Unsplash
+   *  als interim Bild bis ein eigenes 1200x630-PNG gestaltet ist. */
+  ogImage:
+    "https://images.unsplash.com/photo-1556909114-f6e7ad7d3136?auto=format&fit=crop&w=1200&h=630&q=80",
 } as const;
 
 /**

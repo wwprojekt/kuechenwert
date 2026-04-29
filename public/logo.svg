@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="K�chenWert">
+  <title>K�chenWert</title>
+  <defs>
+    <linearGradient id="kw-bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0d9488" />
+      <stop offset="100%" stop-color="#0f766e" />
+    </linearGradient>
+  </defs>
+  <rect width="64" height="64" rx="14" ry="14" fill="url(#kw-bg)" />
+  <!-- Umlaut dots above the K (subtle nod to German "K�che") -->
+  <circle cx="27" cy="13" r="2.2" fill="#ffffff" />
+  <circle cx="35" cy="13" r="2.2" fill="#ffffff" />
+  <!-- Stylized K monogram, slightly right-shifted so dots sit centered above vertical stem -->
+  <path fill="#ffffff"
+        d="M19 18 h6.4 v13.2 l13.2 -13.2 h7.8 l-14.6 14.6 15.6 15.6 h-7.8 l-14.2 -14.2 v14.2 h-6.4 z" />
+</svg>

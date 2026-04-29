@@ -5,10 +5,11 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { supabase } from "@/integrations/supabase/client";
 import DOMPurify from "dompurify";
 import { useSettings } from "@/contexts/SettingsContext";
+import { BRAND } from "@/lib/brand/config";
 
 const Datenschutz = () => {
   const { settings } = useSettings();
-  const siteName = settings?.site_name || 'CaravanWert';
+  const siteName = settings?.site_name || BRAND.name;
   const { data: legalPage, isLoading, error } = useQuery({
     queryKey: ["legalPage", "datenschutz"],
     queryFn: async () => {

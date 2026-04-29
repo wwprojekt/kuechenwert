@@ -9,6 +9,15 @@ import { BRAND } from "@/lib/brand/config";
 // Base URL for canonical URLs (aus zentraler Brand-Config).
 const BASE_URL = BRAND.baseUrl;
 
+// Logo-URL fuer Structured Data (Google, Facebook). SVG ist seit 2024 offiziell
+// in schema.org ImageObject erlaubt und wird von Google fuer Organization-Logos
+// akzeptiert.
+const SCHEMA_LOGO_URL = `${BASE_URL}/logo.svg`;
+// Fallback-Bild fuer Artikel/Produkte ohne eigenes Foto. Unsplash-Kueche bis
+// eigenes Branded-Placeholder existiert.
+const SCHEMA_IMAGE_FALLBACK =
+  "https://images.unsplash.com/photo-1556909114-f6e7ad7d3136?auto=format&fit=crop&w=1200&h=630&q=80";
+
 /**
  * Generate canonical URL for a given path
  */
@@ -43,8 +52,8 @@ export function generateOrganizationSchema(settings?: OrganizationSchemaSettings
     name: settings?.site_name || BRAND.name,
     description: settings?.site_description || 'Ihre Plattform für den Verkauf und Kauf gebrauchter Küchen',
     url: BASE_URL,
-    logo: `${BASE_URL}/favicon.png`,
-    image: `${BASE_URL}/favicon.png`,
+    logo: SCHEMA_LOGO_URL,
+    image: SCHEMA_IMAGE_FALLBACK,
     ...(phone && { telephone: phone }),
     ...(email && { email }),
     ...(settings?.company_address && {
@@ -128,10 +137,10 @@ export function generateArticleSchema(data: ArticleSchemaData) {
       name: BRAND.name,
       logo: {
         '@type': 'ImageObject',
-        url: `${BASE_URL}/favicon.png`,
+        url: SCHEMA_LOGO_URL,
       },
     },
-    image: data.imageUrl || `${BASE_URL}/favicon.png`,
+    image: data.imageUrl || SCHEMA_IMAGE_FALLBACK,
     articleSection: data.articleSection || 'Küchen',
     mainEntityOfPage: {
       '@type': 'WebPage',
@@ -168,7 +177,7 @@ export function generateProductSchema(data: ProductSchemaData) {
     },
     model: data.model,
     productionDate: data.year?.toString(),
-    image: data.imageUrl || `${BASE_URL}/favicon.png`,
+    image: data.imageUrl || SCHEMA_IMAGE_FALLBACK,
     offers: {
       '@type': 'Offer',
       price: data.price,

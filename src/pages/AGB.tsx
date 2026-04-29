@@ -5,10 +5,11 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { supabase } from "@/integrations/supabase/client";
 import DOMPurify from "dompurify";
 import { useSettings } from "@/contexts/SettingsContext";
+import { BRAND } from "@/lib/brand/config";
 
 const AGB = () => {
   const { settings } = useSettings();
-  const siteName = settings?.site_name || 'CaravanWert';
+  const siteName = settings?.site_name || BRAND.name;
   const { data: legalPage, isLoading, error } = useQuery({
     queryKey: ["legalPage", "agb"],
     queryFn: async () => {
@@ -27,9 +28,9 @@ const AGB = () => {
   // Fallback content if database fetch fails
   const fallbackContent = `
     <h2>§ 1 Geltungsbereich</h2>
-    <p>Diese Allgemeinen Geschäftsbedingungen (AGB) gelten für alle Verträge zwischen ${siteName} GmbH (nachfolgend „Anbieter") und seinen Kunden über die Nutzung der Online-Plattform zum Kauf und Verkauf von Wohnmobilen.</p>
+    <p>Diese Allgemeinen Geschäftsbedingungen (AGB) gelten für alle Verträge zwischen der ${BRAND.legalName} (nachfolgend „Anbieter") — Betreiberin der Marke ${siteName} — und ihren Kunden über die Nutzung der Online-Plattform zum Kauf und Verkauf von Küchen sowie zur Vermittlung von Küchen-Planungsleistungen.</p>
     <h2>§ 2 Vertragsschluss</h2>
-    <p>Die Darstellung der Wohnmobile auf unserer Website stellt kein rechtlich bindendes Angebot dar, sondern eine Aufforderung zur Abgabe eines Angebots.</p>
+    <p>Die Darstellung der Küchen auf unserer Website stellt kein rechtlich bindendes Angebot dar, sondern eine Aufforderung zur Abgabe eines Angebots.</p>
   `;
 
   return (

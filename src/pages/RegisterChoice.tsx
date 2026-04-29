@@ -4,6 +4,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { Card } from "@/components/ui/card";
 import { User, Building2, ArrowRight, CheckCircle2 } from "lucide-react";
 import PageLayout from "@/components/PageLayout";
+import { BRAND } from "@/lib/brand";
 
 const RegisterChoice = () => {
   const navigate = useNavigate();
@@ -17,9 +18,9 @@ const RegisterChoice = () => {
 
   return (
     <PageLayout
-      title="Registrieren"
-      description="Registrieren Sie sich bei CaravanWert – als Privatkunde oder Händler"
-      keywords="registrieren, konto erstellen, wohnmobil verkaufen, händler registrierung"
+      title={`Registrieren | ${BRAND.name}`}
+      description={`Registrieren Sie sich bei ${BRAND.name} – als Privatkunde oder Küchen-Händler`}
+      keywords="registrieren, konto erstellen, küche verkaufen, küchen händler registrierung, küchenwert"
       canonicalPath="/register"
       noIndex={true}
     >
@@ -34,7 +35,7 @@ const RegisterChoice = () => {
           {/* Logo header – auf Mobile kompakt, auf Desktop voll */}
           <div className="text-center mb-3 md:mb-8 animate-fade-in">
             <Link to="/" className="hidden md:inline-block mb-6 hover:opacity-90 transition-opacity">
-              <img src="/logo.webp" alt="CaravanWert" className="h-16 w-auto mx-auto" />
+              <img src="/logo.svg" alt={BRAND.name} className="h-16 w-auto mx-auto" />
             </Link>
             <h1 className="text-xl md:text-4xl font-bold text-foreground mb-1 md:mb-3">
               Wie möchten Sie sich registrieren?
@@ -65,13 +66,13 @@ const RegisterChoice = () => {
                     </div>
                   </div>
                   <p className="text-muted-foreground text-xs md:text-base mt-2 md:mt-4 mb-2 md:mb-6 leading-relaxed">
-                    Verkaufen Sie Ihr Wohnmobil oder Ihren Caravan – komplett kostenlos und unverbindlich
+                    Verkaufen Sie Ihre Küche – komplett kostenlos und unverbindlich
                   </p>
                   {/* Vorteile: nur auf Desktop sichtbar */}
                   <div className="hidden md:block space-y-2.5 text-left w-full mb-6">
                     <div className="flex items-center gap-2.5 text-sm">
                       <CheckCircle2 className="w-4 h-4 text-primary flex-shrink-0" />
-                      <span>Kostenlose Bewertung in 24h</span>
+                      <span>Kostenlose Küchen-Bewertung in 24h</span>
                     </div>
                     <div className="flex items-center gap-2.5 text-sm">
                       <CheckCircle2 className="w-4 h-4 text-primary flex-shrink-0" />
@@ -79,11 +80,11 @@ const RegisterChoice = () => {
                     </div>
                     <div className="flex items-center gap-2.5 text-sm">
                       <CheckCircle2 className="w-4 h-4 text-primary flex-shrink-0" />
-                      <span>Zugang zu exklusiven Händler-Auktionen</span>
+                      <span>Mehrere Angebote von geprüften Küchen-Händlern</span>
                     </div>
                     <div className="flex items-center gap-2.5 text-sm">
                       <CheckCircle2 className="w-4 h-4 text-primary flex-shrink-0" />
-                      <span>Direkter Kontakt zu geprüften Händlern</span>
+                      <span>Sichere Abwicklung inkl. Abholung & Demontage</span>
                     </div>
                   </div>
                   <div className="mt-auto w-full pt-1 md:pt-0">
@@ -115,17 +116,17 @@ const RegisterChoice = () => {
                     </div>
                   </div>
                   <p className="text-muted-foreground text-xs md:text-base mt-2 md:mt-4 mb-2 md:mb-6 leading-relaxed">
-                    Ich bin gewerblicher Händler und möchte auf Auktionen bieten
+                    Ich bin Küchen-Händler oder Küchenstudio und möchte qualifizierte Ankauf-Leads erhalten
                   </p>
                   {/* Vorteile: nur auf Desktop sichtbar */}
                   <div className="hidden md:block space-y-2.5 text-left w-full mb-6">
                     <div className="flex items-center gap-2.5 text-sm">
                       <CheckCircle2 className="w-4 h-4 text-primary flex-shrink-0" />
-                      <span>Auf Auktionen bieten</span>
+                      <span>Qualifizierte Küchen-Leads in Ihrer Region</span>
                     </div>
                     <div className="flex items-center gap-2.5 text-sm">
                       <CheckCircle2 className="w-4 h-4 text-primary flex-shrink-0" />
-                      <span>Sofortkauf-Option nutzen</span>
+                      <span>Eigene Angebote in der Reverse-Auktion platzieren</span>
                     </div>
                     <div className="flex items-center gap-2.5 text-sm">
                       <CheckCircle2 className="w-4 h-4 text-primary flex-shrink-0" />

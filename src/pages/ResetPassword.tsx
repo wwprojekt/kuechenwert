@@ -15,6 +15,7 @@ import { logger } from "@/lib/logger";
 import { handleValidationError, handleAuthError } from "@/lib/errorLogService";
 import { Lock, Loader2, CheckCircle2, Eye, EyeOff, ShieldCheck } from "lucide-react";
 import PageLayout from "@/components/PageLayout";
+import { BRAND } from "@/lib/brand";
 
 const passwordSchema = z.object({
   password: z.string()
@@ -141,9 +142,9 @@ const ResetPassword = () => {
 
   return (
     <PageLayout
-      title="Passwort zurücksetzen"
-      description="Setzen Sie ein neues Passwort für Ihr Konto"
-      keywords="passwort zurücksetzen, neues passwort, caravanwert"
+      title={`Passwort zurücksetzen | ${BRAND.name}`}
+      description={`Setzen Sie ein neues Passwort für Ihr ${BRAND.name}-Konto`}
+      keywords="passwort zurücksetzen, neues passwort, küchenwert"
       canonicalPath="/reset-password"
       noIndex={true}
     >
@@ -153,8 +154,8 @@ const ResetPassword = () => {
           <div className="text-center">
             <Link to="/" className="inline-block mb-8">
               <img
-                src="/logo.webp"
-                alt="CaravanWert"
+                src="/logo.svg"
+                alt={BRAND.name}
                 className="h-16 w-auto mx-auto"
               />
             </Link>

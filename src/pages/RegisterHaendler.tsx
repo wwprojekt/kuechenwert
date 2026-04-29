@@ -45,6 +45,7 @@ import { EU_COUNTRIES, getLegalFormsByCountry, DEFAULT_COUNTRY, getPhonePlacehol
 import { CountryFlag } from "@/components/CountryFlag";
 import { getTranslations, type TranslationKey } from "@/lib/dealerRegistrationTranslations";
 import { optimizeImage } from "@/lib/imageOptimization";
+import { BRAND } from "@/lib/brand";
 
 /**
  * Creates a Zod validation schema that uses translated error messages
@@ -211,8 +212,8 @@ const RegisterHaendler = () => {
 
       // Step 1: Register dealer via our custom Edge Function
       // This replaces supabase.auth.signUp() to avoid Supabase's generic confirmation email.
-      // The Edge Function creates the user, generates a branded confirmation email with
-      // CaravanWert layout, and notifies the admin – all in one atomic operation.
+      // The Edge Function creates the user, generates a branded confirmation email,
+      // and notifies the admin – all in one atomic operation.
       const supabaseUrl = import.meta.env.VITE_SUPABASE_URL as string;
       const supabaseAnonKey = (import.meta.env.VITE_SUPABASE_ANON_KEY || import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY) as string;
 
@@ -434,9 +435,9 @@ const RegisterHaendler = () => {
 
   return (
     <PageLayout
-      title="Händler-Registrierung"
-      description="Registrieren Sie sich als Händler bei CaravanWert"
-      keywords="händler registrierung, dealer registration, wohnmobil händler werden"
+      title={`Händler-Registrierung | ${BRAND.name}`}
+      description={`Registrieren Sie sich als Küchen-Händler bei ${BRAND.name} und erhalten Sie qualifizierte Küchen-Leads aus ganz Deutschland.`}
+      keywords="küchen händler registrierung, kitchen dealer registration, küchenankauf partner werden, küchen lead marketplace"
       canonicalPath="/register/haendler"
       noIndex={true}
     >
@@ -451,7 +452,7 @@ const RegisterHaendler = () => {
           {/* Header */}
           <div className="text-center mb-8 animate-fade-in">
             <Link to="/" className="inline-block mb-6 hover:opacity-90 transition-opacity">
-              <img src="/logo.webp" alt="CaravanWert" className="h-16 w-auto mx-auto" />
+              <img src="/logo.svg" alt={BRAND.name} className="h-16 w-auto mx-auto" />
             </Link>
             <div className="inline-flex items-center gap-2 bg-primary/10 text-primary px-4 py-2 rounded-full mb-4">
               <Building2 className="w-4 h-4" />

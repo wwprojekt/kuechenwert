@@ -11,7 +11,7 @@ const Listings = () => {
     queryKey: ['home-auctions'],
     queryFn: async () => {
       // ─────────────────────────────────────────────────────────────────
-      // PRIMARY: Edge-Cached Worker (caravanwert.de/api/auctions/active)
+      // PRIMARY: Edge-Cached Worker (/api/auctions/active)
       // ─────────────────────────────────────────────────────────────────
       // Liefert vorgekochtes JSON mit ALLEN active Auctions (CF KV cache).
       // Wir brauchen für die Homepage nur die ersten 4 (sortiert nach
@@ -157,10 +157,10 @@ const Listings = () => {
       <div className="container px-4 sm:px-6 lg:px-8">
         <div className="text-center mb-8 sm:mb-10 lg:mb-12">
           <h2 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold mb-3 sm:mb-4">
-            Aktuelle Wohnmobil-Angebote
+            Aktuelle Küchen-Angebote
           </h2>
           <p className="text-base sm:text-lg md:text-xl text-muted-foreground max-w-2xl mx-auto px-4">
-            Entdecken Sie unsere neuesten Ankaufsangebote von geprüften Händlern
+            Entdecken Sie unsere neuesten Ankaufsangebote von geprüften Küchen-Händlern
           </p>
         </div>
 

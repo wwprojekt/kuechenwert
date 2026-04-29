@@ -22,14 +22,18 @@
      dynamisch injecten.
    - Gradienten duerfen `hsl()` nutzen, da sie nicht durch Tailwind laufen.
 
-   AKTUELLER STAND (Caravanwert-Fork):
-   - Primary: Cyan/Tuerkis (191deg, 68% Saettigung, 38% Helligkeit)
-   - Secondary: dunkles Blau-Grau
-   - Font: Fira Sans
-   - Brand-Meta (Name, Logo, Domain): siehe src/lib/brand/config.ts
+   AKTUELLER STAND (KuechenWert v2, Phase 3 in Arbeit):
+   - Primary: Cyan/Tuerkis (191deg, 68% Saettigung, 38% Helligkeit) – vom
+     Caravanwert-Fork geerbt. Finale Kuechen-Farbpalette siehe Todo
+     `phase3-globals-css` (wird in einer kommenden Phase auf warme Kueche-
+     Toene umgestellt).
+   - Secondary: dunkles Blau-Grau.
+   - Font: Fira Sans.
+   - Brand-Meta (Name, Logo, Domain): siehe src/lib/brand/config.ts.
 
-   PHASE 3 (Rebrand): Dieser Block + src/lib/brand/config.ts + logo-Assets in
-   public/ werden ausgetauscht. Das komplette UI uebernimmt die neuen Werte.
+   PHASE 3.globals (Rebrand): Dieser Block + src/lib/brand/config.ts + logo-
+   Assets in public/ werden ausgetauscht. Das komplette UI uebernimmt die
+   neuen Werte.
    ============================================================================ */
 
 /* Disable scroll anchoring so the browser does not fight programmatic scrollTo

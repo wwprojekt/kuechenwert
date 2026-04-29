@@ -1,6 +1,8 @@
 /**
  * Kitchen Showcase Component
- * Zeigt Stil-Kategorien gebrauchter Küchen als Einstieg in den Funnel.
+ * Zeigt Stil-Kategorien neuer Kuechen als Einstieg in die Funnels.
+ * User waehlt einen Stil (Modern/Landhaus/Kochinsel/Design) und landet
+ * in Funnel A mit vorgewaehltem Stil.
  */
 
 import { Link } from "react-router-dom";
@@ -9,7 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Star, CheckCircle, Award, Users, ArrowRight } from "lucide-react";
 
-// Unsplash-Stock-Photos für Küchen-Stile bis eigene Assets in
+// Unsplash-Stock-Photos fuer Kuechen-Stile bis eigene Assets in
 // Supabase Storage liegen. Feste Photo-IDs → stabil & cachebar.
 const KITCHEN_PHOTOS = {
   modern: "https://images.unsplash.com/photo-1556909114-f6e7ad7d3136?auto=format&fit=crop&w=800&q=80",
@@ -26,34 +28,38 @@ const KitchenShowcase = () => {
       title: "Moderne Küchen",
       subtitle: "Grifflos, Hochglanz, Matt",
       badge: "Gefragt",
+      styleSlug: "modern",
     },
     {
       id: 2,
       image: KITCHEN_PHOTOS.landhaus,
       title: "Landhaus & Klassisch",
-      subtitle: "Zeitlos & elegant",
+      subtitle: "Zeitlos & gemütlich",
       badge: "Beliebt",
+      styleSlug: "landhaus",
     },
     {
       id: 3,
       image: KITCHEN_PHOTOS.island,
       title: "Kochinsel-Küchen",
       subtitle: "Offener Wohn-Ess-Bereich",
-      badge: "Top",
+      badge: "Trend",
+      styleSlug: "kochinsel",
     },
     {
       id: 4,
       image: KITCHEN_PHOTOS.minimal,
       title: "Design- & Luxus-Küchen",
-      subtitle: "Bulthaup, SieMatic & Co.",
+      subtitle: "Bulthaup, SieMatic, Poggenpohl",
       badge: "Premium",
+      styleSlug: "minimalistisch",
     },
   ];
 
   const stats = [
-    { icon: Users, value: "Bundesweit", label: "Geprüfte Küchen-Händler" },
-    { icon: CheckCircle, value: "48h", label: "Ø Zeit bis zum Angebot" },
-    { icon: Award, value: "100%", label: "Kostenlos & unverbindlich" },
+    { icon: Users, value: "Bundesweit", label: "Geprüfte Küchenstudios" },
+    { icon: CheckCircle, value: "48 h", label: "Ø Zeit bis zum Angebot" },
+    { icon: Award, value: "100 %", label: "Kostenlos & unverbindlich" },
     { icon: Star, value: "Sicher", label: "DSGVO-konform" },
   ];
 
@@ -81,17 +87,18 @@ const KitchenShowcase = () => {
             Alle Stile & Marken
           </Badge>
           <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-foreground mb-3">
-            Küchen aller Marken & Stile
+            Welcher Küchen-Stil passt zu Ihnen?
           </h2>
           <p className="text-muted-foreground text-lg max-w-2xl mx-auto">
-            Ob Nobilia, Häcker, Nolte, SieMatic, Bulthaup oder kleiner Küchenbauer — wir finden den passenden Käufer für Ihre Küche.
+            Ob Nobilia, Häcker, Nolte, SieMatic, Bulthaup oder kleiner Küchenbauer
+            — unsere Partner-Studios beraten Sie zu allen Marken und Stilen.
           </p>
         </div>
 
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6">
           {showcaseItems.map((item, index) => (
             <Link
-              to="/funnel/a"
+              to={`/funnel/a/stil?vor=${item.styleSlug}`}
               key={item.id}
               className="block"
             >
@@ -132,11 +139,12 @@ const KitchenShowcase = () => {
 
         <div className="text-center mt-10 space-y-3">
           <p className="text-muted-foreground">
-            <span className="font-semibold text-foreground">Verkaufen auch Sie Ihre Küche</span> — unkompliziert und fair!
+            <span className="font-semibold text-foreground">Noch unsicher?</span>{" "}
+            Starten Sie mit der kostenlosen Anfrage — Stil legen Sie später fest.
           </p>
           <Link to="/funnel/a">
             <Button size="lg" className="gradient-hero hover:gradient-hero-hover mt-2">
-              Jetzt kostenlos bewerten lassen
+              Kostenlos Angebote erhalten
               <ArrowRight className="ml-2 h-4 w-4" />
             </Button>
           </Link>

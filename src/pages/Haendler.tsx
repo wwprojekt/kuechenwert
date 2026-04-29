@@ -31,27 +31,27 @@ const Haendler = () => {
   const benefits = [
     {
       icon: TrendingUp,
-      title: "Qualifizierte Küchen-Leads",
+      title: "Kaufbereite Küchen-Leads",
       description:
-        "Erhalten Sie direkt Leads von Privatverkäufern, die ihre gebrauchte Küche verkaufen wollen — mit Fotos, Maßen und Details.",
+        "Erhalten Sie Anfragen von Kund:innen, die konkret eine neue Küche planen — mit Budget, Stil-Wünschen, Wohnsituation und Zeitrahmen.",
     },
     {
       icon: Shield,
       title: "Sichere Abwicklung",
       description:
-        "Rechtlich abgesicherte Kaufverträge, transparente Provisionen, DSGVO-konforme Datenschutzprozesse.",
+        "Rechtlich abgesicherte Verträge, transparente Provisionen und DSGVO-konforme Prozesse — Provision nur bei erfolgreichem Kauf.",
     },
     {
       icon: Users,
-      title: "Exklusives Angebot",
+      title: "Vorqualifiziert",
       description:
-        "Zugang zu Küchen direkt von Privatverkäufern — bevor sie über Plattformen wie eBay Kleinanzeigen öffentlich werden.",
+        "Jeder Lead wird von unserem Küchen-Team telefonisch auf Ernsthaftigkeit und Budget geprüft — bevor er Sie überhaupt erreicht.",
     },
     {
       icon: Zap,
       title: "Wenig Aufwand",
       description:
-        "Keine eigene Akquise nötig: Wir bringen die Verkäufer, Sie entscheiden welche Lead-Angebote Sie abgeben.",
+        "Keine eigene Akquise nötig. Sie wählen selbst, welche Leads Sie annehmen und welche Sie passen lassen.",
     },
   ];
 
@@ -59,41 +59,41 @@ const Haendler = () => {
     {
       title: "Lead-Inbox",
       description:
-        "Alle neuen Küchen-Leads in einer übersichtlichen Inbox — filterbar nach Region, Hersteller und Budget.",
+        "Alle neuen Küchen-Anfragen in einer übersichtlichen Inbox — filterbar nach Region, Budget und Stil.",
       features: [
-        "Täglich neue Küchen von Privatverkäufern",
-        "17 Datenpunkte pro Lead (Hersteller, Alter, Maße, Geräte)",
-        "Fotos und Detailangaben direkt im Lead",
+        "Täglich neue, vorqualifizierte Lead-Anfragen",
+        "17 Datenpunkte pro Lead (Stil, Form, Budget, Zeitrahmen)",
+        "Beispielbilder und Wohnsituation direkt im Lead",
       ],
     },
     {
       title: "Angebots-System",
       description:
-        "Geben Sie schnell und strukturiert Angebote an Privatverkäufer ab — digital und rechtssicher.",
+        "Senden Sie strukturierte Angebote an Kund:innen — digital, rechtssicher und mit eigenen Vorlagen.",
       features: [
-        "1-Click-Angebote mit Vorlagen",
-        "Reverse-Auktion: Mehrere Händler bieten, Kunde wählt",
-        "Vertrags-Vorlagen und digitale Unterschrift",
+        "1-Click-Angebote mit eigenen Vorlagen",
+        "Reverse-Auktion: Gegen andere Studios bieten",
+        "Vertrags-Vorlagen &amp; digitale Unterschrift",
       ],
     },
     {
       title: "Reverse-Auktion (Funnel B)",
       description:
-        "Der Verkäufer lädt bestehende Konkurrenz-Angebote hoch — Sie überbieten und gewinnen die Küche.",
+        "Kund:innen laden ein bestehendes Studio-Angebot hoch — Sie unterbieten den Preis und gewinnen den Auftrag.",
       features: [
-        "Transparente Konkurrenz-Preise",
+        "Preistransparenz ohne Konkurrenz-Namen",
         "72-Stunden-Bietphase",
-        "Höchstes Gebot gewinnt",
+        "Kund:in entscheidet bei Angebotsende",
       ],
     },
     {
       title: "Händler-Dashboard",
       description:
-        "Behalten Sie den Überblick über Ihre Leads, offene Angebote und abgewickelte Verkäufe.",
+        "Behalten Sie den Überblick über Ihre Leads, offenen Angebote und abgeschlossenen Aufträge.",
       features: [
         "Echtzeit-Benachrichtigungen bei neuen Leads",
-        "Lead-Verlauf und Angebotsübersicht",
-        "Rechnungen & Verträge digital",
+        "Lead-Verlauf &amp; Angebotsübersicht",
+        "Rechnungen &amp; Verträge digital",
       ],
     },
   ];
@@ -116,19 +116,19 @@ const Haendler = () => {
       step: "2",
       title: "Leads entdecken",
       description:
-        "Durchstöbern Sie neue Küchen-Leads in Ihrer Region — mit Fotos, Maßen und Ausstattungsdetails.",
+        "Erhalten Sie neue Anfragen aus Ihrer Region — mit Budget, Stil, Wohnsituation und Zeitrahmen.",
     },
     {
       step: "3",
-      title: "Angebot abgeben",
+      title: "Angebot senden",
       description:
-        "Senden Sie Ihr Angebot direkt über die Plattform. Bei der Reverse-Auktion überbieten Sie bestehende Angebote.",
+        "Senden Sie Ihr Beratungs- oder Kauf-Angebot direkt über die Plattform. Bei Funnel B unterbieten Sie bestehende Angebote.",
     },
     {
       step: "4",
-      title: "Küche übernehmen",
+      title: "Auftrag gewinnen",
       description:
-        "Bei Zuschlag: Vertrag digital, sichere Demontage und Abholung, transparente Abwicklung.",
+        "Bei Zuschlag: Digitaler Vertrag, Beratungstermin, finales Aufmass, Lieferung und Montage — transparent abgewickelt.",
     },
   ];
 
@@ -137,7 +137,7 @@ const Haendler = () => {
     "@type": "Service",
     name: `${siteName}-Händler-Plattform`,
     description:
-      "B2B-Plattform für Küchen-Händler: Qualifizierte Leads von Privatverkäufern gebrauchter Küchen, digitale Angebotsabwicklung, sichere Vertragsschließung.",
+      "B2B-Plattform für Küchenstudios & Fachhändler: Qualifizierte Küchen-Leads, Reverse-Auktion auf Studio-Preise, digitale Angebotsabwicklung und sichere Vertragsschließung.",
     provider: {
       "@type": "Organization",
       name: siteName,
@@ -153,9 +153,9 @@ const Haendler = () => {
   return (
     <PageLayout
       breadcrumbs={true}
-      title="Für Küchen-Händler: Qualifizierte Leads direkt in Ihre Inbox"
-      description="Als geprüfter Küchen-Händler erhalten Sie direkt Leads von Privatverkäufern gebrauchter Küchen. Kostenlose Registrierung, transparente Provisionen nur bei Zuschlag, sichere Abwicklung."
-      keywords="Küchen-Händler, Küchen Ankauf Händler, gebrauchte Küchen Händler, Küchen Lead, B2B Küche"
+      title="Für Küchenstudios & Fachhändler — qualifizierte Leads direkt in Ihre Inbox"
+      description="Als geprüftes Partner-Studio erhalten Sie kaufbereite Küchen-Leads aus Ihrer Region. Kostenlose Registrierung, Provision nur bei Erfolg, Reverse-Auktion optional."
+      keywords="Küchenstudio Partner, Küchen Leads, Küchenhändler Lead, Reverse-Auktion Küche, B2B Küchen-Plattform"
       canonicalPath="/haendler"
       structuredData={serviceSchema}
     >
@@ -164,13 +164,13 @@ const Haendler = () => {
         <div className="grid lg:grid-cols-2 gap-12 items-center">
           <div className="animate-fade-in">
             <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold mb-6 leading-tight">
-              Küchen-Leads direkt{" "}
-              <span className="gradient-text">in Ihre Inbox</span>
+              Kaufbereite Küchen-Leads{" "}
+              <span className="gradient-text">direkt in Ihre Inbox</span>
             </h1>
             <p className="text-lg md:text-xl text-muted-foreground mb-8 leading-relaxed">
-              Als geprüfter Küchen-Händler erhalten Sie qualifizierte Leads von
-              Privatverkäufern. Kostenlose Registrierung, transparente
-              Provisionen, sichere Abwicklung.
+              Als geprüftes Partner-Studio erhalten Sie vorqualifizierte Anfragen
+              von Kund:innen, die gerade eine neue Küche planen — inkl. Budget,
+              Stil und Zeitrahmen. Provision nur bei Erfolg.
             </p>
             <div className="flex flex-col sm:flex-row gap-4">
               <Link to="/register/haendler">
@@ -230,8 +230,8 @@ const Haendler = () => {
               Ihre Vorteile als Partner
             </h2>
             <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-              Profitieren Sie von unserem Lead-Marketplace und steigern Sie
-              Ihren Geschäftserfolg mit minimalem Akquise-Aufwand.
+              Profitieren Sie von unserem Lead-Marktplatz und Reverse-Auktion —
+              und steigern Sie Ihren Umsatz bei minimalem Akquise-Aufwand.
             </p>
           </div>
 
@@ -264,10 +264,10 @@ const Haendler = () => {
         <div className="container">
           <div className="text-center mb-16">
             <h2 className="text-xl sm:text-2xl md:text-3xl md:text-4xl font-bold mb-4">
-              Unsere Händler-Services
+              Unsere Partner-Services
             </h2>
             <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-              Umfassende Tools für Ihren Erfolg im Küchen-Handel.
+              Alles, was Ihr Küchenstudio für effiziente Lead-Bearbeitung braucht.
             </p>
           </div>
 
@@ -305,10 +305,10 @@ const Haendler = () => {
         <div className="container">
           <div className="text-center mb-16">
             <h2 className="text-xl sm:text-2xl md:text-3xl md:text-4xl font-bold mb-4">
-              In 4 Schritten zum ersten Küchen-Ankauf
+              In 4 Schritten zum ersten Auftrag
             </h2>
             <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-              So einfach kaufen Sie Küchen über {siteName}.
+              So einfach gewinnen Sie neue Kund:innen über {siteName}.
             </p>
           </div>
 
@@ -343,7 +343,7 @@ const Haendler = () => {
                 Warum {siteName}-Partner werden?
               </h2>
               <p className="text-lg opacity-90">
-                Ihr direkter Draht zu Privatverkäufern — ohne Zwischenhändler.
+                Ihr direkter Draht zu kaufbereiten Kund:innen — ohne Werbebudget-Verbrennung.
               </p>
             </div>
 
@@ -353,19 +353,19 @@ const Haendler = () => {
                   icon: Inbox,
                   title: "Stetig neue Leads",
                   description:
-                    "Täglich kommen neue Küchen-Leads von Privatverkäufern in Ihre Inbox — gefiltert nach Ihrer Region.",
+                    "Täglich kommen neue Küchen-Anfragen von kaufbereiten Kund:innen in Ihre Inbox — gefiltert nach Ihrer Region.",
                 },
                 {
                   icon: Target,
-                  title: "Qualifizierte Anfragen",
+                  title: "Vorqualifizierte Anfragen",
                   description:
-                    "Jeder Lead enthält Fotos, Maße, Hersteller und Zustandsangaben — kein zeitraubendes Nachhaken.",
+                    "Jeder Lead enthält Budget, Stil, Wohnsituation und Zeitrahmen — bereits vom KüchenWert-Team auf Ernsthaftigkeit geprüft.",
                 },
                 {
                   icon: Handshake,
                   title: "Faire Konditionen",
                   description:
-                    "Transparente Provision nur bei erfolgreichem Zuschlag. Keine monatlichen Gebühren, keine Mindestabnahmen.",
+                    "Transparente Provision nur bei erfolgreichem Kauf. Keine monatlichen Gebühren, keine Mindestabnahmen.",
                 },
               ].map((item, index) => (
                 <Card
@@ -410,13 +410,13 @@ const Haendler = () => {
                 <div className="flex items-start gap-3">
                   <CheckCircle2 className="h-6 w-6 text-primary flex-shrink-0 mt-0.5" />
                   <p className="text-base">
-                    Kaufvertrag und Rechnung automatisch bei Zuschlag
+                    Vertrag und Rechnung automatisch bei Zuschlag
                   </p>
                 </div>
                 <div className="flex items-start gap-3">
                   <CheckCircle2 className="h-6 w-6 text-primary flex-shrink-0 mt-0.5" />
                   <p className="text-base">
-                    Provision nur bei erfolgreichem Kauf — keine laufenden Kosten
+                    Provision nur bei erfolgreichem Küchenkauf — keine laufenden Kosten
                   </p>
                 </div>
               </CardContent>
@@ -430,31 +430,32 @@ const Haendler = () => {
         <div className="container">
           <div className="max-w-4xl mx-auto prose prose-lg">
             <h2 className="text-xl sm:text-2xl md:text-3xl font-bold mb-6">
-              Häufige Fragen von Küchen-Händlern
+              Häufige Fragen von Küchenstudios &amp; Fachhändlern
             </h2>
 
             <h3 className="text-2xl font-bold mt-8 mb-4">
               Für wen ist die Plattform geeignet?
             </h3>
             <p className="text-muted-foreground leading-relaxed mb-6">
-              Unsere Lead-Plattform richtet sich an Küchen-Studios,
-              Küchen-Fachgeschäfte, Gebrauchtküchen-Händler, Umzugs- und
-              Sanierungsdienstleister sowie freie Küchenmonteure, die ihren
-              Auftragsbestand über Privatverkäufer-Leads erweitern möchten.
-              Egal ob Sie regelmäßig oder gelegentlich ankaufen — Sie zahlen
-              nur bei erfolgreichem Zuschlag.
+              Unsere Lead-Plattform richtet sich an Küchenstudios,
+              Küchen-Fachgeschäfte, Möbelhäuser mit Küchenabteilung sowie
+              freie Küchenmonteure und Schreinereien, die ihre Auftragsbücher
+              über qualifizierte Endkunden-Leads füllen möchten.
+              Egal ob Sie regelmäßig oder gelegentlich Leads annehmen —
+              Sie zahlen nur bei erfolgreichem Kauf.
             </p>
 
             <h3 className="text-2xl font-bold mt-8 mb-4">
-              Wie funktioniert der Lead-Kauf?
+              Wie funktioniert der Lead-Prozess?
             </h3>
             <p className="text-muted-foreground leading-relaxed mb-6">
               Jeder Küchen-Lead, der in Ihre Region passt, erscheint in Ihrer
-              Inbox. Sie sehen alle relevanten Details (Hersteller, Baujahr,
-              Grundriss, Geräte, Zustand, Fotos) und können direkt ein Angebot
-              abgeben. Bei einer Reverse-Auktion (Funnel B) bieten mehrere
-              Händler — der Verkäufer wählt das beste Angebot. Bei Zuschlag
-              erhalten Sie automatisch Kaufvertrag und Rechnung.
+              Inbox. Sie sehen alle relevanten Details (Stil, Form, Budget,
+              Wohnsituation, Zeitrahmen, Beispielbilder) und können direkt ein
+              Angebot oder einen Beratungstermin anbieten. Bei einer
+              Reverse-Auktion (Funnel B) bieten mehrere Studios — die Kund:in
+              wählt das beste Angebot. Bei Zuschlag erhalten Sie automatisch
+              Vertrag und Rechnung.
             </p>
 
             <h3 className="text-2xl font-bold mt-8 mb-4">
@@ -462,10 +463,10 @@ const Haendler = () => {
             </h3>
             <p className="text-muted-foreground leading-relaxed mb-6">
               Die Registrierung ist kostenlos. Es fällt nur eine Provision an,
-              wenn Sie einen Lead erfolgreich in einen Kauf überführen — also
-              nur bei tatsächlichem Zuschlag. Keine monatlichen Gebühren,
-              keine Mindestabnahmen. Die Provisionsstaffel ist transparent in
-              Ihrem Händler-Dashboard einsehbar.
+              wenn Sie einen Lead erfolgreich in einen Küchen-Kauf überführen
+              — also nur bei tatsächlich zustande gekommenem Auftrag. Keine
+              monatlichen Gebühren, keine Mindestabnahmen. Die Provisionsstaffel
+              ist transparent in Ihrem Partner-Dashboard einsehbar.
             </p>
           </div>
         </div>

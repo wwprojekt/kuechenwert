@@ -1,61 +1,89 @@
 import { Card, CardContent } from "@/components/ui/card";
-import { FileCheck, Gavel, Sparkles, ArrowRight } from "lucide-react";
+import { FileCheck, Gavel, Sparkles, ArrowRight, Clock, Calculator } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Link } from "react-router-dom";
 
-const channels = [
+type Channel = {
+  iconComponent: typeof FileCheck;
+  badge: string;
+  title: string;
+  subtitle: string;
+  description: string;
+  benefits: string[];
+  cta: string;
+  ctaLabel: string;
+  soon?: boolean;
+};
+
+const channels: Channel[] = [
   {
     iconComponent: FileCheck,
-    title: "Küche verkaufen",
+    badge: "Weg A · am einfachsten",
+    title: "Angebote einholen",
+    subtitle: "Von geprüften Küchenstudios in Ihrer Region",
     description:
-      "Kostenlose Bewertung in 2 Minuten. Wir finden den passenden Käufer unter unseren geprüften Küchen-Händlern — Sie entscheiden.",
+      "Sie beschreiben in 2 Minuten Ihre Wunsch-Küche — Stil, Form, Budget, PLZ. Wir leiten Ihre Anfrage an passende Küchenstudios weiter. Die melden sich bei Ihnen mit individuellen Angeboten und Beratungsterminen.",
     benefits: [
-      "Bewertung in 2 Minuten",
-      "Geprüfte Händler bieten",
-      "Komplett kostenlos",
+      "In 2 Minuten ausgefüllt",
+      "Angebote binnen 48 h",
+      "Keine Abnahmepflicht",
     ],
     cta: "/funnel/a",
+    ctaLabel: "Angebote holen",
   },
   {
     iconComponent: Gavel,
-    title: "Angebote vergleichen",
+    badge: "Weg B · am meisten sparen",
+    title: "Studio-Preis unterbieten",
+    subtitle: "Reverse-Auktion auf Ihr vorhandenes Angebot",
     description:
-      "Mehrere Händler geben Ihnen ein Angebot für Ihre Küche. Sie vergleichen in Ruhe und nehmen das beste an — wie eine umgekehrte Auktion.",
+      "Sie haben bereits ein Angebot von einem Küchenstudio? Laden Sie Angebot, Bild der geplanten Küche und Preis hoch — geprüfte Händler unterbieten in den nächsten 72 Stunden den Preis. Sie nehmen das beste Gegen-Angebot an.",
     benefits: [
-      "Mehrere Angebote",
-      "Transparenter Preis",
-      "48 Stunden Entscheidungszeit",
+      "Bis zu 30 % Ersparnis",
+      "72 h verbindliche Auktion",
+      "Experten-Check inklusive",
     ],
     cta: "/funnel/b",
+    ctaLabel: "Angebot unterbieten lassen",
   },
   {
     iconComponent: Sparkles,
-    title: "Traumküche planen",
+    badge: "Weg C · für Inspiration",
+    title: "Traumküche visualisieren",
+    subtitle: "KI-Planer: 3 Varianten in wenigen Minuten",
     description:
-      "Sie planen eine neue Küche? Unser KI-Konfigurator entwirft Ihnen 3 individuelle Varianten — und vermittelt den passenden Fachhändler.",
+      "Sie sind noch in der Ideenphase? Unser KI-Planer entwirft auf Basis Ihres Grundrisses und Ihrer Wünsche bis zu 3 fotorealistische Küchen-Varianten. Anschließend vermitteln wir den passenden Fachhändler.",
     benefits: [
-      "KI-gestützte Planung",
-      "3 Entwürfe kostenlos",
-      "Passenden Händler finden",
+      "3 KI-Entwürfe gratis",
+      "Fotorealistische Visualisierung",
+      "Passender Fachhändler",
     ],
-    cta: "/funnel/a",
+    cta: "/funnel/c",
+    ctaLabel: "KI-Planer starten",
+    soon: true,
   },
 ];
 
 const HowItWorks = () => {
   return (
-    <section id="wie-es-funktioniert" className="py-12 sm:py-16 md:py-20 lg:py-28 bg-background cv-auto">
+    <section
+      id="wie-es-funktioniert"
+      className="py-12 sm:py-16 md:py-20 lg:py-28 bg-background cv-auto"
+    >
       <div className="container px-4 sm:px-6 lg:px-8">
         <div className="text-center max-w-3xl mx-auto mb-10 sm:mb-12 lg:mb-16 space-y-3 sm:space-y-4">
           <div className="inline-block animate-fade-in">
             <span className="inline-flex items-center rounded-full bg-primary/10 border border-primary/20 px-4 py-1.5 text-sm font-semibold text-primary">
-              Einfach & Transparent
+              So funktioniert KüchenWert
             </span>
           </div>
           <h2 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl xl:text-6xl font-extrabold text-foreground tracking-tight animate-fade-in animate-delay-100">
-            Drei Wege rund um Ihre Küche
+            Drei Wege zu Ihrer neuen Küche
           </h2>
           <p className="text-base sm:text-lg md:text-xl text-muted-foreground leading-relaxed animate-fade-in animate-delay-200">
-            Ob Sie Ihre alte Küche verkaufen, Angebote vergleichen oder eine neue Traumküche planen möchten — bei KüchenWert läuft alles einfach, fair und unverbindlich.
+            Ob Sie frisch planen, bereits ein Angebot vom Studio haben oder mit KI
+            inspirieren lassen wollen — alle drei Wege sind kostenlos, unverbindlich
+            und lassen sich sogar kombinieren.
           </p>
         </div>
 
@@ -78,11 +106,23 @@ const HowItWorks = () => {
                     </div>
                   </div>
 
-                  <div className="space-y-3">
+                  <div className="space-y-2">
+                    <span className="inline-flex items-center rounded-full bg-primary/10 text-primary text-xs font-semibold px-2.5 py-1">
+                      {channel.badge}
+                    </span>
                     <h3 className="text-xl sm:text-2xl font-bold text-foreground">
                       {channel.title}
+                      {channel.soon && (
+                        <span className="ml-2 inline-flex items-center rounded-full bg-amber-100 text-amber-800 text-[10px] font-bold uppercase px-2 py-0.5 align-middle">
+                          <Clock className="h-3 w-3 mr-1" />
+                          Bald
+                        </span>
+                      )}
                     </h3>
-                    <p className="text-muted-foreground leading-relaxed">
+                    <p className="text-sm font-semibold text-primary">
+                      {channel.subtitle}
+                    </p>
+                    <p className="text-muted-foreground leading-relaxed pt-2">
                       {channel.description}
                     </p>
                   </div>
@@ -90,37 +130,52 @@ const HowItWorks = () => {
                   <div className="space-y-2.5 pt-4 border-t border-border/50">
                     {channel.benefits.map((benefit) => (
                       <div key={benefit} className="flex items-center gap-3">
-                        <div className="h-1.5 w-1.5 rounded-full bg-primary"></div>
+                        <div className="h-1.5 w-1.5 rounded-full bg-primary" />
                         <span className="text-sm text-foreground font-medium">{benefit}</span>
                       </div>
                     ))}
                   </div>
 
-                  <a href={channel.cta} className="w-full">
+                  <Link to={channel.cta} className="w-full">
                     <Button
                       variant="outline"
                       className="w-full mt-4 group/btn hover:border-primary hover:text-primary"
                     >
-                      Mehr erfahren
+                      {channel.ctaLabel}
                       <ArrowRight className="ml-2 h-4 w-4 group-hover/btn:translate-x-1 transition-smooth" />
                     </Button>
-                  </a>
+                  </Link>
                 </CardContent>
               </Card>
             );
           })}
         </div>
 
-        <div className="mt-8 sm:mt-10 lg:mt-12 text-center bg-muted/50 rounded-lg p-6 sm:p-8 max-w-2xl mx-auto">
-          <p className="text-muted-foreground text-base sm:text-lg mb-4 sm:mb-6">
-            Nicht sicher, welcher Weg der richtige für Sie ist?
+        <div className="mt-8 sm:mt-10 lg:mt-12 text-center bg-muted/50 rounded-lg p-6 sm:p-8 max-w-2xl mx-auto space-y-4">
+          <p className="text-muted-foreground text-base sm:text-lg">
+            Nicht sicher, welcher Weg für Sie der richtige ist?
           </p>
-          <a href="/kontakt">
-            <Button size="lg" className="h-11 sm:h-12 px-6 sm:px-8 text-sm sm:text-base font-semibold w-full sm:w-auto">
-              Kostenlose Beratung anfordern
-              <ArrowRight className="ml-2 h-4 sm:h-5 w-4 sm:w-5" />
-            </Button>
-          </a>
+          <div className="flex flex-col sm:flex-row gap-3 justify-center">
+            <Link to="/kuechenrechner">
+              <Button
+                size="lg"
+                variant="outline"
+                className="h-11 sm:h-12 px-6 sm:px-8 text-sm sm:text-base font-semibold w-full sm:w-auto"
+              >
+                <Calculator className="mr-2 h-4 w-4" />
+                Budget in 30 s checken
+              </Button>
+            </Link>
+            <Link to="/kontakt">
+              <Button
+                size="lg"
+                className="h-11 sm:h-12 px-6 sm:px-8 text-sm sm:text-base font-semibold w-full sm:w-auto"
+              >
+                Kostenlose Beratung
+                <ArrowRight className="ml-2 h-4 sm:h-5 w-4 sm:w-5" />
+              </Button>
+            </Link>
+          </div>
         </div>
       </div>
     </section>

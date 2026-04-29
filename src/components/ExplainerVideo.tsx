@@ -60,8 +60,9 @@ const ExplainerVideo = () => {
             So funktioniert {BRAND.name}
           </h2>
           <p className="text-base sm:text-lg md:text-xl text-muted-foreground leading-relaxed animate-fade-in animate-delay-200">
-            Sehen Sie in unserem kurzen Erklärvideo, wie Sie Ihre Küche
-            einfach, sicher und zum besten Preis verkaufen.
+            Sehen Sie in unserem kurzen Erklärvideo, wie Sie kostenlose
+            Angebote für Ihre Traumküche vergleichen und den besten Preis
+            finden.
           </p>
         </div>
 

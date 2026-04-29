@@ -57,8 +57,8 @@ const Footer = () => {
                 <Clock className="h-6 w-6 text-primary" />
               </div>
               <div>
-                <p className="text-sm font-semibold text-slate-900 dark:text-slate-100">24h Bewertung</p>
-                <p className="text-xs text-slate-500 dark:text-slate-400">Schnelle Bearbeitung</p>
+                <p className="text-sm font-semibold text-slate-900 dark:text-slate-100">48h Angebote</p>
+                <p className="text-xs text-slate-500 dark:text-slate-400">Schnelle Rückmeldung</p>
               </div>
             </div>
 
@@ -75,16 +75,16 @@ const Footer = () => {
         </div>
       </div>
 
-      {/* Verkaufs-CTA Section */}
+      {/* Final-CTA Section */}
       <div className="bg-slate-900 border-t border-slate-800">
         <div className="container py-12">
           <div className="flex flex-col lg:flex-row items-center justify-between gap-8">
             <div className="text-center lg:text-left">
               <h3 className="text-xl font-semibold text-white mb-2">
-                Bereit, Ihre Küche zu verkaufen?
+                Bereit für Ihre Traumküche?
               </h3>
               <p className="text-slate-400 text-sm">
-                Starten Sie jetzt mit der kostenlosen Bewertung – unverbindlich und in nur 2 Minuten.
+                Kostenlose Angebote von geprüften Küchenstudios – unverbindlich und in nur 2 Minuten.
               </p>
             </div>
             <div className="flex flex-col sm:flex-row gap-3 w-full lg:w-auto">
@@ -92,16 +92,16 @@ const Footer = () => {
                 <Button
                   className="h-11 px-6 bg-primary hover:bg-primary/90 text-white font-medium w-full sm:w-auto"
                 >
-                  Jetzt kostenlos bewerten
+                  Angebote einholen
                   <ArrowRight className="ml-2 h-4 w-4" />
                 </Button>
               </Link>
-              <Link to="/wertrechner" className="w-full sm:w-auto">
+              <Link to="/kuechenrechner" className="w-full sm:w-auto">
                 <Button
                   variant="outline"
                   className="h-11 px-6 border-slate-700 text-slate-300 hover:text-white hover:bg-slate-800 w-full sm:w-auto"
                 >
-                  Wert berechnen
+                  Budget-Check
                 </Button>
               </Link>
             </div>
@@ -117,7 +117,7 @@ const Footer = () => {
               <SiteLogo variant="footer" />
               <p className="text-sm text-slate-400 leading-relaxed max-w-sm">
                 {settings?.site_description ||
-                  `${BRAND.name} ist Deutschlands Marktplatz für gebrauchte Küchen. Kostenlose Bewertung, geprüfte Küchen-Händler, transparenter Prozess.`}
+                  `${BRAND.name} ist Deutschlands Vergleichsportal für neue Küchen. Angebote einholen, Studio-Preise unterbieten lassen oder mit KI visualisieren — kostenlos und unverbindlich.`}
               </p>
 
               <div className="flex items-center gap-3">
@@ -150,27 +150,27 @@ const Footer = () => {
               <ul className="space-y-3">
                 <li>
                   <Link to="/funnel/a" className="text-sm text-slate-400 hover:text-white transition-colors font-medium">
-                    Küche verkaufen
+                    Angebote einholen
                   </Link>
                 </li>
                 <li>
                   <Link to="/funnel/b" className="text-sm text-slate-400 hover:text-white transition-colors">
-                    Angebote vergleichen
+                    Studio-Preis unterbieten
                   </Link>
                 </li>
                 <li>
-                  <Link to="/wertrechner" className="text-sm text-slate-400 hover:text-white transition-colors">
-                    Küchen-Wertrechner
+                  <Link to="/funnel/c" className="text-sm text-slate-400 hover:text-white transition-colors">
+                    KI-Küchenplaner
                   </Link>
                 </li>
                 <li>
-                  <Link to="/wertermittlung" className="text-sm text-slate-400 hover:text-white transition-colors">
-                    Experten-Bewertung
+                  <Link to="/kuechenrechner" className="text-sm text-slate-400 hover:text-white transition-colors">
+                    KüchenRechner (Preis-Check)
                   </Link>
                 </li>
                 <li>
                   <Link to="/haendler" className="text-sm text-slate-400 hover:text-white transition-colors">
-                    Für Küchen-Händler
+                    Für Küchenstudios
                   </Link>
                 </li>
               </ul>

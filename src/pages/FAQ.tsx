@@ -9,54 +9,54 @@ import { BRAND } from "@/lib/brand/config";
 // auseinanderlaufen (Google straft das sonst ab).
 const faqData = [
   {
-    question: "Wie lange dauert der Verkaufsprozess?",
+    question: "Was kostet mich KüchenWert?",
     answer:
-      "Kostenlose Bewertung in 2 Minuten. Konkrete Angebote geprüfter Küchen-Händler erhalten Sie innerhalb von 24–48 Stunden. Nach Annahme eines Angebots werden Demontage und Abholung meist innerhalb von 1–2 Wochen organisiert.",
+      "Für Sie als Privatkunde ist KüchenWert komplett kostenlos — von der Anfrage über die Angebotsvergleiche bis zur Beratung im Studio. Es fallen weder eine Anmeldegebühr noch eine Vermittlungsprovision an. Unsere Provision wird ausschließlich vom Küchenstudio gezahlt, und zwar nur wenn Sie tatsächlich einen Kauf abschließen.",
   },
   {
-    question: "Was kostet der Service?",
+    question: "Was unterscheidet KüchenWert von Aroundhome oder küchenportal.de?",
     answer:
-      "Für Sie als Verkäufer ist der gesamte Service komplett kostenlos — von der Bewertung über das Einstellen der Küche bis zum Verkaufsabschluss. Es fallen keine Gebühren, Provisionen oder versteckte Kosten an. Die Vermittlungsgebühr trägt ausschließlich der Küchen-Händler.",
+      "Drei Dinge: 1) Unsere Reverse-Auktion (Funnel B) — wenn Sie schon ein Studio-Angebot haben, können geprüfte Händler es 72 h lang unterbieten. 2) Der KI-Planer (Funnel C) — drei fotorealistische Entwürfe Ihrer Traumküche auf Knopfdruck. 3) Echter Experten-Check vor jeder Vermittlung, damit Sie keine unqualifizierten Anrufe bekommen.",
   },
   {
-    question: "Wie werden die Küchen-Händler geprüft?",
+    question: "Wie funktioniert die Reverse-Auktion bei Funnel B?",
     answer:
-      "Alle Händler auf unserer Plattform durchlaufen einen strengen KYC/KYB-Prozess. Wir prüfen Gewerbeanmeldung, USt-ID, Handelsregisterauszug und Versicherungsschutz. Zusätzlich überwachen wir laufend Zahlungsmoral, Reklamationsquote und Kundenzufriedenheit.",
+      "Sie laden Ihr vorhandenes Studio-Angebot, Bild der geplanten Küche und den Angebotspreis hoch. Unser Team neutralisiert das Angebot (Studio-Name wird nicht mitgeschickt) und stellt es für 72 h in unser Händler-Netzwerk. Verifizierte Küchen-Händler bieten Ihnen einen günstigeren Preis für dieselbe oder eine vergleichbare Ausstattung an. Sie nehmen das beste Gebot verbindlich an — oder lehnen alle ab.",
   },
   {
-    question: "Welche Küchen kann ich verkaufen?",
+    question: "Wie werden die Küchenstudios geprüft?",
     answer:
-      "Wir vermitteln Küchen aller gängigen Hersteller — Nobilia, Häcker, Nolte, SieMatic, Bulthaup, Poggenpohl, LEICHT, next125, Schüller und viele mehr. Ob L-Form, U-Form, Kochinsel oder Küchenzeile: Wir finden den passenden Käufer. Das Baujahr sollte idealerweise nicht älter als 15 Jahre sein.",
+      "Jedes Partner-Studio durchläuft unser KYC/KYB-Verfahren: Gewerbeanmeldung, USt-ID, Handelsregisterauszug und Versicherungsschutz werden geprüft. Laufend überwachen wir Kundenzufriedenheit und Zahlungsmoral. Studios, die negativ auffallen, werden aus dem Netzwerk entfernt.",
   },
   {
-    question: "Sind Angebote der Händler verbindlich?",
+    question: "Bin ich nach der Anfrage zu einem Kauf verpflichtet?",
     answer:
-      "Ja. Jedes Angebot eines unserer geprüften Küchen-Händler ist rechtlich verbindlich und kann nicht ohne triftigen Grund (z.B. erhebliche Abweichungen von Ihren Angaben) zurückgezogen werden. Das schützt Sie als Verkäufer und sorgt für einen seriösen Vermittlungsprozess.",
+      "Nein. Weder die Anfrage selbst noch einzelne Angebote verpflichten Sie zu irgendetwas. Sie können alle Angebote ablehnen, sich nur für die Beratung interessieren oder mit dem Vorhaben später weitermachen. Bei Funnel B ist nur die Annahme eines Gegenangebots verbindlich — bis dahin sind Sie frei.",
   },
   {
-    question: "Wer baut die Küche aus?",
+    question: "Wie lange dauert es bis ich erste Angebote habe?",
     answer:
-      "Der ausgewählte Küchen-Händler übernimmt die fachgerechte Demontage und den Abtransport — inklusive aller Elektrogeräte, Arbeitsplatte und ggf. Anschlüsse. Sie müssen sich um nichts kümmern. Termin für Abholung wird mit Ihnen abgestimmt.",
+      "Nach dem Experten-Check (meist binnen 24 h nach Ihrer Anfrage) melden sich die ersten Studios in der Regel binnen 24–48 h. Für die Reverse-Auktion (Funnel B) läuft ein fester 72-h-Zeitraum, in dem die Händler ihre Gegenangebote abgeben.",
   },
   {
-    question: "Welche Zahlungsmethoden gibt es?",
+    question: "Welche Küchenstudios sind im Netzwerk?",
     answer:
-      "Nach Annahme eines Angebots erfolgt die Auszahlung typisch am Tag der Abholung — per Banküberweisung, PayPal oder Barzahlung bei Übergabe. Alle Zahlungen werden dokumentiert und sind für beide Seiten rechtlich abgesichert.",
+      "Unsere Partner umfassen alle Größen: vom inhabergeführten Küchenstudio über regionale Küchenzentren bis zu großen Möbelhäusern und Direkthändlern. Je nach PLZ und Budget passen wir die Vermittlung an. Marken wie Nobilia, Häcker, Nolte, SieMatic, Schüller, Bulthaup u. v. a. sind über unsere Partner erhältlich.",
+  },
+  {
+    question: "Was, wenn ich nur eine ungefähre Preisvorstellung haben will?",
+    answer:
+      "Dafür haben wir unseren KüchenRechner: beantworten Sie in 30 Sekunden 4–5 Fragen zu Größe, Stil und Ausstattung — wir zeigen Ihnen eine realistische Preisspanne, ohne dass Sie Kontaktdaten hinterlassen müssen. Den Rechner finden Sie oben im Menü oder direkt unter /kuechenrechner.",
   },
   {
     question: "Was passiert mit meinen Daten?",
     answer:
-      "Ihre Daten werden nach DSGVO-Standards in Deutschland gespeichert und verarbeitet. Küchen-Händler sehen Ihre Kontaktdaten erst dann, wenn Sie ein konkretes Angebot annehmen. Sie können jederzeit eine Auskunft, Korrektur oder vollständige Löschung Ihrer Daten beantragen.",
+      "Ihre Daten werden nach DSGVO-Standards gespeichert und verarbeitet. Küchenstudios sehen Ihre Kontaktdaten erst, wenn Sie das Angebot aktiv freigeben bzw. einen Beratungstermin bestätigen. Sie können jederzeit eine Kopie Ihrer Daten anfordern oder die vollständige Löschung beantragen.",
   },
   {
-    question: "Welche Unterlagen/Fotos brauche ich?",
+    question: "Kann ich mehrere Funnel gleichzeitig nutzen?",
     answer:
-      "Für eine präzise Bewertung sind 4–8 aussagekräftige Fotos hilfreich: Gesamtansicht, Arbeitsfläche, Fronten und Griffe, Elektrogeräte mit Typenschild. Kaufbeleg oder Originalplanung sind nicht zwingend nötig, helfen dem Händler aber bei der Einschätzung.",
-  },
-  {
-    question: "Gibt es eine Mindest- oder Höchstsumme?",
-    answer:
-      "Nein. Wir vermitteln Küchen aller Preisklassen — von Einbauküchen ab 500 € bis zu hochwertigen Design-Küchen im fünfstelligen Bereich. Unsere Händler sind an Küchen aller Größen und Preisklassen interessiert.",
+      "Ja — viele Kundinnen und Kunden starten mit Funnel A (Angebote einholen), nutzen parallel den KüchenRechner für das eigene Budgetgefühl und ziehen Funnel B später zurate, sobald sie ein konkretes Studio-Angebot in der Hand haben. Alle Funnel sind kostenlos und beeinflussen einander nicht.",
   },
 ];
 
@@ -82,8 +82,8 @@ const FAQPage = () => {
     <PageLayout
       breadcrumbs={true}
       title="Häufig gestellte Fragen (FAQ)"
-      description={`Antworten auf häufig gestellte Fragen zum Verkauf und Kauf von Küchen auf ${BRAND.name}. Erfahren Sie mehr über Bewertung, Abwicklung und Händler.`}
-      keywords="Küche verkaufen FAQ, Küchen-Ankauf Ablauf, gebrauchte Küche verkaufen Fragen, KüchenWert Hilfe"
+      description={`Antworten auf häufig gestellte Fragen zu ${BRAND.name}: Angebote einholen, Reverse-Auktion, KI-Küchenplaner, Partnerstudios und Datenschutz.`}
+      keywords="KüchenWert FAQ, Küche planen Fragen, Küchenangebot vergleichen, Reverse-Auktion Küche, Küchen-Hilfe"
       canonicalPath="/faq"
       structuredData={faqSchema}
     >
@@ -92,7 +92,7 @@ const FAQPage = () => {
         <div className="max-w-3xl mx-auto text-center">
           <h1 className="text-4xl md:text-5xl font-bold mb-6">Häufig gestellte Fragen</h1>
           <p className="text-lg text-muted-foreground">
-            Finden Sie schnell Antworten auf die wichtigsten Fragen rund um den Verkauf und Kauf gebrauchter Küchen auf unserer Plattform.
+            Antworten auf die wichtigsten Fragen zu unseren drei Wegen zur Traumküche — Angebote einholen, Studio-Preise unterbieten und KI-Planer.
           </p>
         </div>
       </PageHero>

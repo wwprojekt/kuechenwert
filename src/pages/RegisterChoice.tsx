@@ -20,7 +20,7 @@ const RegisterChoice = () => {
     <PageLayout
       title={`Registrieren | ${BRAND.name}`}
       description={`Registrieren Sie sich bei ${BRAND.name} – als Privatkunde oder Küchen-Händler`}
-      keywords="registrieren, konto erstellen, küche verkaufen, küchen händler registrierung, küchenwert"
+      keywords="registrieren, konto erstellen, küche planen, küche kaufen, küchen händler registrierung, küchenstudio partner, küchenwert"
       canonicalPath="/register"
       noIndex={true}
     >
@@ -66,25 +66,25 @@ const RegisterChoice = () => {
                     </div>
                   </div>
                   <p className="text-muted-foreground text-xs md:text-base mt-2 md:mt-4 mb-2 md:mb-6 leading-relaxed">
-                    Verkaufen Sie Ihre Küche – komplett kostenlos und unverbindlich
+                    Anfragen stellen, Studio-Angebote vergleichen, Auktionen verfolgen – alles zentral im Dashboard.
                   </p>
                   {/* Vorteile: nur auf Desktop sichtbar */}
                   <div className="hidden md:block space-y-2.5 text-left w-full mb-6">
                     <div className="flex items-center gap-2.5 text-sm">
                       <CheckCircle2 className="w-4 h-4 text-primary flex-shrink-0" />
-                      <span>Kostenlose Küchen-Bewertung in 24h</span>
+                      <span>Angebote von geprüften Küchenstudios sammeln</span>
                     </div>
                     <div className="flex items-center gap-2.5 text-sm">
                       <CheckCircle2 className="w-4 h-4 text-primary flex-shrink-0" />
-                      <span>Keine Gebühren – auch nicht beim Verkauf</span>
+                      <span>Reverse-Auktionen live verfolgen &amp; bestes Gebot annehmen</span>
                     </div>
                     <div className="flex items-center gap-2.5 text-sm">
                       <CheckCircle2 className="w-4 h-4 text-primary flex-shrink-0" />
-                      <span>Mehrere Angebote von geprüften Küchen-Händlern</span>
+                      <span>Termine, Nachrichten &amp; Dokumente zentral verwalten</span>
                     </div>
                     <div className="flex items-center gap-2.5 text-sm">
                       <CheckCircle2 className="w-4 h-4 text-primary flex-shrink-0" />
-                      <span>Sichere Abwicklung inkl. Abholung & Demontage</span>
+                      <span>Für Sie komplett kostenlos &amp; ohne Abnahmepflicht</span>
                     </div>
                   </div>
                   <div className="mt-auto w-full pt-1 md:pt-0">
@@ -116,7 +116,7 @@ const RegisterChoice = () => {
                     </div>
                   </div>
                   <p className="text-muted-foreground text-xs md:text-base mt-2 md:mt-4 mb-2 md:mb-6 leading-relaxed">
-                    Ich bin Küchen-Händler oder Küchenstudio und möchte qualifizierte Ankauf-Leads erhalten
+                    Ich bin Küchenstudio, Fachhändler oder Möbelhaus und möchte qualifizierte Küchen-Leads erhalten.
                   </p>
                   {/* Vorteile: nur auf Desktop sichtbar */}
                   <div className="hidden md:block space-y-2.5 text-left w-full mb-6">
@@ -126,11 +126,11 @@ const RegisterChoice = () => {
                     </div>
                     <div className="flex items-center gap-2.5 text-sm">
                       <CheckCircle2 className="w-4 h-4 text-primary flex-shrink-0" />
-                      <span>Eigene Angebote in der Reverse-Auktion platzieren</span>
+                      <span>Bei Reverse-Auktionen gegen andere Studios bieten</span>
                     </div>
                     <div className="flex items-center gap-2.5 text-sm">
                       <CheckCircle2 className="w-4 h-4 text-primary flex-shrink-0" />
-                      <span>Händler-Dashboard & Benachrichtigungen</span>
+                      <span>Händler-Dashboard, Nachrichten &amp; Benachrichtigungen</span>
                     </div>
                   </div>
                   <div className="mt-auto w-full pt-1 md:pt-0">

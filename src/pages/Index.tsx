@@ -13,15 +13,15 @@ const Index = () => {
   const { settings } = useSettings();
   const organizationSchema = generateOrganizationSchema(settings);
   const serviceSchema = generateServiceSchema(
-    "Küchen-Ankauf & Vermittlung",
-    "Ihre Plattform für den Verkauf gebrauchter Küchen. Kostenlose Bewertung, geprüfte Küchen-Händler, Reverse-Auktion für den besten Preis."
+    "Küchen-Vergleich & Vermittlung",
+    "Deutschlands Vergleichsportal für neue Küchen: Angebote von geprüften Studios einholen, vorhandene Studio-Preise per Reverse-Auktion unterbieten lassen oder die Traumküche mit KI visualisieren."
   );
 
   return (
     <PageLayout
-      title="Küche verkaufen — Kostenlose Bewertung in 2 Minuten"
-      description="Verkaufen Sie Ihre gebrauchte Küche schnell und zum besten Preis. Kostenlose Bewertung, geprüfte Küchen-Händler, transparenter Prozess. Nobilia, Häcker, Nolte & alle Marken."
-      keywords="Küche verkaufen, Küche kaufen, gebrauchte Küche, Küchenbewertung, Nobilia verkaufen, Häcker verkaufen, Nolte verkaufen, Küchenwert"
+      title="Neue Küche günstig kaufen — Angebote vergleichen & Preis unterbieten"
+      description="Drei Wege zu Ihrer Traumküche: Kostenlose Angebote von geprüften Küchenstudios einholen, vorhandene Studio-Preise unterbieten lassen oder mit KI visualisieren. Bis zu 30 % sparen, unverbindlich, deutschlandweit."
+      keywords="Küche kaufen, neue Küche, Küche planen, Küchenstudio, Küche vergleichen, Küchenangebot, Reverse-Auktion Küche, KI Küchenplaner, Nobilia, Häcker, Nolte, SieMatic, günstig Küche, Budget Küche"
       canonicalPath="/"
       structuredData={[organizationSchema, serviceSchema]}
     >

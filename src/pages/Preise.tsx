@@ -17,32 +17,31 @@ const Preise = () => {
   const [calcAmount, setCalcAmount] = useState(15000);
   const calcResult = useCommissionFromTiers(calcAmount);
 
-  const sellerFreeServices = [
-    "Kostenlose Küchen-Bewertung",
-    "Mehrere Angebote von geprüften Küchen-Händlern",
-    "Online-Nachverhandlung",
-    "Reverse-Auktion: Händler bieten um Ihre Küche",
-    "Keine Verkaufspflicht, wenn kein Angebot passt",
-    "Vorgefertigter, rechtssicherer Kaufvertrag",
-    "Unterstützung beim Foto-Upload & Datenerfassung",
-    "Telefonischer Kundensupport",
+  const customerFreeServices = [
+    "Kostenloser KüchenRechner & Budget-Check",
+    "Angebote von geprüften Küchenstudios (Funnel A)",
+    "Reverse-Auktion: Händler unterbieten Studio-Preise (Funnel B)",
+    "KI-Traumküchen-Planer (Funnel C, demnächst)",
+    "Experten-Check vor jeder Vermittlung",
+    "Keine Abnahmepflicht, ohne Gebühren",
+    "Rechtssichere Vertragsvorlagen inklusive",
+    "Persönlicher Telefon- & E-Mail-Support",
   ];
 
-  const buyerFreeServices = [
-    "Zugang zu qualifizierten Küchen-Leads",
-    "Eigene Angebote platzieren",
+  const dealerFreeServices = [
+    "Zugang zu qualifizierten Küchen-Leads (Funnel A)",
+    "Teilnahme an Reverse-Auktionen (Funnel B)",
     "Benachrichtigungen per E-Mail & Dashboard",
-    "Direkte Fragen an den Verkäufer",
-    "Online-Nachverhandlung",
-    "Vorgefertigter, rechtssicherer Kaufvertrag",
+    "Nachrichten direkt mit den Kund:innen",
+    "Rechtssichere Kaufvertrags-Vorlagen",
   ];
 
   return (
     <PageLayout
       breadcrumbs={true}
-      title={`Preise & Leistungen – Küchen verkaufen | ${BRAND.name}`}
-      description={`Transparente Preise für den Küchen-Verkauf bei ${BRAND.name}. Kostenlose Bewertung, faire Provisionen und keine versteckten Gebühren für Verkäufer und Händler.`}
-      keywords="Preise, Kosten, Gebühren, Küche verkaufen, Provision, Küchenwert"
+      title={`Preise & Leistungen – Für Sie kostenlos | ${BRAND.name}`}
+      description={`Transparente Preise bei ${BRAND.name}: Alle Funnels und der KüchenRechner sind für Privatkunden kostenlos. Küchenstudios zahlen eine faire Provision nur bei erfolgreichem Kauf.`}
+      keywords="Preise, Kosten, Gebühren, Küche kaufen, Küchen-Provision, Küchenstudio Partner, Küchenwert"
       canonicalPath="/preise"
       structuredData={generateBreadcrumbSchema(getBreadcrumbsFromPath("/preise"))}
     >
@@ -52,7 +51,7 @@ const Preise = () => {
             Preise & Leistungen
           </h1>
           <p className="text-lg sm:text-xl text-muted-foreground max-w-2xl mx-auto">
-            Transparent und fair – unsere Konditionen für Verkäufer und Käufer
+            Transparent und fair – für Privatkunden komplett kostenlos, Küchenstudios zahlen nur bei Erfolg
           </p>
         </div>
       </PageHero>
@@ -60,16 +59,16 @@ const Preise = () => {
       <section className="py-12 sm:py-16 md:py-20">
         <div className="container px-4 sm:px-6 lg:px-8">
           <div className="grid md:grid-cols-2 gap-6 lg:gap-8">
-            {/* Für Verkäufer */}
+            {/* Fuer Privatkunden */}
             <Card className="border-2 hover:border-primary/20 transition-all duration-300">
               <CardHeader className="border-b bg-muted/30">
                 <CardTitle className="text-xl sm:text-2xl text-center">
-                  Für Verkäufer – kostenlos
+                  Für Privatkunden – 100 % kostenlos
                 </CardTitle>
               </CardHeader>
               <CardContent className="p-6 sm:p-8">
                 <ul className="space-y-3">
-                  {sellerFreeServices.map((service, index) => (
+                  {customerFreeServices.map((service, index) => (
                     <li key={index} className="flex items-start gap-3">
                       <CheckCircle2 className="h-5 w-5 text-green-500 flex-shrink-0 mt-0.5" />
                       <span className="text-sm sm:text-base">{service}</span>
@@ -79,11 +78,11 @@ const Preise = () => {
               </CardContent>
             </Card>
 
-            {/* Für Käufer */}
+            {/* Fuer Kuechenstudios / Haendler */}
             <Card className="border-2 hover:border-primary/20 transition-all duration-300">
               <CardHeader className="border-b bg-muted/30">
                 <CardTitle className="text-xl sm:text-2xl text-center">
-                  Für Käufer (Händler)
+                  Für Küchenstudios & Händler
                 </CardTitle>
               </CardHeader>
               <CardContent className="p-6 sm:p-8">
@@ -93,7 +92,7 @@ const Preise = () => {
                       Kostenlose Leistungen
                     </h3>
                     <ul className="space-y-3">
-                      {buyerFreeServices.map((service, index) => (
+                      {dealerFreeServices.map((service, index) => (
                         <li key={index} className="flex items-start gap-3">
                           <CheckCircle2 className="h-5 w-5 text-green-500 flex-shrink-0 mt-0.5" />
                           <span className="text-sm sm:text-base">{service}</span>
@@ -107,12 +106,12 @@ const Preise = () => {
                       Vermittlungsprovision
                     </h3>
                     <p className="text-sm text-muted-foreground mb-4">
-                      Nur bei erfolgreichem Kauf – gestaffelt nach Kaufpreis:
+                      Nur bei erfolgreichem Kauf – gestaffelt nach Auftragswert:
                     </p>
                     <CommissionTierTable variant="full-table" />
                     <p className="text-xs text-muted-foreground mt-3 flex items-start gap-1.5">
                       <Info className="w-3.5 h-3.5 flex-shrink-0 mt-0.5" />
-                      Alle Beträge zzgl. MwSt. Volumenrabatte für Vielkäufer möglich.
+                      Alle Beträge zzgl. MwSt. Volumenrabatte für Partner-Studios möglich.
                     </p>
                   </div>
                 </div>
@@ -180,18 +179,18 @@ const Preise = () => {
               Bereit loszulegen?
             </h2>
             <p className="text-muted-foreground mb-8 text-lg">
-              Verkaufen Sie Ihre Küche kostenlos oder werden Sie Küchen-Partner und erhalten Sie qualifizierte Leads.
+              Starten Sie Ihre kostenlose Anfrage – oder werden Sie Partner-Studio und erhalten Sie qualifizierte Leads.
             </p>
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
               <Link to="/funnel/a">
                 <Button size="lg" className="gap-2">
-                  Jetzt kostenlos verkaufen
+                  Kostenlos Angebote erhalten
                   <ArrowRight className="w-4 h-4" />
                 </Button>
               </Link>
               <Link to="/haendler">
                 <Button variant="outline" size="lg" className="gap-2">
-                  Für Händler
+                  Für Küchenstudios
                   <ArrowRight className="w-4 h-4" />
                 </Button>
               </Link>

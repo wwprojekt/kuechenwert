@@ -185,7 +185,7 @@ const Kontakt = () => {
       breadcrumbs={true}
       title="Kontakt – Beratung & Support"
       description={`Kontaktieren Sie ${siteName} - Wir sind für Sie da! Telefon, E-Mail oder Kontaktformular. Wir melden uns schnellstmöglich bei Ihnen.`}
-      keywords="Kontakt, KüchenWert Kontakt, Küchen-Ankauf Kontakt, Küchen-Beratung, Küche verkaufen Kontakt"
+      keywords="Kontakt, KüchenWert Kontakt, Küchen-Beratung, Küchen-Planung Support, neue Küche kaufen Kontakt, Küchenstudio Vermittlung"
       canonicalPath="/kontakt"
       structuredData={generateBreadcrumbSchema(getBreadcrumbsFromPath("/kontakt"))}
     >

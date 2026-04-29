@@ -38,25 +38,25 @@ const UeberUns = () => {
       icon: Heart,
       title: "Leidenschaft",
       description:
-        "Wir lieben gut geplante Küchen — und wissen, wie viel Wert in einer gebrauchten Markenküche steckt.",
+        "Wir lieben gut geplante Küchen — und möchten, dass jede Kundin und jeder Kunde die Traumküche zum fairen Preis bekommt.",
     },
     {
       icon: Shield,
       title: "Vertrauen",
       description:
-        "Transparenz und Ehrlichkeit sind die Grundpfeiler unserer Geschäftsbeziehungen — mit Verkäufern und Händlern.",
+        "Transparenz und Ehrlichkeit sind die Grundpfeiler unserer Zusammenarbeit — mit Kund:innen und Partner-Studios.",
     },
     {
       icon: Target,
       title: "Exzellenz",
       description:
-        "Wir streben nach höchster Qualität in Bewertung, Vermittlung und Abwicklung — für Ihre Zufriedenheit.",
+        "Wir streben nach höchster Qualität in Vermittlung, Reverse-Auktion und Beratung — damit Sie entspannt entscheiden.",
     },
     {
       icon: Zap,
       title: "Innovation",
       description:
-        "Moderne Technologie (KI-gestützte Küchen-Planung, datenbasierte Bewertung) trifft auf persönlichen Service.",
+        "Moderne Technologie (KI-Traumküchen-Planer, echte Marktdaten) trifft auf persönlichen, menschlichen Service.",
     },
   ];
 
@@ -65,24 +65,24 @@ const UeberUns = () => {
       year: "2024",
       title: "Die Idee",
       description:
-        "Als Betreiber erfolgreicher Vermittlungsplattformen (wohnwert24.de, caravanwert.de) erkennen wir das Potenzial, unser Know-how auf den Küchen-Markt zu übertragen.",
+        "Als Betreiber erfolgreicher Vermittlungsplattformen (wohnwert24.de, caravanwert.de) erkennen wir: Küchenkauf ist heute für viele intransparent und teuer — das muss nicht so sein.",
     },
     {
       year: "2026",
       title: "Konzeption",
       description:
-        "Entwicklung einer lead-zentrierten Plattform speziell für Küchen: Bewertung in 2 Minuten, Reverse-Auktion mit geprüften Händlern und KI-Konfigurator für Traumküchen.",
+        "Entwicklung einer lead-zentrierten Plattform speziell für neue Küchen: Angebotsvermittlung, Reverse-Auktion auf Studio-Preise und KI-Planer für Traumküchen.",
     },
     {
       year: "Apr 2026",
       title: "Launch",
-      description: `${siteName} geht an den Start — mit dem Ziel, den Küchen-Verkauf transparenter, schneller und fairer zu gestalten.`,
+      description: `${siteName} geht an den Start — mit dem Ziel, den Kauf einer neuen Küche transparenter, schneller und fairer zu gestalten.`,
     },
     {
       year: "Ab 2026",
       title: "Wachstum",
       description:
-        "Kontinuierlicher Ausbau unseres Küchen-Händler-Netzwerks deutschlandweit und stetige Verbesserung unserer Plattform.",
+        "Kontinuierlicher Ausbau unseres Küchenstudio-Netzwerks deutschlandweit und stetige Verbesserung unserer Funnels.",
     },
   ];
 
@@ -90,37 +90,37 @@ const UeberUns = () => {
     {
       name: "Branchenübergreifende Expertise",
       description:
-        "Erfahrung aus Immobilien- und Wohnmobil-Vermittlung, angewandt auf den Küchen-Markt",
+        "Erfahrung aus Immobilien- und Fahrzeug-Vermittlung, angewandt auf den Küchenmarkt",
     },
     {
       name: "Persönlicher Kundenservice",
-      description: "Individuelle Betreuung durch engagierte Ansprechpartner",
+      description: "Individuelle Betreuung durch engagierte Küchen-Berater:innen",
     },
     {
-      name: "Netzwerk geprüfter Händler",
+      name: "Netzwerk geprüfter Küchenstudios",
       description:
-        "Wachsendes Partnernetzwerk aus verifizierten Küchen-Händlern in ganz Deutschland",
+        "Wachsendes Partnernetzwerk aus verifizierten Studios, Fachhändlern und Möbelhäusern in ganz Deutschland",
     },
     {
       name: "Digitale Kompetenz",
       description:
-        "Moderne Plattform mit datenbasierter Küchen-Bewertung und KI-Traumküchen-Konfigurator",
+        "Moderne Plattform mit KüchenRechner, Reverse-Auktion und KI-Traumküchen-Planer",
     },
   ];
 
   const achievements = [
     { number: "Bundesweit", label: "Verfügbar" },
-    { number: "24 h", label: "Bewertungszeit" },
-    { number: "Geprüft", label: "Händlernetzwerk" },
-    { number: "100 %", label: "Kostenlos" },
+    { number: "48 h", label: "Ø bis Angebote" },
+    { number: "Geprüft", label: "Studio-Netzwerk" },
+    { number: "100 %", label: "Kostenlos für Kund:innen" },
   ];
 
   return (
     <PageLayout
       breadcrumbs={true}
-      title="Über uns – Ihr Partner für den Küchen-Verkauf"
-      description={`Erfahren Sie mehr über ${siteName} – Ihre Plattform für den Verkauf und Kauf gebrauchter Küchen. Eine Marke der ${BRAND.legalName}, bundesweit, schnell und fair.`}
-      keywords="über uns, KüchenWert, Küchen verkaufen Plattform, Küchen-Vermittlung, gebrauchte Küche verkaufen"
+      title="Über uns – Ihr Partner für die neue Traumküche"
+      description={`Erfahren Sie mehr über ${siteName} – die Plattform für Ihre neue Küche. Angebote von geprüften Studios, Reverse-Auktion und KI-Planer. Eine Marke der ${BRAND.legalName}, bundesweit, schnell und fair.`}
+      keywords="über uns, KüchenWert, neue Küche planen, Küchen-Vermittlung, Küchenstudio Vergleich, Traumküche"
       canonicalPath="/ueber-uns"
       structuredData={[
         generateOrganizationSchema(settings),
@@ -131,14 +131,14 @@ const UeberUns = () => {
       <PageHero size="lg">
         <div className="max-w-4xl mx-auto text-center">
           <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold mb-6 leading-tight">
-            Ihre Plattform für den{" "}
-            <span className="gradient-text">Küchen-Verkauf</span>
+            Ihre Plattform für die{" "}
+            <span className="gradient-text">neue Traumküche</span>
           </h1>
           <p className="text-lg md:text-xl text-muted-foreground mb-8 leading-relaxed">
-            {siteName} verbindet Küchen-Besitzer mit geprüften Händlern —
-            schnell, transparent und kostenlos. Entstanden aus der Erfahrung
-            mehrerer erfolgreicher Vermittlungsplattformen der{" "}
-            {BRAND.legalName}.
+            {siteName} verbindet Menschen, die eine neue Küche planen, mit geprüften
+            Küchenstudios — transparent, kostenlos und mit echtem Wettbewerb um
+            den fairsten Preis. Entstanden aus der Erfahrung mehrerer erfolgreicher
+            Vermittlungsplattformen der {BRAND.legalName}.
           </p>
         </div>
       </PageHero>
@@ -176,9 +176,11 @@ const UeberUns = () => {
               <div className="space-y-4 text-muted-foreground leading-relaxed">
                 <p>
                   {siteName} wurde 2026 gestartet — aus einer klaren
-                  Überzeugung heraus: Der Verkauf einer gebrauchten Küche sollte
-                  genauso einfach, transparent und fair sein wie der Verkauf
-                  einer Immobilie oder eines Wohnmobils.
+                  Überzeugung heraus: Der Kauf einer neuen Küche sollte genauso
+                  einfach, transparent und fair ablaufen wie der Vergleich eines
+                  Immobilien- oder Fahrzeug-Angebots. Niemand sollte zehn
+                  Küchenstudios abklappern müssen, um einen fairen Preis zu
+                  bekommen.
                 </p>
                 <p>
                   Als Team der {BRAND.legalName} — Betreiberin von{" "}
@@ -361,7 +363,7 @@ const UeberUns = () => {
               {[
                 {
                   icon: Shield,
-                  title: "Geprüfte Küchen-Händler",
+                  title: "Geprüfte Küchenstudios",
                   description:
                     "Alle Partner durchlaufen unseren Verifizierungsprozess (Gewerbenachweis, USt-ID, Kundenzufriedenheit).",
                 },
@@ -369,13 +371,13 @@ const UeberUns = () => {
                   icon: Users,
                   title: "Persönlicher Service",
                   description:
-                    "Individuelle Betreuung bei jedem Küchen-Verkauf — vom ersten Foto bis zur Abholung.",
+                    "Individuelle Betreuung bei jeder Küchenplanung — vom ersten Klick bis zum Montagetag.",
                 },
                 {
                   icon: TrendingUp,
                   title: "Faire Preise",
                   description:
-                    "Marktgerechte Bewertung Ihrer Küche basierend auf Marke, Alter, Ausstattung und Zustand.",
+                    "Durch echten Wettbewerb und unsere Reverse-Auktion sparen Sie bis zu 30 % gegenüber dem Studio-Listenpreis.",
                 },
               ].map((cert, index) => (
                 <Card
@@ -408,13 +410,13 @@ const UeberUns = () => {
             </h2>
             <p className="text-xl mb-8 opacity-95">
               Überzeugen Sie sich selbst von unserem Service. Wir freuen uns
-              darauf, Ihnen beim Verkauf Ihrer Küche zu helfen — kostenlos und
-              unverbindlich.
+              darauf, Ihnen den Weg zur neuen Traumküche so einfach und günstig
+              wie möglich zu machen — kostenlos und unverbindlich.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <Link to="/funnel/a">
                 <Button size="lg" variant="secondary" className="w-full sm:w-auto">
-                  Jetzt verkaufen
+                  Kostenlose Angebote einholen
                 </Button>
               </Link>
               <Link to="/kontakt">

@@ -118,32 +118,32 @@ const Header = () => {
           {/* Desktop Navigation */}
           <div className="hidden lg:flex items-center gap-6">
             <Link 
-              to="/verkaufen/wizard" 
+              to="/funnel/a" 
               className={`text-sm font-semibold transition-smooth px-3.5 py-1.5 rounded-full ${
-                isActive('/verkaufen') || isActive('/verkaufen/wizard') || isActive('/wertermittlung')
+                isActive('/funnel/a') || location.pathname.startsWith('/funnel/a')
                   ? 'bg-primary text-white shadow-md' 
                   : 'bg-primary/20 text-primary hover:bg-primary/30'
               }`}
             >
-              Verkaufen
+              Angebote holen
             </Link>
             <Link 
-              to="/kaufen" 
+              to="/funnel/b" 
               className={`text-sm font-semibold transition-smooth px-3.5 py-1.5 rounded-full ${
-                isActive('/kaufen') 
+                isActive('/funnel/b') 
                   ? 'bg-primary text-white shadow-sm' 
                   : 'text-primary bg-primary/10 hover:bg-primary/15'
               }`}
             >
-              Kaufen
+              Preis unterbieten
             </Link>
             <Link 
-              to="/wertrechner" 
+              to="/kuechenrechner" 
               className={`text-sm font-medium transition-smooth ${
-                isActive('/wertrechner') ? 'text-primary' : 'text-foreground/80 hover:text-primary'
+                isActive('/kuechenrechner') ? 'text-primary' : 'text-foreground/80 hover:text-primary'
               }`}
             >
-              Wertrechner
+              KüchenRechner
             </Link>
             <Link 
               to="/preise" 
@@ -159,7 +159,7 @@ const Header = () => {
                 isActive('/ankaufstationen') ? 'text-primary' : 'text-foreground/80 hover:text-primary'
               }`}
             >
-              Ankaufstationen
+              Studios & Showrooms
             </Link>
             <Link 
               to="/kontakt" 
@@ -330,48 +330,30 @@ const Header = () => {
           <div className="lg:hidden border-t bg-background/95 max-h-[calc(100dvh-5rem)] overflow-y-auto overscroll-contain">
             <div className="container py-4 flex flex-col gap-1 pb-[max(1rem,env(safe-area-inset-bottom))]">
               <Link
-                to="/verkaufen/wizard"
+                to="/funnel/a"
                 className="flex items-center justify-center gap-2 text-sm font-semibold py-3 px-4 rounded-lg bg-primary text-white shadow-sm hover:bg-primary/90 transition-all"
                 onClick={() => setMobileMenuOpen(false)}
               >
-                Jetzt verkaufen
+                Angebote einholen
               </Link>
               <Link
-                to="/verkaufen"
-                className={`text-sm font-medium transition-smooth pl-4 py-2.5 ${
-                  isActive('/verkaufen') ? 'text-primary' : 'text-foreground/60 hover:text-primary'
-                }`}
-                onClick={() => setMobileMenuOpen(false)}
-              >
-                → So funktioniert's
-              </Link>
-              <Link
-                to="/wertermittlung"
-                className={`text-sm font-medium transition-smooth pl-4 py-2.5 ${
-                  isActive('/wertermittlung') ? 'text-primary' : 'text-foreground/60 hover:text-primary'
-                }`}
-                onClick={() => setMobileMenuOpen(false)}
-              >
-                → Expertenbewertung
-              </Link>
-              <Link
-                to="/wertrechner"
-                className="flex items-center justify-center gap-2 text-sm font-semibold py-3 px-4 rounded-lg bg-amber-500 text-white shadow-sm hover:bg-amber-600 transition-all mt-1"
-                onClick={() => setMobileMenuOpen(false)}
-              >
-                <Calculator className="h-4 w-4" />
-                Wertrechner
-              </Link>
-              <Link
-                to="/kaufen"
+                to="/funnel/b"
                 className={`text-sm font-semibold transition-smooth py-2.5 px-4 rounded-lg ${
-                  isActive('/kaufen') 
+                  isActive('/funnel/b') 
                     ? 'bg-primary text-white shadow-sm' 
                     : 'text-primary bg-primary/10 hover:bg-primary/15'
                 }`}
                 onClick={() => setMobileMenuOpen(false)}
               >
-                Kaufen
+                Studio-Preis unterbieten
+              </Link>
+              <Link
+                to="/kuechenrechner"
+                className="flex items-center justify-center gap-2 text-sm font-semibold py-3 px-4 rounded-lg bg-amber-500 text-white shadow-sm hover:bg-amber-600 transition-all mt-1"
+                onClick={() => setMobileMenuOpen(false)}
+              >
+                <Calculator className="h-4 w-4" />
+                KüchenRechner (Preis-Check)
               </Link>
               <Link
                 to="/preise"
@@ -380,7 +362,7 @@ const Header = () => {
                 }`}
                 onClick={() => setMobileMenuOpen(false)}
               >
-                Preise
+                Preise & Leistungen
               </Link>
               <Link
                 to="/ankaufstationen"
@@ -389,7 +371,7 @@ const Header = () => {
                 }`}
                 onClick={() => setMobileMenuOpen(false)}
               >
-                Ankaufstationen
+                Studios & Showrooms
               </Link>
               <Link
                 to="/ratgeber"

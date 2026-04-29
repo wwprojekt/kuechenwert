@@ -50,9 +50,9 @@ const BlogPage = () => {
   return (
     <PageLayout
       breadcrumbs={true}
-      title="Blog – Ratgeber & News rund um gebrauchte Küchen"
-      description="Aktuelle Artikel, Tipps und Ratgeber rund um den Kauf und Verkauf gebrauchter Küchen. Markttrends, Bewertungstipps, Demontage & mehr."
-      keywords="Küchen Blog, Küchen Ratgeber, Küchen Tipps, Küche kaufen Beratung, Küche verkaufen Tipps"
+      title="Blog – Ratgeber & News rund um Ihre neue Traumküche"
+      description="Aktuelle Artikel, Tipps und Ratgeber rund um Küchen-Planung, Budget, Geräte, Stile und den Kauf einer neuen Küche. Markttrends, Expertenwissen und Insider-Tipps."
+      keywords="Küchen Blog, Küchen Ratgeber, Küchen Planung, Küchen Trends, neue Küche kaufen Tipps, Küchenkauf Beratung"
       canonicalPath="/blog"
       structuredData={generateBreadcrumbSchema(getBreadcrumbsFromPath("/blog"))}
     >
@@ -63,7 +63,7 @@ const BlogPage = () => {
             Blog & Ratgeber
           </h1>
           <p className="text-lg text-muted-foreground">
-            Expertenwissen, aktuelle Markttrends und hilfreiche Tipps rund um gebrauchte Küchen – regelmäßig aktualisiert.
+            Expertenwissen, Markttrends und Tipps rund um Planung, Budget und Kauf Ihrer neuen Küche – regelmäßig aktualisiert.
           </p>
         </div>
       </PageHero>

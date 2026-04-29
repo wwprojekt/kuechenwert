@@ -644,8 +644,8 @@ const Kaufen = () => {
     <PageLayout
       breadcrumbs={true}
       title="Küche kaufen"
-      description="Auswahl an gebrauchten Markenküchen zu fairen Preisen. Qualität, Transparenz und persönliche Beratung."
-      keywords="Küche kaufen, gebrauchte Küche kaufen, Einbauküche gebraucht, Nobilia gebraucht, Häcker gebraucht, Nolte gebraucht, SieMatic gebraucht"
+      description="Markenküchen von geprüften Händlern kaufen — attraktive Preise durch Reverse-Auktionen und direkten Studio-Vergleich. Qualität, Transparenz und persönliche Beratung."
+      keywords="Küche kaufen, Einbauküche günstig, Küche Preisvergleich, Nobilia, Häcker, Nolte, SieMatic, Bulthaup, Küchen-Angebot, Küchen-Auktion"
       canonicalPath="/kaufen"
       structuredData={serviceSchema}
     >
@@ -656,7 +656,7 @@ const Kaufen = () => {
             Küchen <span className="gradient-text">kaufen</span>
           </h1>
           <p className="text-lg md:text-xl text-muted-foreground mb-6">
-            Entdecken Sie unsere Auswahl an gebrauchten Markenküchen. Qualität, Transparenz und faire Preise — oder planen Sie Ihre Traumküche neu.
+            Aktuelle Küchen-Auktionen und Angebote von geprüften Küchenhändlern — transparent, fair und zum besten Preis. Oder starten Sie direkt Ihre Traumküchen-Anfrage.
           </p>
         </div>
       </PageHero>

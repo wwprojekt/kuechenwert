@@ -118,8 +118,8 @@ const Register = () => {
   return (
     <PageLayout
       title={`Registrieren | ${BRAND.name}`}
-      description={`Erstellen Sie ein kostenloses Konto bei ${BRAND.name} und verkaufen Sie Ihre Küche fair und unkompliziert.`}
-      keywords="registrieren, konto erstellen, küche verkaufen, küchenwert"
+      description={`Erstellen Sie ein kostenloses ${BRAND.name}-Konto und verwalten Sie Ihre Küchen-Anfragen, Studio-Angebote und Auktionen im persönlichen Dashboard.`}
+      keywords="registrieren, konto erstellen, küche planen, küche kaufen, küchen angebote, dashboard, küchenwert"
       canonicalPath="/register/privat"
       noIndex={true}
     >
@@ -146,7 +146,7 @@ const Register = () => {
                   Konto erstellen
                 </h1>
                 <p className="text-muted-foreground text-lg">
-                  Starten Sie jetzt und verkaufen Sie Ihre Küche
+                  Anfragen, Studio-Angebote und Auktionen an einem Ort
                 </p>
               </>
             )}
@@ -196,7 +196,7 @@ const Register = () => {
                     <span className="text-xs font-bold text-primary">3</span>
                   </div>
                   <p className="text-sm text-muted-foreground">
-                    Nach der Bestätigung können Sie sich anmelden und Ihre Küche bewerten lassen
+                    Nach der Bestätigung können Sie sich anmelden und Ihre Küchen-Anfragen starten
                   </p>
                 </div>
               </div>
@@ -208,7 +208,7 @@ const Register = () => {
               <div className="flex flex-col sm:flex-row gap-3 justify-center">
                 <Link to="/funnel/a">
                   <Button className="gradient-hero hover:gradient-hero-hover shadow-glow-sm">
-                    Jetzt Küche bewerten
+                    Kostenlose Angebote erhalten
                     <ArrowRight className="w-4 h-4 ml-2" />
                   </Button>
                 </Link>
@@ -397,15 +397,15 @@ const Register = () => {
                   <div className="bg-primary/5 rounded-lg p-4 space-y-2">
                     <div className="flex items-center gap-2 text-sm">
                       <CheckCircle2 className="w-4 h-4 text-primary" />
-                      <span>Kostenlose Küchen-Bewertung in 24 Stunden</span>
+                      <span>Alle Anfragen &amp; Studio-Angebote im Dashboard</span>
                     </div>
                     <div className="flex items-center gap-2 text-sm">
                       <CheckCircle2 className="w-4 h-4 text-primary" />
-                      <span>Mehrere Angebote von geprüften Küchen-Händlern</span>
+                      <span>Reverse-Auktionen live verfolgen &amp; Gebote annehmen</span>
                     </div>
                     <div className="flex items-center gap-2 text-sm">
                       <CheckCircle2 className="w-4 h-4 text-primary" />
-                      <span>Sichere Abwicklung – auch bei Abholung & Demontage</span>
+                      <span>Termine, Nachrichten &amp; Dokumente zentral verwalten</span>
                     </div>
                   </div>
 

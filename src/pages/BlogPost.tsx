@@ -181,14 +181,14 @@ const BlogPost = () => {
         <div className="container">
           <div className="max-w-2xl mx-auto text-center">
             <h2 className="text-xl sm:text-2xl md:text-3xl font-bold mb-4">
-              Möchten Sie Ihre Küche verkaufen?
+              Planen Sie gerade eine neue Küche?
             </h2>
             <p className="text-primary-foreground/90 mb-8">
-              Starten Sie jetzt mit der kostenlosen Bewertung und erhalten Sie attraktive Angebote.
+              Starten Sie mit einer kostenlosen Anfrage — geprüfte Studios senden Ihnen in 48 h individuelle Angebote.
             </p>
             <Link to="/funnel/a">
               <Button size="lg" variant="secondary">
-                Jetzt Küchen-Bewertung starten
+                Kostenlose Angebote einholen
               </Button>
             </Link>
           </div>

@@ -11,7 +11,7 @@ import {
   CheckCircle2,
   Building2,
   ArrowRight,
-  Truck,
+  Eye,
   Wrench,
   Loader2,
   Handshake,
@@ -27,20 +27,21 @@ import {
 } from "@/lib/seo";
 
 /**
- * Ankaufstationen / Montage-Partner (Phase 3.9 Rebuild).
+ * Kuechenstudios & Showrooms (Phase 3.9 Rebuild, Phase 3 Re-Rebrand).
  *
- * Alte Logik (CaravanWert): Kunden waehlen eine lokale Ankaufstation, geben
- * Fahrzeugdaten ein, Station kauft vor Ort bar auf.
+ * Alte Logik (CaravanWert): "Ankaufstationen" fuer gebrauchte Fahrzeuge.
  *
- * Neue Logik (KueWert): Lokale Montage- & Ankauf-Partner (Kuechenstudios,
- * Schreinereien, Entsorgungsfirmen) die auf Wunsch die Kueche vor Ort
- * besichtigen, demontieren und abholen. Der eigentliche Ankauf laeuft
- * weiterhin ueber den Funnel (/funnel/a). Diese Seite ist das
- * Marketing-Schaufenster fuer das Partner-Netzwerk.
+ * Neue Logik (KueWert): Lokale Partner aus dem Studio-Netzwerk, die
+ *   1) Beratung und Aufmass vor Ort anbieten (Showroom-Besuch)
+ *   2) Die finale Montage beim Kunden durchfuehren
+ *   3) Nachbetreuung leisten (Service, Ersatzteile)
+ *
+ * Kein "Ankauf" von Gebraucht-Kuechen — der Kunde PLANT eine NEUE Kueche.
+ * Das Partner-Netzwerk ist das lokale Schaufenster unserer Funnels.
  *
  * Das DB-Objekt `purchase_stations` wird weiter gelesen (gleicher Record-Typ),
- * aber semantisch als "Montage-Partner" interpretiert. Das vehicle-
- * Inquiry-Formular wurde entfernt – stattdessen verlinken wir auf /funnel/a.
+ * aber semantisch als "Studio-Partner / Showroom" interpretiert. Alle CTAs
+ * fuehren in Funnel A (Angebote einholen).
  */
 interface MontagePartner {
   id: string;
@@ -86,14 +87,14 @@ const Ankaufstationen = () => {
   return (
     <PageLayout
       breadcrumbs={true}
-      title={`Montage-Partner & Küchen-Showrooms | ${BRAND.name}`}
-      description={`Lokale ${BRAND.name}-Partner in Ihrer Nähe: Küchen-Besichtigung, Demontage und Abholung vor Ort. Jetzt Partner finden oder kostenlose Küchen-Bewertung starten.`}
-      keywords="küchen montage partner, küchen abholung, küchen demontage, küchenstudio partner, küchen-showroom"
+      title={`Küchenstudios & Showrooms in Ihrer Nähe | ${BRAND.name}`}
+      description={`Lokale ${BRAND.name}-Partner-Studios: Showroom-Besuch, Vor-Ort-Beratung, Aufmass und Montage. Finden Sie Ihren passenden Studio-Partner oder starten Sie direkt mit einer kostenlosen Anfrage.`}
+      keywords="küchenstudio nähe, küchen showroom, küchen vor ort beratung, küchen partner, küchen montage"
       canonicalPath="/ankaufstationen"
       structuredData={[
         generateServiceSchema(
-          "Küchen-Montage-Partner",
-          `Lokale Partner aus dem ${BRAND.name}-Netzwerk übernehmen auf Wunsch Besichtigung, Demontage und Abholung Ihrer gebrauchten Küche.`
+          "Küchenstudio-Partner & Showrooms",
+          `Lokale Partner aus dem ${BRAND.name}-Netzwerk bieten Ihnen Showroom-Besuch, individuelle Beratung, Aufmass und fachgerechte Montage Ihrer neuen Küche.`
         ),
         generateBreadcrumbSchema(getBreadcrumbsFromPath("/ankaufstationen")),
       ]}
@@ -102,16 +103,16 @@ const Ankaufstationen = () => {
         <div className="text-center animate-fade-in">
           <h1 className="text-4xl md:text-5xl font-bold text-foreground mb-4 flex items-center justify-center gap-3">
             <Building2 className="w-10 h-10 text-primary" />
-            Unsere Montage-Partner
+            Küchenstudios &amp; Showrooms
           </h1>
           <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-            Lokale Küchenstudios, Schreinereien und Demontage-Profis aus dem {BRAND.name}-Netzwerk –
-            auf Wunsch besichtigen, demontieren und holen sie Ihre Küche direkt vor Ort ab.
+            Lokale Küchenstudios, Fachhändler und Möbelhäuser aus dem {BRAND.name}-Netzwerk –
+            Vor-Ort-Beratung, Showroom-Besuche und fachgerechte Montage Ihrer neuen Küche.
           </p>
           <div className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-3">
             <Link to="/funnel/a">
               <Button size="lg" className="gap-2">
-                Kostenlose Küchen-Bewertung
+                Kostenlose Angebote erhalten
                 <ArrowRight className="w-4 h-4" />
               </Button>
             </Link>
@@ -136,17 +137,17 @@ const Ankaufstationen = () => {
             <Card className="p-8 md:p-12 text-center max-w-3xl mx-auto">
               <Handshake className="w-12 h-12 text-primary mx-auto mb-4" />
               <h2 className="text-2xl font-bold mb-3">
-                Wir bauen unser Partner-Netzwerk gerade auf
+                Wir bauen unser Studio-Netzwerk gerade auf
               </h2>
               <p className="text-muted-foreground mb-6 max-w-xl mx-auto">
-                Aktuell arbeiten wir mit regionalen Küchen-Händlern und Demontage-Spezialisten
-                zusammen, die Ihre Küche fachgerecht abholen. Starten Sie einfach die kostenlose
-                Bewertung – wir verbinden Sie mit passenden Partnern in Ihrer Region.
+                Aktuell arbeiten wir mit regionalen Küchenstudios, Fachhändlern und Möbelhäusern
+                zusammen, die Sie persönlich beraten und Ihre neue Küche planen. Starten Sie mit
+                der kostenlosen Anfrage — wir verbinden Sie mit passenden Partnern in Ihrer Region.
               </p>
               <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
                 <Link to="/funnel/a">
                   <Button size="lg" className="gap-2">
-                    Kostenlose Bewertung starten
+                    Kostenlose Anfrage starten
                     <ArrowRight className="w-4 h-4" />
                   </Button>
                 </Link>
@@ -230,7 +231,7 @@ const Ankaufstationen = () => {
 
                     <Link to="/funnel/a" className="block">
                       <Button className="w-full mt-2 gap-2">
-                        <span>Küchen-Anfrage starten</span>
+                        <span>Beratungstermin anfragen</span>
                         <ArrowRight className="w-4 h-4" />
                       </Button>
                     </Link>
@@ -244,32 +245,32 @@ const Ankaufstationen = () => {
           <div className="mt-16 grid md:grid-cols-3 gap-6">
             <Card className="p-6">
               <h3 className="font-semibold mb-2 flex items-center gap-2">
-                <Truck className="w-5 h-5 text-primary" />
-                Abholung vor Ort
+                <Eye className="w-5 h-5 text-primary" />
+                Showroom-Besuch
               </h3>
               <p className="text-sm text-muted-foreground">
-                Unsere Partner holen Ihre Küche nach Terminabsprache bei Ihnen zuhause ab – auch
-                aus oberen Etagen.
+                Sehen, fühlen, erleben: Unsere Partner-Studios zeigen Ihnen Fronten,
+                Arbeitsplatten und Geräte live – ohne Kaufdruck.
               </p>
             </Card>
             <Card className="p-6">
               <h3 className="font-semibold mb-2 flex items-center gap-2">
                 <Wrench className="w-5 h-5 text-primary" />
-                Professionelle Demontage
+                Aufmass &amp; Montage
               </h3>
               <p className="text-sm text-muted-foreground">
-                Schreiner und Küchenmonteure demontieren Ihre Küche fachgerecht – Arbeitsplatte,
-                Geräte, Unterschränke werden sauber getrennt.
+                Vom professionellen Aufmass vor Ort bis zur finalen Installation:
+                Ausgebildete Küchenmonteure kümmern sich um alle Details.
               </p>
             </Card>
             <Card className="p-6">
               <h3 className="font-semibold mb-2 flex items-center gap-2">
                 <CheckCircle2 className="w-5 h-5 text-primary" />
-                Faire Abwicklung
+                Faire Konditionen
               </h3>
               <p className="text-sm text-muted-foreground">
-                Transparentes Angebot, sichere Bezahlung und ein vorgefertigter Kaufvertrag –
-                auch bei Abholung durch einen Partner.
+                Transparentes Angebot, rechtssicherer Vertrag und Nachbetreuung —
+                alle Partner durchlaufen unser KYC/KYB-Prüfverfahren.
               </p>
             </Card>
           </div>

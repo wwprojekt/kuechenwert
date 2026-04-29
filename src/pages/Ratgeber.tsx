@@ -7,24 +7,29 @@ import {
   AlertTriangle,
   ArrowRight,
   Users,
-  Wrench,
-  Truck,
+  Ruler,
   Calculator,
+  Gavel,
+  Sparkles,
+  Refrigerator,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
 import { BRAND } from "@/lib/brand";
 
 /**
- * Ratgeber/Guides hub for KüchenWert.
+ * Ratgeber/Guides hub for KuechenWert (Kaeufer-Perspektive).
  *
- * Phase 3.7 will add marken-spezifische Ratgeber (Nobilia, Häcker, SieMatic,
- * Ballerup, etc.) plus Situationsratgeber (Umzug, Scheidung, Renovierung).
- * Bis dahin zeigen wir die Kategorien als Platzhalter + Link in den Funnel.
+ * Kerngedanke: Der Ratgeber hilft Kund:innen, eine NEUE Kueche zu planen
+ * und zu kaufen — nicht zu verkaufen.
  *
- * Die alten Caravan-Ratgeber-Detailseiten (src/pages/ratgeber/RatgeberTemplate)
- * sind weiterhin unter /ratgeber/:slug erreichbar. Sobald neue Kuechen-Guides
- * produziert sind, wird das Array unten mit echten Links befuellt.
+ * Alle CTAs fuehren in Funnel A (Angebote einholen), den KuechenRechner
+ * (Budget einschaetzen) oder Funnel B (Studio-Preise unterbieten).
+ *
+ * Phase 3.7 (Marken-Ratgeber Nobilia/Haecker/SieMatic etc.) folgt wenn
+ * Markenliste + Content steht. Detailseiten unter /ratgeber/:slug sind
+ * weiterhin erreichbar, werden aber Stueck fuer Stueck auf Kuechen-Planung
+ * umgeschrieben.
  */
 
 type GuideCategory = {
@@ -36,65 +41,71 @@ type GuideCategory = {
 
 const guideCategories: GuideCategory[] = [
   {
-    title: "Küche richtig bewerten",
+    title: "Küche richtig planen",
     description:
-      "Wie Marke, Alter, Zustand und Ausstattung den Wiederverkaufswert Ihrer Küche beeinflussen.",
+      "Grundriss, Abmessungen, Arbeitszonen und Laufwege — so wird Ihre neue Küche wirklich alltagstauglich.",
+    icon: Ruler,
+    slug: "kueche-richtig-planen",
+  },
+  {
+    title: "Budget realistisch einschätzen",
+    description:
+      "Was kostet eine neue Küche wirklich? Wir zeigen typische Preisspannen nach Größe, Stil und Geräte-Level.",
     icon: Calculator,
-    slug: "kueche-richtig-bewerten",
+    slug: "kueche-budget-einschaetzen",
   },
   {
-    title: "Küchen-Demontage & Transport",
+    title: "Studio-Angebote richtig vergleichen",
     description:
-      "Worauf Sie bei Abbau, Verpackung und Transport Ihrer gebrauchten Küche achten sollten.",
-    icon: Truck,
-    slug: "kueche-demontage-transport",
+      "Worauf Sie bei Angeboten von Küchenstudios achten müssen — von Preis bis Versteckkosten.",
+    icon: Gavel,
+    slug: "kueche-angebote-vergleichen",
   },
   {
-    title: "Küche verkaufen oder entsorgen?",
+    title: "Geräte auswählen",
     description:
-      "Wann sich der Verkauf lohnt und wann es sinnvoller ist, die Küche zu spenden oder zu entsorgen.",
-    icon: ChefHat,
-    slug: "kueche-verkaufen-entsorgen",
-  },
-  {
-    title: "Geräte: mitverkaufen oder nicht?",
-    description:
-      "Backofen, Kühlschrank & Co. – welche Elektrogeräte den Preis steigern und welche Sie besser behalten.",
-    icon: Wrench,
-    slug: "kuechengeraete-mitverkaufen",
+      "Bosch, Siemens, Miele, Gaggenau: Welche Marke passt zu Ihrem Kochstil — und wo sich Premium wirklich lohnt.",
+    icon: Refrigerator,
+    slug: "kuechengeraete-waehlen",
   },
 ];
 
 const situationGuides: { label: string; description: string; slug: string }[] = [
   {
-    label: "Umzug",
-    description: "Alte Küche beim Umzug nicht mehr gebraucht? So verkaufen Sie sie fair und schnell.",
-    slug: "kueche-umzug-verkaufen",
+    label: "Erstkauf",
+    description:
+      "Erste eigene Küche? Wir zeigen Schritt für Schritt, wie Sie von der Idee zum Umzug-fertigen Ergebnis kommen.",
+    slug: "kueche-erstkauf",
   },
   {
     label: "Renovierung",
-    description: "Neue Küche geplant? Wir zeigen, wie Sie mit der alten Küche noch Geld machen.",
-    slug: "kueche-renovierung-verkaufen",
+    description:
+      "Alte Küche raus, neue rein — so planen Sie den Wechsel ohne wochenlange Baustelle.",
+    slug: "kueche-renovierung",
   },
   {
-    label: "Erbfall",
-    description: "Küche geerbt? So ermitteln Sie den Wert und finden den richtigen Käufer.",
-    slug: "kueche-erbfall-verkaufen",
+    label: "Hausbau",
+    description:
+      "Neubau? Wann planen Sie die Küche, wann bestellen, wann einbauen? Der richtige Ablauf spart bares Geld.",
+    slug: "kueche-hausbau",
   },
   {
-    label: "Scheidung",
-    description: "Gemeinsame Küche verkaufen – fair, transparent und ohne Streit.",
-    slug: "kueche-scheidung-verkaufen",
+    label: "Nach Umzug",
+    description:
+      "Umgezogen und die alte Küche passt nicht? So finden Sie schnell eine passende neue zum fairen Preis.",
+    slug: "kueche-nach-umzug",
   },
   {
-    label: "Immobilienverkauf",
-    description: "Haus oder Wohnung verkauft? So trennen Sie die Küche vom Objekt.",
-    slug: "kueche-immobilienverkauf",
+    label: "Kleines Budget",
+    description:
+      "Traumküche mit kleinem Geldbeutel: Welche Kompromisse lohnen sich — und bei welchen Sie lieber abwarten.",
+    slug: "kueche-kleines-budget",
   },
   {
-    label: "Mit Schaden",
-    description: "Kratzer, Wasserschaden, defekte Geräte? Auch beschädigte Küchen haben einen Wert.",
-    slug: "kueche-mit-schaden-verkaufen",
+    label: "Luxus & Design",
+    description:
+      "Bulthaup, SieMatic, Poggenpohl: Wenn das Beste gerade gut genug ist — das ist bei Designerküchen wichtig.",
+    slug: "kueche-luxus-design",
   },
 ];
 
@@ -103,8 +114,8 @@ const Ratgeber = () => {
     <PageLayout
       breadcrumbs={true}
       title={`Küchen-Ratgeber | ${BRAND.name}`}
-      description={`Ratgeber rund um den Verkauf gebrauchter Küchen: Bewertung, Demontage, Transport, Geräte und typische Verkaufssituationen – kompakt erklärt von ${BRAND.name}.`}
-      keywords="küchen ratgeber, küche verkaufen ratgeber, küche bewertung, küche demontage, küche transport, küche entsorgen"
+      description={`Ratgeber rund um die neue Küche: Planung, Budget, Angebotsvergleich, Geräteauswahl und typische Lebenssituationen – kompakt erklärt von ${BRAND.name}.`}
+      keywords="küchen ratgeber, neue küche planen, küchen budget, küchen angebote vergleichen, küchengeräte wählen, küchenkauf tipps"
       canonicalPath="/ratgeber"
     >
       <PageHero size="lg">
@@ -116,8 +127,8 @@ const Ratgeber = () => {
             Ihr <span className="gradient-text">Küchen-Ratgeber</span>
           </h1>
           <p className="text-lg md:text-xl text-muted-foreground mb-4 leading-relaxed">
-            Alles rund um Bewertung, Demontage, Transport und Verkauf Ihrer gebrauchten
-            Küche – in kompakten Experten-Guides zusammengefasst.
+            Alles rund um Planung, Budget, Angebotsvergleich und Geräteauswahl
+            für Ihre neue Küche — in kompakten Experten-Guides zusammengefasst.
           </p>
         </div>
       </PageHero>
@@ -131,7 +142,7 @@ const Ratgeber = () => {
             </div>
             <h2 className="text-3xl md:text-4xl font-bold mb-4">Die wichtigsten Themen</h2>
             <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-              Die häufigsten Fragen beim Verkauf einer gebrauchten Küche – verständlich erklärt.
+              Die häufigsten Fragen beim Kauf einer neuen Küche — verständlich erklärt.
             </p>
           </div>
 
@@ -160,7 +171,7 @@ const Ratgeber = () => {
                       to="/funnel/a"
                       className="inline-flex items-center gap-2 text-sm text-primary hover:underline font-medium"
                     >
-                      Kostenlose Bewertung starten
+                      Kostenlose Angebote einholen
                       <ArrowRight className="h-3.5 w-3.5" />
                     </Link>
                   </CardContent>
@@ -215,22 +226,24 @@ const Ratgeber = () => {
               Brauchen Sie persönliche Beratung?
             </h2>
             <p className="text-xl mb-8 opacity-95">
-              Unsere Experten helfen Ihnen gerne bei allen Fragen rund um Bewertung und Verkauf
-              Ihrer Küche.
+              Unser Küchen-Team hilft Ihnen gerne bei allen Fragen rund um Planung,
+              Budget und Studio-Auswahl.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <Link to="/funnel/a">
                 <Button size="lg" variant="secondary" className="w-full sm:w-auto">
-                  Kostenlose Küchen-Bewertung
+                  <Sparkles className="h-4 w-4 mr-2" />
+                  Kostenlose Angebote einholen
                 </Button>
               </Link>
-              <Link to="/faq">
+              <Link to="/kuechenrechner">
                 <Button
                   size="lg"
                   variant="outline"
                   className="w-full sm:w-auto bg-white/10 border-white/30 hover:bg-white/20 text-white"
                 >
-                  Häufige Fragen
+                  <Calculator className="h-4 w-4 mr-2" />
+                  Budget-Check
                 </Button>
               </Link>
             </div>

@@ -75,31 +75,36 @@ export default RelatedContent;
  */
 export const verkaufenRelatedLinks: RelatedLink[] = [
   {
-    title: "Küchen-Wertrechner",
-    description: "Erhalten Sie in 4 Schritten eine kostenlose Sofort-Schätzung für Ihre Küche",
-    href: "/wertrechner",
+    title: "KüchenRechner",
+    description: "In 4 Schritten eine realistische Preis-Schätzung für Ihre neue Küche erhalten — ohne Kontaktdaten",
+    href: "/kuechenrechner",
   },
   {
-    title: "Angebote vergleichen",
-    description: "Mehrere geprüfte Küchen-Händler bieten — Sie vergleichen und entscheiden",
+    title: "Studio-Preis unterbieten",
+    description: "Angebot vom Küchenstudio hochladen — geprüfte Händler unterbieten in 72 Stunden",
     href: "/funnel/b",
   },
   {
     title: "FAQ",
-    description: "Antworten auf häufig gestellte Fragen zum Küchen-Verkauf",
+    description: "Antworten auf häufig gestellte Fragen rund um die neue Traumküche",
     href: "/faq",
   },
 ];
 
 export const kaufenRelatedLinks: RelatedLink[] = [
   {
-    title: "Traumküche planen",
-    description: "KI-gestützter Konfigurator entwirft 3 Varianten Ihrer Traumküche",
+    title: "Kostenlose Angebote erhalten",
+    description: "Wünsche angeben — geprüfte Küchenstudios melden sich mit passenden Angeboten",
+    href: "/funnel/a",
+  },
+  {
+    title: "Traumküche visualisieren",
+    description: "KI-gestützter Planer entwirft 3 Varianten Ihrer Wunsch-Küche (bald verfügbar)",
     href: "/funnel/c",
   },
   {
     title: "FAQ",
-    description: "Häufig gestellte Fragen zum Küchen-Kauf und zur Vermittlung",
+    description: "Häufig gestellte Fragen rund um Planung, Vergleich & Kauf Ihrer neuen Küche",
     href: "/faq",
   },
   {
@@ -111,18 +116,18 @@ export const kaufenRelatedLinks: RelatedLink[] = [
 
 export const haendlerRelatedLinks: RelatedLink[] = [
   {
-    title: "Küchen-Händler werden",
-    description: "Alle Infos zur Registrierung, Provision und dem Vermittlungsprozess",
+    title: "Küchenstudio-Partner werden",
+    description: "Alle Infos zu Lead-Konditionen, Reverse-Auktion und Vermittlungsprozess",
     href: "/haendler",
   },
   {
-    title: "Händler-Registrierung",
-    description: "Jetzt kostenlos als Küchen-Händler registrieren und Leads erhalten",
+    title: "Studio-Registrierung",
+    description: "Jetzt kostenlos als Küchenstudio registrieren und qualifizierte Leads erhalten",
     href: "/register/haendler",
   },
   {
     title: "Preise",
-    description: "Transparente Konditionen für Küchen-Händler",
+    description: "Transparente Konditionen für Küchenstudios & Händler",
     href: "/preise",
   },
   {
@@ -132,7 +137,7 @@ export const haendlerRelatedLinks: RelatedLink[] = [
   },
   {
     title: "FAQ",
-    description: "Häufig gestellte Fragen zum Küchen-Händler-Partnerprogramm",
+    description: "Häufig gestellte Fragen zum Küchenstudio-Partnerprogramm",
     href: "/faq",
   },
 ];

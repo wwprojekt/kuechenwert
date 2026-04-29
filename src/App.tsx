@@ -49,6 +49,7 @@ const Haendler = lazyRetry(() => import("./pages/Haendler"));
 const Ankaufstationen = lazyRetry(() => import("./pages/Ankaufstationen"));
 const Wertermittlung = lazyRetry(() => import("./pages/Wertermittlung"));
 const Wertrechner = lazyRetry(() => import("./pages/Wertrechner"));
+const Kuechenrechner = lazyRetry(() => import("./pages/Kuechenrechner"));
 
 // Legal pages
 const Impressum = lazyRetry(() => import("./pages/Impressum"));
@@ -222,8 +223,11 @@ const App = () => (
               <Route path="/verkaufen/wizard" element={<Navigate to="/funnel/a" replace />} />
               <Route path="/verkaufen/danke" element={<VerkaufenDanke />} />
               <Route path="/ankaufstationen" element={<Ankaufstationen />} />
+              {/* Legacy Wert-Routen → neuer KuechenRechner (Phase 3 Rebrand).
+                  Komponenten liefern nur noch <Navigate to="/kuechenrechner" />. */}
               <Route path="/wertermittlung" element={<Wertermittlung />} />
               <Route path="/wertrechner" element={<Wertrechner />} />
+              <Route path="/kuechenrechner" element={<Kuechenrechner />} />
               <Route path="/kaufen" element={<Kaufen />} />
               <Route path="/auktion/:id" element={<AuctionRoute />} />
 

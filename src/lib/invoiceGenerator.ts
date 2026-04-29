@@ -254,7 +254,7 @@ class InvoiceGeneratorService {
 <body>
   <div class="header">
     <div class="company-info">
-      <h1>${escapeHtml(settings?.site_name || 'CaravanWert')}</h1>
+      <h1>${escapeHtml(settings?.site_name || 'KüchenWert')}</h1>
       <p>${escapeHtml(settings?.company_address || '')}${settings?.company_address ? '<br>' : ''}${escapeHtml(settings?.company_postal_code || '')} ${escapeHtml(settings?.company_city || '')}${(settings?.company_postal_code || settings?.company_city) ? '<br>' : ''}${escapeHtml(settings?.company_country || 'Deutschland')}</p>
       <p>Tel: ${escapeHtml(settings?.support_phone || '')}<br>
          E-Mail: ${escapeHtml(settings?.contact_email || '')}</p>
@@ -328,11 +328,11 @@ class InvoiceGeneratorService {
   </div>
 
   <p>Vielen Dank für Ihr Vertrauen!</p>
-  <p>Ihr ${escapeHtml(settings?.site_name || 'CaravanWert')} Team</p>
+  <p>Ihr ${escapeHtml(settings?.site_name || 'KüchenWert')} Team</p>
 
   <div class="footer">
     <div class="text-center">
-      <p>${escapeHtml(settings?.site_name || 'CaravanWert')} • ${settings?.managing_director ? `Geschäftsführer: ${escapeHtml(settings.managing_director)}` : '[Geschäftsführer BITTE ERGÄNZEN]'} • ${escapeHtml(settings?.hrb_number || '[HRB BITTE ERGÄNZEN]')}</p>
+      <p>${escapeHtml(settings?.site_name || 'KüchenWert')} • ${settings?.managing_director ? `Geschäftsführer: ${escapeHtml(settings.managing_director)}` : '[Geschäftsführer BITTE ERGÄNZEN]'} • ${escapeHtml(settings?.hrb_number || '[HRB BITTE ERGÄNZEN]')}</p>
       <p>${settings?.tax_number ? `Steuernummer: ${escapeHtml(settings.tax_number)}` : '[Steuernummer BITTE ERGÄNZEN]'} • ${settings?.ust_id ? `USt-ID: ${escapeHtml(settings.ust_id)}` : '[USt-ID BITTE ERGÄNZEN]'}</p>
     </div>
   </div>

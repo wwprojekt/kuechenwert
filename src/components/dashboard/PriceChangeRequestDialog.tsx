@@ -18,7 +18,7 @@ import { BRAND } from "@/lib/brand";
 import { Mail, Loader2 } from "lucide-react";
 
 /**
- * Dialog für Verkäufer, um beim CaravanWert-Team eine Preisänderung
+ * Dialog für Verkäufer, um beim KüchenWert-Team eine Preisänderung
  * für ein laufendes Inserat (Auktion active/kaufchance) anzufragen.
  *
  * Nutzt die Edge Function `request-price-change`, die ownership prüft,
@@ -145,7 +145,7 @@ export function PriceChangeRequestDialog({
     onSuccess: () => {
       toast({
         title: "Anfrage übermittelt",
-        description: "Das CaravanWert-Team hat Ihre Anfrage erhalten und meldet sich in Kürze per E-Mail.",
+        description: `Das ${BRAND.name}-Team hat Ihre Anfrage erhalten und meldet sich in Kürze per E-Mail.`,
       });
       queryClient.invalidateQueries({ queryKey: ["pendingPriceRequest", kitchenId] });
       reset();
@@ -176,7 +176,7 @@ export function PriceChangeRequestDialog({
             Preisanpassung anfragen
           </DialogTitle>
           <DialogDescription>
-            Während die Auktion läuft, übernimmt das CaravanWert-Team die Preisanpassung. Bitte geben Sie Ihren Wunsch und einen kurzen Grund an – Sie erhalten eine Antwort per E-Mail.
+            Während die Auktion läuft, übernimmt das {BRAND.name}-Team die Preisanpassung. Bitte geben Sie Ihren Wunsch und einen kurzen Grund an – Sie erhalten eine Antwort per E-Mail.
           </DialogDescription>
         </DialogHeader>
 

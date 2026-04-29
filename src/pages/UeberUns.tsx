@@ -204,8 +204,8 @@ const UeberUns = () => {
                   — haben wir umfangreiche Erfahrung in der digitalen
                   Vermittlung und Lead-Generierung gesammelt. Diese Expertise
                   übertragen wir nun auf den Küchen-Markt: Wir bringen
-                  Verkäufer und geprüfte Küchen-Händler zusammen — schnell,
-                  sicher und kostenlos für Privatverkäufer.
+                  Küchen-Käufer und geprüfte Küchenstudios zusammen — schnell,
+                  sicher und kostenlos für Privatkunden.
                 </p>
                 <p>
                   Unsere Plattform wächst stetig. Wir arbeiten kontinuierlich

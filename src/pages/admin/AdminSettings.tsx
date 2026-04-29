@@ -631,7 +631,7 @@ export default function AdminSettings() {
                     id="inv-company-name"
                     value={formData.site_name || ''}
                     onChange={(e) => updateField('site_name', e.target.value)}
-                    placeholder="CaravanWert GmbH"
+                    placeholder="KüchenWert GmbH"
                   />
                   <p className="text-xs text-muted-foreground">
                     Wird aus den allgemeinen Einstellungen übernommen
@@ -1030,7 +1030,7 @@ export default function AdminSettings() {
                   <h4 className="font-semibold text-foreground mb-1">Rechnungsvorschau</h4>
                   <p className="text-sm text-muted-foreground">
                     Alle hier eingetragenen Daten werden automatisch auf jede neue Rechnung übernommen.
-                    Die Rechnungen werden im CaravanWert-Design erstellt und enthalten Ihre Firmendaten,
+                    Die Rechnungen werden im KüchenWert-Design erstellt und enthalten Ihre Firmendaten,
                     Bankverbindung und steuerlichen Angaben. Änderungen gelten nur für zukünftige Rechnungen.
                   </p>
                   <p className="text-sm text-muted-foreground mt-2">

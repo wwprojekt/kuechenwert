@@ -3,132 +3,40 @@
         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
         xsi:schemaLocation="http://www.sitemaps.org/schemas/sitemap/0.9
         http://www.sitemaps.org/schemas/sitemap/0.9/sitemap.xsd">
-  <!-- Main Pages -->
-  <url><loc>https://caravanwert.de/</loc><lastmod>2026-03-22</lastmod><changefreq>daily</changefreq><priority>1.0</priority></url>
-  <url><loc>https://caravanwert.de/verkaufen</loc><lastmod>2026-03-22</lastmod><changefreq>weekly</changefreq><priority>0.9</priority></url>
-  <url><loc>https://caravanwert.de/kaufen</loc><lastmod>2026-03-22</lastmod><changefreq>daily</changefreq><priority>0.9</priority></url>
-  <url><loc>https://caravanwert.de/ankaufstationen</loc><lastmod>2026-03-22</lastmod><changefreq>weekly</changefreq><priority>0.8</priority></url>
-  <url><loc>https://caravanwert.de/haendler</loc><lastmod>2026-03-22</lastmod><changefreq>monthly</changefreq><priority>0.8</priority></url>
-  <url><loc>https://caravanwert.de/wertermittlung</loc><lastmod>2026-03-22</lastmod><changefreq>weekly</changefreq><priority>0.8</priority></url>
-  <url><loc>https://caravanwert.de/wertrechner</loc><lastmod>2026-03-22</lastmod><changefreq>weekly</changefreq><priority>0.8</priority></url>
-  <url><loc>https://caravanwert.de/ratgeber</loc><lastmod>2026-03-22</lastmod><changefreq>weekly</changefreq><priority>0.7</priority></url>
-  <url><loc>https://caravanwert.de/kontakt</loc><lastmod>2026-03-22</lastmod><changefreq>monthly</changefreq><priority>0.6</priority></url>
-  <url><loc>https://caravanwert.de/ueber-uns</loc><lastmod>2026-03-22</lastmod><changefreq>monthly</changefreq><priority>0.6</priority></url>
-  <url><loc>https://caravanwert.de/faq</loc><lastmod>2026-03-22</lastmod><changefreq>weekly</changefreq><priority>0.7</priority></url>
-  <url><loc>https://caravanwert.de/blog</loc><lastmod>2026-03-22</lastmod><changefreq>daily</changefreq><priority>0.7</priority></url>
-  <url><loc>https://caravanwert.de/preise</loc><lastmod>2026-03-22</lastmod><changefreq>monthly</changefreq><priority>0.6</priority></url>
-  <!-- SEO Landing Pages -->
-  <url><loc>https://caravanwert.de/wohnmobil-verkaufen</loc><lastmod>2026-03-22</lastmod><changefreq>weekly</changefreq><priority>0.9</priority></url>
-  <url><loc>https://caravanwert.de/wohnwagen-verkaufen</loc><lastmod>2026-03-22</lastmod><changefreq>weekly</changefreq><priority>0.9</priority></url>
-  <url><loc>https://caravanwert.de/was-ist-mein-wohnmobil-wert</loc><lastmod>2026-03-22</lastmod><changefreq>weekly</changefreq><priority>0.8</priority></url>
-  <url><loc>https://caravanwert.de/wohnmobil-wertermittlung-kostenlos</loc><lastmod>2026-03-22</lastmod><changefreq>weekly</changefreq><priority>0.8</priority></url>
-  <url><loc>https://caravanwert.de/wir-kaufen-dein-wohnmobil</loc><lastmod>2026-03-22</lastmod><changefreq>weekly</changefreq><priority>0.8</priority></url>
-  <url><loc>https://caravanwert.de/wieviel-ist-mein-wohnmobil-wert</loc><lastmod>2026-03-22</lastmod><changefreq>weekly</changefreq><priority>0.8</priority></url>
-  <!-- Ratgeber: Hymer -->
-  <url><loc>https://caravanwert.de/ratgeber/hymer-wohnmobil-verkaufen</loc><lastmod>2026-03-22</lastmod><changefreq>monthly</changefreq><priority>0.7</priority></url>
-  <url><loc>https://caravanwert.de/ratgeber/was-kostet-mein-hymer-wohnmobil</loc><lastmod>2026-03-22</lastmod><changefreq>monthly</changefreq><priority>0.7</priority></url>
-  <url><loc>https://caravanwert.de/ratgeber/hymer-wohnmobil-wert-ermitteln</loc><lastmod>2026-03-22</lastmod><changefreq>monthly</changefreq><priority>0.7</priority></url>
-  <url><loc>https://caravanwert.de/ratgeber/wie-verkaufe-ich-mein-hymer-wohnmobil</loc><lastmod>2026-03-22</lastmod><changefreq>monthly</changefreq><priority>0.7</priority></url>
-  <url><loc>https://caravanwert.de/ratgeber/hymer-wohnmobil-versteigern</loc><lastmod>2026-03-22</lastmod><changefreq>monthly</changefreq><priority>0.7</priority></url>
-  <!-- Ratgeber: Dethleffs -->
-  <url><loc>https://caravanwert.de/ratgeber/dethleffs-wohnmobil-verkaufen</loc><lastmod>2026-03-22</lastmod><changefreq>monthly</changefreq><priority>0.7</priority></url>
-  <url><loc>https://caravanwert.de/ratgeber/was-kostet-mein-dethleffs-wohnmobil</loc><lastmod>2026-03-22</lastmod><changefreq>monthly</changefreq><priority>0.7</priority></url>
-  <url><loc>https://caravanwert.de/ratgeber/dethleffs-wohnmobil-wert-ermitteln</loc><lastmod>2026-03-22</lastmod><changefreq>monthly</changefreq><priority>0.7</priority></url>
-  <url><loc>https://caravanwert.de/ratgeber/wie-verkaufe-ich-mein-dethleffs-wohnmobil</loc><lastmod>2026-03-22</lastmod><changefreq>monthly</changefreq><priority>0.7</priority></url>
-  <url><loc>https://caravanwert.de/ratgeber/dethleffs-wohnmobil-versteigern</loc><lastmod>2026-03-22</lastmod><changefreq>monthly</changefreq><priority>0.7</priority></url>
-  <!-- Ratgeber: Knaus -->
-  <url><loc>https://caravanwert.de/ratgeber/knaus-wohnmobil-verkaufen</loc><lastmod>2026-03-22</lastmod><changefreq>monthly</changefreq><priority>0.7</priority></url>
-  <url><loc>https://caravanwert.de/ratgeber/was-kostet-mein-knaus-wohnmobil</loc><lastmod>2026-03-22</lastmod><changefreq>monthly</changefreq><priority>0.7</priority></url>
-  <url><loc>https://caravanwert.de/ratgeber/knaus-wohnmobil-wert-ermitteln</loc><lastmod>2026-03-22</lastmod><changefreq>monthly</changefreq><priority>0.7</priority></url>
-  <url><loc>https://caravanwert.de/ratgeber/wie-verkaufe-ich-mein-knaus-wohnmobil</loc><lastmod>2026-03-22</lastmod><changefreq>monthly</changefreq><priority>0.7</priority></url>
-  <url><loc>https://caravanwert.de/ratgeber/knaus-wohnmobil-versteigern</loc><lastmod>2026-03-22</lastmod><changefreq>monthly</changefreq><priority>0.7</priority></url>
-  <!-- Ratgeber: Buerstner -->
-  <url><loc>https://caravanwert.de/ratgeber/buerstner-wohnmobil-verkaufen</loc><lastmod>2026-03-22</lastmod><changefreq>monthly</changefreq><priority>0.7</priority></url>
-  <url><loc>https://caravanwert.de/ratgeber/was-kostet-mein-buerstner-wohnmobil</loc><lastmod>2026-03-22</lastmod><changefreq>monthly</changefreq><priority>0.7</priority></url>
-  <url><loc>https://caravanwert.de/ratgeber/buerstner-wohnmobil-wert-ermitteln</loc><lastmod>2026-03-22</lastmod><changefreq>monthly</changefreq><priority>0.7</priority></url>
-  <url><loc>https://caravanwert.de/ratgeber/wie-verkaufe-ich-mein-buerstner-wohnmobil</loc><lastmod>2026-03-22</lastmod><changefreq>monthly</changefreq><priority>0.7</priority></url>
-  <url><loc>https://caravanwert.de/ratgeber/buerstner-wohnmobil-versteigern</loc><lastmod>2026-03-22</lastmod><changefreq>monthly</changefreq><priority>0.7</priority></url>
-  <!-- Ratgeber: Carthago -->
-  <url><loc>https://caravanwert.de/ratgeber/carthago-wohnmobil-verkaufen</loc><lastmod>2026-03-22</lastmod><changefreq>monthly</changefreq><priority>0.7</priority></url>
-  <url><loc>https://caravanwert.de/ratgeber/was-kostet-mein-carthago-wohnmobil</loc><lastmod>2026-03-22</lastmod><changefreq>monthly</changefreq><priority>0.7</priority></url>
-  <url><loc>https://caravanwert.de/ratgeber/carthago-wohnmobil-wert-ermitteln</loc><lastmod>2026-03-22</lastmod><changefreq>monthly</changefreq><priority>0.7</priority></url>
-  <url><loc>https://caravanwert.de/ratgeber/wie-verkaufe-ich-mein-carthago-wohnmobil</loc><lastmod>2026-03-22</lastmod><changefreq>monthly</changefreq><priority>0.7</priority></url>
-  <url><loc>https://caravanwert.de/ratgeber/carthago-wohnmobil-versteigern</loc><lastmod>2026-03-22</lastmod><changefreq>monthly</changefreq><priority>0.7</priority></url>
-  <!-- Ratgeber: Hobby -->
-  <url><loc>https://caravanwert.de/ratgeber/hobby-wohnmobil-verkaufen</loc><lastmod>2026-03-22</lastmod><changefreq>monthly</changefreq><priority>0.7</priority></url>
-  <url><loc>https://caravanwert.de/ratgeber/was-kostet-mein-hobby-wohnmobil</loc><lastmod>2026-03-22</lastmod><changefreq>monthly</changefreq><priority>0.7</priority></url>
-  <url><loc>https://caravanwert.de/ratgeber/hobby-wohnmobil-wert-ermitteln</loc><lastmod>2026-03-22</lastmod><changefreq>monthly</changefreq><priority>0.7</priority></url>
-  <url><loc>https://caravanwert.de/ratgeber/wie-verkaufe-ich-mein-hobby-wohnmobil</loc><lastmod>2026-03-22</lastmod><changefreq>monthly</changefreq><priority>0.7</priority></url>
-  <url><loc>https://caravanwert.de/ratgeber/hobby-wohnmobil-versteigern</loc><lastmod>2026-03-22</lastmod><changefreq>monthly</changefreq><priority>0.7</priority></url>
-  <!-- Ratgeber: Adria -->
-  <url><loc>https://caravanwert.de/ratgeber/adria-wohnmobil-verkaufen</loc><lastmod>2026-03-22</lastmod><changefreq>monthly</changefreq><priority>0.7</priority></url>
-  <url><loc>https://caravanwert.de/ratgeber/was-kostet-mein-adria-wohnmobil</loc><lastmod>2026-03-22</lastmod><changefreq>monthly</changefreq><priority>0.7</priority></url>
-  <url><loc>https://caravanwert.de/ratgeber/adria-wohnmobil-wert-ermitteln</loc><lastmod>2026-03-22</lastmod><changefreq>monthly</changefreq><priority>0.7</priority></url>
-  <url><loc>https://caravanwert.de/ratgeber/wie-verkaufe-ich-mein-adria-wohnmobil</loc><lastmod>2026-03-22</lastmod><changefreq>monthly</changefreq><priority>0.7</priority></url>
-  <url><loc>https://caravanwert.de/ratgeber/adria-wohnmobil-versteigern</loc><lastmod>2026-03-22</lastmod><changefreq>monthly</changefreq><priority>0.7</priority></url>
-  <!-- Ratgeber: Weinsberg -->
-  <url><loc>https://caravanwert.de/ratgeber/weinsberg-wohnmobil-verkaufen</loc><lastmod>2026-03-22</lastmod><changefreq>monthly</changefreq><priority>0.7</priority></url>
-  <url><loc>https://caravanwert.de/ratgeber/was-kostet-mein-weinsberg-wohnmobil</loc><lastmod>2026-03-22</lastmod><changefreq>monthly</changefreq><priority>0.7</priority></url>
-  <url><loc>https://caravanwert.de/ratgeber/weinsberg-wohnmobil-wert-ermitteln</loc><lastmod>2026-03-22</lastmod><changefreq>monthly</changefreq><priority>0.7</priority></url>
-  <url><loc>https://caravanwert.de/ratgeber/wie-verkaufe-ich-mein-weinsberg-wohnmobil</loc><lastmod>2026-03-22</lastmod><changefreq>monthly</changefreq><priority>0.7</priority></url>
-  <url><loc>https://caravanwert.de/ratgeber/weinsberg-wohnmobil-versteigern</loc><lastmod>2026-03-22</lastmod><changefreq>monthly</changefreq><priority>0.7</priority></url>
-  <!-- Ratgeber: Carado -->
-  <url><loc>https://caravanwert.de/ratgeber/carado-wohnmobil-verkaufen</loc><lastmod>2026-03-22</lastmod><changefreq>monthly</changefreq><priority>0.7</priority></url>
-  <url><loc>https://caravanwert.de/ratgeber/was-kostet-mein-carado-wohnmobil</loc><lastmod>2026-03-22</lastmod><changefreq>monthly</changefreq><priority>0.7</priority></url>
-  <url><loc>https://caravanwert.de/ratgeber/carado-wohnmobil-wert-ermitteln</loc><lastmod>2026-03-22</lastmod><changefreq>monthly</changefreq><priority>0.7</priority></url>
-  <url><loc>https://caravanwert.de/ratgeber/wie-verkaufe-ich-mein-carado-wohnmobil</loc><lastmod>2026-03-22</lastmod><changefreq>monthly</changefreq><priority>0.7</priority></url>
-  <url><loc>https://caravanwert.de/ratgeber/carado-wohnmobil-versteigern</loc><lastmod>2026-03-22</lastmod><changefreq>monthly</changefreq><priority>0.7</priority></url>
-  <!-- Ratgeber: Sunlight -->
-  <url><loc>https://caravanwert.de/ratgeber/sunlight-wohnmobil-verkaufen</loc><lastmod>2026-03-22</lastmod><changefreq>monthly</changefreq><priority>0.7</priority></url>
-  <url><loc>https://caravanwert.de/ratgeber/was-kostet-mein-sunlight-wohnmobil</loc><lastmod>2026-03-22</lastmod><changefreq>monthly</changefreq><priority>0.7</priority></url>
-  <url><loc>https://caravanwert.de/ratgeber/sunlight-wohnmobil-wert-ermitteln</loc><lastmod>2026-03-22</lastmod><changefreq>monthly</changefreq><priority>0.7</priority></url>
-  <url><loc>https://caravanwert.de/ratgeber/wie-verkaufe-ich-mein-sunlight-wohnmobil</loc><lastmod>2026-03-22</lastmod><changefreq>monthly</changefreq><priority>0.7</priority></url>
-  <url><loc>https://caravanwert.de/ratgeber/sunlight-wohnmobil-versteigern</loc><lastmod>2026-03-22</lastmod><changefreq>monthly</changefreq><priority>0.7</priority></url>
-  <!-- Ratgeber: Poessl -->
-  <url><loc>https://caravanwert.de/ratgeber/poessl-wohnmobil-verkaufen</loc><lastmod>2026-03-22</lastmod><changefreq>monthly</changefreq><priority>0.7</priority></url>
-  <url><loc>https://caravanwert.de/ratgeber/was-kostet-mein-poessl-wohnmobil</loc><lastmod>2026-03-22</lastmod><changefreq>monthly</changefreq><priority>0.7</priority></url>
-  <url><loc>https://caravanwert.de/ratgeber/poessl-wohnmobil-wert-ermitteln</loc><lastmod>2026-03-22</lastmod><changefreq>monthly</changefreq><priority>0.7</priority></url>
-  <url><loc>https://caravanwert.de/ratgeber/wie-verkaufe-ich-mein-poessl-wohnmobil</loc><lastmod>2026-03-22</lastmod><changefreq>monthly</changefreq><priority>0.7</priority></url>
-  <url><loc>https://caravanwert.de/ratgeber/poessl-wohnmobil-versteigern</loc><lastmod>2026-03-22</lastmod><changefreq>monthly</changefreq><priority>0.7</priority></url>
-  <!-- Ratgeber: Chausson -->
-  <url><loc>https://caravanwert.de/ratgeber/chausson-wohnmobil-verkaufen</loc><lastmod>2026-03-22</lastmod><changefreq>monthly</changefreq><priority>0.7</priority></url>
-  <url><loc>https://caravanwert.de/ratgeber/was-kostet-mein-chausson-wohnmobil</loc><lastmod>2026-03-22</lastmod><changefreq>monthly</changefreq><priority>0.7</priority></url>
-  <url><loc>https://caravanwert.de/ratgeber/chausson-wohnmobil-wert-ermitteln</loc><lastmod>2026-03-22</lastmod><changefreq>monthly</changefreq><priority>0.7</priority></url>
-  <url><loc>https://caravanwert.de/ratgeber/wie-verkaufe-ich-mein-chausson-wohnmobil</loc><lastmod>2026-03-22</lastmod><changefreq>monthly</changefreq><priority>0.7</priority></url>
-  <url><loc>https://caravanwert.de/ratgeber/chausson-wohnmobil-versteigern</loc><lastmod>2026-03-22</lastmod><changefreq>monthly</changefreq><priority>0.7</priority></url>
-  <!-- Ratgeber: Rapido -->
-  <url><loc>https://caravanwert.de/ratgeber/rapido-wohnmobil-verkaufen</loc><lastmod>2026-03-22</lastmod><changefreq>monthly</changefreq><priority>0.7</priority></url>
-  <url><loc>https://caravanwert.de/ratgeber/was-kostet-mein-rapido-wohnmobil</loc><lastmod>2026-03-22</lastmod><changefreq>monthly</changefreq><priority>0.7</priority></url>
-  <url><loc>https://caravanwert.de/ratgeber/rapido-wohnmobil-wert-ermitteln</loc><lastmod>2026-03-22</lastmod><changefreq>monthly</changefreq><priority>0.7</priority></url>
-  <url><loc>https://caravanwert.de/ratgeber/wie-verkaufe-ich-mein-rapido-wohnmobil</loc><lastmod>2026-03-22</lastmod><changefreq>monthly</changefreq><priority>0.7</priority></url>
-  <url><loc>https://caravanwert.de/ratgeber/rapido-wohnmobil-versteigern</loc><lastmod>2026-03-22</lastmod><changefreq>monthly</changefreq><priority>0.7</priority></url>
-  <!-- Ratgeber: Concorde -->
-  <url><loc>https://caravanwert.de/ratgeber/concorde-wohnmobil-verkaufen</loc><lastmod>2026-03-22</lastmod><changefreq>monthly</changefreq><priority>0.7</priority></url>
-  <url><loc>https://caravanwert.de/ratgeber/was-kostet-mein-concorde-wohnmobil</loc><lastmod>2026-03-22</lastmod><changefreq>monthly</changefreq><priority>0.7</priority></url>
-  <url><loc>https://caravanwert.de/ratgeber/concorde-wohnmobil-wert-ermitteln</loc><lastmod>2026-03-22</lastmod><changefreq>monthly</changefreq><priority>0.7</priority></url>
-  <url><loc>https://caravanwert.de/ratgeber/wie-verkaufe-ich-mein-concorde-wohnmobil</loc><lastmod>2026-03-22</lastmod><changefreq>monthly</changefreq><priority>0.7</priority></url>
-  <url><loc>https://caravanwert.de/ratgeber/concorde-wohnmobil-versteigern</loc><lastmod>2026-03-22</lastmod><changefreq>monthly</changefreq><priority>0.7</priority></url>
-  <!-- Ratgeber: Laika -->
-  <url><loc>https://caravanwert.de/ratgeber/laika-wohnmobil-verkaufen</loc><lastmod>2026-03-22</lastmod><changefreq>monthly</changefreq><priority>0.7</priority></url>
-  <url><loc>https://caravanwert.de/ratgeber/was-kostet-mein-laika-wohnmobil</loc><lastmod>2026-03-22</lastmod><changefreq>monthly</changefreq><priority>0.7</priority></url>
-  <url><loc>https://caravanwert.de/ratgeber/laika-wohnmobil-wert-ermitteln</loc><lastmod>2026-03-22</lastmod><changefreq>monthly</changefreq><priority>0.7</priority></url>
-  <url><loc>https://caravanwert.de/ratgeber/wie-verkaufe-ich-mein-laika-wohnmobil</loc><lastmod>2026-03-22</lastmod><changefreq>monthly</changefreq><priority>0.7</priority></url>
-  <url><loc>https://caravanwert.de/ratgeber/laika-wohnmobil-versteigern</loc><lastmod>2026-03-22</lastmod><changefreq>monthly</changefreq><priority>0.7</priority></url>
-  <!-- Ratgeber: Schaeden und Situationen -->
-  <url><loc>https://caravanwert.de/ratgeber/wohnmobil-mit-motorschaden-verkaufen</loc><lastmod>2026-03-22</lastmod><changefreq>monthly</changefreq><priority>0.7</priority></url>
-  <url><loc>https://caravanwert.de/ratgeber/wohnmobil-mit-wasserschaden-verkaufen</loc><lastmod>2026-03-22</lastmod><changefreq>monthly</changefreq><priority>0.7</priority></url>
-  <url><loc>https://caravanwert.de/ratgeber/wohnmobil-mit-getriebeschaden-verkaufen</loc><lastmod>2026-03-22</lastmod><changefreq>monthly</changefreq><priority>0.7</priority></url>
-  <url><loc>https://caravanwert.de/ratgeber/wohnmobil-mit-unfallschaden-verkaufen</loc><lastmod>2026-03-22</lastmod><changefreq>monthly</changefreq><priority>0.7</priority></url>
-  <url><loc>https://caravanwert.de/ratgeber/wohnmobil-mit-hagelschaden-verkaufen</loc><lastmod>2026-03-22</lastmod><changefreq>monthly</changefreq><priority>0.7</priority></url>
-  <url><loc>https://caravanwert.de/ratgeber/wohnmobil-mit-schimmel-verkaufen</loc><lastmod>2026-03-22</lastmod><changefreq>monthly</changefreq><priority>0.7</priority></url>
-  <url><loc>https://caravanwert.de/ratgeber/wohnmobil-ohne-tuev-verkaufen</loc><lastmod>2026-03-22</lastmod><changefreq>monthly</changefreq><priority>0.7</priority></url>
-  <url><loc>https://caravanwert.de/ratgeber/wohnmobil-mit-hoher-laufleistung-verkaufen</loc><lastmod>2026-03-22</lastmod><changefreq>monthly</changefreq><priority>0.7</priority></url>
-  <url><loc>https://caravanwert.de/ratgeber/wohnmobil-mit-reparaturstau-verkaufen</loc><lastmod>2026-03-22</lastmod><changefreq>monthly</changefreq><priority>0.7</priority></url>
-  <url><loc>https://caravanwert.de/ratgeber/wohnmobil-mit-leasingvertrag-verkaufen</loc><lastmod>2026-03-22</lastmod><changefreq>monthly</changefreq><priority>0.7</priority></url>
-  <url><loc>https://caravanwert.de/ratgeber/wohnmobil-trotz-finanzierung-verkaufen</loc><lastmod>2026-03-22</lastmod><changefreq>monthly</changefreq><priority>0.7</priority></url>
-  <url><loc>https://caravanwert.de/ratgeber/wohnmobil-im-erbfall-verkaufen</loc><lastmod>2026-03-22</lastmod><changefreq>monthly</changefreq><priority>0.7</priority></url>
-  <url><loc>https://caravanwert.de/ratgeber/wohnmobil-bei-scheidung-verkaufen</loc><lastmod>2026-03-22</lastmod><changefreq>monthly</changefreq><priority>0.7</priority></url>
-  <!-- Wizard -->
-  <url><loc>https://caravanwert.de/verkaufen/wizard</loc><lastmod>2026-03-22</lastmod><changefreq>weekly</changefreq><priority>0.8</priority></url>
-</urlset>
+  <!-- KuechenWert Sitemap
+       Diese statische sitemap.xml ist der Bundle-Fallback. In Production wird
+       sie durch die dynamische Edge-Function /sitemap (Supabase) ersetzt, die
+       auch Blog-Posts und neue Landing-Pages einschliesst (siehe nginx-Proxy
+       in docker/default.conf, Location = /sitemap.xml). -->
 
+  <!-- Main Pages -->
+  <url><loc>https://kuechenwert24.de/</loc><lastmod>2026-04-29</lastmod><changefreq>daily</changefreq><priority>1.0</priority></url>
+
+  <!-- Funnel-Einstiege -->
+  <url><loc>https://kuechenwert24.de/funnel/a</loc><lastmod>2026-04-29</lastmod><changefreq>weekly</changefreq><priority>0.9</priority></url>
+  <url><loc>https://kuechenwert24.de/funnel/b</loc><lastmod>2026-04-29</lastmod><changefreq>weekly</changefreq><priority>0.9</priority></url>
+  <url><loc>https://kuechenwert24.de/funnel/c</loc><lastmod>2026-04-29</lastmod><changefreq>weekly</changefreq><priority>0.9</priority></url>
+
+  <!-- Preis-/Budget-Rechner -->
+  <url><loc>https://kuechenwert24.de/kuechenrechner</loc><lastmod>2026-04-29</lastmod><changefreq>weekly</changefreq><priority>0.9</priority></url>
+
+  <!-- Content-Seiten -->
+  <url><loc>https://kuechenwert24.de/kaufen</loc><lastmod>2026-04-29</lastmod><changefreq>weekly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://kuechenwert24.de/haendler</loc><lastmod>2026-04-29</lastmod><changefreq>monthly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://kuechenwert24.de/ratgeber</loc><lastmod>2026-04-29</lastmod><changefreq>weekly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://kuechenwert24.de/blog</loc><lastmod>2026-04-29</lastmod><changefreq>daily</changefreq><priority>0.7</priority></url>
+  <url><loc>https://kuechenwert24.de/faq</loc><lastmod>2026-04-29</lastmod><changefreq>weekly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://kuechenwert24.de/preise</loc><lastmod>2026-04-29</lastmod><changefreq>monthly</changefreq><priority>0.6</priority></url>
+
+  <!-- Partner / Showrooms -->
+  <url><loc>https://kuechenwert24.de/ankaufstationen</loc><lastmod>2026-04-29</lastmod><changefreq>monthly</changefreq><priority>0.6</priority></url>
+
+  <!-- Unternehmen -->
+  <url><loc>https://kuechenwert24.de/ueber-uns</loc><lastmod>2026-04-29</lastmod><changefreq>monthly</changefreq><priority>0.6</priority></url>
+  <url><loc>https://kuechenwert24.de/kontakt</loc><lastmod>2026-04-29</lastmod><changefreq>monthly</changefreq><priority>0.6</priority></url>
+
+  <!-- Rechtliches -->
+  <url><loc>https://kuechenwert24.de/impressum</loc><lastmod>2026-04-29</lastmod><changefreq>yearly</changefreq><priority>0.3</priority></url>
+  <url><loc>https://kuechenwert24.de/datenschutz</loc><lastmod>2026-04-29</lastmod><changefreq>yearly</changefreq><priority>0.3</priority></url>
+  <url><loc>https://kuechenwert24.de/agb</loc><lastmod>2026-04-29</lastmod><changefreq>yearly</changefreq><priority>0.3</priority></url>
+</urlset>

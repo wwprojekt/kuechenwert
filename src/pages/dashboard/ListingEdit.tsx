@@ -17,6 +17,7 @@ import { withSessionRetry } from "@/lib/sessionGuard";
 import { useUserRole } from "@/hooks/useUserRole";
 import { SellerPhotoManager } from "@/components/dashboard/SellerPhotoManager";
 import { PriceChangeRequestDialog } from "@/components/dashboard/PriceChangeRequestDialog";
+import { BRAND } from "@/lib/brand";
 import { useState, useEffect } from "react";
 
 const VALID_TABS = ["basic", "technical", "dimensions", "interior", "equipment", "photos", "additional"];
@@ -528,7 +529,7 @@ export default function ListingEdit() {
                 <p className="text-sm text-orange-700 dark:text-orange-300">
                   Während die Auktion aktiv ist, können Sie das Inserat nicht direkt bearbeiten.
                   Stattdessen können Sie einen öffentlichen Nachtrag hinzufügen oder eine
-                  Preisanpassung beim CaravanWert-Team anfragen.
+                  Preisanpassung beim {BRAND.name}-Team anfragen.
                 </p>
               </div>
             </div>
@@ -642,7 +643,7 @@ export default function ListingEdit() {
                     />
                     {isDraftAuction && (
                       <p className="text-xs text-emerald-700 dark:text-emerald-400 font-medium">
-                        Inserat ist noch im Entwurf – Preis kann selbst geändert werden. Sobald der Admin freigibt, läuft die Anpassung über das CaravanWert-Team.
+                        Inserat ist noch im Entwurf – Preis kann selbst geändert werden. Sobald der Admin freigibt, läuft die Anpassung über das {BRAND.name}-Team.
                       </p>
                     )}
                     {canEditPricesSelf && (
@@ -652,7 +653,7 @@ export default function ListingEdit() {
                     )}
                     {hasAuction && !isDraftAuction && (
                       <p className="text-xs text-amber-600 font-medium">
-                        Der Mindestpreis kann nur über das CaravanWert-Team geändert werden, sobald die Auktion läuft (siehe Lock-Banner oben).
+                        Der Mindestpreis kann nur über das {BRAND.name}-Team geändert werden, sobald die Auktion läuft (siehe Lock-Banner oben).
                       </p>
                     )}
                     {!hasAuction && isAuctionListing && !formData.instant_price && (

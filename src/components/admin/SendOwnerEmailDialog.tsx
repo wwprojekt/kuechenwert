@@ -1,7 +1,11 @@
 /**
  * SendOwnerEmailDialog
- * Admin-Dialog zum Versenden individueller E-Mails an Wohnmobil-Besitzer
- * Nutzt die bestehende send-admin-email Edge Function mit CaravanWert-Branding
+ * Admin-Dialog zum Versenden individueller E-Mails an Inserat-Verkaeufer
+ * Nutzt die bestehende send-admin-email Edge Function mit KuechenWert-Branding.
+ *
+ * Hinweis: Der Owner-E-Mail-Flow stammt noch aus dem Auktions-/Inserat-Modell
+ * (Caravanwert-Erbe). Fuer den aktuellen KuechenWert-Lead-Flow nicht relevant,
+ * bleibt aber fuer den Admin-Kitchens-/Auctions-Bereich nutzbar.
  */
 
 import { useState } from "react";
@@ -229,7 +233,7 @@ export function SendOwnerEmailDialog({
             E-Mail an Fahrzeugbesitzer
           </DialogTitle>
           <DialogDescription>
-            Senden Sie eine E-Mail im CaravanWert-Design an{" "}
+            Senden Sie eine E-Mail im {BRAND.name}-Design an{" "}
             <span className="font-semibold text-foreground">{sellerName}</span>
             {seller.email && (
               <span className="text-muted-foreground"> ({seller.email})</span>
@@ -247,7 +251,7 @@ export function SendOwnerEmailDialog({
             <p className="text-sm text-muted-foreground text-center">
               Die E-Mail wurde an <span className="font-medium">{seller.email}</span> gesendet
               <br />
-              im professionellen CaravanWert-Layout.
+              im professionellen {BRAND.name}-Layout.
             </p>
           </div>
         ) : (
@@ -324,7 +328,7 @@ export function SendOwnerEmailDialog({
                     Nachricht
                   </Label>
                   <div className="text-xs text-muted-foreground mb-1">
-                    Die Anrede "Guten Tag, {sellerName}" und die Signatur "Ihr CaravanWert Team" werden automatisch ergänzt.
+                    Die Anrede "Guten Tag, {sellerName}" und die Signatur "Ihr {BRAND.name} Team" werden automatisch ergänzt.
                   </div>
                   <Textarea
                     id="email-message"
@@ -340,7 +344,7 @@ export function SendOwnerEmailDialog({
                 <div className="flex items-start gap-2 p-3 rounded-lg bg-blue-50 border border-blue-200 text-sm">
                   <Info className="w-4 h-4 text-blue-500 mt-0.5 shrink-0" />
                   <span className="text-blue-700">
-                    Die E-Mail wird im professionellen CaravanWert-Layout versendet, mit Logo, Branding und Footer.
+                    Die E-Mail wird im professionellen {BRAND.name}-Layout versendet, mit Logo, Branding und Footer.
                   </span>
                 </div>
 

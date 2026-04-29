@@ -507,7 +507,7 @@ export function AdminManualSellDialog({
                 </ul>
                 <p className="text-xs text-amber-700 dark:text-amber-300">
                   Wähle das Konto, mit dem der Händler tatsächlich auf
-                  CaravanWert arbeitet (Bid-Historie / Login). Sonst
+                  KüchenWert arbeitet (Bid-Historie / Login). Sonst
                   erscheint der Kaufvertrag nicht in seinem Dashboard.
                 </p>
               </div>

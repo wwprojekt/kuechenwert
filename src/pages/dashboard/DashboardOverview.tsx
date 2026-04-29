@@ -692,7 +692,7 @@ export default function DashboardOverview() {
               <p className="text-muted-foreground mb-6 max-w-md mx-auto text-sm">
                 Erstellen Sie Ihr Inserat und erreichen Sie tausende potenzielle
                 Käufer auf{" "}
-                {settings?.site_name || "CaravanWert"}.
+                {settings?.site_name || "KüchenWert"}.
               </p>
               <Link to="/verkaufen/wizard">
                 <Button

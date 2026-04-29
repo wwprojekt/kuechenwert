@@ -16,6 +16,7 @@ import { useToast } from "@/hooks/use-toast";
 import { z } from "zod";
 import { logger } from "@/lib/logger";
 import { handleValidationError, handleAuthError } from "@/lib/errorLogService";
+import { BRAND } from "@/lib/brand";
 import {
   Dialog,
   DialogContent,
@@ -141,7 +142,7 @@ const SetPasswordDialog = ({ open }: SetPasswordDialogProps) => {
             </div>
             <DialogHeader className="text-center">
               <DialogTitle className="text-xl text-center">
-                Willkommen bei CaravanWert!
+                Willkommen bei {BRAND.name}!
               </DialogTitle>
               <DialogDescription className="text-center">
                 Ihr Passwort wurde gespeichert. Sie werden gleich zu Ihrem Dashboard weitergeleitet.

@@ -666,7 +666,7 @@ const AdminErrorLogs = () => {
       }
       if (searchQuery.trim()) activeFilters.push(`Suche: "${searchQuery}"`);
 
-      let md = `# Fehlerprotokoll - CaravanWert\n\n`;
+      let md = `# Fehlerprotokoll - KüchenWert\n\n`;
       md += `**Exportiert am:** ${exportDate}\n\n`;
       if (activeFilters.length > 0) {
         md += `**Aktive Filter:** ${activeFilters.join(' | ')}\n\n`;
@@ -813,7 +813,7 @@ const AdminErrorLogs = () => {
       });
 
       // Footer
-      md += `\n*Generiert von CaravanWert Admin — ${exportDate}*\n`;
+      md += `\n*Generiert von KüchenWert Admin — ${exportDate}*\n`;
 
       // Download
       const blob = new Blob([md], { type: 'text/markdown;charset=utf-8;' });

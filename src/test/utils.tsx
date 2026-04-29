@@ -20,7 +20,7 @@ const MockAuthContext = React.createContext({
 const MockSettingsContext = React.createContext({
   settings: {
     id: 'test',
-    site_name: 'CaravanWert Test',
+    site_name: 'KüchenWert Test',
     site_tagline: 'Test Tagline',
     site_description: 'Test Description',
     contact_email: 'test@example.com',

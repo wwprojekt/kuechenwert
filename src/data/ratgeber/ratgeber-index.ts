@@ -1,12 +1,18 @@
-// Public API for ratgeber data.
+// Public API fuer Ratgeber-Daten.
 //
-// IMPORTANT: this file must stay tiny. Do NOT add static `import` statements
-// for any of the heavy ratgeber-<brand>.ts data files here — they should be
-// reached only through the dynamic loader below so each brand/condition
-// becomes its own lazy chunk (~7–10 KB gzipped instead of one 116 KB blob).
+// Die Caravanwert-Ratgeber (15 Brand-Files + 2 Condition-Files) wurden beim
+// KuechenWert-Umbau entfernt. Dieses Modul bleibt als Loader-Geruest
+// bestehen, damit /ratgeber/:slug → RatgeberTemplate spaeter einfach mit
+// neuen Kuechen-Themen gefuettert werden kann (z.B. nobilia-kueche-planen,
+// grifflose-kueche-2026, l-kueche-kosten).
 //
-// The metadata used by the overview page and related-link rendering lives in
-// ratgeber-meta.ts (auto-generated, ~5 KB gzipped).
+// Um neuen Content zu registrieren:
+//   1. src/data/ratgeber/ratgeber-<topic>.ts mit einem `RatgeberConfig`
+//      Default-Export anlegen.
+//   2. Einen entsprechenden Eintrag in `ratgeberMeta` (ratgeber-meta.ts)
+//      ergaenzen, Feld `dataFile: "ratgeber-<topic>"`.
+//   3. Den neuen Dateipfad unten in `dataModules` eintragen, damit Vite das
+//      Modul in ein eigenes Chunk splitten kann.
 
 import type { RatgeberConfig } from "./ratgeber-types";
 import { ratgeberMeta, type RatgeberMeta } from "./ratgeber-meta";
@@ -14,30 +20,9 @@ import { ratgeberMeta, type RatgeberMeta } from "./ratgeber-meta";
 export type { RatgeberConfig, RatgeberMeta };
 export { ratgeberMeta };
 
-// Vite turns each entry below into its own code-split chunk that is fetched
-// only when a slug routed to that file is actually requested.
-//
-// IMPORTANT: this list MUST mirror every ratgeber-<group>.ts data file. Add
-// a new entry here whenever a new data file is added.
-const dataModules = import.meta.glob<Record<string, unknown>>([
-  "./ratgeber-adria.ts",
-  "./ratgeber-buerstner.ts",
-  "./ratgeber-carado.ts",
-  "./ratgeber-carthago.ts",
-  "./ratgeber-chausson.ts",
-  "./ratgeber-concorde.ts",
-  "./ratgeber-dethleffs.ts",
-  "./ratgeber-hobby.ts",
-  "./ratgeber-hymer.ts",
-  "./ratgeber-knaus.ts",
-  "./ratgeber-laika.ts",
-  "./ratgeber-poessl.ts",
-  "./ratgeber-rapido.ts",
-  "./ratgeber-sunlight.ts",
-  "./ratgeber-weinsberg.ts",
-  "./ratgeber-condition-damage.ts",
-  "./ratgeber-condition-situation.ts",
-]);
+// Derzeit leer — keine aktiven Ratgeber-Data-Files im Repo. Sobald
+// ratgeber-<topic>.ts-Files existieren, hier als Glob-Pattern ergaenzen.
+const dataModules = import.meta.glob<Record<string, unknown>>([]);
 
 const slugToFile = new Map<string, string>();
 for (const m of ratgeberMeta) {
@@ -55,8 +40,8 @@ function isRatgeberConfig(value: unknown, slug: string): value is RatgeberConfig
 
 /**
  * Loads the full RatgeberConfig for a given slug. Returns null when the slug
- * is unknown or the chunk fails to load. The returned promise resolves with
- * the cached chunk on subsequent calls — Vite memoises dynamic imports.
+ * is unknown or the chunk fails to load. Currently always returns null
+ * because no Kuechen-Ratgeber data files exist yet.
  */
 export async function loadRatgeberConfig(
   slug: string,

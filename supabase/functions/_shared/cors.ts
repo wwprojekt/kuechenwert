@@ -24,6 +24,11 @@
  */
 
 const ALLOWED_ORIGINS: string[] = [
+  'https://kuechenwert.de',
+  'https://www.kuechenwert.de',
+  'https://kuechenwert24.de',
+  'https://www.kuechenwert24.de',
+  // Legacy-Umleitungs-Domains (CaravanWert-Erbe, kann spaeter raus)
   'https://caravanwert.de',
   'https://www.caravanwert.de',
 ];

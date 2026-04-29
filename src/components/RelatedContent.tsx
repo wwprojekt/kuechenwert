@@ -99,7 +99,7 @@ export const kaufenRelatedLinks: RelatedLink[] = [
   },
   {
     title: "Traumküche visualisieren",
-    description: "KI-gestützter Planer entwirft 3 Varianten Ihrer Wunsch-Küche (bald verfügbar)",
+    description: "KI-gestützter Planer visualisiert Ihre Wunsch-Küche und schätzt den Preis",
     href: "/funnel/c",
   },
   {

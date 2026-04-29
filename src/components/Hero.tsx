@@ -177,7 +177,7 @@ const Hero = () => {
                   {
                     n: "C",
                     t: "Traumküche visualisieren",
-                    d: "Mit KI entwerfen & passenden Fachhändler finden — demnächst verfügbar",
+                    d: "Mit KI entwerfen, Preis schätzen, passendes Studio finden",
                     to: "/funnel/c",
                   },
                 ].map((s) => (

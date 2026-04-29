@@ -60,7 +60,7 @@ const channels: Channel[] = [
     ],
     cta: "/funnel/c",
     ctaLabel: "KI-Planer starten",
-    soon: true,
+    soon: false,
   },
 ];
 

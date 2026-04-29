@@ -36,6 +36,8 @@ worker/__pycache__/
 temp-*.json
 cookies.txt
 dokploy_cookies.txt
+dokploy-cookies.txt
+*-cookies.txt
 .diag-payload.json
 diag2.json
 gads-live-check.json

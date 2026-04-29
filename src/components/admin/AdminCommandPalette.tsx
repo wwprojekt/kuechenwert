@@ -16,12 +16,13 @@ import {
   LayoutDashboard, Car, Gavel, Users, Building2, Mail, Settings,
   TrendingUp, FileText, Calculator, Calendar, Shield, Search,
   MessageCircle, Star, AlertTriangle, CreditCard, FileSignature,
-  Scale, UserPlus, Receipt, TimerReset,
+  Scale, UserPlus, Receipt, TimerReset, Sparkles,
 } from "lucide-react";
 
 const ADMIN_PAGES = [
   { title: "Übersicht", path: "/admin", icon: LayoutDashboard, keywords: "dashboard startseite home" },
   { title: "Leads & Anfragen", path: "/admin/leads", icon: UserPlus, keywords: "wizard sessions anfragen kontakt" },
+  { title: "Traumküchen-KI (Funnel C)", path: "/admin/planner-sessions", icon: Sparkles, keywords: "ai ki fal flux openai planner renders visualisierung funnel c traumkueche" },
   { title: "Wohnmobile", path: "/admin/kitchens", icon: Car, keywords: "fahrzeuge kitchen" },
   { title: "Auktionen", path: "/admin/auctions", icon: Gavel, keywords: "gebote bieten versteigerung" },
   { title: "Nachauktions-Angebote", path: "/admin/offers", icon: Gavel, keywords: "kaufchance angebote" },

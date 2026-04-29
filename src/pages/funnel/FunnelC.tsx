@@ -143,25 +143,85 @@ const INITIAL_CONTACT: ContactData = {
   consentMarketing: false,
 };
 
+const STORAGE_KEY = "kw_funnel_c_state_v1";
+
+type PersistedState = {
+  step: WizardStep;
+  spec: Spec;
+  sessionToken: string | null;
+  imageUrl: string | null;
+  priceRange: PriceRange | null;
+  version: number;
+  contact: ContactData;
+};
+
+function loadPersisted(): Partial<PersistedState> | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const raw = sessionStorage.getItem(STORAGE_KEY);
+    return raw ? (JSON.parse(raw) as Partial<PersistedState>) : null;
+  } catch {
+    return null;
+  }
+}
+
+function savePersisted(state: PersistedState): void {
+  if (typeof window === "undefined") return;
+  try {
+    sessionStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+  } catch {
+    // quota oder iframe-Restriktion; silent fail
+  }
+}
+
+function clearPersisted(): void {
+  if (typeof window === "undefined") return;
+  try {
+    sessionStorage.removeItem(STORAGE_KEY);
+  } catch {
+    // silent
+  }
+}
+
 export default function FunnelC() {
   const navigate = useNavigate();
-  const [step, setStep] = useState<WizardStep>("spec");
-  const [spec, setSpec] = useState<Spec>(INITIAL_SPEC);
+  const persisted = useMemo(() => loadPersisted(), []);
+
+  const [step, setStep] = useState<WizardStep>(persisted?.step ?? "spec");
+  const [spec, setSpec] = useState<Spec>(persisted?.spec ?? INITIAL_SPEC);
 
   const [generating, setGenerating] = useState(false);
-  const [imageUrl, setImageUrl] = useState<string | null>(null);
-  const [sessionToken, setSessionToken] = useState<string | null>(null);
-  const [priceRange, setPriceRange] = useState<PriceRange | null>(null);
-  const [version, setVersion] = useState<number>(0);
+  const [imageUrl, setImageUrl] = useState<string | null>(persisted?.imageUrl ?? null);
+  const [sessionToken, setSessionToken] = useState<string | null>(
+    persisted?.sessionToken ?? null
+  );
+  const [priceRange, setPriceRange] = useState<PriceRange | null>(
+    persisted?.priceRange ?? null
+  );
+  const [version, setVersion] = useState<number>(persisted?.version ?? 0);
   const [genError, setGenError] = useState<string | null>(null);
 
-  const [contact, setContact] = useState<ContactData>(INITIAL_CONTACT);
+  const [contact, setContact] = useState<ContactData>(
+    persisted?.contact ?? INITIAL_CONTACT
+  );
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
 
   useEffect(() => {
     captureUtmParams();
   }, []);
+
+  useEffect(() => {
+    savePersisted({
+      step,
+      spec,
+      sessionToken,
+      imageUrl,
+      priceRange,
+      version,
+      contact,
+    });
+  }, [step, spec, sessionToken, imageUrl, priceRange, version, contact]);
 
   const canGenerate = useMemo(
     () => Boolean(spec.kitchen_form && spec.kitchen_style),
@@ -233,6 +293,7 @@ export default function FunnelC() {
       );
       if (error) throw new Error(error.message || "Netzwerkfehler");
       if (!data?.ok) throw new Error(data?.error || "Übermittlung fehlgeschlagen");
+      clearPersisted();
       navigate("/funnel/danke?funnel=traumkueche");
     } catch (err) {
       setSubmitError(err instanceof Error ? err.message : "Unbekannter Fehler");

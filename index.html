@@ -34,15 +34,11 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link rel="preconnect" href="https://gzqayoalwtmypndrmqes.supabase.co" crossorigin />
 
-    <!-- LCP-Hero-Image preload: wird aktuell via Unsplash-CDN geladen.
-         Sobald eigene Kuechen-Assets in /public/images/ liegen, hier
-         wieder ein preload mit imagesrcset aktivieren. -->
-    <link
-      rel="preload"
-      as="image"
-      href="https://images.unsplash.com/photo-1556909114-f6e7ad7d3136?auto=format&fit=crop&w=1920&q=80"
-      fetchpriority="high"
-    />
+    <!-- LCP-Hero-Image: liegt als gehashtes Vite-Asset unter
+         /assets/hero-kitchen-<hash>.webp im Bundle. Kein static preload hier,
+         weil der Hash build-abhaengig ist. Vite fuegt den optimalen Ladepfad
+         per <link rel=modulepreload> + Code-Splitting selbst ein. -->
+    <!-- Preconnect fuer Unsplash faellt weg, weil der Hero jetzt lokal kommt. -->
 
     <!-- Google Fonts — loaded NON-BLOCKING via media trick.
          Browser loads CSS with media="print" (non-render-blocking),

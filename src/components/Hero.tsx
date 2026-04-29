@@ -8,12 +8,12 @@ import {
   Users,
 } from "lucide-react";
 import { Link } from "react-router-dom";
+import { BRAND_IMAGES } from "@/lib/brand";
 
-// Temporaerer Stock-Hero bis eigene Kuechen-Assets in /public/images/ liegen.
-// Unsplash-URL direkt (nicht ueber Supabase Storage, damit kein Cache-Layer
-// involviert ist). Eigene Bilder ersetzen spaeter dieses src.
-const HERO_IMAGE_URL =
-  "https://images.unsplash.com/photo-1556909114-f6e7ad7d3136?auto=format&fit=crop&w=1920&q=80";
+// Lokales, Vite-gehashtes Asset (src/assets/hero-kitchen.webp, ~110 KB).
+// Vorher wurde das Bild live von Unsplash geladen — jetzt bundled, damit der
+// Hero kein Drittanbieter-Request mehr zieht und Lighthouse-LCP stabil bleibt.
+const HERO_IMAGE_URL = BRAND_IMAGES.heroHome;
 
 /**
  * Homepage-Hero — KuechenWert "drei Wege zur Traumkueche"

@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
-import { Shield, Search, Star, CheckCircle2, Bell, ArrowUpDown, Filter, RotateCcw } from "lucide-react";
+import { Shield, Search, Star, CheckCircle2, Bell, ArrowUpDown, Filter, RotateCcw, Sparkles, TrendingDown, Wand2, ArrowRight } from "lucide-react";
 import { Link } from "react-router-dom";
 import { FilterSidebar, type FilterState } from "@/components/FilterSidebar";
 import KitchenCard from "@/components/KitchenCard";
@@ -975,17 +975,96 @@ const Kaufen = () => {
                   </div>
                 </Card>
               ) : (
-                /* Empty state when no auctions exist at all */
-                <Card className="p-12">
-                  <div className="text-center">
-                    <p className="text-xl font-semibold text-muted-foreground mb-2">
-                      Keine aktiven Inserate
-                    </p>
-                    <p className="text-muted-foreground">
-                      Aktuell sind keine Inserate verfügbar. Schauen Sie später wieder vorbei!
+                /*
+                 * Empty state: Statt eines nichtssagenden "keine Inserate
+                 * verfuegbar" leiten wir den User auf die drei Kuechen-Funnels.
+                 * Die Seite /kaufen hiess frueher "verkaufte Caravans stoebern"
+                 * — jetzt ist KuechenWert primaer ein Lead-Vergleichsportal, nur
+                 * wenn der Admin im Backoffice explizit Kuechen als Auktionen
+                 * einstellt (z.B. Ausstellungsstuecke eines Studios), erscheinen
+                 * sie hier. Bis dahin bleibt das Listing leer, deshalb diese
+                 * Fallback-Kacheln.
+                 */
+                <div className="space-y-8">
+                  <div className="text-center mb-4">
+                    <h3 className="text-2xl md:text-3xl font-bold mb-3">
+                      Noch keine Inserate — aber Sie haben 3 bessere Wege zur Traumküche
+                    </h3>
+                    <p className="text-muted-foreground max-w-2xl mx-auto">
+                      Statt auf Inserate zu warten, starten Sie direkt eine unverbindliche Anfrage. Bis zu 3 geprüfte Küchenstudios geben Ihnen ein Angebot — oder lassen Sie Ihr vorliegendes Studio-Angebot unterbieten.
                     </p>
                   </div>
-                </Card>
+
+                  <div className="grid gap-6 md:grid-cols-3">
+                    <Card className="hover-lift border-2 animate-fade-in">
+                      <CardHeader>
+                        <div className="h-12 w-12 rounded-xl bg-primary/10 flex items-center justify-center mb-3">
+                          <Sparkles className="h-6 w-6 text-primary" />
+                        </div>
+                        <CardTitle className="text-xl">Angebote einholen</CardTitle>
+                        <CardDescription>
+                          Traumküche beschreiben — bis zu 3 Studios melden sich mit unverbindlichen Angeboten.
+                        </CardDescription>
+                      </CardHeader>
+                      <CardContent>
+                        <Button asChild className="w-full">
+                          <Link to="/funnel/a" className="flex items-center justify-center gap-2">
+                            Jetzt starten
+                            <ArrowRight className="h-4 w-4" />
+                          </Link>
+                        </Button>
+                      </CardContent>
+                    </Card>
+
+                    <Card className="hover-lift border-2 animate-fade-in">
+                      <CardHeader>
+                        <div className="h-12 w-12 rounded-xl bg-accent/10 flex items-center justify-center mb-3">
+                          <TrendingDown className="h-6 w-6 text-accent" />
+                        </div>
+                        <CardTitle className="text-xl">Studio-Preis unterbieten</CardTitle>
+                        <CardDescription>
+                          Sie haben schon ein Angebot? Wir lassen es von verifizierten Händlern unterbieten.
+                        </CardDescription>
+                      </CardHeader>
+                      <CardContent>
+                        <Button asChild variant="outline" className="w-full">
+                          <Link to="/funnel/b" className="flex items-center justify-center gap-2">
+                            Angebot hochladen
+                            <ArrowRight className="h-4 w-4" />
+                          </Link>
+                        </Button>
+                      </CardContent>
+                    </Card>
+
+                    <Card className="hover-lift border-2 animate-fade-in">
+                      <CardHeader>
+                        <div className="h-12 w-12 rounded-xl bg-secondary/10 flex items-center justify-center mb-3">
+                          <Wand2 className="h-6 w-6 text-secondary-foreground" />
+                        </div>
+                        <CardTitle className="text-xl">Mit KI visualisieren</CardTitle>
+                        <CardDescription>
+                          Beschreiben Sie Ihre Wunschküche — unsere KI erzeugt ein realistisches Bild + Budget.
+                        </CardDescription>
+                      </CardHeader>
+                      <CardContent>
+                        <Button asChild variant="outline" className="w-full">
+                          <Link to="/funnel/c" className="flex items-center justify-center gap-2">
+                            Traumküche-KI starten
+                            <ArrowRight className="h-4 w-4" />
+                          </Link>
+                        </Button>
+                      </CardContent>
+                    </Card>
+                  </div>
+
+                  <div className="text-center pt-4">
+                    <Button asChild variant="ghost" size="sm">
+                      <Link to="/kuechenrechner">
+                        Lieber erst den Küchenrechner ausprobieren →
+                      </Link>
+                    </Button>
+                  </div>
+                </div>
               )}
             </div>
           </div>

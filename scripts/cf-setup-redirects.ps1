@@ -1,14 +1,28 @@
-$ErrorActionPreference = 'Continue'
+# Richtet in Cloudflare eine 301-Redirect-Rule auf der Umlaut-Zone
+# (kǘchenwert.de / xn--kchenwert-q9a.de) ein, damit der gesamte Traffic auf
+# kuechenwert24.de umgeleitet wird. Grund: Die Umlaut-Domain ist wegen
+# Punycode-Problemen nicht nutzbar (siehe src/lib/brand/config.ts).
+#
+# Voraussetzungen:
+#   $env:CF_AUTH_EMAIL = 'dein-cf-account@email.tld'
+#   $env:CF_AUTH_KEY   = 'Global-API-Key aus Cloudflare Dashboard'
 
-$email  = 'info@wohnwert24.de'
-$apiKey = '8057eb2fde70fe60ea0a3d2e7e9f2d09fb4fd'
+$ErrorActionPreference = 'Stop'
+
+$email  = $env:CF_AUTH_EMAIL
+$apiKey = $env:CF_AUTH_KEY
+if (-not $email -or -not $apiKey) {
+  Write-Error 'CF_AUTH_EMAIL und CF_AUTH_KEY muessen als Umgebungsvariablen gesetzt sein.'
+  exit 1
+}
+
 $headers = @{
   'X-Auth-Email' = $email
   'X-Auth-Key'   = $apiKey
   'Content-Type' = 'application/json'
 }
 
-$zoneId = '90788f860ca8e39f2c0386226b770b79'
+$zoneId = '90788f860ca8e39f2c0386226b770b79'  # küchenwert.de (Punycode: xn--kchenwert-q9a.de)
 
 $body = @{
   targets = @(
@@ -27,22 +41,17 @@ $body = @{
   status   = 'active'
 } | ConvertTo-Json -Depth 10 -Compress
 
-Write-Output 'Request body:'
-Write-Output $body
-
 $url = 'https://api.cloudflare.com/client/v4/zones/' + $zoneId + '/pagerules'
 
 try {
   $r = Invoke-RestMethod -Uri $url -Headers $headers -Method POST -Body $body
-  Write-Output 'SUCCESS'
+  Write-Output 'Page Rule angelegt:'
   $r.result | ConvertTo-Json -Depth 10
 }
 catch {
-  Write-Output 'FAIL - message:'
+  Write-Output 'FAIL:'
   Write-Output $_.Exception.Message
-  $ed = $_.ErrorDetails
-  if ($ed) {
-    Write-Output 'ErrorDetails:'
-    Write-Output $ed.Message
+  if ($_.ErrorDetails) {
+    Write-Output $_.ErrorDetails.Message
   }
 }

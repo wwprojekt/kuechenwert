@@ -111,7 +111,7 @@ const FAQPage = () => {
             <div className="grid md:grid-cols-2 gap-6">
               <div className="bg-card p-6 rounded-lg border shadow-sm">
                 <h3 className="font-bold text-lg mb-2">Telefonische Beratung</h3>
-                <p className="text-muted-foreground mb-4">Mo–Fr von 8:00–18:00 Uhr</p>
+                <p className="text-muted-foreground mb-4">Mo–Fr von 10:00–18:00 Uhr</p>
                 {supportPhone ? (
                   <a
                     href={`tel:${supportPhone.replace(/\s/g, "")}`}

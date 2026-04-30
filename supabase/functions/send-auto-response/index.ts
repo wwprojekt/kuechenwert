@@ -72,7 +72,7 @@ const handler = async (req: Request): Promise<Response> => {
       ${greeting(displayName)}
       ${paragraph(`Vielen Dank f&uuml;r Ihre Nachricht an <strong>${settingsData.site_name}</strong>. Wir haben Ihre E-Mail erhalten und werden uns schnellstm&ouml;glich bei Ihnen melden.`)}
       ${infoBox('Unser Service-Versprechen', `
-        ${paragraph('In der Regel antworten wir innerhalb von <strong>24 Stunden</strong> an Werktagen (Mo&ndash;Fr, 9:00&ndash;17:00 Uhr).')}
+        ${paragraph('In der Regel antworten wir innerhalb von <strong>24 Stunden</strong> an Werktagen (Mo&ndash;Fr, 10:00&ndash;18:00 Uhr).')}
       `, 'info', settingsData)}
       ${paragraph('In der Zwischenzeit finden Sie Antworten auf h&auml;ufige Fragen m&ouml;glicherweise in unserem FAQ-Bereich:')}
       ${list([

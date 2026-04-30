@@ -154,7 +154,7 @@ const Kontakt = () => {
       icon: Phone,
       title: "Telefon",
       detail: supportPhone,
-      description: "Mo-Fr: 8:00-18:00 Uhr",
+      description: "Mo-Fr: 10:00-18:00 Uhr",
       action: supportPhone ? `tel:${supportPhone.replace(/\s/g, '')}` : '#'
     },
     {
@@ -174,8 +174,8 @@ const Kontakt = () => {
     {
       icon: Clock,
       title: "Öffnungszeiten",
-      detail: "Mo-Fr: 8:00-18:00 Uhr",
-      description: "Sa: 9:00-14:00 Uhr",
+      detail: "Mo-Fr: 10:00-18:00 Uhr",
+      description: "Sa/So: geschlossen",
       action: "#"
     }
   ];

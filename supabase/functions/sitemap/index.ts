@@ -1,10 +1,24 @@
-﻿// Follow this setup guide to integrate the Deno language server with your editor:
-// https://deno.land/manual/getting_started/setup_your_environment
-// This enables autocomplete, go to definition, etc.
+﻿// Dynamische sitemap.xml fuer kuechenwert24.de.
+//
+// Ablauf: Der nginx im Frontend-Container proxied GET /sitemap.xml an diese
+// Edge Function (siehe docker/default.conf). Hier werden statische KuechenWert-
+// Routen (Homepage, Funnels, Content-Seiten, Legal-Pages) mit dynamischen
+// Quellen (Blog-Posts, aktive Auktionen, Showrooms) zusammengefuehrt und als
+// gueltiges sitemaps.org-XML zurueckgegeben.
+//
+// Geschichte: Diese Function stammt aus dem Caravanwert-Fork und listete dort
+// 100+ Wohnmobil-SEO-Landings und Marken-Ratgeber (Hymer, Dethleffs, Knaus,
+// …). Beim KuechenWert-Umbau wurden diese Pages aus dem Repo entfernt — die
+// URLs bleiben aber im Google-Index und liefern jetzt 404, wenn sie noch in
+// der sitemap stehen. Deshalb enthaelt die Liste unten **ausschliesslich**
+// Routen, die in src/App.tsx tatsaechlich aktiv sind.
+//
+// Kuechen-Landing-Pages (z.B. /nobilia-kueche-planen, /kueche-guenstig-kaufen)
+// werden ergaenzt, sobald die TSX-Pages und ratgeberMeta-Eintraege existieren.
 
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.100.1'
-import { getCorsHeaders, handleCorsPreflightRequest } from '../_shared/cors.ts';
+import { getCorsHeaders, handleCorsPreflightRequest } from '../_shared/cors.ts'
 
 interface SitemapUrl {
   loc: string
@@ -14,13 +28,11 @@ interface SitemapUrl {
 }
 
 serve(async (req) => {
-  // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
-    return handleCorsPreflightRequest(req);
+    return handleCorsPreflightRequest(req)
   }
 
   try {
-    // Create Supabase client
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
     const supabase = createClient(supabaseUrl, supabaseKey)
@@ -28,92 +40,46 @@ serve(async (req) => {
     const baseUrl = 'https://kuechenwert24.de'
     const today = new Date().toISOString().split('T')[0]
 
-    // Static pages with priorities
+    // Statische Routen — spiegelt public/sitemap.xml und src/App.tsx.
     const staticUrls: SitemapUrl[] = [
+      // Homepage
       { loc: `${baseUrl}/`, lastmod: today, changefreq: 'daily', priority: '1.0' },
-      { loc: `${baseUrl}/verkaufen`, lastmod: today, changefreq: 'weekly', priority: '0.9' },
-      { loc: `${baseUrl}/kaufen`, lastmod: today, changefreq: 'daily', priority: '0.9' },
-      { loc: `${baseUrl}/ankaufstationen`, lastmod: today, changefreq: 'weekly', priority: '0.8' },
-      { loc: `${baseUrl}/haendler`, lastmod: today, changefreq: 'monthly', priority: '0.8' },
+
+      // Funnel-Einstiege (A = Angebote einholen, B = Studio-Preis unterbieten,
+      // C = Traumkueche AI). Das sind die primaeren Conversion-Einstiege.
+      { loc: `${baseUrl}/funnel/a`, lastmod: today, changefreq: 'weekly', priority: '0.9' },
+      { loc: `${baseUrl}/funnel/b`, lastmod: today, changefreq: 'weekly', priority: '0.9' },
+      { loc: `${baseUrl}/funnel/c`, lastmod: today, changefreq: 'weekly', priority: '0.9' },
+
+      // Preis-/Budget-Rechner.
+      { loc: `${baseUrl}/kuechenrechner`, lastmod: today, changefreq: 'weekly', priority: '0.9' },
+
+      // Content-Seiten.
+      { loc: `${baseUrl}/kaufen`, lastmod: today, changefreq: 'weekly', priority: '0.8' },
+      { loc: `${baseUrl}/haendler`, lastmod: today, changefreq: 'monthly', priority: '0.7' },
       { loc: `${baseUrl}/ratgeber`, lastmod: today, changefreq: 'weekly', priority: '0.7' },
-      { loc: `${baseUrl}/kontakt`, lastmod: today, changefreq: 'monthly', priority: '0.6' },
-      { loc: `${baseUrl}/ueber-uns`, lastmod: today, changefreq: 'monthly', priority: '0.6' },
-      { loc: `${baseUrl}/faq`, lastmod: today, changefreq: 'weekly', priority: '0.7' },
       { loc: `${baseUrl}/blog`, lastmod: today, changefreq: 'daily', priority: '0.7' },
-      { loc: `${baseUrl}/wertermittlung`, lastmod: today, changefreq: 'weekly', priority: '0.8' },
-      { loc: `${baseUrl}/wertrechner`, lastmod: today, changefreq: 'weekly', priority: '0.8' },
+      { loc: `${baseUrl}/faq`, lastmod: today, changefreq: 'weekly', priority: '0.7' },
       { loc: `${baseUrl}/preise`, lastmod: today, changefreq: 'monthly', priority: '0.6' },
+
+      // Partner / Showrooms.
+      { loc: `${baseUrl}/ankaufstationen`, lastmod: today, changefreq: 'monthly', priority: '0.6' },
+
+      // Unternehmen.
+      { loc: `${baseUrl}/ueber-uns`, lastmod: today, changefreq: 'monthly', priority: '0.6' },
+      { loc: `${baseUrl}/kontakt`, lastmod: today, changefreq: 'monthly', priority: '0.6' },
+
+      // Rechtliches.
       { loc: `${baseUrl}/impressum`, lastmod: today, changefreq: 'yearly', priority: '0.3' },
       { loc: `${baseUrl}/datenschutz`, lastmod: today, changefreq: 'yearly', priority: '0.3' },
       { loc: `${baseUrl}/agb`, lastmod: today, changefreq: 'yearly', priority: '0.3' },
-      // SEO Landing Pages
-      { loc: `${baseUrl}/wohnmobil-verkaufen`, lastmod: today, changefreq: 'weekly', priority: '0.9' },
-      { loc: `${baseUrl}/wohnwagen-verkaufen`, lastmod: today, changefreq: 'weekly', priority: '0.9' },
-      { loc: `${baseUrl}/was-ist-mein-wohnmobil-wert`, lastmod: today, changefreq: 'weekly', priority: '0.8' },
-      { loc: `${baseUrl}/wohnmobil-wertermittlung-kostenlos`, lastmod: today, changefreq: 'weekly', priority: '0.8' },
-      { loc: `${baseUrl}/wir-kaufen-dein-wohnmobil`, lastmod: today, changefreq: 'weekly', priority: '0.8' },
-      { loc: `${baseUrl}/wieviel-ist-mein-wohnmobil-wert`, lastmod: today, changefreq: 'weekly', priority: '0.8' },
-      { loc: `${baseUrl}/wohnmobil-haendler-werden`, lastmod: today, changefreq: 'weekly', priority: '0.8' },
-      { loc: `${baseUrl}/schwacke-liste-wohnmobil`, lastmod: today, changefreq: 'weekly', priority: '0.8' },
-      { loc: `${baseUrl}/wohnmobil-verkaufspreis`, lastmod: today, changefreq: 'weekly', priority: '0.8' },
-      { loc: `${baseUrl}/wann-wohnmobil-verkaufen`, lastmod: today, changefreq: 'weekly', priority: '0.8' },
-      { loc: `${baseUrl}/wohnmobilpreise-2026`, lastmod: today, changefreq: 'weekly', priority: '0.8' },
-      { loc: `${baseUrl}/wohnmobil-ankauf-ratgeber`, lastmod: today, changefreq: 'weekly', priority: '0.8' },
-      { loc: `${baseUrl}/finanziertes-wohnmobil-verkaufen`, lastmod: today, changefreq: 'weekly', priority: '0.8' },
-      { loc: `${baseUrl}/wohnwagen-verkaufspreis`, lastmod: today, changefreq: 'weekly', priority: '0.8' },
-      { loc: `${baseUrl}/wann-wohnwagen-verkaufen`, lastmod: today, changefreq: 'weekly', priority: '0.8' },
-      { loc: `${baseUrl}/wohnwagenpreise-2026`, lastmod: today, changefreq: 'weekly', priority: '0.8' },
-      { loc: `${baseUrl}/finanzierten-wohnwagen-verkaufen`, lastmod: today, changefreq: 'weekly', priority: '0.8' },
-      // Auth & Registration pages (noindex in meta but useful for sitemap discovery)
-      { loc: `${baseUrl}/register/haendler`, lastmod: today, changefreq: 'monthly', priority: '0.6' },
+
+      // Registrierung fuer Kuechenstudios (Partner-Akquise).
+      { loc: `${baseUrl}/register/haendler`, lastmod: today, changefreq: 'monthly', priority: '0.5' },
     ]
 
-    // Ratgeber pages (88 guides)
-    const ratgeberSlugs = [
-      // Hymer
-      'hymer-wohnmobil-verkaufen', 'was-kostet-mein-hymer-wohnmobil', 'hymer-wohnmobil-wert-ermitteln', 'wie-verkaufe-ich-mein-hymer-wohnmobil', 'hymer-wohnmobil-versteigern',
-      // Dethleffs
-      'dethleffs-wohnmobil-verkaufen', 'was-kostet-mein-dethleffs-wohnmobil', 'dethleffs-wohnmobil-wert-ermitteln', 'wie-verkaufe-ich-mein-dethleffs-wohnmobil', 'dethleffs-wohnmobil-versteigern',
-      // Knaus
-      'knaus-wohnmobil-verkaufen', 'was-kostet-mein-knaus-wohnmobil', 'knaus-wohnmobil-wert-ermitteln', 'wie-verkaufe-ich-mein-knaus-wohnmobil', 'knaus-wohnmobil-versteigern',
-      // Bürstner
-      'buerstner-wohnmobil-verkaufen', 'was-kostet-mein-buerstner-wohnmobil', 'buerstner-wohnmobil-wert-ermitteln', 'wie-verkaufe-ich-mein-buerstner-wohnmobil', 'buerstner-wohnmobil-versteigern',
-      // Carthago
-      'carthago-wohnmobil-verkaufen', 'was-kostet-mein-carthago-wohnmobil', 'carthago-wohnmobil-wert-ermitteln', 'wie-verkaufe-ich-mein-carthago-wohnmobil', 'carthago-wohnmobil-versteigern',
-      // Hobby
-      'hobby-wohnmobil-verkaufen', 'was-kostet-mein-hobby-wohnmobil', 'hobby-wohnmobil-wert-ermitteln', 'wie-verkaufe-ich-mein-hobby-wohnmobil', 'hobby-wohnmobil-versteigern',
-      // Adria
-      'adria-wohnmobil-verkaufen', 'was-kostet-mein-adria-wohnmobil', 'adria-wohnmobil-wert-ermitteln', 'wie-verkaufe-ich-mein-adria-wohnmobil', 'adria-wohnmobil-versteigern',
-      // Weinsberg
-      'weinsberg-wohnmobil-verkaufen', 'was-kostet-mein-weinsberg-wohnmobil', 'weinsberg-wohnmobil-wert-ermitteln', 'wie-verkaufe-ich-mein-weinsberg-wohnmobil', 'weinsberg-wohnmobil-versteigern',
-      // Carado
-      'carado-wohnmobil-verkaufen', 'was-kostet-mein-carado-wohnmobil', 'carado-wohnmobil-wert-ermitteln', 'wie-verkaufe-ich-mein-carado-wohnmobil', 'carado-wohnmobil-versteigern',
-      // Sunlight
-      'sunlight-wohnmobil-verkaufen', 'was-kostet-mein-sunlight-wohnmobil', 'sunlight-wohnmobil-wert-ermitteln', 'wie-verkaufe-ich-mein-sunlight-wohnmobil', 'sunlight-wohnmobil-versteigern',
-      // Pössl
-      'poessl-wohnmobil-verkaufen', 'was-kostet-mein-poessl-wohnmobil', 'poessl-wohnmobil-wert-ermitteln', 'wie-verkaufe-ich-mein-poessl-wohnmobil', 'poessl-wohnmobil-versteigern',
-      // Chausson
-      'chausson-wohnmobil-verkaufen', 'was-kostet-mein-chausson-wohnmobil', 'chausson-wohnmobil-wert-ermitteln', 'wie-verkaufe-ich-mein-chausson-wohnmobil', 'chausson-wohnmobil-versteigern',
-      // Rapido
-      'rapido-wohnmobil-verkaufen', 'was-kostet-mein-rapido-wohnmobil', 'rapido-wohnmobil-wert-ermitteln', 'wie-verkaufe-ich-mein-rapido-wohnmobil', 'rapido-wohnmobil-versteigern',
-      // Concorde
-      'concorde-wohnmobil-verkaufen', 'was-kostet-mein-concorde-wohnmobil', 'concorde-wohnmobil-wert-ermitteln', 'wie-verkaufe-ich-mein-concorde-wohnmobil', 'concorde-wohnmobil-versteigern',
-      // Laika
-      'laika-wohnmobil-verkaufen', 'was-kostet-mein-laika-wohnmobil', 'laika-wohnmobil-wert-ermitteln', 'wie-verkaufe-ich-mein-laika-wohnmobil', 'laika-wohnmobil-versteigern',
-      // Condition — damage
-      'wohnmobil-mit-motorschaden-verkaufen', 'wohnmobil-mit-wasserschaden-verkaufen', 'wohnmobil-mit-getriebeschaden-verkaufen', 'wohnmobil-mit-unfallschaden-verkaufen', 'wohnmobil-mit-hagelschaden-verkaufen', 'wohnmobil-mit-schimmel-verkaufen',
-      // Condition — situation
-      'wohnmobil-ohne-tuev-verkaufen', 'wohnmobil-mit-hoher-laufleistung-verkaufen', 'wohnmobil-mit-reparaturstau-verkaufen', 'wohnmobil-mit-leasingvertrag-verkaufen', 'wohnmobil-trotz-finanzierung-verkaufen', 'wohnmobil-im-erbfall-verkaufen', 'wohnmobil-bei-scheidung-verkaufen',
-    ]
-
-    const ratgeberUrls: SitemapUrl[] = ratgeberSlugs.map((slug) => ({
-      loc: `${baseUrl}/ratgeber/${slug}`,
-      lastmod: today,
-      changefreq: 'monthly',
-      priority: '0.7',
-    }))
-
-    // Fetch dynamic blog posts
+    // Dynamische Blog-Posts. Kuechen-Themen sind hier bereits lauffaehig
+    // (z.B. "Neue Kueche planen — 7 Fehler vermeiden").
     const { data: blogPosts } = await supabase
       .from('blog_posts')
       .select('slug, published_at, updated_at')
@@ -127,13 +93,14 @@ serve(async (req) => {
       priority: '0.6',
     }))
 
-    // Fetch active auctions
+    // Reverse-Auktionen fuer neue Kuechen. Aktuell leer, wird lebendig sobald
+    // Studios Leads gewinnen und Verkaufsangebote erstellt werden.
     const { data: auctions } = await supabase
       .from('auctions')
       .select('id, updated_at')
       .eq('status', 'active')
       .order('created_at', { ascending: false })
-      .limit(100) // Limit to most recent 100 active auctions
+      .limit(100)
 
     const auctionUrls: SitemapUrl[] = (auctions || []).map((auction) => ({
       loc: `${baseUrl}/auktion/${auction.id}`,
@@ -142,7 +109,7 @@ serve(async (req) => {
       priority: '0.8',
     }))
 
-    // Fetch purchase stations
+    // Kuechen-Showrooms / Partner-Studios fuer Vor-Ort-Beratung.
     const { data: stations } = await supabase
       .from('purchase_stations')
       .select('id, updated_at')
@@ -155,10 +122,8 @@ serve(async (req) => {
       priority: '0.7',
     }))
 
-    // Combine all URLs
-    const allUrls = [...staticUrls, ...ratgeberUrls, ...blogUrls, ...auctionUrls, ...stationUrls]
+    const allUrls = [...staticUrls, ...blogUrls, ...auctionUrls, ...stationUrls]
 
-    // Generate XML sitemap
     const sitemap = `<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
@@ -180,24 +145,14 @@ ${allUrls
       headers: {
         ...getCorsHeaders(req),
         'Content-Type': 'application/xml',
-        'Cache-Control': 'public, max-age=3600, s-maxage=3600', // Cache for 1 hour
+        'Cache-Control': 'public, max-age=3600, s-maxage=3600',
       },
     })
   } catch (error) {
     console.error('Error generating sitemap:', error)
-    return new Response(JSON.stringify({ error: error.message }), {
+    return new Response(JSON.stringify({ error: (error as Error).message }), {
       status: 500,
       headers: { ...getCorsHeaders(req), 'Content-Type': 'application/json' },
     })
   }
 })
-
-/* To invoke locally:
-
-  1. Run `supabase start` (see: https://supabase.com/docs/reference/cli/supabase-start)
-  2. Make an HTTP request:
-
-  curl -i --location --request GET 'http://127.0.0.1:54321/functions/v1/sitemap'
-
-*/
-

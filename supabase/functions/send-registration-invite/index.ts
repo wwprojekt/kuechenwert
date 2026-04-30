@@ -85,8 +85,8 @@ const handler = async (req: Request): Promise<Response> => {
       .single();
 
     const settingsData = settings || {
-      site_name: "KuechenWert",
-      site_description: "Deutschlands führende Wohnmobil-Handelsplattform",
+      site_name: "KüchenWert",
+      site_description: "Vergleichsportal für neue Küchen — Angebote einholen, Studio-Preise unterbieten, KI-Visualisierung.",
       contact_email: "info@kuechenwert24.de",
       support_phone: "+49 511 51532476",
     };

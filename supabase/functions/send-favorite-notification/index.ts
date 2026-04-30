@@ -35,7 +35,7 @@ Deno.serve(async (req) => {
       .single();
 
     const settings = settingsData || {
-      site_name: "KuechenWert",
+      site_name: "KÃ¼chenWert",
       site_description: "Deutschlands führende Wohnmobil-Handelsplattform",
       contact_email: "info@kuechenwert24.de",
       support_phone: "+49 511 51532476",

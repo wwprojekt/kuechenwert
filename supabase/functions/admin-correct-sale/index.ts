@@ -461,7 +461,7 @@ Deno.serve(async (req) => {
         const protoResult = await sendBlankHandoverProtocol({
           supabase,
           resendApiKey: RESEND_API_KEY,
-          settingsData: settings || { site_name: 'KuechenWert', contact_email: 'info@kuechenwert24.de' },
+          settingsData: settings || { site_name: 'KÃ¼chenWert', contact_email: 'info@kuechenwert24.de' },
           kitchenId: kitchen.id,
           buyerId,
           sellerId,

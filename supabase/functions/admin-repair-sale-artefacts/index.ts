@@ -88,7 +88,7 @@ async function sendAdminEmail(
       .maybeSingle();
 
     const settingsData = settings || {
-      site_name: 'KuechenWert',
+      site_name: 'KÃ¼chenWert',
       contact_email: 'info@kuechenwert24.de',
     };
 
@@ -328,7 +328,7 @@ Deno.serve(async (req) => {
       .limit(1)
       .maybeSingle();
     const settingsData = settings || {
-      site_name: 'KuechenWert',
+      site_name: 'KÃ¼chenWert',
       contact_email: 'info@kuechenwert24.de',
     };
 

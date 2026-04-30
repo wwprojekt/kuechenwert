@@ -132,7 +132,7 @@ const handler = async (req: Request): Promise<Response> => {
       .maybeSingle();
 
     const settingsData = settings || {
-      site_name: 'KuechenWert',
+      site_name: 'KÃ¼chenWert',
       site_description: 'Deutschlands führende Wohnmobil-Handelsplattform',
       contact_email: 'info@kuechenwert24.de',
       support_phone: '0511 / 51532476',

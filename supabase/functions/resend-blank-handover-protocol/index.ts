@@ -143,7 +143,7 @@ Deno.serve(async (req) => {
     .limit(1)
     .maybeSingle();
 
-  const settingsData = settings ?? { site_name: 'KuechenWert', contact_email: 'info@kuechenwert24.de' };
+  const settingsData = settings ?? { site_name: 'KÃ¼chenWert', contact_email: 'info@kuechenwert24.de' };
 
   // ─── 5a. TEST MODE: PDF generieren + nur an testRecipient schicken ──
   // Skips DB updates and admin_emails to keep state clean during previews.

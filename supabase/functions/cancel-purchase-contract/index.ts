@@ -277,7 +277,7 @@ Deno.serve(async (req) => {
   // ─── Step 3: send emails ───────────────────────────────────────────────
   const { data: settings } = await supabaseAdmin.from('site_settings').select('*').single();
   const settingsData: SettingsLike = (settings as SettingsLike | null) ?? {
-    site_name: 'KuechenWert',
+    site_name: 'KÃ¼chenWert',
     site_description: 'Deutschlands führende Wohnmobil-Handelsplattform',
     contact_email: 'info@kuechenwert24.de',
     support_phone: '+49 511 51532476',

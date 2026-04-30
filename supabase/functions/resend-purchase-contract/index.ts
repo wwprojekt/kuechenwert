@@ -100,7 +100,7 @@ Deno.serve(async (req) => {
       .limit(1)
       .maybeSingle();
 
-    const settingsData = settings || { site_name: 'KuechenWert', contact_email: 'info@kuechenwert24.de' };
+    const settingsData = settings || { site_name: 'KÃ¼chenWert', contact_email: 'info@kuechenwert24.de' };
     const vehicleName = contract.vehicle_description || 'Fahrzeug';
     const contractNumber = contract.contract_number;
     const salePrice = `€${Number(contract.sale_price).toLocaleString('de-DE')}`;

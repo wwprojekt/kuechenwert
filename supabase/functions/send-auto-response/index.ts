@@ -59,8 +59,8 @@ const handler = async (req: Request): Promise<Response> => {
     // Fetch site settings
     const { data: settings } = await supabase.from('site_settings').select('*').single();
     const settingsData = settings || {
-      site_name: 'KuechenWert',
-      site_description: 'Deutschlands führende Wohnmobil-Handelsplattform',
+      site_name: 'KüchenWert',
+      site_description: 'Vergleichsportal für neue Küchen — Angebote einholen, Studio-Preise unterbieten, KI-Visualisierung.',
       contact_email: 'info@kuechenwert24.de',
       support_phone: '+49 511 51532476',
     };
@@ -77,8 +77,9 @@ const handler = async (req: Request): Promise<Response> => {
       ${paragraph('In der Zwischenzeit finden Sie Antworten auf h&auml;ufige Fragen m&ouml;glicherweise in unserem FAQ-Bereich:')}
       ${list([
         '<a href="https://kuechenwert24.de/faq" style="color: #1f8aa2;">H&auml;ufig gestellte Fragen</a>',
-        '<a href="https://kuechenwert24.de/verkaufen" style="color: #1f8aa2;">Wohnmobil verkaufen &ndash; So funktioniert&apos;s</a>',
-        '<a href="https://kuechenwert24.de/haendler" style="color: #1f8aa2;">H&auml;ndler werden</a>',
+        '<a href="https://kuechenwert24.de/funnel/a" style="color: #1f8aa2;">Angebote f&uuml;r Ihre Traumk&uuml;che einholen</a>',
+        '<a href="https://kuechenwert24.de/funnel/b" style="color: #1f8aa2;">Bestehendes K&uuml;chen-Angebot unterbieten lassen</a>',
+        '<a href="https://kuechenwert24.de/haendler" style="color: #1f8aa2;">Als K&uuml;chenstudio / H&auml;ndler mitmachen</a>',
       ])}
       ${paragraph('<em>Dies ist eine automatische Best&auml;tigung. Bitte antworten Sie nicht auf diese E-Mail.</em>')}
     `;

@@ -61,7 +61,7 @@ async function sendAdminEmail(
       .maybeSingle();
 
     const settingsData = settings || {
-      site_name: 'KuechenWert',
+      site_name: 'KÃ¼chenWert',
       contact_email: 'info@kuechenwert24.de',
     };
 
@@ -564,7 +564,7 @@ Deno.serve(async (req) => {
           .select('*')
           .limit(1)
           .maybeSingle();
-        const settingsData = settings || { site_name: 'KuechenWert', contact_email: 'info@kuechenwert24.de' };
+        const settingsData = settings || { site_name: 'KÃ¼chenWert', contact_email: 'info@kuechenwert24.de' };
 
         // Send contract email to seller
         if (sellerProfile?.email && contractPdfBase64) {
@@ -759,7 +759,7 @@ Deno.serve(async (req) => {
         const protoResult = await sendBlankHandoverProtocol({
           supabase: supabaseAdmin,
           resendApiKey: RESEND_API_KEY,
-          settingsData: settings2 || { site_name: 'KuechenWert', contact_email: 'info@kuechenwert24.de' },
+          settingsData: settings2 || { site_name: 'KÃ¼chenWert', contact_email: 'info@kuechenwert24.de' },
           kitchenId: kitchen.id,
           buyerId,
           sellerId: kitchen.seller_id,

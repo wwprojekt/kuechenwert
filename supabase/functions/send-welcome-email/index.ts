@@ -72,8 +72,8 @@ const handler = async (req: Request): Promise<Response> => {
     // Fetch site settings
     const { data: settings } = await supabase.from('site_settings').select('*').single();
     const settingsData = settings || {
-      site_name: 'KuechenWert',
-      site_description: 'Deutschlands führende Wohnmobil-Handelsplattform',
+      site_name: 'KüchenWert',
+      site_description: 'Vergleichsportal für neue Küchen — Angebote einholen, Studio-Preise unterbieten, KI-Visualisierung.',
       contact_email: 'info@kuechenwert24.de',
       support_phone: '+49 511 51532476',
     };
@@ -86,34 +86,34 @@ const handler = async (req: Request): Promise<Response> => {
       emailContent = `
         ${greeting(name || undefined)}
         ${customerBadge(profile.customer_number)}
-        ${paragraph(`Herzlich willkommen bei <strong>${settingsData.site_name}</strong> &ndash; Deutschlands f&uuml;hrender Wohnmobil-Handelsplattform f&uuml;r H&auml;ndler!`)}
-        ${paragraph('Ihr Konto wurde erfolgreich erstellt. Um auf Auktionen bieten zu k&ouml;nnen, reichen Sie bitte Ihre H&auml;ndler-Bewerbung ein.')}
-        ${infoBox('Ihre n&auml;chsten Schritte', `
+        ${paragraph(`Herzlich willkommen bei <strong>${settingsData.site_name}</strong> &ndash; dem Vergleichsportal für neue Küchen. Sie sind jetzt als Küchenstudio / Küchenhändler registriert.`)}
+        ${paragraph('Ihr Konto wurde erfolgreich erstellt. Um passende Leads zu erhalten und auf Angebots-Anfragen reagieren zu können, reichen Sie bitte Ihre Händler-Bewerbung ein.')}
+        ${infoBox('Ihre nächsten Schritte', `
           ${list([
-            'Vervollst&auml;ndigen Sie Ihr Unternehmensprofil',
-            'Reichen Sie Ihre H&auml;ndler-Bewerbung ein',
-            'Nach Freischaltung: Entdecken Sie aktuelle Auktionen',
-            'Geben Sie Ihr erstes Gebot ab',
+            'Vervollständigen Sie Ihr Unternehmensprofil',
+            'Reichen Sie Ihre Händler-Bewerbung ein',
+            'Nach Freischaltung: Erhalten Sie Lead-Benachrichtigungen',
+            'Geben Sie Ihr erstes Angebot auf eine Kundenanfrage ab',
           ])}
         `, 'info', settingsData)}
-        ${button('Zum H&auml;ndler-Portal', 'https://kuechenwert24.de/dashboard', settingsData)}
-        ${paragraph('Unser Team pr&uuml;ft Ihre Bewerbung in der Regel innerhalb von 1&ndash;2 Werktagen. Sie erhalten eine Best&auml;tigung per E-Mail.')}
+        ${button('Zum Händler-Portal', 'https://kuechenwert24.de/dashboard', settingsData)}
+        ${paragraph('Unser Team prüft Ihre Bewerbung in der Regel innerhalb von 1–2 Werktagen. Sie erhalten eine Bestätigung per E-Mail.')}
       `;
     } else {
       emailContent = `
         ${greeting(name || undefined)}
-        ${paragraph(`Herzlich willkommen bei <strong>${settingsData.site_name}</strong>! Wir freuen uns, dass Sie dabei sind.`)}
-        ${paragraph('Ihr Konto wurde erfolgreich erstellt. Hier ist ein kurzer &Uuml;berblick, was Sie jetzt tun k&ouml;nnen:')}
+        ${paragraph(`Herzlich willkommen bei <strong>${settingsData.site_name}</strong>! Wir freuen uns, dass Sie Ihre Traumküche mit uns planen.`)}
+        ${paragraph('Ihr Konto wurde erfolgreich erstellt. Hier ist ein kurzer Überblick, was Sie jetzt tun können:')}
         ${infoBox('Das erwartet Sie', `
           ${list([
-            '<strong>Wohnmobil verkaufen</strong> &ndash; Lassen Sie Ihr Fahrzeug kostenlos bewerten und in unsere Auktion aufnehmen',
-            '<strong>Marktpreise vergleichen</strong> &ndash; Erfahren Sie den aktuellen Wert Ihres Wohnmobils',
-            '<strong>Profil vervollst&auml;ndigen</strong> &ndash; Halten Sie Ihre Kontaktdaten aktuell',
-            '<strong>Benachrichtigungen einstellen</strong> &ndash; W&auml;hlen Sie, wor&uuml;ber Sie informiert werden m&ouml;chten',
+            '<strong>Angebote einholen</strong> – Bis zu 3 geprüfte Küchenstudios geben Ihnen unverbindliche Angebote',
+            '<strong>Studio-Preis unterbieten</strong> – Ihr bestehendes Küchen-Angebot von verifizierten Händlern unterbieten lassen',
+            '<strong>Traumküche visualisieren</strong> – Mit KI aus Ihren Vorstellungen ein realistisches Küchenbild erzeugen',
+            '<strong>Anfragen tracken</strong> – Alle eingehenden Studio-Angebote bequem im Dashboard verwalten',
           ])}
         `, 'info', settingsData)}
-        ${button('Jetzt Wohnmobil bewerten', 'https://kuechenwert24.de/verkaufen', settingsData)}
-        ${paragraph('Bei Fragen stehen wir Ihnen jederzeit gerne zur Verf&uuml;gung.')}
+        ${button('Jetzt Traumküche planen', 'https://kuechenwert24.de/funnel/a', settingsData)}
+        ${paragraph('Bei Fragen stehen wir Ihnen jederzeit gerne zur Verfügung.')}
       `;
     }
 

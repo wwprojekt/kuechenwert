@@ -695,7 +695,7 @@ export default function AdminSettings() {
                     type="email"
                     value={formData.contact_email || ''}
                     onChange={(e) => updateField('contact_email', e.target.value)}
-                    placeholder="info@kuechenwert.de"
+                    placeholder="info@kuechenwert24.de"
                   />
                 </div>
                 <div className="space-y-2">

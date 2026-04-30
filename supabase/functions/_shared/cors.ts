@@ -1,4 +1,4 @@
-﻿/**
+/**
  * Shared CORS configuration for all Edge Functions.
  *
  * Allowed origins:
@@ -24,8 +24,8 @@
  */
 
 const ALLOWED_ORIGINS: string[] = [
-  'https://kuechenwert.de',
-  'https://www.kuechenwert.de',
+  'https://kuechenwert24.de',
+  'https://www.kuechenwert24.de',
   'https://kuechenwert24.de',
   'https://www.kuechenwert24.de',
   // Legacy-Umleitungs-Domains (KuechenWert-Erbe, kann spaeter raus)

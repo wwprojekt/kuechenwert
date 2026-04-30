@@ -1,4 +1,4 @@
-﻿import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.100.1';
 import { buildEmailLayout, paragraph, infoBox, detailRow, pinDisplay, list } from '../_shared/email-builder.ts';
 import { getCorsHeaders, handleCorsPreflightRequest } from '../_shared/cors.ts';
@@ -92,7 +92,7 @@ serve(async (req) => {
     const settingsData = settings || {
       site_name: 'KuechenWert',
       site_description: 'Ihr Wohnmobil-Marktplatz',
-      contact_email: 'info@kuechenwert.de',
+      contact_email: 'info@kuechenwert24.de',
       support_phone: '',
     };
 
@@ -132,7 +132,7 @@ serve(async (req) => {
             'Authorization': `Bearer ${RESEND_API_KEY}`,
           },
           body: JSON.stringify({
-            from: `${settingsData.site_name || 'KuechenWert'} <info@kuechenwert.de>`,
+            from: `${settingsData.site_name || 'KuechenWert'} <info@kuechenwert24.de>`,
             to: [fullAppointment.profiles.email],
             subject: 'Ihr Freigabe-PIN f\u00fcr die Fahrzeug\u00fcbergabe',
             html: emailHtml,
@@ -148,7 +148,7 @@ serve(async (req) => {
           // Log in admin_emails for System tab
           try {
             await supabaseClient.from('admin_emails').insert({
-              sender_email: 'info@kuechenwert.de',
+              sender_email: 'info@kuechenwert24.de',
               sender_name: settingsData.site_name || 'KuechenWert',
               recipient_email: fullAppointment.profiles.email,
               recipient_name: fullAppointment.profiles.first_name || null,

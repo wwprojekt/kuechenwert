@@ -1,4 +1,4 @@
-﻿import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
+import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.100.1';
 import { buildEmailLayout, paragraph } from '../_shared/email-builder.ts';
 import { getCorsHeaders, handleCorsPreflightRequest } from '../_shared/cors.ts';
@@ -201,7 +201,7 @@ const handler = async (req: Request): Promise<Response> => {
     const settingsData = settings || {
       site_name: 'KuechenWert',
       site_description: 'Deutschlands führende Wohnmobil-Handelsplattform',
-      contact_email: 'info@kuechenwert.de',
+      contact_email: 'info@kuechenwert24.de',
       support_phone: '+49 511 51532476',
     };
 
@@ -220,11 +220,11 @@ const handler = async (req: Request): Promise<Response> => {
           "Authorization": `Bearer ${RESEND_API_KEY}`,
         },
         body: JSON.stringify({
-          from: `${settingsData.site_name} <info@kuechenwert.de>`,
+          from: `${settingsData.site_name} <info@kuechenwert24.de>`,
           to: [test_email],
           subject: `[TEST] ${subject}`,
           html,
-          reply_to: 'info@kuechenwert.de',
+          reply_to: 'info@kuechenwert24.de',
           headers: {
             'List-Unsubscribe': '<https://kuechenwert24.de/dashboard/profile>',
             'List-Unsubscribe-Post': 'List-Unsubscribe=One-Click',
@@ -274,11 +274,11 @@ const handler = async (req: Request): Promise<Response> => {
       const promises = batch.map(async (recipient) => {
         try {
           const resendPayload: any = {
-            from: `${settingsData.site_name} <info@kuechenwert.de>`,
+            from: `${settingsData.site_name} <info@kuechenwert24.de>`,
             to: [recipient.email],
             subject,
             html,
-            reply_to: 'info@kuechenwert.de',
+            reply_to: 'info@kuechenwert24.de',
           };
 
           if (include_unsubscribe) {
@@ -306,7 +306,7 @@ const handler = async (req: Request): Promise<Response> => {
 
           // Log each email
           await supabase.from('admin_emails').insert({
-            sender_email: 'info@kuechenwert.de',
+            sender_email: 'info@kuechenwert24.de',
             sender_name: settingsData.site_name,
             recipient_email: recipient.email,
             recipient_name: recipient.name,

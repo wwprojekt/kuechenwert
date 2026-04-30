@@ -1,4 +1,4 @@
-﻿import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.100.1';
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.100.1';
 import {
   buildEmailLayout,
   paragraph,
@@ -89,11 +89,11 @@ async function sendMail(
         Authorization: `Bearer ${RESEND_API_KEY}`,
       },
       body: JSON.stringify({
-        from: `${settingsData.site_name} <info@kuechenwert.de>`,
+        from: `${settingsData.site_name} <info@kuechenwert24.de>`,
         to: [recipientEmail],
         subject,
         html,
-        reply_to: 'info@kuechenwert.de',
+        reply_to: 'info@kuechenwert24.de',
       }),
     });
     if (!res.ok) {
@@ -279,7 +279,7 @@ Deno.serve(async (req) => {
   const settingsData: SettingsLike = (settings as SettingsLike | null) ?? {
     site_name: 'KuechenWert',
     site_description: 'Deutschlands führende Wohnmobil-Handelsplattform',
-    contact_email: 'info@kuechenwert.de',
+    contact_email: 'info@kuechenwert24.de',
     support_phone: '+49 511 51532476',
   };
 
@@ -325,7 +325,7 @@ Deno.serve(async (req) => {
           : 'Das Fahrzeug ist damit wieder frei. Falls Sie eine neue Auktion oder ein Festpreis-Angebot starten möchten, können Sie das im Verkäufer-Dashboard tun.',
       )}
       ${paragraph(
-        `Bei Rückfragen erreichen Sie uns unter <a href="mailto:info@kuechenwert.de" style="color:#1f8aa2;">info@kuechenwert.de</a> oder telefonisch unter ${settingsData.support_phone}.`,
+        `Bei Rückfragen erreichen Sie uns unter <a href="mailto:info@kuechenwert24.de" style="color:#1f8aa2;">info@kuechenwert24.de</a> oder telefonisch unter ${settingsData.support_phone}.`,
       )}
     `;
     return { subject, html: buildEmailLayout(settingsData, subject, content) };
@@ -340,7 +340,7 @@ Deno.serve(async (req) => {
       if (result.ok) {
         try {
           await supabaseAdmin.from('admin_emails').insert({
-            sender_email: 'info@kuechenwert.de',
+            sender_email: 'info@kuechenwert24.de',
             sender_name: settingsData.site_name,
             recipient_email: buyer.email,
             recipient_name: buyerDisplay,
@@ -371,7 +371,7 @@ Deno.serve(async (req) => {
       if (result.ok) {
         try {
           await supabaseAdmin.from('admin_emails').insert({
-            sender_email: 'info@kuechenwert.de',
+            sender_email: 'info@kuechenwert24.de',
             sender_name: settingsData.site_name,
             recipient_email: seller.email,
             recipient_name: sellerDisplay,

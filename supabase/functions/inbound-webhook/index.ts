@@ -1,4 +1,4 @@
-﻿import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
+import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.100.1';
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
@@ -410,7 +410,7 @@ const handler = async (req: Request): Promise<Response> => {
       .insert({
         sender_email: senderEmail,
         sender_name: finalSenderName,
-        recipient_email: emailData.to?.[0] || 'info@kuechenwert.de',
+        recipient_email: emailData.to?.[0] || 'info@kuechenwert24.de',
         recipient_name: 'KuechenWert',
         recipient_id: null,
         subject: emailData.subject || '(Kein Betreff)',

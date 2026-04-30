@@ -1,4 +1,4 @@
-﻿import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.100.1';
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.100.1';
 import {
   buildEmailLayout,
   paragraph,
@@ -195,7 +195,7 @@ Deno.serve(async (req) => {
       const settingsData = settings || {
         site_name: 'KuechenWert',
         site_description: 'Deutschlands führende Wohnmobil-Handelsplattform',
-        contact_email: 'info@kuechenwert.de',
+        contact_email: 'info@kuechenwert24.de',
         support_phone: '+49 511 51532476',
       };
 
@@ -248,7 +248,7 @@ Deno.serve(async (req) => {
           'Bitte verwenden Sie diese E-Mail als Beleg für Ihre Buchhaltung. Falls Sie die ursprüngliche Rechnung bereits gebucht haben, stornieren Sie den Vorgang bitte ebenfalls in Ihrer Buchhaltung.',
         )}
         ${paragraph(
-          'Bei Rückfragen sind wir unter <a href="mailto:info@kuechenwert.de" style="color:#1f8aa2;">info@kuechenwert.de</a> für Sie da.',
+          'Bei Rückfragen sind wir unter <a href="mailto:info@kuechenwert24.de" style="color:#1f8aa2;">info@kuechenwert24.de</a> für Sie da.',
         )}
       `;
 
@@ -261,11 +261,11 @@ Deno.serve(async (req) => {
           Authorization: `Bearer ${RESEND_API_KEY}`,
         },
         body: JSON.stringify({
-          from: `${settingsData.site_name} <info@kuechenwert.de>`,
+          from: `${settingsData.site_name} <info@kuechenwert24.de>`,
           to: [recipientEmail],
           subject,
           html,
-          reply_to: 'info@kuechenwert.de',
+          reply_to: 'info@kuechenwert24.de',
         }),
       });
 
@@ -276,7 +276,7 @@ Deno.serve(async (req) => {
         emailSent = true;
 
         await supabaseAdmin.from('admin_emails').insert({
-          sender_email: 'info@kuechenwert.de',
+          sender_email: 'info@kuechenwert24.de',
           sender_name: settingsData.site_name,
           recipient_email: recipientEmail,
           recipient_name: recipientName,

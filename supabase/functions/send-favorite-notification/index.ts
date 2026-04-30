@@ -1,4 +1,4 @@
-﻿import { createClient } from "https://esm.sh/@supabase/supabase-js@2.100.1";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.100.1";
 import { buildEmailLayout, paragraph, button, detailRow, infoBox, greeting } from "../_shared/email-builder.ts";
 import { getCorsHeaders, handleCorsPreflightRequest } from '../_shared/cors.ts';
 import { checkServiceRoleOrAdmin } from '../_shared/auth.ts';
@@ -37,7 +37,7 @@ Deno.serve(async (req) => {
     const settings = settingsData || {
       site_name: "KuechenWert",
       site_description: "Deutschlands führende Wohnmobil-Handelsplattform",
-      contact_email: "info@kuechenwert.de",
+      contact_email: "info@kuechenwert24.de",
       support_phone: "+49 511 51532476",
     };
 
@@ -189,7 +189,7 @@ Deno.serve(async (req) => {
         );
         if (deferUntil) {
           const { error: queueErr } = await supabase.from("admin_emails").insert({
-            sender_email: "info@kuechenwert.de",
+            sender_email: "info@kuechenwert24.de",
             sender_name: "KuechenWert",
             recipient_email: user.email,
             recipient_id: user.id,
@@ -219,7 +219,7 @@ Deno.serve(async (req) => {
             "Content-Type": "application/json",
           },
           body: JSON.stringify({
-            from: "KuechenWert <info@kuechenwert.de>",
+            from: "KuechenWert <info@kuechenwert24.de>",
             to: [user.email],
             subject,
             html,
@@ -231,7 +231,7 @@ Deno.serve(async (req) => {
           // Per-user log for dedup (email_type: favorite_price_change for anti-spam check).
           // Store the FULL HTML so the Email Center preview is meaningful.
           supabase.from("admin_emails").insert({
-            sender_email: "info@kuechenwert.de",
+            sender_email: "info@kuechenwert24.de",
             sender_name: "KuechenWert",
             recipient_email: user.email,
             recipient_id: user.id,
@@ -255,7 +255,7 @@ Deno.serve(async (req) => {
     if (sent > 0) {
       try {
         await supabase.from("admin_emails").insert({
-          sender_email: "info@kuechenwert.de",
+          sender_email: "info@kuechenwert24.de",
           sender_name: "KuechenWert",
           recipient_email: `${sent} Favoriten-Nutzer`,
           subject: `[Auto] Favoriten-Benachrichtigung: ${event_type}`,

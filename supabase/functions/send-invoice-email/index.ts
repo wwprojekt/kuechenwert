@@ -1,4 +1,4 @@
-﻿import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.100.1';
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.100.1';
 import { buildEmailLayout, paragraph, infoBox, detailRow, amountDisplay, button, customerBadge } from '../_shared/email-builder.ts';
 import { getCorsHeaders, handleCorsPreflightRequest } from '../_shared/cors.ts';
 import { checkServiceRoleOrAdmin } from '../_shared/auth.ts';
@@ -85,7 +85,7 @@ Deno.serve(async (req) => {
     const settingsData = {
       site_name: siteName,
       site_description: settings?.site_description || 'Deutschlands führende Wohnmobil-Handelsplattform',
-      contact_email: settings?.contact_email || 'info@kuechenwert.de',
+      contact_email: settings?.contact_email || 'info@kuechenwert24.de',
       support_phone: settings?.support_phone || '',
     };
 
@@ -198,7 +198,7 @@ Deno.serve(async (req) => {
     }
 
     const emailPayload: any = {
-      from: `${siteName} <info@kuechenwert.de>`,
+      from: `${siteName} <info@kuechenwert24.de>`,
       to: [invoice.dealer.email],
       subject: emailSubject,
       html: emailHtml,
@@ -228,7 +228,7 @@ Deno.serve(async (req) => {
     // ─── Log in admin_emails for System tab ─────────────────────────
     try {
       await supabaseAdmin.from('admin_emails').insert({
-        sender_email: 'info@kuechenwert.de',
+        sender_email: 'info@kuechenwert24.de',
         sender_name: siteName,
         recipient_email: invoice.dealer.email,
         recipient_name: dealerName || null,

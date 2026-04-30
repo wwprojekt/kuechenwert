@@ -2,15 +2,21 @@
  * Brand-Konfiguration (Frontend)
  *
  * Zentrale Quelle fuer alle Brand-spezifischen Texte, Domains, E-Mail-Adressen.
- * Bei einem Rebrand (Phase 3) muessen NUR die Werte in dieser Datei + dem
- * Spiegel-File supabase/functions/_shared/brand-config.ts angepasst werden,
- * plus der CSS-Variablen-Block in src/index.css.
+ * Bei einem Rebrand muessen NUR die Werte in dieser Datei + dem Spiegel-File
+ * supabase/functions/_shared/brand-config.ts angepasst werden, plus der
+ * CSS-Variablen-Block in src/index.css.
  *
  * SPIEGEL von supabase/functions/_shared/brand-config.ts.
- * WICHTIG: Bei Aenderung IMMER beide Dateien anpassen (Muster siehe marketing-config.ts).
+ * WICHTIG: Bei Aenderung IMMER beide Dateien anpassen.
  *
- * Stand der Werte: aktuell noch "CaravanWert"-Branding aus dem Caravanwert-Fork.
- * Phase 3 ersetzt diese Werte durch echte KuechenWert-Werte.
+ * Domain-Strategie (Stand 2026-04-30):
+ *   Primary:  kuechenwert24.de (ASCII, Umlaut-frei, problemlos ueberall)
+ *   Aliases:  kuechenwert.de   → 301 auf kuechenwert24.de (Cloudflare Rule)
+ *             küchenwert.de    → 301 auf kuechenwert24.de (Punycode-Probleme)
+ *
+ * Alle URLs, E-Mail-Adressen, OG-Tags, Sitemap und Links nutzen
+ * kuechenwert24.de, damit weder Mail-Relays, noch Cookie-Scopes, noch
+ * SSL-Zertifikate Probleme mit Punycode-Konvertierung bekommen.
  */
 
 export const BRAND = {
@@ -26,19 +32,18 @@ export const BRAND = {
   // Produkt-Claim / Subline.
   tagline: "Küchen einfach verkaufen & kaufen",
 
-  // Primaere Landing-Domain (ohne Protokoll).
-  // ASCII-safe (ohne Umlaut) weil Email / externe APIs Probleme mit Punycode
-  // machen. kuechenwert.de leitet per 301-Redirect hierher um.
+  // Primaere Landing-Domain (ohne Protokoll). ASCII-safe, Umlaut-frei.
   domain: "kuechenwert24.de",
 
   // URL-Base fuer absolute Links in E-Mails, Sitemap, OG-Tags.
   baseUrl: "https://kuechenwert24.de",
 
   // Support-Email (fuer sichtbare Kontaktmails, Footer, Impressum).
-  supportEmail: "info@kuechenwert.de",
+  // MX-Records muessen bei kuechenwert24.de gesetzt sein.
+  supportEmail: "info@kuechenwert24.de",
 
   // Admin-/No-Reply-Absender fuer Transaktionsmails.
-  noReplyEmail: "noreply@kuechenwert.de",
+  noReplyEmail: "noreply@kuechenwert24.de",
 
   // Social-Media-Handles. Platzhalter — Accounts ggf. noch anlegen.
   social: {

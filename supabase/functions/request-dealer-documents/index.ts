@@ -1,4 +1,4 @@
-﻿import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
+import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.100.1';
 import { buildEmailLayout, infoBox, paragraph, button, list, warningBox } from '../_shared/email-builder.ts';
 import { getCorsHeaders, handleCorsPreflightRequest } from '../_shared/cors.ts';
@@ -52,7 +52,7 @@ const handler = async (req: Request): Promise<Response> => {
     const settingsData = settings || {
       site_name: 'KuechenWert',
       site_description: 'Deutschlands führende Wohnmobil-Handelsplattform',
-      contact_email: 'info@kuechenwert.de',
+      contact_email: 'info@kuechenwert24.de',
       support_phone: '+49 511 51532476',
     };
 
@@ -96,11 +96,11 @@ const handler = async (req: Request): Promise<Response> => {
         Authorization: `Bearer ${RESEND_API_KEY}`,
       },
       body: JSON.stringify({
-        from: `${settingsData.site_name} <info@kuechenwert.de>`,
+        from: `${settingsData.site_name} <info@kuechenwert24.de>`,
         to: [dealer_email],
         subject: subject,
         html: html,
-        reply_to: 'info@kuechenwert.de',
+        reply_to: 'info@kuechenwert24.de',
       }),
     });
 
@@ -148,7 +148,7 @@ const handler = async (req: Request): Promise<Response> => {
     // can group/filter dealer document requests separately from generic 'auto' mails.
     try {
       await supabase.from('admin_emails').insert({
-        sender_email: 'info@kuechenwert.de',
+        sender_email: 'info@kuechenwert24.de',
         sender_name: settingsData.site_name,
         recipient_email: dealer_email,
         recipient_name: dealer_name,

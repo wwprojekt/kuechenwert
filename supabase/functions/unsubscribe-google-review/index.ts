@@ -1,4 +1,4 @@
-﻿import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
+import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.100.1";
 
 /**
@@ -78,7 +78,7 @@ const handler = async (req: Request): Promise<Response> => {
           error.message?.includes("token_not_found") ||
             error.message?.includes("invalid_token")
             ? "Dieser Abmelde-Link ist nicht mehr gültig oder wurde bereits verwendet."
-            : "Beim Abmelden ist ein Fehler aufgetreten. Bitte schreiben Sie uns kurz an info@kuechenwert.de.";
+            : "Beim Abmelden ist ein Fehler aufgetreten. Bitte schreiben Sie uns kurz an info@kuechenwert24.de.";
         // Distinguish API vs browser POST: form POST sends Accept: text/html
         const wantsHtml =
           (req.headers.get("accept") ?? "").includes("text/html");
@@ -157,7 +157,7 @@ function htmlSuccess(email: string): Response {
     </p>
     <p style="margin-top:32px;font-size:13px;color:#6b7280;">
       Falls Sie versehentlich abgemeldet wurden, schreiben Sie uns kurz an
-      <a href="mailto:info@kuechenwert.de" style="color:#1f8aa2;">info@kuechenwert.de</a>.
+      <a href="mailto:info@kuechenwert24.de" style="color:#1f8aa2;">info@kuechenwert24.de</a>.
     </p>
     `,
   );

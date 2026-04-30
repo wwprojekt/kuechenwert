@@ -1,4 +1,4 @@
-﻿/**
+/**
  * resend-blank-handover-protocol
  *
  * Admin/service-role rescue endpoint to (re-)generate the blank Übergabe-
@@ -143,7 +143,7 @@ Deno.serve(async (req) => {
     .limit(1)
     .maybeSingle();
 
-  const settingsData = settings ?? { site_name: 'KuechenWert', contact_email: 'info@kuechenwert.de' };
+  const settingsData = settings ?? { site_name: 'KuechenWert', contact_email: 'info@kuechenwert24.de' };
 
   // ─── 5a. TEST MODE: PDF generieren + nur an testRecipient schicken ──
   // Skips DB updates and admin_emails to keep state clean during previews.
@@ -197,7 +197,7 @@ Deno.serve(async (req) => {
       const subject =
         `[TEST] Übergabeprotokoll zum Kaufvertrag ${contract.contract_number} – ${vehicleName}`;
       const filename = `${contract.contract_number}_uebergabeprotokoll.pdf`;
-      const fromAddr = `${settingsData.site_name || 'KuechenWert'} <info@kuechenwert.de>`;
+      const fromAddr = `${settingsData.site_name || 'KuechenWert'} <info@kuechenwert24.de>`;
       const html = `
         <div style="font-family:Arial,sans-serif;font-size:14px;line-height:1.5;color:#1f2937">
           <p><strong>TEST-Vorschau</strong></p>

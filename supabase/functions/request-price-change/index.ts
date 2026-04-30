@@ -1,4 +1,4 @@
-﻿import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.100.1';
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.100.1';
 import { z } from 'https://deno.land/x/zod@v3.22.4/mod.ts';
 import { getCorsHeaders, handleCorsPreflightRequest } from '../_shared/cors.ts';
 
@@ -140,7 +140,7 @@ Deno.serve(async (req: Request): Promise<Response> => {
     ) {
       return jsonResponse(
         {
-          error: `Der Mindestpreis kann nur gesenkt, nicht erhoeht werden (aktuell: ${fmtPrice(currentReserveForCompare)}, gewuenscht: ${fmtPrice(requestedReserve)}). Fuer Erhoehungen wenden Sie sich an info@kuechenwert.de.`,
+          error: `Der Mindestpreis kann nur gesenkt, nicht erhoeht werden (aktuell: ${fmtPrice(currentReserveForCompare)}, gewuenscht: ${fmtPrice(requestedReserve)}). Fuer Erhoehungen wenden Sie sich an info@kuechenwert24.de.`,
           code: 'PRICE_RAISE_NOT_ALLOWED',
         },
         400,
@@ -154,7 +154,7 @@ Deno.serve(async (req: Request): Promise<Response> => {
     ) {
       return jsonResponse(
         {
-          error: `Der Sofortpreis kann nur gesenkt, nicht erhoeht werden (aktuell: ${fmtPrice(currentInstantForCompare)}, gewuenscht: ${fmtPrice(requestedInstant)}). Fuer Erhoehungen wenden Sie sich an info@kuechenwert.de.`,
+          error: `Der Sofortpreis kann nur gesenkt, nicht erhoeht werden (aktuell: ${fmtPrice(currentInstantForCompare)}, gewuenscht: ${fmtPrice(requestedInstant)}). Fuer Erhoehungen wenden Sie sich an info@kuechenwert24.de.`,
           code: 'PRICE_RAISE_NOT_ALLOWED',
         },
         400,
@@ -171,7 +171,7 @@ Deno.serve(async (req: Request): Promise<Response> => {
     if (existing) {
       return jsonResponse(
         {
-          error: 'Es gibt bereits eine offene Preisänderungs-Anfrage für dieses Inserat. Bitte warten Sie auf die Bearbeitung oder kontaktieren Sie info@kuechenwert.de.',
+          error: 'Es gibt bereits eine offene Preisänderungs-Anfrage für dieses Inserat. Bitte warten Sie auf die Bearbeitung oder kontaktieren Sie info@kuechenwert24.de.',
           code: 'PENDING_REQUEST_EXISTS',
           existingRequestId: existing.id,
         },
@@ -262,11 +262,11 @@ Deno.serve(async (req: Request): Promise<Response> => {
             'Authorization': `Bearer ${RESEND_API_KEY}`,
           },
           body: JSON.stringify({
-            from: 'KuechenWert <info@kuechenwert.de>',
-            to: ['info@kuechenwert.de'],
+            from: 'KuechenWert <info@kuechenwert24.de>',
+            to: ['info@kuechenwert24.de'],
             subject,
             html,
-            reply_to: sellerEmail !== 'unbekannt' ? sellerEmail : 'info@kuechenwert.de',
+            reply_to: sellerEmail !== 'unbekannt' ? sellerEmail : 'info@kuechenwert24.de',
           }),
         });
 
@@ -276,9 +276,9 @@ Deno.serve(async (req: Request): Promise<Response> => {
         } else {
           const resendResult = await resendResp.json();
           await adminClient.from('admin_emails').insert({
-            sender_email: 'info@kuechenwert.de',
+            sender_email: 'info@kuechenwert24.de',
             sender_name: 'KuechenWert',
-            recipient_email: 'info@kuechenwert.de',
+            recipient_email: 'info@kuechenwert24.de',
             subject,
             body_html: html,
             body_text: html.replace(/<[^>]+>/g, ''),

@@ -1,4 +1,4 @@
-﻿import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.100.1';
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.100.1';
 import { getCorsHeaders, handleCorsPreflightRequest } from '../_shared/cors.ts';
 // @deno-types="https://esm.sh/jspdf@2.5.2"
 import { jsPDF } from 'https://esm.sh/jspdf@2.5.2';
@@ -144,7 +144,7 @@ Deno.serve(async (req) => {
       .maybeSingle();
 
     const siteName = settings?.site_name || 'KuechenWert';
-    const contactEmail = settings?.contact_email || 'info@kuechenwert.de';
+    const contactEmail = settings?.contact_email || 'info@kuechenwert24.de';
     const contactPhone = settings?.contact_phone || '';
 
     const doc = new jsPDF({ unit: 'mm', format: 'a4', orientation: 'portrait' });

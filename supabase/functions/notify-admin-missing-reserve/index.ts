@@ -1,4 +1,4 @@
-﻿// One-shot admin notification: lists active/kaufchance auctions with NULL
+// One-shot admin notification: lists active/kaufchance auctions with NULL
 // seller_initial_reserve (legacy gap before AGB v7 hardening). Will be
 // invoked once and then removed from the project. Internal use only —
 // no public auth contract required.
@@ -91,11 +91,11 @@ serve(async (_req: Request): Promise<Response> => {
         "Authorization": `Bearer ${RESEND_API_KEY}`,
       },
       body: JSON.stringify({
-        from: "KuechenWert <info@kuechenwert.de>",
-        to: ["info@kuechenwert.de"],
+        from: "KuechenWert <info@kuechenwert24.de>",
+        to: ["info@kuechenwert24.de"],
         subject,
         html,
-        reply_to: "info@kuechenwert.de",
+        reply_to: "info@kuechenwert24.de",
       }),
     });
 
@@ -106,9 +106,9 @@ serve(async (_req: Request): Promise<Response> => {
     const resendResult = await resendResp.json();
 
     await supabase.from("admin_emails").insert({
-      sender_email: "info@kuechenwert.de",
+      sender_email: "info@kuechenwert24.de",
       sender_name: "KuechenWert",
-      recipient_email: "info@kuechenwert.de",
+      recipient_email: "info@kuechenwert24.de",
       subject,
       body_html: html,
       body_text: html.replace(/<[^>]+>/g, ""),

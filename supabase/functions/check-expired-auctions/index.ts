@@ -1,4 +1,4 @@
-﻿import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.100.1';
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.100.1';
 import { getCorsHeaders, handleCorsPreflightRequest } from '../_shared/cors.ts';
 import { checkServiceRoleOrAdmin } from '../_shared/auth.ts';
 import { logEdgeError } from '../_shared/edgeLogger.ts';
@@ -479,7 +479,7 @@ Deno.serve(async (req) => {
             try {
               const { data: settings } = await supabase
                 .from('site_settings').select('contact_email, site_name').limit(1).maybeSingle();
-              const adminEmail = settings?.contact_email || 'info@kuechenwert.de';
+              const adminEmail = settings?.contact_email || 'info@kuechenwert24.de';
 
               // Lookup seller name for richer admin context
               let sellerNameStr: string | undefined;

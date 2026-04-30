@@ -1,4 +1,4 @@
-﻿import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.100.1';
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.100.1';
 import { getCorsHeaders, handleCorsPreflightRequest } from '../_shared/cors.ts';
 import { buildEmailLayout, paragraph, infoBox, detailRow, warningBox, button } from '../_shared/email-builder.ts';
 import { logEdgeError } from '../_shared/edgeLogger.ts';
@@ -430,7 +430,7 @@ Deno.serve(async (req) => {
           .limit(1)
           .maybeSingle();
 
-        const settingsData = settings || { site_name: 'KuechenWert', contact_email: 'info@kuechenwert.de' };
+        const settingsData = settings || { site_name: 'KuechenWert', contact_email: 'info@kuechenwert24.de' };
 
         // Contract email to seller
         if (sellerProfile?.email && contractPdfBase64) {
@@ -455,7 +455,7 @@ Deno.serve(async (req) => {
                 'Authorization': `Bearer ${RESEND_API_KEY}`,
               },
               body: JSON.stringify({
-                from: `${settingsData.site_name} <info@kuechenwert.de>`,
+                from: `${settingsData.site_name} <info@kuechenwert24.de>`,
                 to: [sellerProfile.email],
                 subject: `Kaufvertrag ${contractNumber} – ${kitchenName}`,
                 html,
@@ -474,7 +474,7 @@ Deno.serve(async (req) => {
 
             try {
               const { error: logError } = await supabase.from('admin_emails').insert({
-                sender_email: 'info@kuechenwert.de',
+                sender_email: 'info@kuechenwert24.de',
                 sender_name: settingsData.site_name,
                 recipient_email: sellerProfile.email,
                 recipient_name: sellerName,
@@ -524,7 +524,7 @@ Deno.serve(async (req) => {
                 'Authorization': `Bearer ${RESEND_API_KEY}`,
               },
               body: JSON.stringify({
-                from: `${settingsData.site_name} <info@kuechenwert.de>`,
+                from: `${settingsData.site_name} <info@kuechenwert24.de>`,
                 to: [buyerProfile.email],
                 subject: `Kaufvertrag ${contractNumber} – ${kitchenName}`,
                 html,
@@ -543,7 +543,7 @@ Deno.serve(async (req) => {
 
             try {
               const { error: logError } = await supabase.from('admin_emails').insert({
-                sender_email: 'info@kuechenwert.de',
+                sender_email: 'info@kuechenwert24.de',
                 sender_name: settingsData.site_name,
                 recipient_email: buyerProfile.email,
                 recipient_name: buyerName,
@@ -597,7 +597,7 @@ Deno.serve(async (req) => {
         const protoResult = await sendBlankHandoverProtocol({
           supabase,
           resendApiKey: RESEND_API_KEY,
-          settingsData: settings2 || { site_name: 'KuechenWert', contact_email: 'info@kuechenwert.de' },
+          settingsData: settings2 || { site_name: 'KuechenWert', contact_email: 'info@kuechenwert24.de' },
           kitchenId: auction.kitchen.id,
           buyerId,
           sellerId: auction.kitchen.seller_id,
@@ -751,7 +751,7 @@ Deno.serve(async (req) => {
         .limit(1)
         .maybeSingle();
 
-      const settingsData = settings || { site_name: 'KuechenWert', contact_email: 'info@kuechenwert.de' };
+      const settingsData = settings || { site_name: 'KuechenWert', contact_email: 'info@kuechenwert24.de' };
 
       // Get admin emails
       const recipients: string[] = [];
@@ -775,7 +775,7 @@ Deno.serve(async (req) => {
       }
 
       if (recipients.length === 0) {
-        recipients.push('info@kuechenwert.de');
+        recipients.push('info@kuechenwert24.de');
       }
 
       const saleLabel = isFestpreisProposal ? 'Preisvorschlag' : 'Kaufchance';
@@ -817,7 +817,7 @@ Deno.serve(async (req) => {
             'Authorization': `Bearer ${RESEND_API_KEY}`,
           },
           body: JSON.stringify({
-            from: `${settingsData.site_name} System <info@kuechenwert.de>`,
+            from: `${settingsData.site_name} System <info@kuechenwert24.de>`,
             to: recipients,
             subject: adminSubject,
             html,
@@ -828,7 +828,7 @@ Deno.serve(async (req) => {
       // Log admin email
       try {
         await supabase.from('admin_emails').insert({
-          sender_email: 'info@kuechenwert.de',
+          sender_email: 'info@kuechenwert24.de',
           sender_name: `${settingsData.site_name} System`,
           recipient_email: recipients[0],
           recipient_name: 'Admin',

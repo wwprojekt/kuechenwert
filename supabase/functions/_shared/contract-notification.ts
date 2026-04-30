@@ -1,4 +1,4 @@
-﻿// deno-lint-ignore-file no-explicit-any
+// deno-lint-ignore-file no-explicit-any
 import {
   buildEmailLayout,
   paragraph,
@@ -62,7 +62,7 @@ export async function sendContractSentNotification(opts: {
         'Authorization': `Bearer ${opts.resendApiKey}`,
       },
       body: JSON.stringify({
-        from: `${siteName} <info@kuechenwert.de>`,
+        from: `${siteName} <info@kuechenwert24.de>`,
         to: [opts.recipientEmail],
         subject,
         html,
@@ -80,7 +80,7 @@ export async function sendContractSentNotification(opts: {
 
     try {
       await opts.supabase.from('admin_emails').insert({
-        sender_email: 'info@kuechenwert.de',
+        sender_email: 'info@kuechenwert24.de',
         sender_name: siteName,
         recipient_email: opts.recipientEmail,
         recipient_name: opts.recipientName,

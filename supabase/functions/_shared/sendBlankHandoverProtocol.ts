@@ -1,4 +1,4 @@
-﻿/**
+/**
  * Shared helper: sendBlankHandoverProtocol
  *
  * Generates a BLANK handover-protocol PDF (via the
@@ -203,7 +203,7 @@ async function sendBlankHandoverProtocolInner(
   // ─── 3. Send to seller + buyer (in sequence, isolated) ────────────────
   const subject = `Übergabeprotokoll zum Kaufvertrag ${contractNumber} – ${vehicleName}`;
   const filename = `${contractNumber}_uebergabeprotokoll.pdf`;
-  const fromAddr = `${settingsData.site_name || 'KuechenWert'} <info@kuechenwert.de>`;
+  const fromAddr = `${settingsData.site_name || 'KuechenWert'} <info@kuechenwert24.de>`;
 
   const allRecipients: { profile: ProfileLike | null | undefined; party: 'seller' | 'buyer'; salutation: string; intro: string; instructions: string }[] = [
     {
@@ -290,7 +290,7 @@ async function sendBlankHandoverProtocolInner(
 
       try {
         await supabase.from('admin_emails').insert({
-          sender_email: 'info@kuechenwert.de',
+          sender_email: 'info@kuechenwert24.de',
           sender_name: settingsData.site_name || 'KuechenWert',
           recipient_email: email,
           recipient_name: recipientName,

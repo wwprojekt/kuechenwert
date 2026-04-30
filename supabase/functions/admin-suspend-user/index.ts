@@ -1,4 +1,4 @@
-﻿import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.100.1';
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.100.1';
 import {
   buildEmailLayout,
   paragraph,
@@ -61,7 +61,7 @@ interface SettingsLike {
 const fallbackSettings: SettingsLike = {
   site_name: 'KuechenWert',
   site_description: 'Deutschlands führende Wohnmobil-Handelsplattform',
-  contact_email: 'info@kuechenwert.de',
+  contact_email: 'info@kuechenwert24.de',
   support_phone: '+49 511 51532476',
 };
 
@@ -87,11 +87,11 @@ async function sendMail(
         Authorization: `Bearer ${RESEND_API_KEY}`,
       },
       body: JSON.stringify({
-        from: `${settings.site_name} <info@kuechenwert.de>`,
+        from: `${settings.site_name} <info@kuechenwert24.de>`,
         to: [recipientEmail],
         subject,
         html,
-        reply_to: 'info@kuechenwert.de',
+        reply_to: 'info@kuechenwert24.de',
       }),
     });
     if (!res.ok) {
@@ -236,7 +236,7 @@ Deno.serve(async (req) => {
     if (result.ok) {
       try {
         await supabaseAdmin.from('admin_emails').insert({
-          sender_email: 'info@kuechenwert.de',
+          sender_email: 'info@kuechenwert24.de',
           sender_name: settings.site_name,
           recipient_email: profile.email,
           recipient_name: displayName(profile),

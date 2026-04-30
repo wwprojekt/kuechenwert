@@ -1,4 +1,4 @@
-﻿import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.100.1';
 import { getCorsHeaders, handleCorsPreflightRequest } from '../_shared/cors.ts';
 import { checkServiceRoleOrAdmin } from '../_shared/auth.ts';
@@ -61,7 +61,7 @@ serve(async (req) => {
       zip: settings?.zip_code || settings?.company_postal_code || '30627',
       city: settings?.city || settings?.company_city || 'Hannover',
       phone: settings?.support_phone || '0511 / 51532476',
-      email: settings?.contact_email || 'info@kuechenwert.de',
+      email: settings?.contact_email || 'info@kuechenwert24.de',
       managingDirector: settings?.managing_director || 'Mona Kareem-Ameen',
       hrbNumber: settings?.hrb_number || '210321',
       court: 'Amtsgericht Hildesheim',

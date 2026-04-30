@@ -1,4 +1,4 @@
-﻿import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
+import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.100.1';
 import { buildEmailLayout, paragraph } from '../_shared/email-builder.ts';
 import { checkServiceRoleOrAdmin } from '../_shared/auth.ts';
@@ -57,7 +57,7 @@ const handler = async (req: Request): Promise<Response> => {
     const settingsData = settings || {
       site_name: 'KuechenWert',
       site_description: 'Deutschlands führende Wohnmobil-Handelsplattform',
-      contact_email: 'info@kuechenwert.de',
+      contact_email: 'info@kuechenwert24.de',
       support_phone: '+49 511 51532476',
     };
 
@@ -78,11 +78,11 @@ const handler = async (req: Request): Promise<Response> => {
           : buildEmailLayout(settingsData, email.subject, rawBody);
 
         const emailPayload: any = {
-          from: `${email.sender_name || settingsData.site_name} <${email.sender_email || 'info@kuechenwert.de'}>`,
+          from: `${email.sender_name || settingsData.site_name} <${email.sender_email || 'info@kuechenwert24.de'}>`,
           to: [email.recipient_email],
           subject: email.subject,
           html,
-          reply_to: 'info@kuechenwert.de',
+          reply_to: 'info@kuechenwert24.de',
         };
 
         // Add CC/BCC if present

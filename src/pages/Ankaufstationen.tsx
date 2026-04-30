@@ -224,7 +224,7 @@ const Ankaufstationen = () => {
                         <p className="text-xs text-muted-foreground">
                           {typeof partner.opening_hours === "string"
                             ? partner.opening_hours
-                            : "Mo-Fr: 9-18 Uhr"}
+                            : "Mo-Fr: 10-18 Uhr"}
                         </p>
                       </div>
                     ) : null}

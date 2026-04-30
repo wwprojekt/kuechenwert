@@ -77,18 +77,20 @@
     <meta property="og:title" content="KüchenWert — Neue Küche günstig planen" />
     <meta property="og:description" content="Drei Wege zur Traumküche: Angebote vergleichen, Studio-Preis unterbieten oder mit KI visualisieren. Kostenlos, unverbindlich, deutschlandweit." />
     <meta property="og:url" content="https://kuechenwert24.de" />
-    <!-- Interim social-share image (Unsplash) bis eigenes KüchenWert-OG-Bild gestaltet ist.
-         Altes /og-image.png war noch das CaravanWert-Motorhome-Bild. -->
-    <meta property="og:image" content="https://images.unsplash.com/photo-1556909114-f6e7ad7d3136?auto=format&fit=crop&w=1200&h=630&q=80" />
+    <!-- Eigenes KuechenWert-OG-Bild (1200x630, PNG). Zeigt eine moderne
+         Salbei-Gruen-Kueche mit Preisvergleichs-Badge "3 Angebote vergleichen"
+         und dem Claim "Traumküche. Schlau geplant." — ersetzt das interim
+         Unsplash-Bild aus der Rebrand-Phase. -->
+    <meta property="og:image" content="https://kuechenwert24.de/og-image.png" />
     <meta property="og:image:width" content="1200" />
     <meta property="og:image:height" content="630" />
-    <meta property="og:image:alt" content="Moderne Traumküche — mit KüchenWert schlau planen und günstig kaufen" />
+    <meta property="og:image:alt" content="Moderne Traumküche in Salbei-Grün — mit KüchenWert 3 Angebote vergleichen und schlau planen" />
 
     <!-- Twitter -->
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:title" content="KüchenWert — Neue Küche günstig planen" />
     <meta name="twitter:description" content="Drei Wege zur Traumküche: Angebote vergleichen, Studio-Preis unterbieten oder mit KI visualisieren." />
-    <meta name="twitter:image" content="https://images.unsplash.com/photo-1556909114-f6e7ad7d3136?auto=format&fit=crop&w=1200&h=630&q=80" />
+    <meta name="twitter:image" content="https://kuechenwert24.de/og-image.png" />
 
     <!-- Structured Data - Organization Schema -->
     <script type="application/ld+json">
@@ -99,7 +101,7 @@
       "description": "Deutschlands Vergleichsportal für neue Küchen — Angebote von geprüften Studios einholen, Studio-Preise unterbieten lassen oder mit KI visualisieren.",
       "url": "https://kuechenwert24.de",
       "logo": "https://kuechenwert24.de/logo.svg",
-      "image": "https://images.unsplash.com/photo-1556909114-f6e7ad7d3136?auto=format&fit=crop&w=1200&h=630&q=80",
+      "image": "https://kuechenwert24.de/og-image.png",
       "telephone": "+49-511-51532476",
       "email": "info@kuechenwert24.de",
       "address": {
@@ -115,8 +117,20 @@
         "telephone": "+49-511-51532476",
         "contactType": "Customer Service",
         "areaServed": "DE",
-        "availableLanguage": "German"
-      }
+        "availableLanguage": "German",
+        "hoursAvailable": {
+          "@type": "OpeningHoursSpecification",
+          "dayOfWeek": ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"],
+          "opens": "10:00",
+          "closes": "18:00"
+        }
+      },
+      "openingHoursSpecification": [{
+        "@type": "OpeningHoursSpecification",
+        "dayOfWeek": ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"],
+        "opens": "10:00",
+        "closes": "18:00"
+      }]
     }
     </script>
   </head>

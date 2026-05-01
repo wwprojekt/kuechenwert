@@ -35,17 +35,15 @@ interface AuctionWithKitchen extends AuctionRow {
   };
 }
 
-type SortOption = 'ending_soon' | 'newest' | 'price_asc' | 'price_desc' | 'year_desc' | 'year_asc' | 'mileage_asc' | 'mileage_desc';
+type SortOption = 'ending_soon' | 'newest' | 'price_asc' | 'price_desc' | 'year_desc' | 'year_asc';
 
 const SORT_OPTIONS: { value: SortOption; label: string }[] = [
   { value: 'ending_soon', label: 'Bald endend' },
   { value: 'newest', label: 'Neueste zuerst' },
   { value: 'price_asc', label: 'Preis aufsteigend' },
   { value: 'price_desc', label: 'Preis absteigend' },
-  { value: 'year_desc', label: 'Baujahr neueste' },
-  { value: 'year_asc', label: 'Baujahr älteste' },
-  { value: 'mileage_asc', label: 'Km niedrigste' },
-  { value: 'mileage_desc', label: 'Km höchste' },
+  { value: 'year_desc', label: 'Produktionsjahr (neu)' },
+  { value: 'year_asc', label: 'Produktionsjahr (alt)' },
 ];
 
 const ITEMS_PER_PAGE = 12;
@@ -65,18 +63,13 @@ const Kaufen = () => {
   const [visibleCount, setVisibleCount] = useState(ITEMS_PER_PAGE);
   const [mobileFilterOpen, setMobileFilterOpen] = useState(false);
   const [filters, setFilters] = useState<FilterState>({
-    priceRange: [0, 500000],
-    yearRange: [1980, 2026],
-    vehicleTypes: [],
+    priceRange: [0, 50000],
+    yearRange: [2000, 2026],
+    kitchenForms: [],
     brand: null,
-    beds: null,
+    style: null,
     searchQuery: "",
-    // New Phase 3 filters
     countries: [],
-    mileageMin: null,
-    mileageMax: null,
-    transmission: null,
-    accidentFree: null,
     buyNowOnly: false,
   });
   const { toast } = useToast();
@@ -423,30 +416,27 @@ const Kaufen = () => {
         return false;
       }
 
-      // Year filter
+      // Production year filter
       if (kitchen.year < filters.yearRange[0] || kitchen.year > filters.yearRange[1]) {
         return false;
       }
 
-      // Vehicle type filter
-      if (filters.vehicleTypes.length > 0 && !filters.vehicleTypes.includes(kitchen.body_type)) {
+      // Küchenform filter (body_type column hält den Form-Namen, z.B. "L-Form")
+      if (filters.kitchenForms.length > 0 && !filters.kitchenForms.includes(kitchen.body_type)) {
         return false;
       }
 
-      // Brand filter
+      // Brand (Hersteller) filter
       if (filters.brand && kitchen.manufacturer !== filters.brand) {
         return false;
       }
 
-      // Beds filter
-      if (filters.beds) {
-        const bedsNum = parseInt(filters.beds);
-        const kitchenBeds = (kitchen as any).sleeping_places || 0;
-        if (filters.beds === "6") {
-          if (kitchenBeds < 6) return false;
-        } else {
-          if (kitchenBeds !== bedsNum) return false;
-        }
+      // Style filter — Stil wird aktuell nicht in einer eigenen Spalte
+      // gepflegt; wir suchen ihn im Modell-Namen / Manufacturer-Text.
+      if (filters.style) {
+        const styleLc = filters.style.toLowerCase();
+        const haystack = `${kitchen.manufacturer || ""} ${kitchen.model || ""}`.toLowerCase();
+        if (!haystack.includes(styleLc)) return false;
       }
 
       // Search filter
@@ -459,7 +449,7 @@ const Kaufen = () => {
         }
       }
 
-      // Country filter (Phase 3)
+      // Country filter
       if (filters.countries.length > 0) {
         const kitchenCountry = (kitchen as any).country || 'DE';
         if (!filters.countries.includes(kitchenCountry)) {
@@ -467,27 +457,9 @@ const Kaufen = () => {
         }
       }
 
-      // Mileage filter (Phase 3)
-      if (filters.mileageMin !== null && kitchen.mileage < filters.mileageMin) {
-        return false;
-      }
-      if (filters.mileageMax !== null && kitchen.mileage > filters.mileageMax) {
-        return false;
-      }
-
-      // Transmission filter (Phase 3)
-      if (filters.transmission && kitchen.transmission !== filters.transmission) {
-        return false;
-      }
-
-      // Accident free filter (Phase 3)
-      if (filters.accidentFree === true && kitchen.accident_free !== true) {
-        return false;
-      }
-
-      // Buy Now filter (Phase 3)
+      // Buy Now (Sofortkauf) filter
       if (filters.buyNowOnly) {
-        const hasInstantPrice = kitchen.instant_price && 
+        const hasInstantPrice = kitchen.instant_price &&
           Number(kitchen.instant_price) > 0;
         if (!hasInstantPrice) {
           return false;
@@ -528,12 +500,6 @@ const Kaufen = () => {
       case 'year_asc':
         sorted.sort((a, b) => (a.kitchen?.year || 0) - (b.kitchen?.year || 0));
         break;
-      case 'mileage_asc':
-        sorted.sort((a, b) => (a.kitchen?.mileage || 0) - (b.kitchen?.mileage || 0));
-        break;
-      case 'mileage_desc':
-        sorted.sort((a, b) => (b.kitchen?.mileage || 0) - (a.kitchen?.mileage || 0));
-        break;
     }
     return sorted;
   }, [filteredAuctions, sortBy]);
@@ -554,18 +520,14 @@ const Kaufen = () => {
   const hasActiveFilters = useMemo(() => {
     return (
       filters.priceRange[0] > 0 ||
-      filters.priceRange[1] < 500000 ||
-      filters.yearRange[0] > 1980 ||
+      filters.priceRange[1] < 50000 ||
+      filters.yearRange[0] > 2000 ||
       filters.yearRange[1] < 2026 ||
-      filters.vehicleTypes.length > 0 ||
+      filters.kitchenForms.length > 0 ||
       filters.brand !== null ||
-      filters.beds !== null ||
+      filters.style !== null ||
       filters.searchQuery !== "" ||
       filters.countries.length > 0 ||
-      filters.mileageMin !== null ||
-      filters.mileageMax !== null ||
-      filters.transmission !== null ||
-      filters.accidentFree !== null ||
       filters.buyNowOnly
     );
   }, [filters]);
@@ -573,16 +535,13 @@ const Kaufen = () => {
   // Count active filters for mobile badge
   const activeFilterCount = useMemo(() => {
     let count = 0;
-    if (filters.priceRange[0] > 0 || filters.priceRange[1] < 500000) count++;
-    if (filters.yearRange[0] > 1980 || filters.yearRange[1] < 2026) count++;
-    if (filters.vehicleTypes.length > 0) count++;
+    if (filters.priceRange[0] > 0 || filters.priceRange[1] < 50000) count++;
+    if (filters.yearRange[0] > 2000 || filters.yearRange[1] < 2026) count++;
+    if (filters.kitchenForms.length > 0) count++;
     if (filters.brand !== null) count++;
-    if (filters.beds !== null) count++;
+    if (filters.style !== null) count++;
     if (filters.searchQuery !== "") count++;
     if (filters.countries.length > 0) count++;
-    if (filters.mileageMin !== null || filters.mileageMax !== null) count++;
-    if (filters.transmission !== null) count++;
-    if (filters.accidentFree !== null) count++;
     if (filters.buyNowOnly) count++;
     return count;
   }, [filters]);
@@ -620,14 +579,14 @@ const Kaufen = () => {
   const handleFilterChange = useCallback((newFilters: FilterState) => {
     setFilters(newFilters);
     const activeFilters = Object.entries(newFilters).filter(([k, v]) => {
-      if (k === 'priceRange') return (v as number[])[0] > 0 || (v as number[])[1] < 500000;
-      if (k === 'yearRange') return (v as number[])[0] > 1980 || (v as number[])[1] < new Date().getFullYear();
+      if (k === 'priceRange') return (v as number[])[0] > 0 || (v as number[])[1] < 50000;
+      if (k === 'yearRange') return (v as number[])[0] > 2000 || (v as number[])[1] < new Date().getFullYear();
       if (Array.isArray(v)) return v.length > 0;
       if (typeof v === 'string') return v !== '';
       return false;
     }).map(([k]) => k);
     if (activeFilters.length > 0) {
-      trackEvent('filter_applied', { category: 'auction', properties: { filters: activeFilters, brand: newFilters.brand, vehicleTypes: newFilters.vehicleTypes } });
+      trackEvent('filter_applied', { category: 'auction', properties: { filters: activeFilters, brand: newFilters.brand, kitchenForms: newFilters.kitchenForms, style: newFilters.style } });
     }
   }, []);
 
@@ -800,9 +759,10 @@ const Kaufen = () => {
                     <div className="text-xs text-muted-foreground p-2 bg-muted/50 rounded">
                       <strong>Aktuelle Filter:</strong>{' '}
                       {filters.brand ? `Marke: ${filters.brand}` : 'Alle Marken'}
-                      {filters.vehicleTypes.length > 0 ? ` • Typ: ${filters.vehicleTypes.join(', ')}` : ''}
-                      {filters.priceRange[1] < 500000 ? ` • Max: €${filters.priceRange[1].toLocaleString('de-DE')}` : ''}
-                      {filters.yearRange[0] > 1980 ? ` • Ab ${filters.yearRange[0]}` : ''}
+                      {filters.kitchenForms.length > 0 ? ` • Form: ${filters.kitchenForms.join(', ')}` : ''}
+                      {filters.style ? ` • Stil: ${filters.style}` : ''}
+                      {filters.priceRange[1] < 50000 ? ` • Max: €${filters.priceRange[1].toLocaleString('de-DE')}` : ''}
+                      {filters.yearRange[0] > 2000 ? ` • Ab ${filters.yearRange[0]}` : ''}
                     </div>
                     <div className="flex gap-2 justify-end">
                       <Button
@@ -824,11 +784,11 @@ const Kaufen = () => {
 
                             const criteria: Record<string, any> = {};
                             if (filters.brand) criteria.manufacturer = filters.brand;
-                            if (filters.vehicleTypes.length > 0) criteria.body_type = filters.vehicleTypes[0];
-                            if (filters.priceRange[1] < 500000) criteria.max_price = filters.priceRange[1];
-                            if (filters.yearRange[0] > 1980) criteria.min_year = filters.yearRange[0];
+                            if (filters.kitchenForms.length > 0) criteria.body_type = filters.kitchenForms[0];
+                            if (filters.style) criteria.style = filters.style;
+                            if (filters.priceRange[1] < 50000) criteria.max_price = filters.priceRange[1];
+                            if (filters.yearRange[0] > 2000) criteria.min_year = filters.yearRange[0];
                             if (filters.yearRange[1] < 2026) criteria.max_year = filters.yearRange[1];
-                            if (filters.beds) criteria.sleeping_places = parseInt(filters.beds);
 
                             const { error } = await supabase
                               .from('search_alerts')
@@ -954,17 +914,13 @@ const Kaufen = () => {
                       className="gap-2"
                       onClick={() => {
                         setFilters({
-                          priceRange: [0, 500000],
-                          yearRange: [1980, 2026],
-                          vehicleTypes: [],
+                          priceRange: [0, 50000],
+                          yearRange: [2000, 2026],
+                          kitchenForms: [],
                           brand: null,
-                          beds: null,
+                          style: null,
                           searchQuery: "",
                           countries: [],
-                          mileageMin: null,
-                          mileageMax: null,
-                          transmission: null,
-                          accidentFree: null,
                           buyNowOnly: false,
                         });
                       }}

@@ -610,7 +610,7 @@ export default function AdminKitchens() {
               <TableCell colSpan={11} className="text-center py-12">
                 <div className="flex flex-col items-center gap-2 text-muted-foreground">
                   <Car className="w-8 h-8" />
-                  <p>Keine Wohnmobile in dieser Kategorie</p>
+                  <p>Keine Küchen in dieser Kategorie</p>
                 </div>
               </TableCell>
             </TableRow>
@@ -806,9 +806,9 @@ export default function AdminKitchens() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-xl sm:text-2xl md:text-3xl font-bold text-foreground mb-2">Wohnmobilverwaltung</h1>
+          <h1 className="text-xl sm:text-2xl md:text-3xl font-bold text-foreground mb-2">Küchenverwaltung</h1>
           <p className="text-muted-foreground">
-            Übersicht aller Wohnmobile auf der Plattform
+            Übersicht aller Küchen auf der Plattform
           </p>
         </div>
         <ExportButton

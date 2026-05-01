@@ -6732,7 +6732,7 @@ export type Database = {
         | "Sehr gut"
         | "Gut"
         | "Befriedigend"
-        | "ReparaturbedÃ¼rftig"
+        | "Reparaturbedürftig"
         | "Sehr gepflegt"
         | "Gepflegt"
         | "Gebrauchsspuren"
@@ -6920,7 +6920,7 @@ export const Constants = {
         "Sehr gut",
         "Gut",
         "Befriedigend",
-        "ReparaturbedÃ¼rftig",
+        "Reparaturbedürftig",
         "Sehr gepflegt",
         "Gepflegt",
         "Gebrauchsspuren",

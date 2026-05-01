@@ -987,7 +987,7 @@ export default function AdminDashboard() {
           badge={counts?.totalMessages}
         />
         <QuickStatCard
-          title="Wohnmobile"
+          title="Küchen"
           value={stats?.totalKitchens || 0}
           subtitle={`${stats?.activeAuctions || 0} in Auktion`}
           icon={Car}
@@ -1290,7 +1290,7 @@ export default function AdminDashboard() {
               <div className="flex items-center justify-between">
                 <CardTitle className="text-lg flex items-center gap-2">
                   <Car className="w-5 h-5 text-green-600" />
-                  Letzte Wohnmobil-Aktivität
+                  Letzte Küchen-Aktivität
                 </CardTitle>
                 <Link to="/admin/kitchens">
                   <Button variant="ghost" size="sm" className="text-xs h-7">
@@ -1302,7 +1302,7 @@ export default function AdminDashboard() {
             <CardContent className="pt-0">
               {!recentKitchens || recentKitchens.length === 0 ? (
                 <p className="text-sm text-muted-foreground text-center py-4">
-                  Keine Wohnmobile vorhanden.
+                  Keine Küchen vorhanden.
                 </p>
               ) : (
                 <div className="space-y-1">

@@ -122,7 +122,7 @@ const DealerInventory = () => {
         <div>
           <h1 className="text-xl sm:text-2xl font-bold mb-0.5">Inventar</h1>
           <p className="text-sm text-muted-foreground">
-            Verwalten Sie Ihre erworbenen Wohnmobile
+            Verwalten Sie Ihre erworbenen Küchen
           </p>
         </div>
         <Badge variant="secondary" className="text-sm px-3 py-1">

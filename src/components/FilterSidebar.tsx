@@ -6,22 +6,24 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Slider } from "@/components/ui/slider";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Filter, MapPin, Gauge, Cog, Shield, Zap, Globe } from "lucide-react";
+import { Filter, Palette, Globe, Zap } from "lucide-react";
 import { useState, useEffect } from "react";
 
+// FilterState for the kitchens marketplace (`/kaufen`).
+//
+// Historisch enthielt dieser Typ noch Caravan-Felder (`vehicleTypes`,
+// `mileageMin/Max`, `transmission`, `accidentFree`, `beds`). Die Felder
+// werden nicht mehr in der UI gezeigt und nicht mehr in der Query
+// angewendet. Sie sind 2026-05-01 entfernt worden — die Seite ist jetzt
+// ein Küchen-Marketplace.
 export interface FilterState {
   priceRange: [number, number];
   yearRange: [number, number];
-  vehicleTypes: string[];
+  kitchenForms: string[];
   brand: string | null;
-  beds: string | null;
+  style: string | null;
   searchQuery: string;
-  // New filters for Phase 3
   countries: string[];
-  mileageMin: number | null;
-  mileageMax: number | null;
-  transmission: string | null;
-  accidentFree: boolean | null;
   buyNowOnly: boolean;
 }
 
@@ -33,78 +35,108 @@ interface FilterSidebarProps {
 }
 
 const COUNTRIES = [
-  { code: 'DE', name: 'Deutschland' },
-  { code: 'AT', name: 'Österreich' },
-  { code: 'CH', name: 'Schweiz' },
-  { code: 'NL', name: 'Niederlande' },
-  { code: 'BE', name: 'Belgien' },
-  { code: 'FR', name: 'Frankreich' },
-  { code: 'IT', name: 'Italien' },
-  { code: 'ES', name: 'Spanien' },
+  { code: "DE", name: "Deutschland" },
+  { code: "AT", name: "Österreich" },
+  { code: "CH", name: "Schweiz" },
 ];
 
-export const FilterSidebar = ({ onFilterChange, resultCount, countryCounts, availableBrands }: FilterSidebarProps) => {
-  const [priceRange, setPriceRange] = useState<[number, number]>([0, 500000]);
-  const [yearRange, setYearRange] = useState<[number, number]>([1980, 2026]);
-  const [vehicleTypes, setVehicleTypes] = useState<string[]>([]);
+// Küchenformen (Grundriss). Entspricht dem `body_type`-Feld in der
+// `kitchens`-Tabelle. Die Namen sind so gewählt, dass sie zum Enum
+// passen, das in der nächsten Migration gesetzt wird.
+const KITCHEN_FORMS = [
+  "L-Form",
+  "U-Form",
+  "Kochinsel",
+  "Einzelzeile",
+  "Zweizeilig",
+  "G-Form",
+];
+
+// Küchenstile. Wird primär als Filter-Hinweis für SEO/Browse genutzt —
+// die eigentlichen Angebote sind markenunabhängig; Studios pflegen Stil
+// i.d.R. im Freitext. Wir filtern clientseitig über den Titel.
+const KITCHEN_STYLES = [
+  "Modern",
+  "Landhaus",
+  "Klassisch",
+  "Minimalistisch",
+  "Industrial",
+  "Skandinavisch",
+];
+
+// Küchen-Hersteller (Standard-Liste, falls keine Auctions vorhanden sind).
+// Wird von `availableBrands` überschrieben, sobald echte Inserate da sind.
+const DEFAULT_KITCHEN_BRANDS = [
+  "Nobilia",
+  "Häcker",
+  "Nolte",
+  "SieMatic",
+  "Bulthaup",
+  "Poggenpohl",
+  "Leicht",
+  "Schüller",
+  "Rotpunkt",
+  "Ballerina",
+  "Ewe",
+  "Bauformat",
+];
+
+export const FilterSidebar = ({
+  onFilterChange,
+  resultCount,
+  countryCounts,
+  availableBrands,
+}: FilterSidebarProps) => {
+  const [priceRange, setPriceRange] = useState<[number, number]>([0, 50000]);
+  const [yearRange, setYearRange] = useState<[number, number]>([2000, 2026]);
+  const [kitchenForms, setKitchenForms] = useState<string[]>([]);
   const [brand, setBrand] = useState<string | null>(null);
-  const [beds, setBeds] = useState<string | null>(null);
+  const [style, setStyle] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
-  
-  // New filter states
   const [countries, setCountries] = useState<string[]>([]);
-  const [mileageMin, setMileageMin] = useState<number | null>(null);
-  const [mileageMax, setMileageMax] = useState<number | null>(null);
-  const [transmission, setTransmission] = useState<string | null>(null);
-  const [accidentFree, setAccidentFree] = useState<boolean | null>(null);
   const [buyNowOnly, setBuyNowOnly] = useState(false);
 
-  const defaultBrands = ["Hymer", "Weinsberg", "Knaus", "Bürstner", "Dethleffs", "Carado", "Fiat", "Pössl", "Adria", "Carthago"];
-  const brands = availableBrands && availableBrands.length > 0 ? availableBrands : defaultBrands;
+  const brands =
+    availableBrands && availableBrands.length > 0
+      ? availableBrands
+      : DEFAULT_KITCHEN_BRANDS;
 
-  const handleVehicleTypeToggle = (type: string) => {
-    setVehicleTypes(prev => 
-      prev.includes(type) ? prev.filter(t => t !== type) : [...prev, type]
+  const handleFormToggle = (form: string) => {
+    setKitchenForms((prev) =>
+      prev.includes(form) ? prev.filter((t) => t !== form) : [...prev, form]
     );
   };
 
   const handleCountryToggle = (countryCode: string) => {
-    setCountries(prev =>
-      prev.includes(countryCode) ? prev.filter(c => c !== countryCode) : [...prev, countryCode]
+    setCountries((prev) =>
+      prev.includes(countryCode)
+        ? prev.filter((c) => c !== countryCode)
+        : [...prev, countryCode]
     );
   };
 
-  // Auto-apply filters whenever any filter state changes
   useEffect(() => {
     onFilterChange({
       priceRange,
       yearRange,
-      vehicleTypes,
+      kitchenForms,
       brand,
-      beds,
+      style,
       searchQuery,
       countries,
-      mileageMin,
-      mileageMax,
-      transmission,
-      accidentFree,
       buyNowOnly,
     });
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [priceRange, yearRange, vehicleTypes, brand, beds, searchQuery, countries, mileageMin, mileageMax, transmission, accidentFree, buyNowOnly]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [priceRange, yearRange, kitchenForms, brand, style, searchQuery, countries, buyNowOnly]);
 
   const resetFilters = () => {
-    setPriceRange([0, 500000]);
-    setYearRange([1980, 2026]);
-    setVehicleTypes([]);
+    setPriceRange([0, 50000]);
+    setYearRange([2000, 2026]);
+    setKitchenForms([]);
     setBrand(null);
-    setBeds(null);
+    setStyle(null);
     setSearchQuery("");
     setCountries([]);
-    setMileageMin(null);
-    setMileageMax(null);
-    setTransmission(null);
-    setAccidentFree(null);
     setBuyNowOnly(false);
   };
 
@@ -133,7 +165,7 @@ export const FilterSidebar = ({ onFilterChange, resultCount, countryCounts, avai
             <Label className="text-sm font-semibold">Suche</Label>
             <Input
               type="text"
-              placeholder="Marke, Modell..."
+              placeholder="Marke, Modell, Stil..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="w-full"
@@ -144,7 +176,10 @@ export const FilterSidebar = ({ onFilterChange, resultCount, countryCounts, avai
           <div className="flex items-center justify-between py-3 px-4 bg-primary/5 rounded-lg border border-primary/20">
             <div className="flex items-center gap-2">
               <Zap className="w-4 h-4 text-primary" />
-              <Label htmlFor="buyNowOnly" className="text-sm font-medium cursor-pointer">
+              <Label
+                htmlFor="buyNowOnly"
+                className="text-sm font-medium cursor-pointer"
+              >
                 Nur Sofortkauf
               </Label>
             </div>
@@ -160,8 +195,8 @@ export const FilterSidebar = ({ onFilterChange, resultCount, countryCounts, avai
             <Label className="text-sm font-semibold">Preis</Label>
             <Slider
               min={0}
-              max={500000}
-              step={5000}
+              max={50000}
+              step={500}
               value={priceRange}
               onValueChange={(value) => setPriceRange(value as [number, number])}
               className="py-4"
@@ -172,11 +207,11 @@ export const FilterSidebar = ({ onFilterChange, resultCount, countryCounts, avai
             </div>
           </div>
 
-          {/* Year Range */}
+          {/* Production Year */}
           <div className="space-y-3 pt-4 border-t">
-            <Label className="text-sm font-semibold">Baujahr</Label>
+            <Label className="text-sm font-semibold">Produktionsjahr</Label>
             <Slider
-              min={1980}
+              min={2000}
               max={2026}
               step={1}
               value={yearRange}
@@ -189,87 +224,22 @@ export const FilterSidebar = ({ onFilterChange, resultCount, countryCounts, avai
             </div>
           </div>
 
-          {/* Mileage Range */}
+          {/* Kitchen Form */}
           <div className="space-y-3 pt-4 border-t">
-            <Label className="text-sm font-semibold flex items-center gap-2">
-              <Gauge className="w-4 h-4" />
-              Kilometerstand
-            </Label>
-            <div className="grid grid-cols-2 gap-2">
-              <div>
-                <Input
-                  type="number"
-                  placeholder="Min km"
-                  value={mileageMin || ""}
-                  onChange={(e) => setMileageMin(e.target.value ? parseInt(e.target.value) : null)}
-                  min={0}
-                />
-              </div>
-              <div>
-                <Input
-                  type="number"
-                  placeholder="Max km"
-                  value={mileageMax || ""}
-                  onChange={(e) => setMileageMax(e.target.value ? parseInt(e.target.value) : null)}
-                  min={0}
-                />
-              </div>
-            </div>
-          </div>
-
-          {/* Transmission */}
-          <div className="space-y-3 pt-4 border-t">
-            <Label className="text-sm font-semibold flex items-center gap-2">
-              <Cog className="w-4 h-4" />
-              Getriebe
-            </Label>
-            <Select value={transmission || undefined} onValueChange={(value) => setTransmission(value || null)}>
-              <SelectTrigger>
-                <SelectValue placeholder="Alle Getriebe" />
-              </SelectTrigger>
-              <SelectContent className="bg-popover">
-                <SelectItem value="Schaltgetriebe">Schaltgetriebe</SelectItem>
-                <SelectItem value="Automatik">Automatik</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
-          {/* Accident Free */}
-          <div className="space-y-3 pt-4 border-t">
-            <Label className="text-sm font-semibold flex items-center gap-2">
-              <Shield className="w-4 h-4" />
-              Fahrzeugzustand
-            </Label>
-            <Select 
-              value={accidentFree === null ? undefined : accidentFree ? "yes" : "no"} 
-              onValueChange={(value) => setAccidentFree(value === undefined ? null : value === "yes")}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Alle Fahrzeuge" />
-              </SelectTrigger>
-              <SelectContent className="bg-popover">
-                <SelectItem value="yes">Nur unfallfrei</SelectItem>
-                <SelectItem value="no">Alle anzeigen</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
-          {/* Vehicle Type */}
-          <div className="space-y-3 pt-4 border-t">
-            <Label className="text-sm font-semibold">Fahrzeugtyp</Label>
+            <Label className="text-sm font-semibold">Küchenform</Label>
             <div className="space-y-2">
-              {["Teilintegriert", "Vollintegriert", "Kastenwagen", "Alkoven", "Campingbus"].map((type) => (
-                <div key={type} className="flex items-center space-x-2">
-                  <Checkbox 
-                    id={type} 
-                    checked={vehicleTypes.includes(type)}
-                    onCheckedChange={() => handleVehicleTypeToggle(type)}
+              {KITCHEN_FORMS.map((form) => (
+                <div key={form} className="flex items-center space-x-2">
+                  <Checkbox
+                    id={form}
+                    checked={kitchenForms.includes(form)}
+                    onCheckedChange={() => handleFormToggle(form)}
                   />
                   <label
-                    htmlFor={type}
+                    htmlFor={form}
                     className="text-sm text-muted-foreground cursor-pointer hover:text-foreground transition-smooth"
                   >
-                    {type}
+                    {form}
                   </label>
                 </div>
               ))}
@@ -284,9 +254,12 @@ export const FilterSidebar = ({ onFilterChange, resultCount, countryCounts, avai
             </Label>
             <div className="space-y-2 max-h-48 overflow-y-auto">
               {COUNTRIES.map((country) => (
-                <div key={country.code} className="flex items-center justify-between">
+                <div
+                  key={country.code}
+                  className="flex items-center justify-between"
+                >
                   <div className="flex items-center space-x-2">
-                    <Checkbox 
+                    <Checkbox
                       id={`country-${country.code}`}
                       checked={countries.includes(country.code)}
                       onCheckedChange={() => handleCountryToggle(country.code)}
@@ -298,11 +271,12 @@ export const FilterSidebar = ({ onFilterChange, resultCount, countryCounts, avai
                       {country.name}
                     </label>
                   </div>
-                  {countryCounts && countryCounts[country.code] !== undefined && (
-                    <span className="text-xs text-muted-foreground bg-muted px-2 py-0.5 rounded">
-                      {countryCounts[country.code]}
-                    </span>
-                  )}
+                  {countryCounts &&
+                    countryCounts[country.code] !== undefined && (
+                      <span className="text-xs text-muted-foreground bg-muted px-2 py-0.5 rounded">
+                        {countryCounts[country.code]}
+                      </span>
+                    )}
                 </div>
               ))}
             </div>
@@ -311,7 +285,10 @@ export const FilterSidebar = ({ onFilterChange, resultCount, countryCounts, avai
           {/* Brand */}
           <div className="space-y-3 pt-4 border-t">
             <Label className="text-sm font-semibold">Marke</Label>
-            <Select value={brand || undefined} onValueChange={(value) => setBrand(value || null)}>
+            <Select
+              value={brand || undefined}
+              onValueChange={(value) => setBrand(value || null)}
+            >
               <SelectTrigger>
                 <SelectValue placeholder="Alle Marken" />
               </SelectTrigger>
@@ -325,21 +302,28 @@ export const FilterSidebar = ({ onFilterChange, resultCount, countryCounts, avai
             </Select>
           </div>
 
-          {/* Beds */}
+          {/* Style */}
           <div className="space-y-3 pt-4 border-t">
-            <Label className="text-sm font-semibold">Schlafplätze</Label>
-            <Select value={beds || undefined} onValueChange={(value) => setBeds(value || null)}>
+            <Label className="text-sm font-semibold flex items-center gap-2">
+              <Palette className="w-4 h-4" />
+              Stil
+            </Label>
+            <Select
+              value={style || undefined}
+              onValueChange={(value) => setStyle(value || null)}
+            >
               <SelectTrigger>
                 <SelectValue placeholder="Beliebig" />
               </SelectTrigger>
               <SelectContent className="bg-popover">
-                <SelectItem value="2">2 Personen</SelectItem>
-                <SelectItem value="4">4 Personen</SelectItem>
-                <SelectItem value="6">6+ Personen</SelectItem>
+                {KITCHEN_STYLES.map((s) => (
+                  <SelectItem key={s} value={s}>
+                    {s}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>
-
         </CardContent>
       </Card>
 
@@ -347,8 +331,10 @@ export const FilterSidebar = ({ onFilterChange, resultCount, countryCounts, avai
       <Card className="border-2 bg-muted/30">
         <CardContent className="pt-6">
           <div className="text-center">
-            <div className="text-3xl font-bold text-primary mb-1">{resultCount}</div>
-            <p className="text-sm text-muted-foreground">Verfügbare Fahrzeuge</p>
+            <div className="text-3xl font-bold text-primary mb-1">
+              {resultCount}
+            </div>
+            <p className="text-sm text-muted-foreground">Verfügbare Küchen</p>
           </div>
         </CardContent>
       </Card>

@@ -1356,7 +1356,7 @@ export default function AdminSettings() {
                 KI-Bewertungssystem
               </CardTitle>
               <CardDescription>
-                Konfigurieren Sie die KI-gestützte Wohnmobil-Bewertung. Die KI lernt aus Ihren Expertenbewertungen und wird mit der Zeit immer genauer.
+                Konfigurieren Sie die KI-gestützte Küchen-Kostenschätzung (Küchenrechner + Traumküche-Planer). Die KI lernt aus Ihren Expertenbewertungen und wird mit der Zeit immer genauer.
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
@@ -1391,7 +1391,7 @@ export default function AdminSettings() {
                   </button>
                 </div>
                 <p className="text-xs text-muted-foreground">
-                  Benötigt für die KI-Bewertung im Wertrechner. Erhalten Sie einen Key unter{" "}
+                  Benötigt für die KI-Bewertung im Küchenrechner und für OpenAI-Prompt-Enhancement im Traumküche-Planer. Erhalten Sie einen Key unter{" "}
                   <a href="https://platform.openai.com/api-keys" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
                     platform.openai.com/api-keys
                   </a>
@@ -1402,10 +1402,10 @@ export default function AdminSettings() {
               <div className="rounded-lg border p-4 bg-muted/30 space-y-3">
                 <h4 className="font-medium text-sm">So funktioniert das KI-System:</h4>
                 <ol className="text-sm text-muted-foreground space-y-2 list-decimal list-inside">
-                  <li>Ein Nutzer bewertet sein Wohnmobil im <strong>Wertrechner</strong></li>
-                  <li>Der <strong>Algorithmus</strong> berechnet einen Schätzwert basierend auf Marke, Typ, Alter und Zustand</li>
-                  <li>Die <strong>KI</strong> wird im Hintergrund abgefragt und liefert eine zusätzliche Schätzung</li>
-                  <li>Sie tragen im Admin-Bereich unter <strong>Leads → Wertrechner</strong> Ihren fundierten Expertenwert ein</li>
+                  <li>Ein Nutzer beantwortet im <strong>Küchenrechner</strong> Fragen zu seiner Wunschküche</li>
+                  <li>Der <strong>Algorithmus</strong> berechnet einen Schätzwert basierend auf Form, Größe, Material und Ausstattung</li>
+                  <li>Die <strong>KI</strong> wird im Hintergrund abgefragt und liefert eine zusätzliche Preis-Range</li>
+                  <li>Sie tragen im Admin-Bereich unter <strong>Leads → Küchenrechner</strong> Ihren fundierten Expertenwert ein</li>
                   <li>Die KI <strong>lernt</strong> aus Ihren Expertenwerten und wird mit jeder Bewertung genauer</li>
                 </ol>
               </div>

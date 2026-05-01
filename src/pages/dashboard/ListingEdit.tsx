@@ -591,7 +591,7 @@ export default function ListingEdit() {
                     id="description"
                     value={formData.description}
                     onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                    placeholder="Beschreiben Sie Ihr Wohnmobil..."
+                    placeholder="Beschreiben Sie Ihre Küche..."
                     rows={6}
                   />
                   <p className="text-xs text-muted-foreground">

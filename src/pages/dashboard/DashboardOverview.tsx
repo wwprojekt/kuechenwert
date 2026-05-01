@@ -501,7 +501,7 @@ export default function DashboardOverview() {
       return {
         step: 6,
         label: "Verkauft",
-        sublabel: "Ihr Wohnmobil wurde erfolgreich verkauft",
+        sublabel: "Ihre Küche wurde erfolgreich verkauft",
         color: "text-emerald-600",
         bgColor: "bg-emerald-100 dark:bg-emerald-900/30",
         borderColor: "border-emerald-200 dark:border-emerald-800",
@@ -938,7 +938,7 @@ export default function DashboardOverview() {
                             Fotos fehlen!
                           </p>
                           <p className="text-xs text-amber-600 dark:text-amber-400">
-                            Ohne Fotos kann Ihr Wohnmobil nicht an Händler vermittelt werden. Laden Sie jetzt mindestens 4 Fotos hoch.
+                            Ohne Fotos kann Ihre Küche nicht an Händler vermittelt werden. Laden Sie jetzt mindestens 4 Fotos hoch.
                           </p>
                         </div>
                       </div>

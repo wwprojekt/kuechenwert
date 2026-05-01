@@ -35,6 +35,7 @@ import { de } from "date-fns/locale";
 import { useEffect, useRef } from "react";
 import { ensureValidRLSSession } from "@/lib/sessionGuard";
 import { NewOfferAlert, type KitchenWithOffers } from "@/components/dashboard/NewOfferAlert";
+import { MyKuechenJourney } from "@/components/dashboard/MyKuechenJourney";
 import { useToast } from "@/hooks/use-toast";
 
 /**
@@ -618,7 +619,7 @@ export default function DashboardOverview() {
                   Hallo, {displayName}!
                 </h1>
                 <p className="text-muted-foreground text-sm sm:text-base">
-                  Hier sehen Sie den aktuellen Status Ihres Fahrzeugs.
+                  Ihre Küchen-Anfragen und eingehende Studio-Angebote auf einen Blick.
                 </p>
                 {profile?.customer_number && (
                   <div className="mt-2 inline-flex items-center gap-2 bg-background/80 border border-border rounded-lg px-3 py-1.5">
@@ -636,10 +637,13 @@ export default function DashboardOverview() {
           </div>
         </div>
 
-        {/* Prominentes Highlight für eingehende Kaufchance-/Festpreis-Angebote.
-            Zeigt nur dann etwas an, wenn pending Offers über aktuellem
-            Höchstgebot/Festpreis existieren — sonst null. Enthält Auto-Popup
-            beim ersten Sehen + permanenten Banner + Annahme-Bestätigung. */}
+        {/* Neuer Lead-zentrierter Block (Funnel A/B/C + Traumkueche-KI).
+            Zeigt selbst seinen eigenen Empty-State mit 3-Funnel-CTA, daher
+            keine weitere Conditional-Logik noetig. */}
+        <MyKuechenJourney />
+
+        {/* Legacy Kaufchance-/Festpreis-Alert — nur relevant fuer die
+            historische Auktions-Logik. Bleibt fuer Legacy-Kitchens. */}
         {kitchens.length > 0 && (
           <NewOfferAlert kitchens={kitchens as KitchenWithOffers[]} />
         )}
@@ -679,34 +683,9 @@ export default function DashboardOverview() {
           </Card>
         )}
 
-        {kitchens.length === 0 && !pendingWizardSession && (
-          <Card className="border-2 border-dashed border-primary/30">
-            <CardContent className="p-8 sm:p-12 text-center">
-              <div className="relative mx-auto w-20 h-20 mb-6">
-                <div className="absolute inset-0 bg-gradient-to-br from-primary/20 to-primary/5 rounded-full animate-pulse" />
-                <Car className="relative w-20 h-20 text-primary/40 mx-auto" />
-              </div>
-              <h3 className="text-lg font-semibold mb-2">
-                Noch kein Inserat vorhanden
-              </h3>
-              <p className="text-muted-foreground mb-6 max-w-md mx-auto text-sm">
-                Erstellen Sie Ihr Inserat und erreichen Sie tausende potenzielle
-                Käufer auf{" "}
-                {settings?.site_name || "KüchenWert"}.
-              </p>
-              <Link to="/verkaufen/wizard">
-                <Button
-                  size="lg"
-                  className="bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 shadow-lg group w-full sm:w-auto"
-                >
-                  <Plus className="w-5 h-5 mr-2 group-hover:rotate-90 transition-transform" />
-                  Jetzt Inserat erstellen
-                  <ArrowUpRight className="w-4 h-4 ml-2 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
-                </Button>
-              </Link>
-            </CardContent>
-          </Card>
-        )}
+        {/* Alter "Noch kein Inserat" Empty-State entfernt — MyKuechenJourney
+            rendert selbst einen 3-Funnel-CTA wenn keine Leads/Sessions da
+            sind. */}
 
         {/* Kitchen cards with timeline */}
         {kitchens.map((mh: any) => {

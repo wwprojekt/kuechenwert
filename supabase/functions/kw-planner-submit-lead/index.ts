@@ -77,6 +77,17 @@ Deno.serve(async (req: Request) => {
     auth: { persistSession: false },
   });
 
+  // Auth-Header auslesen: wenn der Client einen gueltigen JWT mitschickt,
+  // koennen wir den Lead mit dem User verknuepfen und er sieht ihn im
+  // Dashboard unter "Meine Anfragen". Guest-Submits bleiben funktional.
+  let userId: string | null = null;
+  const authHeader = req.headers.get("authorization");
+  if (authHeader?.startsWith("Bearer ")) {
+    const token = authHeader.slice("Bearer ".length);
+    const { data: authUser } = await supabase.auth.getUser(token);
+    userId = authUser?.user?.id ?? null;
+  }
+
   const { data: session, error: sErr } = await supabase
     .from("planner_sessions")
     .select("id,session_token,spec,lead_id,status,utm_source,utm_medium,utm_campaign,utm_content,utm_term")
@@ -103,6 +114,7 @@ Deno.serve(async (req: Request) => {
       funnel_variant: "C",
       status: "new",
       tier: "standard",
+      user_id: userId,
       postal_code: body.postal_code,
       kitchen_form: (spec.kitchen_form as string) ?? null,
       kitchen_style: (spec.kitchen_style as string) ?? null,

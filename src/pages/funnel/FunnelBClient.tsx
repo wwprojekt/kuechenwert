@@ -244,10 +244,15 @@ export default function FunnelBClient() {
         ? Math.round(Number(data.existingOfferPriceEur) * 100)
         : null;
 
+      // Wenn User eingeloggt ist, Lead mit Account verknuepfen -> Dashboard.
+      const { data: authData } = await supabase.auth.getUser();
+      const userId = authData?.user?.id ?? null;
+
       const { data: inserted, error: insertError } = await supabase
         .from("leads")
         .insert({
           funnel_type: "b",
+          user_id: userId,
           postal_code: data.postalCode,
           city: data.city || null,
           first_name: data.firstName || null,

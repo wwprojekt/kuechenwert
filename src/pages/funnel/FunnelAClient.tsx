@@ -156,9 +156,16 @@ export function FunnelAClient({
         budget_source: "slider",
       };
 
+      // Wenn User eingeloggt ist, Lead mit Account verknuepfen -> Dashboard
+      // kann "Meine Anfragen" zeigen. Guest-Submits (user_id=null) bleiben
+      // ueber RLS-Policy erlaubt (anon insert, siehe kw_lead_insert_policies).
+      const { data: authData } = await supabase.auth.getUser();
+      const userId = authData?.user?.id ?? null;
+
       const { error } = await supabase.from("leads").insert({
         funnel_type: FUNNEL_A_ID,
         funnel_variant: "A",
+        user_id: userId,
         // status, tier, score: DB-Defaults greifen
         postal_code: data.plz,
         housing_type: housingType ?? null,

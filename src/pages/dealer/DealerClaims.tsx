@@ -36,6 +36,7 @@ import {
 } from '@/components/ui/dialog';
 import { format } from 'date-fns';
 import { de } from 'date-fns/locale';
+import { ensureValidRLSSession } from '@/lib/sessionGuard';
 
 interface Claim {
   id: string;
@@ -85,7 +86,9 @@ export default function DealerClaims() {
     queryKey: ['won-auctions', user?.id],
     queryFn: async () => {
       if (!user) return [];
-      
+      const sessionOk = await ensureValidRLSSession();
+      if (!sessionOk) throw new Error("Sitzung abgelaufen. Bitte neu anmelden.");
+
       // P4-Hardening: explizite Spalten statt '*' (Tabellen-SELECT auf
       // public.auctions ist für authenticated revoked).
       const { data, error } = await supabase
@@ -109,7 +112,9 @@ export default function DealerClaims() {
     queryKey: ['dealer-claims', user?.id],
     queryFn: async () => {
       if (!user) return [];
-      
+      const sessionOk = await ensureValidRLSSession();
+      if (!sessionOk) throw new Error("Sitzung abgelaufen. Bitte neu anmelden.");
+
       const { data, error } = await supabase
         .from('claims')
         .select(`
@@ -130,7 +135,9 @@ export default function DealerClaims() {
   const submitClaimMutation = useMutation({
     mutationFn: async (claimData: typeof claimForm) => {
       if (!user || !selectedAuction) throw new Error('Missing required data');
-      
+      const sessionOk = await ensureValidRLSSession();
+      if (!sessionOk) throw new Error("Sitzung abgelaufen. Bitte neu anmelden.");
+
       // Get auction and kitchen details
       const { data: auction, error: auctionError } = await supabase
         .from('auctions')

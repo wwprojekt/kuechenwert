@@ -87,6 +87,8 @@ const DealerDashboard = () => {
     let channel: ReturnType<typeof supabase.channel> | null = null;
 
     async function setup() {
+      const sessionOk = await ensureValidRLSSession();
+      if (!sessionOk || cancelled) return;
       // Schritt 1: Alle auction_ids holen auf denen dieser Dealer geboten hat.
       // `supabase as any` umgeht den Supabase-TS-Generics-Recursion-Bug,
       // der bei `.eq()` auf bestimmten Tables die Type-Inferenz sprengt.
@@ -200,6 +202,8 @@ const DealerDashboard = () => {
     queryKey: ["dealerLevel", user?.id],
     queryFn: async () => {
       if (!user) return null;
+      const sessionValid = await ensureValidRLSSession();
+      if (!sessionValid) return null;
       const { data, error } = await supabase
         .from("dealer_levels")
         .select("*")
@@ -271,6 +275,9 @@ const DealerDashboard = () => {
   const { data: recentAuctions } = useQuery({
     queryKey: ["allActiveAuctions", user?.id],
     queryFn: async () => {
+      const sessionValid = await ensureValidRLSSession();
+      if (!sessionValid) return [];
+
       // First get all active auctions with left join for resilience.
       // P4-Hardening: explizite Spalten statt '*' (Tabellen-SELECT auf
       // public.auctions ist für authenticated revoked).

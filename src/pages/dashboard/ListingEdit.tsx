@@ -63,6 +63,8 @@ export default function ListingEdit() {
     queryKey: ["kitchenAuction", id],
     queryFn: async () => {
       if (!id) return null;
+      const sessionOk = await ensureValidRLSSession();
+      if (!sessionOk) throw new Error("Sitzung abgelaufen. Bitte neu anmelden.");
       const { data, error } = await supabase
         .from("auctions")
         .select("id, status, reserve_price, seller_initial_reserve, seller_initial_instant_price")
@@ -92,6 +94,8 @@ export default function ListingEdit() {
     queryKey: ['pendingPriceRequest', id],
     queryFn: async () => {
       if (!id || !user) return null;
+      const sessionOk = await ensureValidRLSSession();
+      if (!sessionOk) throw new Error("Sitzung abgelaufen. Bitte neu anmelden.");
       const { data, error } = await supabase
         .from('price_change_requests')
         .select('id, requested_reserve, requested_instant, reason, created_at, status')

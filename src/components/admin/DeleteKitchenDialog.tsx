@@ -121,9 +121,11 @@ export function DeleteKitchenDialog({
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["adminKitchens"] });
+      queryClient.invalidateQueries({ queryKey: ["adminKitchenDetail"] });
+      queryClient.invalidateQueries({ queryKey: ["myListings"] });
       toast({
         title: "Gelöscht",
-        description: "Wohnmobil wurde erfolgreich gelöscht.",
+        description: "Küche wurde erfolgreich gelöscht.",
       });
       onOpenChange(false);
     },
@@ -131,7 +133,7 @@ export function DeleteKitchenDialog({
       logger.error("Delete error:", error);
       toast({
         title: "Fehler",
-        description: "Wohnmobil konnte nicht gelöscht werden. Möglicherweise gibt es noch abhängige Daten.",
+        description: "Küche konnte nicht gelöscht werden. Möglicherweise gibt es noch abhängige Daten.",
         variant: "destructive",
       });
     },
@@ -149,9 +151,9 @@ export function DeleteKitchenDialog({
     <AlertDialog open={open} onOpenChange={onOpenChange}>
       <AlertDialogContent>
         <AlertDialogHeader>
-          <AlertDialogTitle>Wohnmobil löschen?</AlertDialogTitle>
+          <AlertDialogTitle>Küche löschen?</AlertDialogTitle>
           <AlertDialogDescription>
-            Sind Sie sicher, dass Sie das Wohnmobil{" "}
+            Sind Sie sicher, dass Sie die Küche{" "}
             <strong>
               {kitchen.manufacturer} {kitchen.model}
             </strong>{" "}

@@ -17,6 +17,7 @@ import {
 import { Link } from "react-router-dom";
 import { format } from "date-fns";
 import { de } from "date-fns/locale";
+import { ensureValidRLSSession } from "@/lib/sessionGuard";
 
 type FilterType = "all" | "active" | "won" | "lost";
 
@@ -29,6 +30,8 @@ export default function MyBids() {
     queryKey: ["myBids", user?.id],
     queryFn: async () => {
       if (!user) return [];
+      const sessionOk = await ensureValidRLSSession();
+      if (!sessionOk) throw new Error("Sitzung abgelaufen. Bitte neu anmelden.");
 
       const { data, error } = await supabase
         .from("bids_public")

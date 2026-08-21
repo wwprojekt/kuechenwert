@@ -16,6 +16,7 @@ import {
 
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
+import { ensureValidRLSSession } from "@/lib/sessionGuard";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -151,6 +152,8 @@ export function MyKuechenJourney() {
     queryKey: ["myLeads", user?.id],
     queryFn: async () => {
       if (!user) return [] as LeadRow[];
+      const sessionOk = await ensureValidRLSSession();
+      if (!sessionOk) throw new Error("Sitzung abgelaufen. Bitte neu anmelden.");
       const { data, error } = await supabase
         .from("leads")
         .select(
@@ -170,6 +173,8 @@ export function MyKuechenJourney() {
     queryKey: ["myPlannerSessions", user?.id],
     queryFn: async () => {
       if (!user) return [] as PlannerSessionRow[];
+      const sessionOk = await ensureValidRLSSession();
+      if (!sessionOk) throw new Error("Sitzung abgelaufen. Bitte neu anmelden.");
       // Planner-Sessions ohne `user_id`-Spalte -> ueber lead_id joinen:
       // Alle Sessions auflisten, deren lead_id zu einem User-Lead gehoert.
       const { data: leadIds } = await supabase

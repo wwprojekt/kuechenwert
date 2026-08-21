@@ -31,6 +31,7 @@ import {
 import { useAudioNotification } from '@/hooks/useAudioNotification';
 import { usePushNotifications } from '@/hooks/usePushNotifications';
 import { useUserRole } from '@/hooks/useUserRole';
+import { ensureValidRLSSession } from '@/lib/sessionGuard';
 import { DealerInstantBuyAlertCard } from '@/components/DealerInstantBuyAlertCard';
 
 interface NotificationPreferences {
@@ -107,7 +108,9 @@ export const NotificationPreferences = () => {
     queryKey: ['notification-preferences', user?.id],
     queryFn: async () => {
       if (!user) return null;
-      
+      const sessionOk = await ensureValidRLSSession();
+      if (!sessionOk) throw new Error("Sitzung abgelaufen. Bitte neu anmelden.");
+
       const { data, error } = await supabase
         .from('user_notification_preferences')
         .select('*')
@@ -131,7 +134,9 @@ export const NotificationPreferences = () => {
   const savePreferencesMutation = useMutation({
     mutationFn: async (prefs: NotificationPreferences) => {
       if (!user) throw new Error('User not authenticated');
-      
+      const sessionOk = await ensureValidRLSSession();
+      if (!sessionOk) throw new Error("Sitzung abgelaufen. Bitte neu anmelden.");
+
       const { error } = await supabase
         .from('user_notification_preferences')
         .upsert({
@@ -600,7 +605,9 @@ export const CompactNotificationSettings = () => {
     queryKey: ['notification-preferences', user?.id],
     queryFn: async () => {
       if (!user) return null;
-      
+      const sessionOk = await ensureValidRLSSession();
+      if (!sessionOk) throw new Error("Sitzung abgelaufen. Bitte neu anmelden.");
+
       const { data, error } = await supabase
         .from('user_notification_preferences')
         .select('audio_enabled, email_outbid, email_new_bid')
@@ -615,7 +622,9 @@ export const CompactNotificationSettings = () => {
 
   const toggleAudio = async () => {
     if (!user) return;
-    
+    const sessionOk = await ensureValidRLSSession();
+    if (!sessionOk) return;
+
     const newAudioState = !preferences?.audio_enabled;
     
     await supabase

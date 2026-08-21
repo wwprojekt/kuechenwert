@@ -155,12 +155,15 @@ export default function AdminKitchenDetail() {
       if (error) throw error;
     },
     onSuccess: () => {
-      toast.success("Wohnmobil erfolgreich gelöscht");
+      queryClient.invalidateQueries({ queryKey: ["adminKitchens"] });
+      queryClient.invalidateQueries({ queryKey: ["adminKitchenDetail", id] });
+      queryClient.invalidateQueries({ queryKey: ["myListings"] });
+      toast.success("Küche erfolgreich gelöscht");
       navigate("/admin/kitchens");
     },
     onError: (error) => {
       logger.error("Delete kitchen error:", error);
-      toast.error("Fehler beim Löschen des Wohnmobils");
+      toast.error("Fehler beim Löschen der Küche");
     },
   });
 
@@ -224,9 +227,9 @@ export default function AdminKitchenDetail() {
       <div className="flex items-center justify-center h-96">
         <div className="text-center">
           <AlertTriangle className="w-12 h-12 mx-auto text-destructive" />
-          <h2 className="mt-4 text-lg font-semibold">Wohnmobil nicht gefunden</h2>
+          <h2 className="mt-4 text-lg font-semibold">Küche nicht gefunden</h2>
           <p className="mt-2 text-muted-foreground">
-            Das angeforderte Wohnmobil existiert nicht oder wurde gelöscht.
+            Die angeforderte Küche existiert nicht oder wurde gelöscht.
           </p>
           <Button className="mt-4" onClick={() => navigate("/admin/kitchens")}>
             Zurück zur Übersicht
@@ -322,11 +325,11 @@ export default function AdminKitchenDetail() {
 
   return (
     <AdminDetailLayout
-      title={kitchen ? `${kitchen.manufacturer} ${kitchen.model}` : "Wohnmobil"}
+      title={kitchen ? `${kitchen.manufacturer} ${kitchen.model}` : "Küche"}
       subtitle={kitchen ? `${kitchen.year} • ${kitchen.body_type} • ${kitchen.listing_number || "—"}` : undefined}
       status={kitchen ? getStatusBadge(kitchen.status) : undefined}
       backUrl="/admin/kitchens"
-      backLabel="Alle Wohnmobile"
+      backLabel="Alle Küchen"
       isLoading={isLoading}
       icon={<Car className="w-6 h-6" />}
       actions={
@@ -412,7 +415,7 @@ export default function AdminKitchenDetail() {
               </AlertDialogTrigger>
               <AlertDialogContent>
                 <AlertDialogHeader>
-                  <AlertDialogTitle>Wohnmobil löschen?</AlertDialogTitle>
+                  <AlertDialogTitle>Küche löschen?</AlertDialogTitle>
                   <AlertDialogDescription>
                     Diese Aktion kann nicht rückgängig gemacht werden. Alle zugehörigen Fotos
                     und Daten werden ebenfalls gelöscht.

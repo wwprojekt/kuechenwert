@@ -62,8 +62,8 @@
 
 ### Offene Aufgaben
 - [x] Funnel A/B/C: send-lead-notification type=funnel + track-conversion (Click-IDs) (21.08.2026)
-- [ ] sessionGuard: ensureValidRLSSession auf restliche Seller/Dealer-Reads (DealerDashboard, ListingDetail, MyBids, DealerInventory)
-- [ ] Query-Keys: ConvertToKitchenDialog + Admin-Delete invalidieren myListings/myLeads
+- [x] sessionGuard: ensureValidRLSSession auf Seller/Dealer-Reads (MyBids, DealerInventory, DealerClaims, MyKuechenJourney, NotificationPreferences, DealerDashboard, ListingEdit) (21.08.2026)
+- [x] Query-Keys: ConvertToKitchenDialog + Admin-Delete invalidieren myListings/myLeads/admin-leads (21.08.2026)
 - [ ] Google-Review-Send-Pipeline wiederherstellen (Function fehlt) oder Cron dauerhaft tot lassen
 - [x] Admin Kitchen/Auction/Appointment Copy: Form statt km/Aufbauart (21.08.2026)
 - [ ] Stille Admin-Aktionen ohne Empfänger-Mail (Audit 17.04.2026):

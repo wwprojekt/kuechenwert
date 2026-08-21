@@ -17,6 +17,7 @@ import {
 } from "@/components/ui/select";
 import { toast } from "sonner";
 import { Link } from "react-router-dom";
+import { ensureValidRLSSession } from "@/lib/sessionGuard";
 
 interface InventoryItem {
   id: string;
@@ -39,6 +40,9 @@ const DealerInventory = () => {
 
   const fetchInventory = useCallback(async () => {
     try {
+      const sessionOk = await ensureValidRLSSession();
+      if (!sessionOk) throw new Error("Sitzung abgelaufen. Bitte neu anmelden.");
+
       // Get kitchens that the dealer has won/purchased
       const { data, error } = await supabase
         .from('kitchens')

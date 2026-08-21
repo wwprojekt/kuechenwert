@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -11,142 +11,136 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { ArrowLeft, Plus, Loader2 } from "lucide-react";
-import { withSessionRetry } from "@/lib/sessionGuard";
+import { ensureValidRLSSession, invokeWithAuth } from "@/lib/sessionGuard";
 import { MARKETING_CONFIG } from "@/lib/marketing-config";
 import {
-  popularManufacturers,
-  wohnwagenManufacturers,
-  manufacturerModels,
-  wohnwagenManufacturerModels,
-} from "@/lib/vehicle-data";
-
-const BODY_TYPES_WOHNMOBIL = [
-  "Teilintegriert", "Alkoven", "Vollintegriert", "Kastenwagen", "Campingbus",
-] as const;
-
-const BODY_TYPES_WOHNWAGEN = [
-  "Wohnwagen", "Faltcaravan",
-] as const;
-
-const CONDITIONS = [
-  "Neuwertig", "Sehr gepflegt", "Gepflegt", "Sehr gut", "Gut",
-  "Gebrauchsspuren", "Befriedigend", "Reparaturbedürftig",
-] as const;
-
-type VehicleType = "Wohnmobil" | "Wohnwagen";
+  KITCHEN_FORMS,
+  KITCHEN_CONDITIONS,
+  DEFAULT_KITCHEN_BRANDS,
+  dealerKitchenCreateSchema,
+  displayKitchenBrand,
+} from "@/lib/kitchen-listing";
 
 export default function DealerListingCreate() {
   const { user } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
+  const queryClient = useQueryClient();
 
-  const [vehicleType, setVehicleType] = useState<VehicleType>("Wohnmobil");
   const [manufacturer, setManufacturer] = useState("");
+  const [customBrand, setCustomBrand] = useState("");
   const [model, setModel] = useState("");
-  const [customModel, setCustomModel] = useState("");
   const [bodyType, setBodyType] = useState("");
   const [year, setYear] = useState("");
-  const [mileage, setMileage] = useState("");
   const [condition, setCondition] = useState("");
   const [reservePrice, setReservePrice] = useState("");
-  /** Verkäufer kennzeichnet, ob Umsatzsteuer auf der Kaufrechnung ausgewiesen wird */
   const [mwstAusweisbar, setMwstAusweisbar] = useState(true);
 
-  const manufacturers = vehicleType === "Wohnmobil" ? popularManufacturers : wohnwagenManufacturers;
-  const modelsMap = vehicleType === "Wohnmobil" ? manufacturerModels : wohnwagenManufacturerModels;
-  const models = manufacturer ? (modelsMap[manufacturer] || []) : [];
-  const bodyTypes = vehicleType === "Wohnmobil" ? BODY_TYPES_WOHNMOBIL : BODY_TYPES_WOHNWAGEN;
+  const { data: catalogBrands } = useQuery({
+    queryKey: ["catalogKitchenBrands"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("catalog_kitchen_brands")
+        .select("name")
+        .eq("is_active", true)
+        .order("sort_order");
+      if (error) throw error;
+      return (data ?? []).map((row) => row.name);
+    },
+    staleTime: 15 * 60 * 1000,
+  });
+
+  const brandOptions = catalogBrands && catalogBrands.length > 0
+    ? catalogBrands
+    : [...DEFAULT_KITCHEN_BRANDS];
 
   const currentYear = new Date().getFullYear();
-  const years = Array.from({ length: 40 }, (_, i) => currentYear - i);
+  const years = Array.from({ length: currentYear - 1989 }, (_, i) => currentYear - i);
 
-  const effectiveModel = model === "__custom" ? customModel : model;
-  const isWohnwagen = vehicleType === "Wohnwagen";
+  const effectiveBrand = manufacturer === "__custom" ? customBrand : manufacturer;
   const reservePriceNum = reservePrice ? Number(reservePrice) : 0;
-  // Mindestpreis ist Pflicht bei Auktions-Inseraten – juristische Absicherung der
-  // automatischen Preisanpassung (AGB §6.4 c) Reduktionsboden -6 %). Ohne Wunsch-
-  // Mindestpreis kann der Floor nicht definiert werden, und der seller_initial_reserve
-  // bliebe NULL. sale_channel ist hier hartcodiert auf 'auction'.
-  const isValid =
-    manufacturer && effectiveModel && bodyType && year && (isWohnwagen || mileage) && condition &&
-    reservePriceNum > 0;
+
+  const parsed = dealerKitchenCreateSchema.safeParse({
+    manufacturer: effectiveBrand,
+    model,
+    bodyType,
+    year: year ? Number(year) : undefined,
+    condition,
+    reservePrice: reservePriceNum,
+    mwstAusweisbar,
+  });
+  const isValid = parsed.success;
 
   const createMutation = useMutation({
     mutationFn: async () => {
       if (!user) throw new Error("Nicht authentifiziert");
-      if (!isValid) throw new Error("Bitte füllen Sie alle Pflichtfelder aus");
-      if (!(reservePriceNum > 0)) {
-        throw new Error("Mindestpreis ist Pflicht für Auktions-Inserate (AGB §6.4 c).");
+      const check = dealerKitchenCreateSchema.safeParse({
+        manufacturer: effectiveBrand,
+        model,
+        bodyType,
+        year: year ? Number(year) : undefined,
+        condition,
+        reservePrice: reservePriceNum,
+        mwstAusweisbar,
+      });
+      if (!check.success) {
+        throw new Error(check.error.issues[0]?.message || "Bitte füllen Sie alle Pflichtfelder aus");
       }
+      const values = check.data;
 
-      const finalModel = model === "__custom" ? customModel : model;
+      const sessionOk = await ensureValidRLSSession();
+      if (!sessionOk) throw new Error("Sitzung abgelaufen. Bitte neu anmelden.");
 
-      const result = await withSessionRetry(async () => {
-        const { data: roleRow, error: roleErr } = await supabase
-          .from("user_roles")
-          .select("role")
-          .eq("user_id", user.id)
-          .maybeSingle();
-        if (roleErr) throw roleErr;
+      const { data: roleRow, error: roleErr } = await supabase
+        .from("user_roles")
+        .select("role")
+        .eq("user_id", user.id)
+        .maybeSingle();
+      if (roleErr) throw roleErr;
 
-        const insertData = {
+      const { data, error } = await supabase
+        .from("kitchens")
+        .insert({
           seller_id: user.id,
           account_type: roleRow?.role === "dealer" ? "dealer" : "private",
-          mwst_ausweisbar: roleRow?.role === "dealer" ? mwstAusweisbar : null,
-          manufacturer,
-          model: finalModel,
-          body_type: bodyType as any,
-          year: Number(year),
-          mileage: isWohnwagen ? 0 : Number(mileage),
-          condition: condition as any,
+          mwst_ausweisbar: roleRow?.role === "dealer" ? values.mwstAusweisbar : null,
+          manufacturer: values.manufacturer,
+          model: values.model,
+          body_type: values.bodyType,
+          year: values.year,
+          mileage: 0,
+          condition: values.condition,
           sale_channel: "auction" as const,
-          reserve_price: reservePrice ? Number(reservePrice) : null,
+          reserve_price: values.reservePrice,
           status: "available",
           country: "DE",
-        };
+        })
+        .select("id")
+        .single();
+      if (error) throw error;
 
-        const { data, error } = await supabase
-          .from("kitchens")
-          .insert(insertData)
-          .select("id")
-          .single();
-        if (error) throw error;
-        return data;
-      }, "DealerListingCreate.insert");
-
-      // Create draft auction so admin can activate it.
-      // P4-Hardening: Marketing-Phase-Felder werden direkt mit angelegt, damit
-      // die Reduktions-Logik (-2% pro Runde, -6% Floor) auch bei Händler-
-      // Inseraten greift, sobald der Admin sie aktiviert. Ohne diese Anker
-      // bleibt dynamic_pricing=false und der Soft-Brake greift nicht.
-      const reserveNum = reservePrice ? Number(reservePrice) : null;
       const { error: auctionError } = await supabase.from("auctions").insert({
-        kitchen_id: result.id,
-        starting_bid: 50, // wird beim Admin-Aktivieren via activate-auction.ts neu gewürfelt
-        reserve_price: reserveNum,
+        kitchen_id: data.id,
+        starting_bid: 50,
+        reserve_price: values.reservePrice,
         status: "draft",
-        seller_initial_reserve: reserveNum,
+        seller_initial_reserve: values.reservePrice,
         dynamic_pricing: MARKETING_CONFIG.AUCTION_DYNAMIC_PRICING_DEFAULT,
         auto_relist: true,
       });
 
       if (auctionError) {
-        // Cleanup orphaned kitchen on auction creation failure
-        await supabase.from("kitchens").delete().eq("id", result.id);
+        await supabase.from("kitchens").delete().eq("id", data.id);
         throw new Error("Auktion konnte nicht erstellt werden: " + auctionError.message);
       }
 
-      // Notify admin about new dealer listing.
-      // Fire-and-forget so a failed admin notification never blocks the
-      // dealer's listing creation, but log errors instead of silently
-      // swallowing them so we can spot Resend / rate-limit regressions.
-      supabase.functions.invoke("send-lead-notification", {
+      invokeWithAuth("send-lead-notification", {
         body: {
           type: "wizard",
           name: user.email || "Händler",
           email: user.email || "",
-          manufacturer,
-          model: finalModel,
+          manufacturer: values.manufacturer,
+          model: values.model,
           country: "DE",
           source: "dealer_dashboard",
         },
@@ -154,16 +148,18 @@ export default function DealerListingCreate() {
         console.error("[DealerListingCreate] send-lead-notification failed (non-blocking):", err);
       });
 
-      return result;
+      return data;
     },
     onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ["myListings"] });
+      queryClient.invalidateQueries({ queryKey: ["sellerTimeline"] });
       toast({
         title: "Inserat erstellt",
-        description: "Ergänzen Sie jetzt Details und Fotos. Der Admin wird die Auktion nach Prüfung freischalten.",
+        description: "Ergänzen Sie jetzt Details und Fotos. Der Admin schaltet die Auktion nach Prüfung frei.",
       });
       navigate(`/dashboard/listings/${data.id}/edit?tab=photos`);
     },
-    onError: (error: any) => {
+    onError: (error: Error) => {
       toast({
         title: "Fehler",
         description: error.message || "Inserat konnte nicht erstellt werden",
@@ -183,18 +179,18 @@ export default function DealerListingCreate() {
           <ArrowLeft className="w-4 h-4" />
           Zurück zu Inseraten
         </Button>
-        <h1 className="text-xl sm:text-2xl font-bold">Neues Inserat erstellen</h1>
+        <h1 className="text-xl sm:text-2xl font-bold">Küche inserieren</h1>
         <p className="text-muted-foreground mt-1">
-          Geben Sie die Basisdaten ein. Details und Fotos können Sie danach ergänzen.
+          Basisdaten der Küche. Details und Fotos ergänzen Sie danach.
         </p>
       </div>
 
       <Card>
         <CardHeader>
-          <CardTitle>Fahrzeugdaten</CardTitle>
+          <CardTitle>Küchendaten</CardTitle>
           <CardDescription>
-            Nach dem Erstellen können Sie im Editor alle weiteren Details, Ausstattung und Fotos ergänzen.
-            Der Admin wird die Auktion nach Prüfung freischalten.
+            Nach dem Erstellen können Sie Beschreibung und Fotos ergänzen.
+            Der Admin schaltet die Auktion nach Prüfung frei.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -205,99 +201,64 @@ export default function DealerListingCreate() {
             }}
             className="space-y-5"
           >
-            {/* Vehicle Type */}
             <div className="space-y-2">
-              <Label>Fahrzeugtyp *</Label>
-              <div className="flex gap-3">
-                {(["Wohnmobil", "Wohnwagen"] as const).map((type) => (
-                  <Button
-                    key={type}
-                    type="button"
-                    variant={vehicleType === type ? "default" : "outline"}
-                    onClick={() => {
-                      setVehicleType(type);
-                      setManufacturer("");
-                      setModel("");
-                      setCustomModel("");
-                      setBodyType("");
-                      setMileage("");
-                    }}
-                    className="flex-1"
-                  >
-                    {type}
-                  </Button>
-                ))}
-              </div>
-            </div>
-
-            {/* Body Type */}
-            <div className="space-y-2">
-              <Label>Aufbauart *</Label>
+              <Label>Küchenform *</Label>
               <Select value={bodyType} onValueChange={setBodyType}>
                 <SelectTrigger>
-                  <SelectValue placeholder="Aufbauart wählen" />
+                  <SelectValue placeholder="Form wählen" />
                 </SelectTrigger>
                 <SelectContent>
-                  {bodyTypes.map((bt) => (
-                    <SelectItem key={bt} value={bt}>{bt}</SelectItem>
+                  {KITCHEN_FORMS.map((form) => (
+                    <SelectItem key={form} value={form}>{form}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
             </div>
 
-            {/* Manufacturer */}
             <div className="space-y-2">
-              <Label>Hersteller *</Label>
-              <Select value={manufacturer} onValueChange={(v) => { setManufacturer(v); setModel(""); }}>
+              <Label>Marke *</Label>
+              <Select
+                value={manufacturer}
+                onValueChange={(v) => {
+                  setManufacturer(v);
+                  if (v !== "__custom") setCustomBrand("");
+                }}
+              >
                 <SelectTrigger>
-                  <SelectValue placeholder="Hersteller wählen" />
+                  <SelectValue placeholder="Marke wählen" />
                 </SelectTrigger>
                 <SelectContent className="max-h-64">
-                  {manufacturers.map((m) => (
-                    <SelectItem key={m} value={m}>{m}</SelectItem>
+                  {brandOptions.map((brand) => (
+                    <SelectItem key={brand} value={brand}>
+                      {displayKitchenBrand(brand)}
+                    </SelectItem>
                   ))}
+                  <SelectItem value="__custom">Andere Marke…</SelectItem>
                 </SelectContent>
               </Select>
-            </div>
-
-            {/* Model */}
-            <div className="space-y-2">
-              <Label>Modell *</Label>
-              {models.length > 0 ? (
-                <>
-                  <Select value={model} onValueChange={(v) => { setModel(v); if (v !== "__custom") setCustomModel(""); }}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Modell wählen" />
-                    </SelectTrigger>
-                    <SelectContent className="max-h-64">
-                      {models.map((m) => (
-                        <SelectItem key={m} value={m}>{m}</SelectItem>
-                      ))}
-                      <SelectItem value="__custom">Anderes Modell...</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  {model === "__custom" && (
-                    <Input
-                      value={customModel}
-                      onChange={(e) => setCustomModel(e.target.value)}
-                      placeholder="z.B. Excellent 560 UL"
-                      autoFocus
-                    />
-                  )}
-                </>
-              ) : (
+              {manufacturer === "__custom" && (
                 <Input
-                  value={model}
-                  onChange={(e) => setModel(e.target.value)}
-                  placeholder="z.B. Excellent 560 UL"
+                  value={customBrand}
+                  onChange={(e) => setCustomBrand(e.target.value)}
+                  placeholder="z.B. lokale Manufaktur"
+                  autoFocus
                 />
               )}
             </div>
 
-            {/* Year + Mileage */}
-            <div className={`grid gap-4 ${isWohnwagen ? 'grid-cols-1' : 'grid-cols-2'}`}>
+            <div className="space-y-2">
+              <Label htmlFor="kitchen-model">Serie / Modell *</Label>
+              <Input
+                id="kitchen-model"
+                value={model}
+                onChange={(e) => setModel(e.target.value)}
+                placeholder="z.B. Easytouch 966"
+              />
+            </div>
+
+            <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-2">
-                <Label>Baujahr *</Label>
+                <Label>Produktionsjahr *</Label>
                 <Select value={year} onValueChange={setYear}>
                   <SelectTrigger>
                     <SelectValue placeholder="Jahr" />
@@ -309,33 +270,19 @@ export default function DealerListingCreate() {
                   </SelectContent>
                 </Select>
               </div>
-              {!isWohnwagen && (
-                <div className="space-y-2">
-                  <Label>Kilometerstand *</Label>
-                  <Input
-                    type="text"
-                    inputMode="numeric"
-                    value={mileage}
-                    onChange={(e) => setMileage(e.target.value.replace(/\D/g, ''))}
-                    placeholder="z.B. 45000"
-                  />
-                </div>
-              )}
-            </div>
-
-            {/* Condition */}
-            <div className="space-y-2">
-              <Label>Zustand *</Label>
-              <Select value={condition} onValueChange={setCondition}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Zustand wählen" />
-                </SelectTrigger>
-                <SelectContent>
-                  {CONDITIONS.map((c) => (
-                    <SelectItem key={c} value={c}>{c}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <div className="space-y-2">
+                <Label>Zustand *</Label>
+                <Select value={condition} onValueChange={setCondition}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Zustand wählen" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {KITCHEN_CONDITIONS.map((c) => (
+                      <SelectItem key={c} value={c}>{c}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
 
             <div className="flex items-start gap-3 rounded-lg border border-border/80 bg-muted/30 p-4">
@@ -349,32 +296,31 @@ export default function DealerListingCreate() {
                   Umsatzsteuer auf der Kaufrechnung gesondert ausweisen
                 </Label>
                 <p className="text-xs text-muted-foreground">
-                  Aktivieren, wenn Sie die MwSt. auf der Fahrzeugrechnung an den Käufer ausweisen (normale Umsatzbesteuerung).
-                  Deaktivieren z. B. bei Differenzbesteuerung oder Kleinunternehmerregelung.
+                  Aktivieren bei normaler Umsatzbesteuerung. Deaktivieren z. B. bei
+                  Differenzbesteuerung oder Kleinunternehmerregelung.
                 </p>
               </div>
             </div>
 
-            {/* Reserve Price (Pflicht) */}
             <div className="space-y-2">
-              <Label htmlFor="dealer-reserve-price" className="flex items-center gap-1">
-                Mindestpreis in € <span className="text-red-500">*</span>
+              <Label htmlFor="dealer-reserve-price">
+                Mindestpreis in € <span className="text-destructive">*</span>
               </Label>
               <Input
                 id="dealer-reserve-price"
                 type="text"
                 inputMode="numeric"
                 value={reservePrice}
-                onChange={(e) => setReservePrice(e.target.value.replace(/\D/g, ''))}
-                placeholder="z.B. 25000"
+                onChange={(e) => setReservePrice(e.target.value.replace(/\D/g, ""))}
+                placeholder="z.B. 8500"
                 aria-invalid={reservePrice !== "" && reservePriceNum <= 0}
               />
               <p className="text-xs text-muted-foreground">
-                Pflichtfeld. Wird nicht verkauft, wenn das Höchstgebot unter diesem Preis liegt. Notwendig für die juristische Absicherung der automatischen Preisanpassung (AGB §6.4).
+                Wird nicht verkauft, wenn das Höchstgebot darunter liegt. Pflicht für die
+                automatische Preisanpassung (AGB §6.4).
               </p>
             </div>
 
-            {/* Submit */}
             <Button
               type="submit"
               disabled={!isValid || createMutation.isPending}

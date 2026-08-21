@@ -357,14 +357,13 @@ export default function AdminKitchens() {
 
   // ---- Export ----
   const { exportCSV, exportExcel, isExporting } = useExport({
-    filename: "wohnmobile",
+    filename: "kuechen",
     columns: [
       { key: "id", label: "ID" },
       { key: "manufacturer", label: "Hersteller" },
       { key: "model", label: "Modell" },
-      { key: "body_type", label: "Aufbauart" },
-      { key: "year", label: "Baujahr" },
-      { key: "mileage", label: "Kilometerstand", format: (v: any) => v ? `${Number(v).toLocaleString()} km` : "" },
+      { key: "body_type", label: "Küchenform" },
+      { key: "year", label: "Produktionsjahr" },
       { key: "condition", label: "Zustand" },
       { key: "sale_channel", label: "Verkaufsweg" },
       { key: "status", label: "Kitchen-Status" },

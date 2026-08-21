@@ -520,7 +520,7 @@ export default function AdminAppointmentDetail() {
                     </p>
                     <InfoGrid columns={3}>
                       <InfoItem label="Zustand" value={appointment.kitchen?.condition} />
-                      <InfoItem label="Kilometerstand" value={appointment.kitchen?.mileage ? `${appointment.kitchen.mileage.toLocaleString()} km` : "—"} />
+                      <InfoItem label="Küchenform" value={appointment.kitchen?.body_type} />
                       <InfoItem label="Preis" value={formatPrice(appointment.kitchen?.instant_price || appointment.kitchen?.reserve_price)} />
                     </InfoGrid>
                   </div>

@@ -141,7 +141,7 @@ const menuGroups: MenuGroup[] = [
     label: "Verkaufen",
     items: [
       { title: "Meine Inserate", url: "/dashboard/listings", icon: ClipboardList },
-      { title: "Neues Inserat", url: "/dashboard/listings/new", icon: PlusCircle },
+      { title: "Küche inserieren", url: "/dashboard/listings/new", icon: PlusCircle },
     ],
   },
   {

@@ -443,8 +443,8 @@ export default function AdminKitchenDetail() {
               icon={<Euro className="w-5 h-5" />}
             />
             <StatsCard
-              label="Kilometerstand"
-              value={kitchen.mileage ? `${kitchen.mileage.toLocaleString()} km` : "—"}
+              label="Küchenform"
+              value={kitchen.body_type || "—"}
               icon={<Gauge className="w-5 h-5" />}
             />
             <StatsCard
@@ -489,16 +489,12 @@ export default function AdminKitchenDetail() {
                     <InfoGrid columns={3}>
                       <InfoItem label="Hersteller" value={kitchen.manufacturer} />
                       <InfoItem label="Modell" value={kitchen.model} />
-                      <InfoItem label="Baujahr" value={kitchen.year} />
-                      <InfoItem label="Aufbauart" value={kitchen.body_type} />
+                      <InfoItem label="Produktionsjahr" value={kitchen.year} />
+                      <InfoItem label="Küchenform" value={kitchen.body_type} />
                       <InfoItem label="Zustand" value={kitchen.condition} />
-                      <InfoItem label="Kilometerstand" value={kitchen.mileage ? `${kitchen.mileage.toLocaleString()} km` : "—"} />
-                      <InfoItem label="Fahrgestellnr." value={kitchen.vehicle_identification_number} />
-                      <InfoItem label="Kennzeichen" value={kitchen.license_plate} />
                       <InfoItem label="Listennummer" value={kitchen.listing_number} />
                       <InfoItem label="PLZ (Standort)" value={kitchen.postal_code || "—"} />
                       <InfoItem label="Stadt" value={kitchen.city || "—"} />
-                      <InfoItem label="Basisfahrzeug" value={kitchen.base_vehicle || "—"} />
                     </InfoGrid>
                     {kitchen.description && (
                       <div className="mt-6 p-4 rounded-lg bg-muted/50">

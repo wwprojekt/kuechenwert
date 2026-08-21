@@ -378,8 +378,8 @@ export default function AdminAnalytics() {
             {/* Body Type Distribution */}
             <Card>
               <CardHeader>
-                <CardTitle>Fahrzeugtypen</CardTitle>
-                <CardDescription>Verteilung nach Aufbauart</CardDescription>
+                <CardTitle>Küchenformen</CardTitle>
+                <CardDescription>Verteilung nach Grundriss</CardDescription>
               </CardHeader>
               <CardContent>
                 <ResponsiveContainer width="100%" height={300}>

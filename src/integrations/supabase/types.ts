@@ -6727,6 +6727,12 @@ export type Database = {
         | "Wohnwagen"
         | "Faltcaravan"
         | "Mobilheim"
+        | "L-Form"
+        | "U-Form"
+        | "Kochinsel"
+        | "Einzelzeile"
+        | "Zweizeilig"
+        | "G-Form"
       kitchen_condition:
         | "Neuwertig"
         | "Sehr gut"
@@ -6914,6 +6920,12 @@ export const Constants = {
         "Wohnwagen",
         "Faltcaravan",
         "Mobilheim",
+        "L-Form",
+        "U-Form",
+        "Kochinsel",
+        "Einzelzeile",
+        "Zweizeilig",
+        "G-Form",
       ],
       kitchen_condition: [
         "Neuwertig",

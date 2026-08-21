@@ -5,22 +5,20 @@ import { useAuth } from "@/contexts/AuthContext";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { MonthYearPicker } from "@/components/ui/month-year-picker";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { ArrowLeft, Save, Lock, FileText, Mail, Clock } from "lucide-react";
-import { withSessionRetry } from "@/lib/sessionGuard";
+import { ensureValidRLSSession, withSessionRetry } from "@/lib/sessionGuard";
 import { useUserRole } from "@/hooks/useUserRole";
 import { SellerPhotoManager } from "@/components/dashboard/SellerPhotoManager";
 import { PriceChangeRequestDialog } from "@/components/dashboard/PriceChangeRequestDialog";
 import { BRAND } from "@/lib/brand";
 import { useState, useEffect } from "react";
 
-const VALID_TABS = ["basic", "technical", "dimensions", "interior", "equipment", "photos", "additional"];
+const VALID_TABS = ["basic", "dimensions", "photos", "additional"];
 
 export default function ListingEdit() {
   const { id } = useParams();
@@ -39,6 +37,8 @@ export default function ListingEdit() {
     queryKey: ["kitchenEdit", id],
     queryFn: async () => {
       if (!id) return null;
+      const sessionOk = await ensureValidRLSSession();
+      if (!sessionOk) throw new Error("Sitzung abgelaufen. Bitte neu anmelden.");
 
       const { data, error } = await supabase
         .from("kitchens")
@@ -573,12 +573,9 @@ export default function ListingEdit() {
           <CardContent className="space-y-6">
           <fieldset disabled={isAuctionLive}>
             <Tabs defaultValue={initialTab} className="w-full">
-              <TabsList className="flex w-full overflow-x-auto sm:grid sm:grid-cols-7 h-auto">
+              <TabsList className="flex w-full overflow-x-auto sm:grid sm:grid-cols-4 h-auto">
                 <TabsTrigger value="basic" className="text-xs sm:text-sm px-2.5 sm:px-3 py-2 whitespace-nowrap">Basis</TabsTrigger>
-                <TabsTrigger value="technical" className="text-xs sm:text-sm px-2.5 sm:px-3 py-2 whitespace-nowrap">Technik</TabsTrigger>
                 <TabsTrigger value="dimensions" className="text-xs sm:text-sm px-2.5 sm:px-3 py-2 whitespace-nowrap">Maße</TabsTrigger>
-                <TabsTrigger value="interior" className="text-xs sm:text-sm px-2.5 sm:px-3 py-2 whitespace-nowrap">Innenraum</TabsTrigger>
-                <TabsTrigger value="equipment" className="text-xs sm:text-sm px-2.5 sm:px-3 py-2 whitespace-nowrap">Ausstattung</TabsTrigger>
                 <TabsTrigger value="photos" className="text-xs sm:text-sm px-2.5 sm:px-3 py-2 whitespace-nowrap">Fotos</TabsTrigger>
                 <TabsTrigger value="additional" className="text-xs sm:text-sm px-2.5 sm:px-3 py-2 whitespace-nowrap">Zusätzlich</TabsTrigger>
               </TabsList>
@@ -678,7 +675,7 @@ export default function ListingEdit() {
                         Umsatzsteuer auf der Kaufrechnung gesondert ausweisen
                       </Label>
                       <p className="text-xs text-muted-foreground">
-                        Für gewerbliche Verkäufer: aktivieren, wenn die MwSt. auf der Fahrzeugrechnung ausgewiesen wird;
+                        Für gewerbliche Verkäufer: aktivieren, wenn die MwSt. auf der Kaufrechnung ausgewiesen wird;
                         deaktivieren z. B. bei Differenzbesteuerung oder Kleinunternehmerregelung.
                       </p>
                     </div>
@@ -686,293 +683,23 @@ export default function ListingEdit() {
                 )}
               </TabsContent>
 
-              {/* Technical Tab */}
-              <TabsContent value="technical" className="space-y-6 mt-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="fuel_type">Kraftstoffart</Label>
-                    <Select value={formData.fuel_type} onValueChange={(value) => setFormData({ ...formData, fuel_type: value })}>
-                      <SelectTrigger><SelectValue placeholder="Wählen Sie..." /></SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="Diesel">Diesel</SelectItem>
-                        <SelectItem value="Benzin">Benzin</SelectItem>
-                        <SelectItem value="Elektro">Elektro</SelectItem>
-                        <SelectItem value="Hybrid">Hybrid</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="transmission">Getriebe</Label>
-                    <Select value={formData.transmission} onValueChange={(value) => setFormData({ ...formData, transmission: value })}>
-                      <SelectTrigger><SelectValue placeholder="Wählen Sie..." /></SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="Schaltgetriebe">Schaltgetriebe</SelectItem>
-                        <SelectItem value="Automatik">Automatik</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="power_kw">Leistung (kW)</Label>
-                    <Input id="power_kw" type="number" value={formData.power_kw} onChange={(e) => setFormData({ ...formData, power_kw: e.target.value })} placeholder="z.B. 96" />
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="engine_power_hp">Leistung (PS)</Label>
-                    <Input id="engine_power_hp" type="number" value={formData.engine_power_hp} onChange={(e) => setFormData({ ...formData, engine_power_hp: e.target.value })} placeholder="z.B. 130" />
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="emission_class">Schadstoffklasse</Label>
-                    <Select value={formData.emission_class} onValueChange={(value) => setFormData({ ...formData, emission_class: value })}>
-                      <SelectTrigger><SelectValue placeholder="Wählen Sie..." /></SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="Euro 6d">Euro 6d</SelectItem>
-                        <SelectItem value="Euro 6d-TEMP">Euro 6d-TEMP</SelectItem>
-                        <SelectItem value="Euro 6c">Euro 6c</SelectItem>
-                        <SelectItem value="Euro 6">Euro 6</SelectItem>
-                        <SelectItem value="Euro 5">Euro 5</SelectItem>
-                        <SelectItem value="Euro 4">Euro 4</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="fuel_tank_capacity_liters">Tankinhalt (Liter)</Label>
-                    <Input id="fuel_tank_capacity_liters" type="number" value={formData.fuel_tank_capacity_liters} onChange={(e) => setFormData({ ...formData, fuel_tank_capacity_liters: e.target.value })} placeholder="z.B. 90" />
-                  </div>
-
-                  <MonthYearPicker
-                    id="first_registration"
-                    label="Erstzulassung"
-                    value={formData.first_registration}
-                    onChange={(val) => setFormData({ ...formData, first_registration: val })}
-                  />
-
-                  <MonthYearPicker
-                    id="last_tuev_date"
-                    label="Letzte TÜV/HU"
-                    value={formData.last_tuev_date}
-                    onChange={(val) => setFormData({ ...formData, last_tuev_date: val })}
-                  />
-
-                  <MonthYearPicker
-                    id="tuev_valid_until"
-                    label="Nächste TÜV/HU"
-                    value={formData.tuev_valid_until}
-                    onChange={(val) => setFormData({ ...formData, tuev_valid_until: val })}
-                  />
-
-                  <div className="space-y-2">
-                    <Label htmlFor="previous_owners">Vorbesitzer</Label>
-                    <Input id="previous_owners" type="number" value={formData.previous_owners} onChange={(e) => setFormData({ ...formData, previous_owners: e.target.value })} placeholder="z.B. 1" />
-                  </div>
-                </div>
-
-                <div className="space-y-3">
-                  <div className="flex items-center space-x-2">
-                    <Checkbox id="accident_free" checked={formData.accident_free} onCheckedChange={(checked) => setFormData({ ...formData, accident_free: checked as boolean })} />
-                    <label htmlFor="accident_free" className="text-sm font-medium">Unfallfrei</label>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <Checkbox id="non_smoker" checked={formData.non_smoker} onCheckedChange={(checked) => setFormData({ ...formData, non_smoker: checked as boolean })} />
-                    <label htmlFor="non_smoker" className="text-sm font-medium">Nichtraucherfahrzeug</label>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <Checkbox id="service_history_available" checked={formData.service_history_available} onCheckedChange={(checked) => setFormData({ ...formData, service_history_available: checked as boolean })} />
-                    <label htmlFor="service_history_available" className="text-sm font-medium">Scheckheftgepflegt</label>
-                  </div>
-                </div>
-              </TabsContent>
-
-              {/* Dimensions Tab */}
               <TabsContent value="dimensions" className="space-y-6 mt-6">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label htmlFor="length_m">Länge (cm)</Label>
-                    <Input id="length_m" type="number" value={formData.length_m} onChange={(e) => setFormData({ ...formData, length_m: e.target.value })} placeholder="z.B. 650" />
+                    <Label htmlFor="length_m">Länge (m)</Label>
+                    <Input id="length_m" type="number" step="0.01" value={formData.length_m} onChange={(e) => setFormData({ ...formData, length_m: e.target.value })} placeholder="z.B. 3.60" />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="width_m">Breite (cm)</Label>
-                    <Input id="width_m" type="number" value={formData.width_m} onChange={(e) => setFormData({ ...formData, width_m: e.target.value })} placeholder="z.B. 230" />
+                    <Label htmlFor="width_m">Breite (m)</Label>
+                    <Input id="width_m" type="number" step="0.01" value={formData.width_m} onChange={(e) => setFormData({ ...formData, width_m: e.target.value })} placeholder="z.B. 2.40" />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="height_m">Höhe (cm)</Label>
-                    <Input id="height_m" type="number" value={formData.height_m} onChange={(e) => setFormData({ ...formData, height_m: e.target.value })} placeholder="z.B. 280" />
+                    <Label htmlFor="height_m">Höhe (m)</Label>
+                    <Input id="height_m" type="number" step="0.01" value={formData.height_m} onChange={(e) => setFormData({ ...formData, height_m: e.target.value })} placeholder="z.B. 2.20" />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="weight_kg">Gesamtgewicht (kg)</Label>
-                    <Input id="weight_kg" type="number" value={formData.weight_kg} onChange={(e) => setFormData({ ...formData, weight_kg: e.target.value })} placeholder="z.B. 3500" />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="payload_kg">Nutzlast (kg)</Label>
-                    <Input id="payload_kg" type="number" value={formData.payload_kg} onChange={(e) => setFormData({ ...formData, payload_kg: e.target.value })} placeholder="z.B. 500" />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="number_of_axles">Anzahl Achsen</Label>
-                    <Input id="number_of_axles" type="number" value={formData.number_of_axles} onChange={(e) => setFormData({ ...formData, number_of_axles: Number(e.target.value) })} placeholder="z.B. 2" />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="seats">Sitzplätze mit Gurten</Label>
-                    <Input id="seats" type="number" value={formData.seats} onChange={(e) => setFormData({ ...formData, seats: e.target.value })} placeholder="z.B. 4" />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="sleeping_places">Schlafplätze</Label>
-                    <Input id="sleeping_places" type="number" value={formData.sleeping_places} onChange={(e) => setFormData({ ...formData, sleeping_places: e.target.value })} placeholder="z.B. 4" />
-                  </div>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="beds_description">Betten-Beschreibung</Label>
-                  <Textarea id="beds_description" value={formData.beds_description} onChange={(e) => setFormData({ ...formData, beds_description: e.target.value })} placeholder="z.B. 1x Hubbett, 1x Einzelbett" rows={3} />
-                </div>
-              </TabsContent>
-
-              {/* Interior Tab */}
-              <TabsContent value="interior" className="space-y-6 mt-6">
-                <div className="space-y-3">
-                  <div className="flex items-center space-x-2">
-                    <Checkbox id="has_kitchen" checked={formData.has_kitchen} onCheckedChange={(checked) => setFormData({ ...formData, has_kitchen: checked as boolean })} />
-                    <label htmlFor="has_kitchen" className="text-sm font-medium">Küche vorhanden</label>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <Checkbox id="has_bathroom" checked={formData.has_bathroom} onCheckedChange={(checked) => setFormData({ ...formData, has_bathroom: checked as boolean })} />
-                    <label htmlFor="has_bathroom" className="text-sm font-medium">Badezimmer vorhanden</label>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <Checkbox id="has_toilet" checked={formData.has_toilet} onCheckedChange={(checked) => setFormData({ ...formData, has_toilet: checked as boolean })} />
-                    <label htmlFor="has_toilet" className="text-sm font-medium">Toilette vorhanden</label>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <Checkbox id="has_shower" checked={formData.has_shower} onCheckedChange={(checked) => setFormData({ ...formData, has_shower: checked as boolean })} />
-                    <label htmlFor="has_shower" className="text-sm font-medium">Dusche vorhanden</label>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="refrigerator_type">Kühlschrank</Label>
-                    <Select
-                      value={formData.refrigerator_type || "__none__"}
-                      onValueChange={(value) => setFormData({ ...formData, refrigerator_type: value === "__none__" ? "" : value })}
-                    >
-                      <SelectTrigger><SelectValue placeholder="Wählen Sie..." /></SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="__none__">Keine Angabe</SelectItem>
-                        <SelectItem value="Kompressor">Kompressor</SelectItem>
-                        <SelectItem value="Absorber">Absorber</SelectItem>
-                        <SelectItem value="Thermoelektrisch">Thermoelektrisch</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="heating_type">Heizung</Label>
-                    <Select
-                      value={formData.heating_type || "__none__"}
-                      onValueChange={(value) => setFormData({ ...formData, heating_type: value === "__none__" ? "" : value })}
-                    >
-                      <SelectTrigger><SelectValue placeholder="Wählen Sie..." /></SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="__none__">Keine Angabe</SelectItem>
-                        <SelectItem value="Gas">Gas</SelectItem>
-                        <SelectItem value="Diesel">Diesel</SelectItem>
-                        <SelectItem value="Elektrisch">Elektrisch</SelectItem>
-                        <SelectItem value="Kombiniert">Kombiniert</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="air_conditioning_type">Klimaanlage</Label>
-                    <Select value={formData.air_conditioning_type} onValueChange={(value) => setFormData({ ...formData, air_conditioning_type: value })}>
-                      <SelectTrigger><SelectValue placeholder="Wählen Sie..." /></SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="Fahrerhaus">Fahrerhaus</SelectItem>
-                        <SelectItem value="Wohnraum">Wohnraum</SelectItem>
-                        <SelectItem value="Beides">Beides</SelectItem>
-                        <SelectItem value="Keine">Keine</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="water_tank_liters">Frischwasser (Liter)</Label>
-                    <Input id="water_tank_liters" type="number" value={formData.water_tank_liters} onChange={(e) => setFormData({ ...formData, water_tank_liters: e.target.value })} placeholder="z.B. 120" />
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="grey_water_capacity_liters">Grauwasser (Liter)</Label>
-                    <Input id="grey_water_capacity_liters" type="number" value={formData.grey_water_capacity_liters} onChange={(e) => setFormData({ ...formData, grey_water_capacity_liters: e.target.value })} placeholder="z.B. 100" />
-                  </div>
-                </div>
-              </TabsContent>
-
-              {/* Equipment Tab */}
-              <TabsContent value="equipment" className="space-y-6 mt-6">
-                <div className="space-y-3">
-                  <div className="flex items-center space-x-2">
-                    <Checkbox id="has_solar" checked={formData.has_solar} onCheckedChange={(checked) => setFormData({ ...formData, has_solar: checked as boolean })} />
-                    <label htmlFor="has_solar" className="text-sm font-medium">Solaranlage</label>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <Checkbox id="has_inverter" checked={formData.has_inverter} onCheckedChange={(checked) => setFormData({ ...formData, has_inverter: checked as boolean })} />
-                    <label htmlFor="has_inverter" className="text-sm font-medium">Wechselrichter</label>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <Checkbox id="has_awning" checked={formData.has_awning} onCheckedChange={(checked) => setFormData({ ...formData, has_awning: checked as boolean })} />
-                    <label htmlFor="has_awning" className="text-sm font-medium">Markise</label>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <Checkbox id="has_awning_tent" checked={formData.has_awning_tent} onCheckedChange={(checked) => setFormData({ ...formData, has_awning_tent: checked as boolean })} />
-                    <label htmlFor="has_awning_tent" className="text-sm font-medium">Vorzelt</label>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <Checkbox id="has_roof_ac" checked={formData.has_roof_ac} onCheckedChange={(checked) => setFormData({ ...formData, has_roof_ac: checked as boolean, has_stand_ac: checked as boolean })} />
-                    <label htmlFor="has_roof_ac" className="text-sm font-medium">Dachklima/Standklima</label>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <Checkbox id="has_bike_rack" checked={formData.has_bike_rack} onCheckedChange={(checked) => setFormData({ ...formData, has_bike_rack: checked as boolean })} />
-                    <label htmlFor="has_bike_rack" className="text-sm font-medium">Fahrradträger</label>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <Checkbox id="has_garage" checked={formData.has_garage} onCheckedChange={(checked) => setFormData({ ...formData, has_garage: checked as boolean })} />
-                    <label htmlFor="has_garage" className="text-sm font-medium">Garage</label>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <Checkbox id="has_tv" checked={formData.has_tv} onCheckedChange={(checked) => setFormData({ ...formData, has_tv: checked as boolean })} />
-                    <label htmlFor="has_tv" className="text-sm font-medium">TV/SAT-Anlage</label>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <Checkbox id="has_backup_camera" checked={formData.has_backup_camera} onCheckedChange={(checked) => setFormData({ ...formData, has_backup_camera: checked as boolean })} />
-                    <label htmlFor="has_backup_camera" className="text-sm font-medium">Rückfahrkamera</label>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <Checkbox id="has_parking_sensors" checked={formData.has_parking_sensors} onCheckedChange={(checked) => setFormData({ ...formData, has_parking_sensors: checked as boolean })} />
-                    <label htmlFor="has_parking_sensors" className="text-sm font-medium">Parksensoren</label>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <Checkbox id="has_cruise_control" checked={formData.has_cruise_control} onCheckedChange={(checked) => setFormData({ ...formData, has_cruise_control: checked as boolean })} />
-                    <label htmlFor="has_cruise_control" className="text-sm font-medium">Tempomat</label>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <Checkbox id="has_central_locking" checked={formData.has_central_locking} onCheckedChange={(checked) => setFormData({ ...formData, has_central_locking: checked as boolean })} />
-                    <label htmlFor="has_central_locking" className="text-sm font-medium">Zentralverriegelung</label>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="solar_power_watts">Solarleistung (Watt)</Label>
-                    <Input id="solar_power_watts" type="number" value={formData.solar_power_watts} onChange={(e) => setFormData({ ...formData, solar_power_watts: e.target.value })} placeholder="z.B. 200" />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="battery_capacity_ah">Batteriekapazität (Ah)</Label>
-                    <Input id="battery_capacity_ah" type="number" value={formData.battery_capacity_ah} onChange={(e) => setFormData({ ...formData, battery_capacity_ah: e.target.value })} placeholder="z.B. 150" />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="awning_length_m">Markisenlänge (cm)</Label>
-                    <Input id="awning_length_m" type="number" value={formData.awning_length_m} onChange={(e) => setFormData({ ...formData, awning_length_m: e.target.value })} placeholder="z.B. 400" />
+                    <Label htmlFor="weight_kg">Gewicht (kg, optional)</Label>
+                    <Input id="weight_kg" type="number" value={formData.weight_kg} onChange={(e) => setFormData({ ...formData, weight_kg: e.target.value })} placeholder="z.B. 280" />
                   </div>
                 </div>
               </TabsContent>
@@ -990,19 +717,14 @@ export default function ListingEdit() {
               {/* Additional Tab */}
               <TabsContent value="additional" className="space-y-6 mt-6">
                 <div className="space-y-2">
-                  <Label htmlFor="additional_equipment">Zusätzliche Ausstattung</Label>
-                  <Textarea id="additional_equipment" value={formData.additional_equipment} onChange={(e) => setFormData({ ...formData, additional_equipment: e.target.value })} placeholder="Weitere Ausstattungsmerkmale..." rows={4} />
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="vehicle_identification_number">Fahrzeug-Identifizierungsnummer (FIN)</Label>
-                    <Input id="vehicle_identification_number" value={formData.vehicle_identification_number} onChange={(e) => setFormData({ ...formData, vehicle_identification_number: e.target.value })} placeholder="z.B. WDB12345..." />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="license_plate">Kennzeichen</Label>
-                    <Input id="license_plate" value={formData.license_plate} onChange={(e) => setFormData({ ...formData, license_plate: e.target.value })} placeholder="z.B. B-AB 1234" />
-                  </div>
+                  <Label htmlFor="additional_equipment">Ausstattung & Hinweise</Label>
+                  <Textarea
+                    id="additional_equipment"
+                    value={formData.additional_equipment}
+                    onChange={(e) => setFormData({ ...formData, additional_equipment: e.target.value })}
+                    placeholder="z.B. Fronten Mattlack, Arbeitsplatte Quarz, Geräte Bosch..."
+                    rows={4}
+                  />
                 </div>
               </TabsContent>
             </Tabs>
@@ -1051,8 +773,8 @@ export default function ListingEdit() {
         </CardHeader>
         <CardContent>
           <p className="text-sm text-muted-foreground">
-            Grundlegende Fahrzeugdaten wie Hersteller, Modell, Baujahr und Kilometerstand können
-            nicht nachträglich geändert werden. Bei Fragen wenden Sie sich bitte an den Support.
+            Marke, Modell, Küchenform und Produktionsjahr können nachträglich nicht geändert
+            werden. Bei Fragen wenden Sie sich bitte an den Support.
           </p>
         </CardContent>
       </Card>

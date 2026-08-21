@@ -58,14 +58,14 @@
 - [x] Error-Log-Rauschen reduziert: Globaler `console.error`/`unhandledrejection`-Interceptor in `errorLogService.ts` filtert jetzt `SessionExpiredError` (Dialog handhabt UX) und transiente Netzwerkfehler ("Load failed" Safari, "Failed to fetch" Chrome) komplett raus. Begründung: nicht actionable, User-sichtbare Netzwerkfehler werden weiter über `toast()` und `handleApiError()` korrekt erfasst. Behebt Error-Log "Niedrig/API/seller/Global Load failed" auf Startseite. (19.04.2026)
 
 - [x] P0 Audit-Batch 21.08.2026: site_settings Secrets gesperrt, Google-Review-RPCs gehärtet, Funnel Helmet+Tracking, km/Wohnmobil-Copy auf Karten/Dashboard, Funnel-CSS, request-price-change verify_jwt=false, AGENTS.md/project.md auf KüchenWert
+- [x] DealerListingCreate auf Küchenfelder (Marke/Form/Jahr/Zustand), body_type-Enum um Layouts erweitert, ListingEdit ohne Fahrzeug-Tabs (21.08.2026)
 
 ### Offene Aufgaben
-- [ ] DealerListingCreate noch Wohnmobil-Formular (Hymer/km) — auf Küchenfelder umbauen oder verstecken
 - [ ] Funnel A/B: send-lead-notification / track-conversion serverseitig verdrahten
-- [ ] sessionGuard: ensureValidRLSSession auf Seller/Dealer-Reads (MyListings, ListingEdit, DealerDashboard)
+- [ ] sessionGuard: ensureValidRLSSession auf restliche Seller/Dealer-Reads (DealerDashboard, ListingDetail, MyBids, DealerInventory)
 - [ ] Query-Keys: ConvertToKitchenDialog + Admin-Delete invalidieren myListings/myLeads
 - [ ] Google-Review-Send-Pipeline wiederherstellen (Function fehlt) oder Cron dauerhaft tot lassen
-- [ ] Dealer-Inserat + Admin Kitchen Detail: restliche Fahrzeug/km-Copy
+- [x] Admin Kitchen/Auction/Appointment Copy: Form statt km/Aufbauart (21.08.2026)
 - [ ] Stille Admin-Aktionen ohne Empfänger-Mail (Audit 17.04.2026):
   - [x] HIGH: `purchase_contracts cancel` (`AdminContracts`) → atomic via Edge Function `cancel-purchase-contract` (Käufer + Verkäufer Mail, Motorhome-Reset, Audit, Error-Logs) [17.04.2026]
   - [x] HIGH: `cancelAuctionAsAdmin` / `AdminMotorhomes.cancelAuctionMutation` → atomic via Edge Function `cancel-auction-as-admin` (Verkäufer + alle Bieter + Festpreis-Anbieter + Kaufchance-Invitees informiert, Audit, Error-Logs) [17.04.2026]

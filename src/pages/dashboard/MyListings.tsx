@@ -20,6 +20,7 @@ import {
 import { Link, useNavigate } from "react-router-dom";
 import { format } from "date-fns";
 import { de } from "date-fns/locale";
+import { ensureValidRLSSession } from "@/lib/sessionGuard";
 
 export default function MyListings() {
   const { user } = useAuth();
@@ -32,6 +33,8 @@ export default function MyListings() {
     queryKey: ["myListings", user?.id],
     queryFn: async () => {
       if (!user) return [];
+      const sessionOk = await ensureValidRLSSession();
+      if (!sessionOk) throw new Error("Sitzung abgelaufen. Bitte neu anmelden.");
 
       const { data, error } = await supabase
         .from("kitchens")
@@ -152,7 +155,7 @@ export default function MyListings() {
         <Link to={primaryRole === "dealer" ? "/dashboard/listings/new" : "/funnel/a"}>
           <Button size="lg" className="gradient-hero hover:gradient-hero-hover w-full md:w-auto">
             <Plus className="w-4 h-4 mr-2" />
-            {primaryRole === "dealer" ? "Neues Inserat" : "Neue Anfrage"}
+            {primaryRole === "dealer" ? "Küche inserieren" : "Neue Anfrage"}
           </Button>
         </Link>
       </div>
@@ -288,7 +291,7 @@ export default function MyListings() {
                       {kitchen.manufacturer} {kitchen.model}
                     </h3>
                     <p className="text-sm text-muted-foreground">
-                      {kitchen.year} • {kitchen.mileage.toLocaleString()} km • {kitchen.body_type}
+                      {kitchen.year} • {kitchen.body_type}
                     </p>
                   </div>
 

@@ -624,7 +624,7 @@ export default function AdminAuctionDetail() {
 
               {/* Kitchen Info */}
               <DetailSection
-                title="Fahrzeugdaten"
+                title="Küchendaten"
                 icon={<Car className="w-5 h-5" />}
                 actions={
                   <Button
@@ -656,10 +656,9 @@ export default function AdminAuctionDetail() {
                   <InfoGrid columns={3}>
                     <InfoItem label="Hersteller" value={auction.kitchen?.manufacturer} />
                     <InfoItem label="Modell" value={auction.kitchen?.model} />
-                    <InfoItem label="Baujahr" value={auction.kitchen?.year} />
-                    <InfoItem label="Kilometerstand" value={auction.kitchen?.mileage ? `${auction.kitchen.mileage.toLocaleString()} km` : "—"} />
+                    <InfoItem label="Produktionsjahr" value={auction.kitchen?.year} />
                     <InfoItem label="Zustand" value={auction.kitchen?.condition} />
-                    <InfoItem label="Aufbauart" value={auction.kitchen?.body_type} />
+                    <InfoItem label="Küchenform" value={auction.kitchen?.body_type} />
                     <InfoItem label="PLZ (Standort)" value={auction.kitchen?.postal_code || "—"} />
                     <InfoItem label="Stadt" value={auction.kitchen?.city || "—"} />
                     <InfoItem label="Verkaufsweg" value={

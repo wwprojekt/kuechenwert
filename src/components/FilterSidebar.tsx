@@ -8,6 +8,7 @@ import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Filter, Palette, Globe, Zap } from "lucide-react";
 import { useState, useEffect } from "react";
+import { DEFAULT_KITCHEN_BRANDS, KITCHEN_FORMS } from "@/lib/kitchen-listing";
 
 // FilterState for the kitchens marketplace (`/kaufen`).
 //
@@ -40,18 +41,6 @@ const COUNTRIES = [
   { code: "CH", name: "Schweiz" },
 ];
 
-// Küchenformen (Grundriss). Entspricht dem `body_type`-Feld in der
-// `kitchens`-Tabelle. Die Namen sind so gewählt, dass sie zum Enum
-// passen, das in der nächsten Migration gesetzt wird.
-const KITCHEN_FORMS = [
-  "L-Form",
-  "U-Form",
-  "Kochinsel",
-  "Einzelzeile",
-  "Zweizeilig",
-  "G-Form",
-];
-
 // Küchenstile. Wird primär als Filter-Hinweis für SEO/Browse genutzt —
 // die eigentlichen Angebote sind markenunabhängig; Studios pflegen Stil
 // i.d.R. im Freitext. Wir filtern clientseitig über den Titel.
@@ -62,23 +51,6 @@ const KITCHEN_STYLES = [
   "Minimalistisch",
   "Industrial",
   "Skandinavisch",
-];
-
-// Küchen-Hersteller (Standard-Liste, falls keine Auctions vorhanden sind).
-// Wird von `availableBrands` überschrieben, sobald echte Inserate da sind.
-const DEFAULT_KITCHEN_BRANDS = [
-  "Nobilia",
-  "Häcker",
-  "Nolte",
-  "SieMatic",
-  "Bulthaup",
-  "Poggenpohl",
-  "Leicht",
-  "Schüller",
-  "Rotpunkt",
-  "Ballerina",
-  "Ewe",
-  "Bauformat",
 ];
 
 export const FilterSidebar = ({

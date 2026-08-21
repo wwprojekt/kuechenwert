@@ -4,6 +4,7 @@ import { FunnelAClient } from "./FunnelAClient";
 import { useFunnelAStammdaten } from "./useFunnelAStammdaten";
 import { FUNNEL_A_STEPS } from "@/config/funnel-a";
 import { captureUtmParams } from "@/lib/utm";
+import { FunnelSeo } from "@/components/funnel/funnel-seo";
 import { Loader2 } from "lucide-react";
 
 /**
@@ -41,17 +42,31 @@ export default function FunnelA() {
 
   if (isLoading) {
     return (
-      <div className="flex min-h-[60vh] items-center justify-center">
-        <Loader2 className="h-6 w-6 animate-spin text-primary" />
-      </div>
+      <>
+        <FunnelSeo
+          title="Küchenangebote vergleichen"
+          description="Beschreiben Sie Ihre Traumküche — bis zu 3 geprüfte Studios erstellen unverbindliche Angebote. Kostenlos und in wenigen Minuten."
+          canonicalPath="/funnel/a"
+        />
+        <div className="flex min-h-[60vh] items-center justify-center">
+          <Loader2 className="h-6 w-6 animate-spin text-primary" />
+        </div>
+      </>
     );
   }
 
   return (
-    <FunnelAClient
-      stepSlug={stepSlug}
-      initialPlz={initialPlz}
-      stammdaten={stammdaten}
-    />
+    <>
+      <FunnelSeo
+        title="Küchenangebote vergleichen"
+        description="Beschreiben Sie Ihre Traumküche — bis zu 3 geprüfte Studios erstellen unverbindliche Angebote. Kostenlos und in wenigen Minuten."
+        canonicalPath="/funnel/a"
+      />
+      <FunnelAClient
+        stepSlug={stepSlug}
+        initialPlz={initialPlz}
+        stammdaten={stammdaten}
+      />
+    </>
   );
 }

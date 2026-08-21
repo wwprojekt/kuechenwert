@@ -146,13 +146,13 @@ export default function MyListings() {
         <div>
           <h1 className="text-xl sm:text-2xl md:text-3xl font-bold text-foreground mb-2">Meine Inserate</h1>
           <p className="text-muted-foreground">
-            Verwalten Sie Ihre Wohnmobil-Inserate
+            Verwalten Sie Ihre Küchen-Inserate
           </p>
         </div>
-        <Link to={primaryRole === "dealer" ? "/dashboard/listings/new" : "/verkaufen/wizard"}>
+        <Link to={primaryRole === "dealer" ? "/dashboard/listings/new" : "/funnel/a"}>
           <Button size="lg" className="gradient-hero hover:gradient-hero-hover w-full md:w-auto">
             <Plus className="w-4 h-4 mr-2" />
-            Neues Inserat
+            {primaryRole === "dealer" ? "Neues Inserat" : "Neue Anfrage"}
           </Button>
         </Link>
       </div>
@@ -169,10 +169,10 @@ export default function MyListings() {
             <p className="text-muted-foreground mb-6">
               Erstellen Sie Ihr erstes Inserat und starten Sie den Verkauf
             </p>
-            <Link to={primaryRole === "dealer" ? "/dashboard/listings/new" : "/verkaufen/wizard"}>
+            <Link to={primaryRole === "dealer" ? "/dashboard/listings/new" : "/funnel/a"}>
               <Button className="gradient-hero hover:gradient-hero-hover">
                 <Plus className="w-4 h-4 mr-2" />
-                Erstes Inserat erstellen
+                {primaryRole === "dealer" ? "Erstes Inserat erstellen" : "Erste Anfrage starten"}
               </Button>
             </Link>
           </div>

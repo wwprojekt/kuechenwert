@@ -4,6 +4,12 @@ import { clsx } from "clsx";
 import { supabase } from "@/integrations/supabase/client";
 import { getStoredUtm } from "@/lib/utm";
 import {
+  generateTransactionId,
+  setEnhancedConversionFromForm,
+  trackKitchenFunnelLead,
+} from "@/lib/gadsConversionService";
+import { trackMetaLead } from "@/lib/metaPixelService";
+import {
   Plus,
   Trash2,
   FileUp,
@@ -335,6 +341,7 @@ export default function FunnelBClient() {
           .from("lead-files")
           .upload(path, file, {
             contentType: file.type || "application/octet-stream",
+            cacheControl: "31536000, immutable",
             upsert: false,
           });
         if (uploadError) {
@@ -351,6 +358,20 @@ export default function FunnelBClient() {
           category,
         });
       }
+
+      const transactionId = generateTransactionId("funnel_b");
+      await setEnhancedConversionFromForm({
+        email: data.email,
+        firstName: data.firstName,
+        lastName: data.lastName,
+        phone: data.phone,
+        postalCode: data.postalCode,
+      });
+      await trackKitchenFunnelLead("b", transactionId);
+      trackMetaLead({
+        content_name: "Funnel B",
+        content_category: "Angebot unterbieten",
+      });
 
       try {
         sessionStorage.removeItem(STORAGE_KEY);

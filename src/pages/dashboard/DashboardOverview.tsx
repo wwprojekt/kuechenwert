@@ -346,7 +346,7 @@ export default function DashboardOverview() {
             toast({
               title: "Neues Angebot eingegangen!",
               description: amount > 0
-                ? `Ein Händler bietet ${Math.round(amount).toLocaleString("de-DE")} € für Ihr Fahrzeug.`
+                ? `Ein Händler bietet ${Math.round(amount).toLocaleString("de-DE")} € für Ihre Küche.`
                 : "Schauen Sie sich das neue Angebot an.",
             });
           }
@@ -547,7 +547,7 @@ export default function DashboardOverview() {
       return {
         step: 6,
         label: "Verkauft!",
-        sublabel: "Ihr Fahrzeug wurde erfolgreich verkauft",
+        sublabel: "Ihre Küche wurde erfolgreich verkauft",
         color: "text-emerald-600",
         bgColor: "bg-emerald-100 dark:bg-emerald-900/30",
         borderColor: "border-emerald-200 dark:border-emerald-800",
@@ -558,7 +558,7 @@ export default function DashboardOverview() {
       return {
         step: 6,
         label: mh.sale_channel === "instant_price" ? "Inserat beendet" : "Auktion beendet",
-        sublabel: mh.sold_to ? "Ihr Fahrzeug wurde erfolgreich verkauft" : "Reservepreis nicht erreicht",
+        sublabel: mh.sold_to ? "Ihre Küche wurde erfolgreich verkauft" : "Reservepreis nicht erreicht",
         color: mh.sold_to ? "text-emerald-600" : "text-gray-600",
         bgColor: mh.sold_to ? "bg-emerald-100 dark:bg-emerald-900/30" : "bg-gray-100 dark:bg-gray-900/30",
         borderColor: mh.sold_to ? "border-emerald-200 dark:border-emerald-800" : "border-gray-200 dark:border-gray-800",
@@ -742,9 +742,8 @@ export default function DashboardOverview() {
                           {mh.manufacturer} {mh.model}
                         </h2>
                         <p className="text-sm text-muted-foreground">
-                          Baujahr {mh.year}
-                          {mh.mileage &&
-                            ` · ${Number(mh.mileage).toLocaleString("de-DE")} km`}
+                          Produktionsjahr {mh.year}
+                          {mh.body_type ? ` · ${mh.body_type}` : ""}
                         </p>
                         {/* Preisinfos für den Verkäufer */}
                         <div className="flex flex-wrap gap-x-4 gap-y-1 mt-1">
@@ -1125,7 +1124,7 @@ export default function DashboardOverview() {
       gradient: "from-purple-500 to-pink-500",
       bgGradient: "from-purple-500/10 to-pink-500/10",
       link: "/dashboard/inventory",
-      description: "Fahrzeuge",
+      description: "Küchen",
     },
     {
       title: "Gesamt investiert",
@@ -1236,7 +1235,7 @@ export default function DashboardOverview() {
                 €{(dealerStats?.totalSpent || 0).toLocaleString("de-DE")}
               </p>
               <p className="text-white/70 text-sm">
-                Gesamtbetrag aller erworbenen Fahrzeuge
+                Gesamtbetrag aller erworbenen Küchen
               </p>
             </div>
             <div className="flex items-center gap-4">

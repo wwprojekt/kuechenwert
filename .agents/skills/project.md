@@ -1,11 +1,11 @@
-# CaravanWert – Projekt-Kontext & Aufgaben-Management
+# KüchenWert – Projekt-Kontext & Aufgaben-Management
 
 ## Projektübersicht
 
-**CaravanWert** ist eine deutschsprachige Online-Plattform zum Verkauf und Ankauf von Wohnmobilen und Wohnwagen über ein Auktionssystem.
+**KüchenWert** ist eine deutschsprachige Plattform für Küchenangebote, Preisvergleich und Studio-Leads (Funnel A/B/C). Der Code stammt von einem Caravan-Auktions-Fork — neue Features immer für Küchen, nie für Wohnmobile.
 
-- **URL:** caravanwert.de
-- **Supabase-Projekt:** `zcrwqxsyptjwkuxfacvq` (Region: eu-west-1)
+- **URL:** kuechenwert24.de
+- **Supabase-Projekt:** `gzqayoalwtmypndrmqes`
 - **Stack:** React 18 + TypeScript + Vite 5 + Tailwind + shadcn/ui + Supabase
 - **Architektur-Details:** Siehe `AGENTS.md` im Root
 
@@ -57,7 +57,15 @@
 - [x] Session-Expired UX-Architektur: Globale `registerSessionExpiredHandler`-Registry in `sessionGuard.ts` + Auto-Trigger des `SessionExpiredDialog` aus `invokeWithAuth()`, sodass alle ~150 Aufrufstellen automatisch korrekt funktionieren ohne manuelle `instanceof SessionExpiredError`-Checks. Toast-Wrapper (`use-toast.ts`) unterdrückt zusätzlich `SESSION_EXPIRED`-Toasts → Nutzer sieht nur den Dialog, nie verwirrenden Doppel-UI. `PostAuctionOfferDialog` (5 Handler) gehärtet. Behebt Error-Log "Mittel/Unbekannt/Händler/Global SESSION_EXPIRED". (19.04.2026)
 - [x] Error-Log-Rauschen reduziert: Globaler `console.error`/`unhandledrejection`-Interceptor in `errorLogService.ts` filtert jetzt `SessionExpiredError` (Dialog handhabt UX) und transiente Netzwerkfehler ("Load failed" Safari, "Failed to fetch" Chrome) komplett raus. Begründung: nicht actionable, User-sichtbare Netzwerkfehler werden weiter über `toast()` und `handleApiError()` korrekt erfasst. Behebt Error-Log "Niedrig/API/seller/Global Load failed" auf Startseite. (19.04.2026)
 
+- [x] P0 Audit-Batch 21.08.2026: site_settings Secrets gesperrt, Google-Review-RPCs gehärtet, Funnel Helmet+Tracking, km/Wohnmobil-Copy auf Karten/Dashboard, Funnel-CSS, request-price-change verify_jwt=false, AGENTS.md/project.md auf KüchenWert
+
 ### Offene Aufgaben
+- [ ] DealerListingCreate noch Wohnmobil-Formular (Hymer/km) — auf Küchenfelder umbauen oder verstecken
+- [ ] Funnel A/B: send-lead-notification / track-conversion serverseitig verdrahten
+- [ ] sessionGuard: ensureValidRLSSession auf Seller/Dealer-Reads (MyListings, ListingEdit, DealerDashboard)
+- [ ] Query-Keys: ConvertToKitchenDialog + Admin-Delete invalidieren myListings/myLeads
+- [ ] Google-Review-Send-Pipeline wiederherstellen (Function fehlt) oder Cron dauerhaft tot lassen
+- [ ] Dealer-Inserat + Admin Kitchen Detail: restliche Fahrzeug/km-Copy
 - [ ] Stille Admin-Aktionen ohne Empfänger-Mail (Audit 17.04.2026):
   - [x] HIGH: `purchase_contracts cancel` (`AdminContracts`) → atomic via Edge Function `cancel-purchase-contract` (Käufer + Verkäufer Mail, Motorhome-Reset, Audit, Error-Logs) [17.04.2026]
   - [x] HIGH: `cancelAuctionAsAdmin` / `AdminMotorhomes.cancelAuctionMutation` → atomic via Edge Function `cancel-auction-as-admin` (Verkäufer + alle Bieter + Festpreis-Anbieter + Kaufchance-Invitees informiert, Audit, Error-Logs) [17.04.2026]

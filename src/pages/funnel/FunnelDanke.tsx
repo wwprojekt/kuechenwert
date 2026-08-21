@@ -1,6 +1,7 @@
 import { useSearchParams, Link } from "react-router-dom";
 import { CheckCircle2, Phone, Mail } from "lucide-react";
 import { BRAND } from "@/lib/brand";
+import { FunnelSeo } from "@/components/funnel/funnel-seo";
 
 /**
  * Danke-Seite nach erfolgreichem Funnel-Abschluss.
@@ -39,6 +40,12 @@ export default function FunnelDanke() {
 
   return (
     <div className="min-h-screen bg-background">
+      <FunnelSeo
+        title="Danke für Ihre Anfrage"
+        description="Wir haben Ihre Küchenanfrage erhalten und leiten sie an passende Studios weiter."
+        canonicalPath="/funnel/danke"
+        noIndex
+      />
       <div className="mx-auto max-w-2xl px-4 py-12 sm:px-6 sm:py-20">
         <div className="mb-8 flex justify-center">
           <CheckCircle2 className="h-20 w-20 text-primary" strokeWidth={1.5} />

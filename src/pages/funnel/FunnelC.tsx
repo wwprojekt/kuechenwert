@@ -18,6 +18,12 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { supabase } from "@/integrations/supabase/client";
 import { BRAND } from "@/lib/brand";
 import { captureUtmParams, getStoredUtm } from "@/lib/utm";
+import {
+  generateTransactionId,
+  setEnhancedConversionFromForm,
+  trackKitchenFunnelLead,
+} from "@/lib/gadsConversionService";
+import { trackMetaLead } from "@/lib/metaPixelService";
 
 /**
  * Funnel C — Traumkueche AI-Visualisierung
@@ -294,6 +300,19 @@ export default function FunnelC() {
       );
       if (error) throw new Error(error.message || "Netzwerkfehler");
       if (!data?.ok) throw new Error(data?.error || "Übermittlung fehlgeschlagen");
+      const transactionId = generateTransactionId("funnel_c");
+      await setEnhancedConversionFromForm({
+        email: contact.email,
+        firstName: contact.firstName,
+        lastName: contact.lastName,
+        phone: contact.phone,
+        postalCode: contact.postalCode,
+      });
+      await trackKitchenFunnelLead("c", transactionId);
+      trackMetaLead({
+        content_name: "Funnel C",
+        content_category: "Traumküche",
+      });
       clearPersisted();
       navigate("/funnel/danke?funnel=traumkueche");
     } catch (err) {
@@ -308,7 +327,6 @@ export default function FunnelC() {
       title={`Traumküchen-Planer (KI) | ${BRAND.name}`}
       description="Beschreiben Sie Ihre Wunsch-Küche – unsere KI generiert in 30-60 Sekunden ein fotorealistisches Bild und schätzt den Preis. Anschließend melden sich geprüfte Küchenstudios."
       canonicalPath="/funnel/c"
-      noIndex
     >
       <section className="min-h-[70vh] py-10 sm:py-14 bg-gradient-to-b from-background via-muted/20 to-background">
         <div className="container max-w-5xl px-4 sm:px-6 lg:px-8">

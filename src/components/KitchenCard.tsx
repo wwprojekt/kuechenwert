@@ -1,7 +1,7 @@
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { MapPin, Calendar, Gauge, Users, Bed, ArrowRight, Clock, Zap, Truck, Lock } from "lucide-react";
+import { MapPin, Calendar, LayoutGrid, ArrowRight, Clock, Zap, Lock } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useMemo } from "react";
 import { FavoriteButton } from "@/components/FavoriteButton";
@@ -37,7 +37,8 @@ interface KitchenCardProps {
   manufacturer: string;
   model: string;
   year: number;
-  mileage: number;
+  /** @deprecated Caravan leftover — ignored on kitchen cards */
+  mileage?: number;
   // image = bevorzugt card_url (480px WebP, ~10-25 KB), Fallback url (Original)
   image: string;
   // imageMedium = optional medium_url (1024px WebP, ~50-100 KB) für 2x-DPR
@@ -175,12 +176,9 @@ const KitchenCard = ({
   manufacturer,
   model,
   year,
-  mileage,
   image,
   imageMedium,
   listingNumber,
-  beds,
-  passengers,
   location,
   bodyType,
   country,
@@ -445,26 +443,10 @@ const KitchenCard = ({
               <Calendar className="h-3.5 w-3.5 text-primary" />
               <span>{year}</span>
             </div>
-            <div className="flex items-center gap-1.5">
-              <Gauge className="h-3.5 w-3.5 text-primary" />
-              <span>{mileage.toLocaleString("de-DE")} km</span>
-            </div>
             {bodyType && (
               <div className="flex items-center gap-1.5">
-                <Truck className="h-3.5 w-3.5 text-primary" />
+                <LayoutGrid className="h-3.5 w-3.5 text-primary" />
                 <span>{bodyType}</span>
-              </div>
-            )}
-            {passengers && (
-              <div className="flex items-center gap-1.5">
-                <Users className="h-3.5 w-3.5 text-primary" />
-                <span>{passengers} Sitze</span>
-              </div>
-            )}
-            {beds && (
-              <div className="flex items-center gap-1.5">
-                <Bed className="h-3.5 w-3.5 text-primary" />
-                <span>{beds} Betten</span>
               </div>
             )}
           </div>

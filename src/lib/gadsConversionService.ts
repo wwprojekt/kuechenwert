@@ -248,6 +248,31 @@ export async function trackLandingPageLead(landingPage: string, vehicleInfo?: st
  * Wird ausgelöst in: Kontakt.tsx
  * Primäre Conversion: Ja
  */
+export async function trackKitchenFunnelLead(
+  funnel: "a" | "b" | "c",
+  transactionId?: string,
+): Promise<void> {
+  const txId = transactionId || generateTransactionId(`funnel_${funnel}`);
+  await sendConversionByKey("WIZARD_ABGESCHLOSSEN", "WIZARD_ABGESCHLOSSEN", txId);
+
+  safeGtag("event", "generate_lead", {
+    transaction_id: txId,
+    event_category: "Lead",
+    event_label: `funnel_${funnel}`,
+    value: getConversionValue("WIZARD_ABGESCHLOSSEN"),
+    currency: "EUR",
+    lead_source: `funnel_${funnel}`,
+  });
+
+  safeGtag("event", "form_submit", {
+    form_id: `funnel_${funnel}`,
+    form_name: `Küchen-Funnel ${funnel.toUpperCase()}`,
+    form_destination: `/funnel/${funnel}`,
+  });
+
+  sendBingConversion("WIZARD_ABGESCHLOSSEN", "WIZARD_ABGESCHLOSSEN", txId);
+}
+
 export async function trackKontaktformularGesendet(transactionId?: string): Promise<void> {
   const txId = transactionId || generateTransactionId('kontakt');
   const value = getConversionValue('KONTAKTFORMULAR_GESENDET');

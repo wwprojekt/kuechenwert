@@ -116,7 +116,7 @@ const baseMenuItems: MenuItem[] = [
 ];
 
 /**
- * Roles that should see the "Neues Inserat" button.
+ * Roles that should see the "Neue Anfrage" button.
  * Dealers have their own dashboard with different CTAs.
  */
 const ROLES_WITH_NEW_LISTING = ['seller'];
@@ -189,10 +189,10 @@ export function UserSidebar() {
           <div className="px-3 mb-6 animate-fade-in">
             <Button
               className="w-full bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 text-primary-foreground shadow-lg hover:shadow-xl transition-all"
-              onClick={() => { closeMobileIfOpen(); navigate("/verkaufen/wizard"); }}
+              onClick={() => { closeMobileIfOpen(); navigate("/funnel/a"); }}
             >
               <Plus className="w-4 h-4 mr-2" />
-              Neues Inserat
+              Neue Anfrage
             </Button>
           </div>
         )}
@@ -202,7 +202,7 @@ export function UserSidebar() {
             <Button
               size="icon"
               className="w-full bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 shadow-lg"
-              onClick={() => { closeMobileIfOpen(); navigate("/verkaufen/wizard"); }}
+              onClick={() => { closeMobileIfOpen(); navigate("/funnel/a"); }}
             >
               <Plus className="w-4 h-4" />
             </Button>

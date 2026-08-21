@@ -39,6 +39,12 @@ import {
 } from "@/config/funnel-a";
 import { getStoredUtm } from "@/lib/utm";
 import {
+  generateTransactionId,
+  setEnhancedConversionFromForm,
+  trackKitchenFunnelLead,
+} from "@/lib/gadsConversionService";
+import { trackMetaLead } from "@/lib/metaPixelService";
+import {
   OCCASION_ICONS,
   HOUSING_ICONS,
   SIZE_ICONS,
@@ -193,6 +199,20 @@ export function FunnelAClient({
       if (error) {
         throw new Error(error.message || "Senden fehlgeschlagen");
       }
+
+      const transactionId = generateTransactionId("funnel_a");
+      await setEnhancedConversionFromForm({
+        email: data.email,
+        firstName: data.firstName,
+        lastName: data.lastName,
+        phone: data.phone,
+        postalCode: data.plz,
+      });
+      await trackKitchenFunnelLead("a", transactionId);
+      trackMetaLead({
+        content_name: "Funnel A",
+        content_category: "Küchenanfrage",
+      });
 
       sessionStorage.removeItem(STORAGE_KEY);
       navigate("/funnel/danke?funnel=a");

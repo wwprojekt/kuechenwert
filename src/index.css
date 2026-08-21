@@ -304,3 +304,30 @@ html, body, #root {
     contain-intrinsic-size: auto 500px;
   }
 }
+
+@layer components {
+  .section-container {
+    @apply mx-auto w-full max-w-3xl px-4 sm:px-6;
+  }
+  .input-field {
+    @apply flex h-12 w-full rounded-lg border border-input bg-background px-3 text-base shadow-sm outline-none ring-offset-background placeholder:text-muted-foreground focus-visible:ring-2 focus-visible:ring-ring;
+  }
+  .label-field {
+    @apply text-sm font-medium text-foreground;
+  }
+  .btn-primary {
+    @apply inline-flex min-h-11 items-center justify-center rounded-lg bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground shadow-sm transition-colors hover:bg-primary/90 disabled:pointer-events-none disabled:opacity-50;
+  }
+  .btn-primary-lg {
+    @apply inline-flex min-h-12 items-center justify-center rounded-lg bg-primary px-5 py-3 text-base font-semibold text-primary-foreground shadow-sm transition-colors hover:bg-primary/90 disabled:pointer-events-none disabled:opacity-50;
+  }
+  .btn-ghost {
+    @apply inline-flex min-h-11 items-center justify-center rounded-lg px-4 py-2.5 text-sm font-medium text-foreground transition-colors hover:bg-muted disabled:pointer-events-none disabled:opacity-50;
+  }
+  .btn-accent {
+    @apply inline-flex min-h-11 items-center justify-center rounded-lg bg-accent px-4 py-2.5 text-sm font-semibold text-accent-foreground shadow-sm transition-colors hover:bg-accent/90 disabled:pointer-events-none disabled:opacity-50;
+  }
+  .card-clickable {
+    @apply cursor-pointer rounded-xl border border-border bg-card transition-colors hover:border-primary/40 hover:bg-muted/40;
+  }
+}

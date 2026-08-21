@@ -6,7 +6,7 @@ import { useLiveData } from "@/hooks/useLiveData";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Heart, Car, Calendar, Gauge, Trash2 } from "lucide-react";
+import { Heart, Car, Calendar, Trash2 } from "lucide-react";
 import { useFavorites } from "@/hooks/useFavorites";
 import { CountryFlag } from "@/components/CountryFlag";
 import { ensureValidRLSSession, isNetworkError } from "@/lib/sessionGuard";
@@ -23,7 +23,7 @@ interface FavoriteVehicle {
     manufacturer: string;
     model: string;
     year: number;
-    mileage: number;
+    body_type?: string | null;
     status: string;
     country: string | null;
     listing_number: string | null;
@@ -70,7 +70,7 @@ export default function MyFavorites() {
             manufacturer,
             model,
             year,
-            mileage,
+            body_type,
             status,
             country,
             listing_number,
@@ -123,7 +123,7 @@ export default function MyFavorites() {
       <div>
         <h1 className="text-xl sm:text-2xl font-bold">Meine Favoriten</h1>
         <p className="text-sm text-muted-foreground">
-          Ihre gespeicherten Fahrzeuge
+          Ihre gespeicherten Küchen
         </p>
       </div>
 
@@ -148,10 +148,10 @@ export default function MyFavorites() {
             <Heart className="w-12 h-12 text-muted-foreground mx-auto mb-3" />
             <h3 className="text-lg font-semibold mb-1">Keine Favoriten</h3>
             <p className="text-sm text-muted-foreground mb-4">
-              Sie haben noch keine Fahrzeuge zu Ihren Favoriten hinzugefügt.
+              Sie haben noch keine Küchen zu Ihren Favoriten hinzugefügt.
             </p>
             <Button size="sm" asChild>
-              <Link to="/kaufen">Fahrzeuge durchsuchen</Link>
+              <Link to="/kaufen">Küchen durchsuchen</Link>
             </Button>
           </div>
         </Card>
@@ -211,10 +211,11 @@ export default function MyFavorites() {
                             <Calendar className="w-3 h-3" />
                             {kitchen.year}
                           </span>
-                          <span className="flex items-center gap-0.5">
-                            <Gauge className="w-3 h-3" />
-                            {kitchen.mileage?.toLocaleString('de-DE')} km
-                          </span>
+                          {kitchen.body_type && (
+                            <span className="flex items-center gap-0.5">
+                              {kitchen.body_type}
+                            </span>
+                          )}
                           {kitchen.listing_number && (
                             <span className="font-mono text-[10px] bg-muted px-1 py-0.5 rounded">
                               #{kitchen.listing_number}

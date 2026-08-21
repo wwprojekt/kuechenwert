@@ -1,9 +1,11 @@
-# AGENTS.md – CaravanWert Repository Knowledge
+# AGENTS.md – KüchenWert Repository Knowledge
 
 ## Project Overview
-- German-language Wohnmobil/Wohnwagen sales platform with auction system
-- Supabase project ID: `zcrwqxsyptjwkuxfacvq` (eu-west-1)
+- German-language kitchen (Küche) lead-gen and comparison platform, forked from a caravan auction stack
+- Live domain: `kuechenwert24.de` (brand: KüchenWert)
+- Supabase project ID: `gzqayoalwtmypndrmqes`
 - Stack: React 18 + TypeScript + Vite 5 + Tailwind + shadcn/ui + Supabase
+- **Primary product:** Funnels A/B/C + Küchenrechner + dealer marketplace. Do NOT implement new Wohnmobil/Caravan features. User-facing copy must say Küche, never Fahrzeug/Wohnmobil.
 
 ## Do
 - Use React functional components with hooks

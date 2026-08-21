@@ -164,7 +164,7 @@ verify_jwt = false
 
 # --- Purchase Inquiry ---
 [functions.request-price-change]
-verify_jwt = true
+verify_jwt = false
 
 # --- Conversion Tracking ---
 [functions.track-conversion]
@@ -265,4 +265,17 @@ verify_jwt = false
 
 # --- Admin repair sale artefacts (idempotent post-hoc fixer for half-failed sells) ---
 [functions.admin-repair-sale-artefacts]
+verify_jwt = false
+
+# --- Funnel / public helpers (custom auth or no JWT; sendBeacon cannot send Authorization) ---
+[functions.wizard-telemetry]
+verify_jwt = false
+
+[functions.unsubscribe-google-review]
+verify_jwt = false
+
+[functions.kw-planner-generate]
+verify_jwt = false
+
+[functions.kw-planner-submit-lead]
 verify_jwt = false

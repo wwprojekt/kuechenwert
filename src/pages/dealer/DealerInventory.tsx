@@ -225,7 +225,7 @@ const DealerInventory = () => {
                           {item.manufacturer} {item.model}
                         </h3>
                         <p className="text-xs text-muted-foreground mt-0.5">
-                          {item.year} · {item.mileage.toLocaleString('de-DE')} km
+                          {item.year}
                         </p>
                       </div>
 

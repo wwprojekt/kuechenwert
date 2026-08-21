@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { clsx } from "clsx";
 import { supabase } from "@/integrations/supabase/client";
 import { getStoredUtm } from "@/lib/utm";
+import { notifyKitchenFunnelLead } from "@/lib/funnelLeadNotify";
 import {
   generateTransactionId,
   setEnhancedConversionFromForm,
@@ -360,6 +361,15 @@ export default function FunnelBClient() {
       }
 
       const transactionId = generateTransactionId("funnel_b");
+      notifyKitchenFunnelLead({
+        funnel: "b",
+        firstName: data.firstName,
+        lastName: data.lastName,
+        email: data.email,
+        phone: data.phone,
+        postalCode: data.postalCode,
+        transactionId,
+      });
       await setEnhancedConversionFromForm({
         email: data.email,
         firstName: data.firstName,

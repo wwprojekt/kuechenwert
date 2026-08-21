@@ -61,7 +61,7 @@
 - [x] DealerListingCreate auf Küchenfelder (Marke/Form/Jahr/Zustand), body_type-Enum um Layouts erweitert, ListingEdit ohne Fahrzeug-Tabs (21.08.2026)
 
 ### Offene Aufgaben
-- [ ] Funnel A/B: send-lead-notification / track-conversion serverseitig verdrahten
+- [x] Funnel A/B/C: send-lead-notification type=funnel + track-conversion (Click-IDs) (21.08.2026)
 - [ ] sessionGuard: ensureValidRLSSession auf restliche Seller/Dealer-Reads (DealerDashboard, ListingDetail, MyBids, DealerInventory)
 - [ ] Query-Keys: ConvertToKitchenDialog + Admin-Delete invalidieren myListings/myLeads
 - [ ] Google-Review-Send-Pipeline wiederherstellen (Function fehlt) oder Cron dauerhaft tot lassen

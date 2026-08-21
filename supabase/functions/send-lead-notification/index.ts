@@ -24,7 +24,10 @@ const LEAD_RATE_LIMIT = {
 };
 
 interface LeadNotificationRequest {
-  type: "wertermittlung" | "wertrechner" | "wizard" | "kontakt" | "dealer";
+  type: "wertermittlung" | "wertrechner" | "wizard" | "kontakt" | "dealer" | "funnel";
+  kitchenForm?: string;
+  postalCode?: string;
+  funnelVariant?: string;
   name: string;
   email: string;
   phone?: string;
@@ -59,7 +62,7 @@ interface LeadNotificationRequest {
   honeypot?: string;
 }
 
-const VALID_TYPES = ["wertermittlung", "wertrechner", "wizard", "kontakt", "dealer"];
+const VALID_TYPES = ["wertermittlung", "wertrechner", "wizard", "kontakt", "dealer", "funnel"];
 
 const handler = async (req: Request): Promise<Response> => {
   if (req.method === "OPTIONS") {
@@ -151,6 +154,7 @@ const handler = async (req: Request): Promise<Response> => {
       wizard: "Verkaufen-Wizard",
       kontakt: "Kontaktformular",
       dealer: "Händler-Bewerbung",
+      funnel: "Küchenanfrage",
     };
     const sourceLabel = sourceLabels[type] || type;
 
@@ -167,6 +171,7 @@ const handler = async (req: Request): Promise<Response> => {
       wizard: "Ihre Verkaufsanfrage bei KuechenWert",
       kontakt: "Ihre Kontaktanfrage bei KuechenWert",
       dealer: "Ihre Händler-Bewerbung bei KuechenWert",
+      funnel: "Ihre Küchenanfrage bei KuechenWert",
     };
     const userSubject = userSubjects[type] || "Ihre Anfrage bei KuechenWert";
 
@@ -301,6 +306,8 @@ const handler = async (req: Request): Promise<Response> => {
             ? `Vielen Dank für Ihre Nachricht. Wir haben Ihre Anfrage erhalten und werden uns schnellstmöglich bei Ihnen melden.`
             : type === "wizard"
             ? `Vielen Dank für Ihre Verkaufsanfrage. Wir haben Ihre Fahrzeugdaten erhalten und werden uns innerhalb von 24 Stunden bei Ihnen melden.`
+            : type === "funnel"
+            ? `Vielen Dank für Ihre Küchenanfrage. Geprüfte Studios erhalten Ihre Angaben und melden sich in Kürze bei Ihnen.`
             : `Vielen Dank für Ihre Anfrage über unseren ${sourceLabel}. Wir haben Ihre Daten erhalten und werden uns in Kürze bei Ihnen melden.`
         )}
         ${infoBox(
@@ -313,6 +320,17 @@ const handler = async (req: Request): Promise<Response> => {
             estimatedMin && estimatedMax
               ? paragraph(
                   `<strong>Vorläufige Schätzung:</strong> ${estimatedMin.toLocaleString("de-DE")} - ${estimatedMax.toLocaleString("de-DE")} €`
+                )
+              : ""
+          }
+          ${
+            type === "funnel" && (data.kitchenForm || data.postalCode)
+              ? paragraph(
+                  [
+                    data.funnelVariant ? `Funnel ${String(data.funnelVariant).toUpperCase()}` : "Küchenanfrage",
+                    data.kitchenForm ? `Form: ${String(data.kitchenForm).replace(/[<>&]/g, "")}` : "",
+                    data.postalCode ? `PLZ: ${String(data.postalCode).replace(/[^\d]/g, "").slice(0, 5)}` : "",
+                  ].filter(Boolean).join(" · ")
                 )
               : ""
           }

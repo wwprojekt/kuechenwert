@@ -18,6 +18,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { supabase } from "@/integrations/supabase/client";
 import { BRAND } from "@/lib/brand";
 import { captureUtmParams, getStoredUtm } from "@/lib/utm";
+import { notifyKitchenFunnelLead } from "@/lib/funnelLeadNotify";
 import {
   generateTransactionId,
   setEnhancedConversionFromForm,
@@ -301,6 +302,16 @@ export default function FunnelC() {
       if (error) throw new Error(error.message || "Netzwerkfehler");
       if (!data?.ok) throw new Error(data?.error || "Übermittlung fehlgeschlagen");
       const transactionId = generateTransactionId("funnel_c");
+      notifyKitchenFunnelLead({
+        funnel: "c",
+        firstName: contact.firstName,
+        lastName: contact.lastName,
+        email: contact.email,
+        phone: contact.phone,
+        postalCode: contact.postalCode,
+        kitchenForm: spec.kitchen_form,
+        transactionId,
+      });
       await setEnhancedConversionFromForm({
         email: contact.email,
         firstName: contact.firstName,

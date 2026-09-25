@@ -6659,6 +6659,13 @@ export type Database = {
       }
       kw_is_active_dealer: { Args: { p_uid: string }; Returns: boolean }
       kw_lead_accepts_uploads: { Args: { p_lead_id: string }; Returns: boolean }
+      kw_lead_estimate_eur: {
+        Args: {
+          p_key: string
+          p_lead: Database["public"]["Tables"]["leads"]["Row"]
+        }
+        Returns: number
+      }
       kw_lead_public_summary: {
         Args: { p_lead: Database["public"]["Tables"]["leads"]["Row"] }
         Returns: Json

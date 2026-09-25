@@ -64,9 +64,13 @@
 - [x] Branding 25.09.2026: Caravan-Rasterlogos/OG-Bild/Favicons ersetzt (`scripts/generate-logo-assets.mjs`), Caravan-Bilder entfernt, Hero mit klickbaren 3 Wegen, Landing-Texte an echte Abläufe angepasst, FAQ als eine Quelle (`src/data/faq.ts`), nginx: immutable nur für /assets/
 - [x] Site-Settings wieder live: `public_site_settings` lieferte seit 21.08. für anon 401 → RPC `get_public_site_settings` + localStorage-Cache; Laufzeit-Farbüberschreibung entfernt (DB-HSL ohne %, überschrieb Dark Mode) (25.09.2026)
 - [x] Supabase-Client: `lockAcquireTimeout` entfernt (hat Database-Typen des Clients zerstört, Typfehler 1962 → ~250) (25.09.2026)
+- [x] Funnel A v2 (25.09.2026): 18 Schritte nach kuechenportal-Vorbild, gemeinsamer Katalog `_shared/funnel-a-catalog.ts` (Labels, Legacy-IDs, Preisanker), Submit über Edge Function `kw-lead` (Honeypot, Turnstile, Rate-Limit, `lead_consents` mit `text_version`), Telefon optional + Nachtragen auf der Projektseite (`kw-project` add-phone), Landing `/formular`, Grundriss-Piktogramme statt falscher Formfotos, Labels in Studio-Portal/Admin/Mails, Funnel-B-Budget in Euro (Trigger). Migrationen `20260925221331_kw_funnel_a_v2`, `20260925222534_kw_funnel_b_budget_eur`. Deployt: kw-lead v1, kw-project v2, kw-market-worker v3. E2E mit echtem Submit getestet, Testdaten gelöscht.
 
 ### Offene Aufgaben
 - [ ] **Production-Deploy freischalten**: Live läuft noch der Build vom 10.05.2026. Repo-Secrets `DOKPLOY_URL`, `DOKPLOY_API_KEY`, `DOKPLOY_APP_ID` setzen (dann deployt `.github/workflows/deploy.yml` jeden Push) oder in Dokploy einmal manuell deployen. Docker-Build-Fehler (pnpm `ERR_PNPM_IGNORED_BUILDS`) ist seit 25.09.2026 behoben.
+- [ ] **Direkt nach dem Frontend-Release** (Funnel A v2 / `/formular`) deployen: `sitemap`, `send-welcome-email`, `send-auto-response` (verlinken `/formular`, das der alte Build nicht kennt) und `kw-planner` (nur Refactoring auf `_shared/rate-card.ts`). Danach prüfen, dass `/formular` live ist.
+- [ ] Nach dem Release: Anon-Insert-Policy auf `leads` entfernen, sobald auch Funnel B serverseitig absendet (Funnel A nutzt `kw-lead`).
+- [ ] Click-Wrap-, Einwilligungs- und Transparenztexte in Funnel A (`kw-anfrage-2026-09`) anwaltlich prüfen lassen.
 - [x] Funnel A/B/C: send-lead-notification type=funnel + track-conversion (Click-IDs) (21.08.2026)
 - [x] sessionGuard: ensureValidRLSSession auf Seller/Dealer-Reads (MyBids, DealerInventory, DealerClaims, MyKuechenJourney, NotificationPreferences, DealerDashboard, ListingEdit) (21.08.2026)
 - [x] Query-Keys: ConvertToKitchenDialog + Admin-Delete invalidieren myListings/myLeads/admin-leads (21.08.2026)

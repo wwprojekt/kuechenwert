@@ -46,10 +46,11 @@ const FALLBACK: Variant = {
 };
 
 /**
- * Danke-Seite nach Funnel A (Angebote einholen) und B (Unterbieten).
- * Beide legen ein Projekt mit Ausschreibung an; der Projektlink kommt per
- * E-Mail (kw-market-worker, Event project_created). Funnel C leitet direkt
- * auf die Projektseite weiter.
+ * Danke-Seite nach Funnel B (Unterbieten) und als Rückfall für Funnel A,
+ * wenn kw-lead keinen Projekt-Token liefern konnte. Beide legen ein Projekt
+ * mit Ausschreibung an; der Projektlink kommt per E-Mail (kw-market-worker,
+ * Event project_created). Funnel A und C leiten sonst direkt auf die
+ * Projektseite weiter.
  */
 export default function FunnelDanke() {
   const [searchParams] = useSearchParams();

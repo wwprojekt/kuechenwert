@@ -23,7 +23,7 @@ const PATHS: Path[] = [
     featured: true,
   },
   {
-    to: "/funnel/a",
+    to: "/formular",
     icon: Inbox,
     title: "Angebote einholen",
     description: "Wünsche angeben – geprüfte Studios aus Ihrer Region schicken Angebote.",

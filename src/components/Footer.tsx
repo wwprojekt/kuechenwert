@@ -99,7 +99,7 @@ const Footer = () => {
                 variant="outline"
                 className="h-11 px-6 border-slate-700 bg-transparent text-slate-300 hover:text-white hover:bg-slate-800 w-full sm:w-auto"
               >
-                <Link to="/funnel/a">Angebote einholen</Link>
+                <Link to="/formular">Angebote einholen</Link>
               </Button>
             </div>
           </div>
@@ -151,7 +151,7 @@ const Footer = () => {
                   </Link>
                 </li>
                 <li>
-                  <Link to="/funnel/a" className="text-sm text-slate-400 hover:text-white transition-colors">
+                  <Link to="/formular" className="text-sm text-slate-400 hover:text-white transition-colors">
                     Angebote einholen
                   </Link>
                 </li>

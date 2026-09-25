@@ -84,7 +84,11 @@ const Register = () => {
       if (error) throw error;
 
       if (signUpData?.user) {
-        try { await supabase.rpc('record_agb_acceptance', { p_user_id: signUpData.user.id, p_context: 'registration' }); } catch {}
+        try {
+          await supabase.rpc('record_agb_acceptance', { p_user_id: signUpData.user.id, p_context: 'registration' });
+        } catch (err) {
+          console.error('[register] AGB-Zustimmung konnte nicht protokolliert werden:', err);
+        }
       }
 
       await setEnhancedConversionData({ email: validated.email, firstName: validated.firstName, lastName: validated.lastName, phone: validated.phone });
@@ -206,7 +210,7 @@ const Register = () => {
               </p>
 
               <div className="flex flex-col sm:flex-row gap-3 justify-center">
-                <Link to="/funnel/a">
+                <Link to="/formular">
                   <Button className="gradient-hero hover:gradient-hero-hover shadow-glow-sm">
                     Kostenlose Angebote erhalten
                     <ArrowRight className="w-4 h-4 ml-2" />

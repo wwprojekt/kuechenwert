@@ -168,7 +168,7 @@ const Ratgeber = () => {
                       {category.description}
                     </p>
                     <Link
-                      to="/funnel/a"
+                      to="/formular"
                       className="inline-flex items-center gap-2 text-sm text-primary hover:underline font-medium"
                     >
                       Kostenlose Angebote einholen
@@ -230,7 +230,7 @@ const Ratgeber = () => {
               Budget und Studio-Auswahl.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <Link to="/funnel/a">
+              <Link to="/formular">
                 <Button size="lg" variant="secondary" className="w-full sm:w-auto">
                   <Sparkles className="h-4 w-4 mr-2" />
                   Kostenlose Angebote einholen

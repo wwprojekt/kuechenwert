@@ -189,7 +189,7 @@ export function UserSidebar() {
           <div className="px-3 mb-6 animate-fade-in">
             <Button
               className="w-full bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 text-primary-foreground shadow-lg hover:shadow-xl transition-all"
-              onClick={() => { closeMobileIfOpen(); navigate("/funnel/a"); }}
+              onClick={() => { closeMobileIfOpen(); navigate("/formular"); }}
             >
               <Plus className="w-4 h-4 mr-2" />
               Neue Anfrage
@@ -202,7 +202,7 @@ export function UserSidebar() {
             <Button
               size="icon"
               className="w-full bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 shadow-lg"
-              onClick={() => { closeMobileIfOpen(); navigate("/funnel/a"); }}
+              onClick={() => { closeMobileIfOpen(); navigate("/formular"); }}
             >
               <Plus className="w-4 h-4" />
             </Button>

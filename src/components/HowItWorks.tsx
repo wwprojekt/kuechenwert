@@ -36,7 +36,7 @@ const CHANNELS: Channel[] = [
     description:
       "Beschreiben Sie in 2 Minuten Ihre Wunschküche – Stil, Form, Budget, PLZ. Passende Küchenstudios aus Ihrer Region schicken Ihnen Angebote, die Sie auf Ihrer Projektseite vergleichen.",
     benefits: ["In 2 Minuten ausgefüllt", "Erste Angebote meist in 48 h", "Keine Abnahmepflicht"],
-    to: "/funnel/a",
+    to: "/formular",
     ctaLabel: "Angebote holen",
   },
   {

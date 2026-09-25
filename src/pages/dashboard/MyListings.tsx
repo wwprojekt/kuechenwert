@@ -152,7 +152,7 @@ export default function MyListings() {
             Verwalten Sie Ihre Küchen-Inserate
           </p>
         </div>
-        <Link to={primaryRole === "dealer" ? "/dashboard/listings/new" : "/funnel/a"}>
+        <Link to={primaryRole === "dealer" ? "/dashboard/listings/new" : "/formular"}>
           <Button size="lg" className="gradient-hero hover:gradient-hero-hover w-full md:w-auto">
             <Plus className="w-4 h-4 mr-2" />
             {primaryRole === "dealer" ? "Küche inserieren" : "Neue Anfrage"}
@@ -172,7 +172,7 @@ export default function MyListings() {
             <p className="text-muted-foreground mb-6">
               Erstellen Sie Ihr erstes Inserat und starten Sie den Verkauf
             </p>
-            <Link to={primaryRole === "dealer" ? "/dashboard/listings/new" : "/funnel/a"}>
+            <Link to={primaryRole === "dealer" ? "/dashboard/listings/new" : "/formular"}>
               <Button className="gradient-hero hover:gradient-hero-hover">
                 <Plus className="w-4 h-4 mr-2" />
                 {primaryRole === "dealer" ? "Erstes Inserat erstellen" : "Erste Anfrage starten"}

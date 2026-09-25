@@ -45,10 +45,12 @@ interface NavItem {
   icon?: LucideIcon;
   /** Erst ab xl – zwischen 1024 und 1280 px passt die Leiste sonst nicht neben das Logo. */
   wideOnly?: boolean;
+  /** Weitere Pfade, unter denen der Eintrag als aktiv gilt (z. B. die Funnel-Schritte hinter der Landing). */
+  activePaths?: string[];
 }
 
 const MAIN_NAV: NavItem[] = [
-  { to: "/funnel/a", label: "Angebote holen" },
+  { to: "/formular", label: "Angebote holen", activePaths: ["/funnel/a"] },
   { to: "/funnel/b", label: "Preis unterbieten" },
   { to: "/kuechenrechner", label: "KüchenRechner", wideOnly: true },
   { to: "/kuechenstudios", label: "Küchenstudios", wideOnly: true },
@@ -95,6 +97,7 @@ const Header = () => {
   const { isAdmin, isDealer } = useUserRole();
 
   const isActive = (path: string) => location.pathname === path || location.pathname.startsWith(`${path}/`);
+  const isNavActive = (item: NavItem) => isActive(item.to) || (item.activePaths ?? []).some(isActive);
   const phone = settings?.support_phone || "+49 511 51532476";
   const email = settings?.contact_email || BRAND.supportEmail;
   const accountLinks = isAdmin ? ADMIN_ACCOUNT : isDealer ? DEALER_ACCOUNT : CONSUMER_ACCOUNT;
@@ -197,10 +200,10 @@ const Header = () => {
               <Link
                 key={item.to}
                 to={item.to}
-                aria-current={isActive(item.to) ? "page" : undefined}
+                aria-current={isNavActive(item) ? "page" : undefined}
                 className={cn(
                   "whitespace-nowrap text-sm font-medium transition-colors rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
-                  isActive(item.to) ? "text-primary" : "text-foreground/80 hover:text-primary",
+                  isNavActive(item) ? "text-primary" : "text-foreground/80 hover:text-primary",
                   item.wideOnly && "hidden xl:inline",
                 )}
               >
@@ -282,7 +285,7 @@ const Header = () => {
                 Traumküche planen (KI)
               </Link>
               <div className="mt-1 grid grid-cols-2 gap-2">
-                <Link to="/funnel/a" className="rounded-lg bg-primary/10 px-3 py-2.5 text-center text-sm font-semibold text-primary hover:bg-primary/15">
+                <Link to="/formular" className="rounded-lg bg-primary/10 px-3 py-2.5 text-center text-sm font-semibold text-primary hover:bg-primary/15">
                   Angebote holen
                 </Link>
                 <Link to="/funnel/b" className="rounded-lg bg-primary/10 px-3 py-2.5 text-center text-sm font-semibold text-primary hover:bg-primary/15">

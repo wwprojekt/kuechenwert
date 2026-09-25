@@ -77,7 +77,7 @@ const handler = async (req: Request): Promise<Response> => {
       ${paragraph('In der Zwischenzeit finden Sie Antworten auf h&auml;ufige Fragen m&ouml;glicherweise in unserem FAQ-Bereich:')}
       ${list([
         '<a href="https://kuechenwert24.de/faq" style="color: #1f8aa2;">H&auml;ufig gestellte Fragen</a>',
-        '<a href="https://kuechenwert24.de/funnel/a" style="color: #1f8aa2;">Angebote f&uuml;r Ihre Traumk&uuml;che einholen</a>',
+        '<a href="https://kuechenwert24.de/formular" style="color: #1f8aa2;">Angebote f&uuml;r Ihre Traumk&uuml;che einholen</a>',
         '<a href="https://kuechenwert24.de/funnel/b" style="color: #1f8aa2;">Bestehendes K&uuml;chen-Angebot unterbieten lassen</a>',
         '<a href="https://kuechenwert24.de/haendler" style="color: #1f8aa2;">Als K&uuml;chenstudio / H&auml;ndler mitmachen</a>',
       ])}

@@ -182,7 +182,7 @@ const Preise = () => {
               Starten Sie Ihre kostenlose Anfrage – oder werden Sie Partner-Studio und erhalten Sie qualifizierte Leads.
             </p>
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-              <Link to="/funnel/a">
+              <Link to="/formular">
                 <Button size="lg" className="gap-2">
                   Kostenlos Angebote erhalten
                   <ArrowRight className="w-4 h-4" />

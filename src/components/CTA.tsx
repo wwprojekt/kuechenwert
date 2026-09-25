@@ -103,7 +103,7 @@ const CTA = () => {
                   variant="outline"
                   className="h-12 sm:h-14 px-8 sm:px-12 text-sm sm:text-base hover-lift-sm border-2 border-white bg-white/10 text-white hover:bg-white/20 hover:text-white hover:border-white font-semibold backdrop-blur-sm w-full sm:w-auto"
                 >
-                  <Link to="/funnel/a">Angebote einholen</Link>
+                  <Link to="/formular">Angebote einholen</Link>
                 </Button>
               </div>
 

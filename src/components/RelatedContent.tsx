@@ -95,7 +95,7 @@ export const kaufenRelatedLinks: RelatedLink[] = [
   {
     title: "Kostenlose Angebote erhalten",
     description: "Wünsche angeben — geprüfte Küchenstudios melden sich mit passenden Angeboten",
-    href: "/funnel/a",
+    href: "/formular",
   },
   {
     title: "Traumküche visualisieren",

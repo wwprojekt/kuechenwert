@@ -13,7 +13,6 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import {
-  Award,
   Users,
   TrendingUp,
   Shield,
@@ -415,7 +414,7 @@ const UeberUns = () => {
               wie möglich zu machen — kostenlos und unverbindlich.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <Link to="/funnel/a">
+              <Link to="/formular">
                 <Button size="lg" variant="secondary" className="w-full sm:w-auto">
                   Kostenlose Angebote einholen
                 </Button>

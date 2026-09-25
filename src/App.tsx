@@ -4,10 +4,11 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { ThemeProvider } from "@/components/ThemeProvider";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route, useParams, useLocation, Navigate } from "react-router-dom";
+import { BrowserRouter, Routes, Route, useParams, useLocation } from "react-router-dom";
 import PageTransition from "./components/PageTransition";
 import { ErrorBoundary, AuctionErrorBoundary } from "./components/ErrorBoundary";
 import { WhatsAppButton } from "./components/WhatsAppButton";
+import { RedirectKeepingQuery } from "./components/RedirectKeepingQuery";
 import CookieBanner from "./components/CookieBanner";
 import ScrollRestoration from "./components/ScrollRestoration";
 import { SessionExpiredProvider } from "./components/SessionExpiredDialog";
@@ -36,7 +37,7 @@ const AuthConfirm = lazyRetry(() => import("./pages/AuthConfirm"));
 // Core pages
 const Verkaufen = lazyRetry(() => import("./pages/Verkaufen"));
 // VerkaufenWizard (alter Caravan-8-Step-Wizard) ist deaktiviert – die Route
-// /verkaufen/wizard leitet jetzt auf /funnel/a um. Die Datei bleibt vorerst
+// /verkaufen/wizard leitet jetzt auf /formular um. Die Datei bleibt vorerst
 // im Repo, falls Teile (Steps, Hooks) fuer Funnel-Features wiederverwendet
 // werden sollen. Kein lazy()-Import => kein Bundle-Chunk.
 const VerkaufenDanke = lazyRetry(() => import("./pages/VerkaufenDanke"));
@@ -110,6 +111,7 @@ const AdminDealerStats = lazyRetry(() => import("./pages/admin/AdminDealerStats"
 const RatgeberPage = lazyRetry(() => import("./pages/ratgeber/RatgeberPage"));
 
 // Funnel (Lead-Gen + Angebot-Compare + Traumkueche)
+const FormularLanding = lazyRetry(() => import("./pages/funnel/FormularLanding"));
 const FunnelA = lazyRetry(() => import("./pages/funnel/FunnelA"));
 const FunnelB = lazyRetry(() => import("./pages/funnel/FunnelB"));
 const FunnelC = lazyRetry(() => import("./pages/funnel/FunnelC"));
@@ -224,10 +226,10 @@ const App = () => (
               <Route path="/auth/confirm" element={<AuthConfirm />} />
               <Route path="/verkaufen" element={<Verkaufen />} />
               {/* Alte Caravan-Wizard-Route leitet auf den neuen Kuechen-Funnel um. */}
-              <Route path="/verkaufen/wizard" element={<Navigate to="/funnel/a" replace />} />
+              <Route path="/verkaufen/wizard" element={<RedirectKeepingQuery to="/formular" />} />
               <Route path="/verkaufen/danke" element={<VerkaufenDanke />} />
               <Route path="/kuechenstudios" element={<Ankaufstationen />} />
-              <Route path="/ankaufstationen" element={<Navigate to="/kuechenstudios" replace />} />
+              <Route path="/ankaufstationen" element={<RedirectKeepingQuery to="/kuechenstudios" />} />
               {/* Legacy Wert-Routen → neuer KuechenRechner (Phase 3 Rebrand).
                   Komponenten liefern nur noch <Navigate to="/kuechenrechner" />. */}
               <Route path="/wertermittlung" element={<Wertermittlung />} />
@@ -237,11 +239,12 @@ const App = () => (
               <Route path="/auktion/:id" element={<AuctionRoute />} />
 
               {/* Funnel A/B/C - Lead-Gen, Offer-Compare, Traumkueche */}
+              <Route path="/formular" element={<FormularLanding />} />
               <Route path="/funnel/a" element={<FunnelA />} />
               <Route path="/funnel/a/:step" element={<FunnelA />} />
               <Route path="/funnel/b" element={<FunnelB />} />
               <Route path="/funnel/c" element={<FunnelC />} />
-              <Route path="/traumkueche" element={<Navigate to="/funnel/c" replace />} />
+              <Route path="/traumkueche" element={<RedirectKeepingQuery to="/funnel/c" />} />
               <Route path="/funnel/danke" element={<FunnelDanke />} />
               <Route path="/projekt" element={<ProjectLinkPage />} />
               <Route path="/projekt/:token" element={<ProjectPage />} />

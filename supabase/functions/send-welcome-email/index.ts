@@ -109,10 +109,10 @@ const handler = async (req: Request): Promise<Response> => {
             '<strong>Angebote einholen</strong> – Bis zu 3 geprüfte Küchenstudios geben Ihnen unverbindliche Angebote',
             '<strong>Studio-Preis unterbieten</strong> – Ihr bestehendes Küchen-Angebot von verifizierten Händlern unterbieten lassen',
             '<strong>Traumküche visualisieren</strong> – Mit KI aus Ihren Vorstellungen ein realistisches Küchenbild erzeugen',
-            '<strong>Anfragen tracken</strong> – Alle eingehenden Studio-Angebote bequem im Dashboard verwalten',
+            '<strong>Angebote vergleichen</strong> – Alle Studio-Angebote auf Ihrer persönlichen Projektseite, Ihre Anfragen im Dashboard',
           ])}
         `, 'info', settingsData)}
-        ${button('Jetzt Traumküche planen', 'https://kuechenwert24.de/funnel/a', settingsData)}
+        ${button('Jetzt Küchenangebote einholen', 'https://kuechenwert24.de/formular', settingsData)}
         ${paragraph('Bei Fragen stehen wir Ihnen jederzeit gerne zur Verfügung.')}
       `;
     }

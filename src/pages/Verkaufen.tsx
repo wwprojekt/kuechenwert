@@ -1,4 +1,4 @@
-import { Navigate } from "react-router-dom";
+import { RedirectKeepingQuery } from "@/components/RedirectKeepingQuery";
 
 /**
  * /verkaufen (DEPRECATED → Funnel A)
@@ -7,9 +7,9 @@ import { Navigate } from "react-router-dom";
  * das "Verkaufen" einer gebrauchten Kueche, sondern um das PLANEN einer NEUEN
  * Kueche (Angebote von Studios einholen).
  *
- * Diese Komponente leitet deshalb auf den primaeren Funnel A um. Die Datei
- * bleibt im Repo, damit alte Backlinks (/verkaufen) nicht 404en.
+ * Diese Komponente leitet deshalb auf den Einstieg von Funnel A (/formular)
+ * um. Die Datei bleibt im Repo, damit alte Backlinks (/verkaufen) nicht 404en.
  */
-const Verkaufen = () => <Navigate to="/funnel/a" replace />;
+const Verkaufen = () => <RedirectKeepingQuery to="/formular" />;
 
 export default Verkaufen;

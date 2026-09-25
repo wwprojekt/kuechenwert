@@ -184,7 +184,7 @@ const BlogPost = () => {
             <p className="text-primary-foreground/90 mb-8">
               Starten Sie mit einer kostenlosen Anfrage — geprüfte Studios senden Ihnen in 48 h individuelle Angebote.
             </p>
-            <Link to="/funnel/a">
+            <Link to="/formular">
               <Button size="lg" variant="secondary">
                 Kostenlose Angebote einholen
               </Button>

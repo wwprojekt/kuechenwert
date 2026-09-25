@@ -45,9 +45,10 @@ serve(async (req) => {
       // Homepage
       { loc: `${baseUrl}/`, lastmod: today, changefreq: 'daily', priority: '1.0' },
 
-      // Funnel-Einstiege (A = Angebote einholen, B = Studio-Preis unterbieten,
-      // C = Traumkueche AI). Das sind die primaeren Conversion-Einstiege.
-      { loc: `${baseUrl}/funnel/a`, lastmod: today, changefreq: 'weekly', priority: '0.9' },
+      // Funnel-Einstiege (A = Angebote einholen ueber die Landing /formular,
+      // B = Studio-Preis unterbieten, C = Traumkueche AI). Das sind die
+      // primaeren Conversion-Einstiege.
+      { loc: `${baseUrl}/formular`, lastmod: today, changefreq: 'weekly', priority: '0.9' },
       { loc: `${baseUrl}/funnel/b`, lastmod: today, changefreq: 'weekly', priority: '0.9' },
       { loc: `${baseUrl}/funnel/c`, lastmod: today, changefreq: 'weekly', priority: '0.9' },
 

@@ -110,7 +110,7 @@ const Ankaufstationen = () => {
             Vor-Ort-Beratung, Showroom-Besuche und fachgerechte Montage Ihrer neuen Küche.
           </p>
           <div className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-3">
-            <Link to="/funnel/a">
+            <Link to="/formular">
               <Button size="lg" className="gap-2">
                 Kostenlose Angebote erhalten
                 <ArrowRight className="w-4 h-4" />
@@ -145,7 +145,7 @@ const Ankaufstationen = () => {
                 der kostenlosen Anfrage — wir verbinden Sie mit passenden Partnern in Ihrer Region.
               </p>
               <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
-                <Link to="/funnel/a">
+                <Link to="/formular">
                   <Button size="lg" className="gap-2">
                     Kostenlose Anfrage starten
                     <ArrowRight className="w-4 h-4" />
@@ -229,7 +229,7 @@ const Ankaufstationen = () => {
                       </div>
                     ) : null}
 
-                    <Link to="/funnel/a" className="block">
+                    <Link to="/formular" className="block">
                       <Button className="w-full mt-2 gap-2">
                         <span>Beratungstermin anfragen</span>
                         <ArrowRight className="w-4 h-4" />

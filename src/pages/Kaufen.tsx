@@ -964,7 +964,7 @@ const Kaufen = () => {
                       </CardHeader>
                       <CardContent>
                         <Button asChild className="w-full">
-                          <Link to="/funnel/a" className="flex items-center justify-center gap-2">
+                          <Link to="/formular" className="flex items-center justify-center gap-2">
                             Jetzt starten
                             <ArrowRight className="h-4 w-4" />
                           </Link>

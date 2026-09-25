@@ -30,6 +30,7 @@ import {
   type Settings,
 } from "../_shared/email-builder.ts";
 import { BRAND } from "../_shared/brand-config.ts";
+import { describeLeadSummary } from "../_shared/funnel-a-catalog.ts";
 
 const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY") ?? "";
 const CRON_SECRET = Deno.env.get("KW_CRON_SECRET") ?? "";
@@ -190,7 +191,19 @@ const fullName = (l: { first_name: string | null; last_name: string | null }) =>
 
 const dealerName = (d: Dealer) => d.company_name?.trim() || fullName(d) || "Küchenstudio";
 
+/** Anfrage (A) und Unterbieten (B) beschreibt der Funnel-Katalog, den Konfigurator summary.labels. */
+const isFunnelSummary = (summary: Record<string, unknown>) =>
+  (summary.source === "a" || summary.source === "b") && !summary.labels;
+
 function summaryRows(summary: Record<string, unknown>, estimate: { min: number | null; max: number | null }) {
+  const range = estimate.min && estimate.max ? `${formatEuro(estimate.min)} – ${formatEuro(estimate.max)}` : null;
+  if (isFunnelSummary(summary)) {
+    const rows = describeLeadSummary(summary).flatMap((group) =>
+      group.rows.map((row) => detailRow(escapeHtml(row.label), escapeHtml(row.value))),
+    );
+    if (range) rows.push(detailRow("Preisschätzung", range));
+    return rows.join("");
+  }
   const labels = (summary.labels ?? {}) as Record<string, unknown>;
   const room = (summary.room ?? {}) as Record<string, unknown>;
   const rows: string[] = [];
@@ -199,7 +212,7 @@ function summaryRows(summary: Record<string, unknown>, estimate: { min: number |
   if (labels.style) rows.push(detailRow("Stil", escapeHtml(String(labels.style))));
   if (labels.front) rows.push(detailRow("Fronten", escapeHtml(String(labels.front))));
   if (labels.worktop) rows.push(detailRow("Arbeitsplatte", escapeHtml(String(labels.worktop))));
-  if (estimate.min && estimate.max) rows.push(detailRow("KI-Preisschätzung", `${formatEuro(estimate.min)} – ${formatEuro(estimate.max)}`));
+  if (range) rows.push(detailRow("KI-Preisschätzung", range));
   return rows.join("");
 }
 
@@ -339,7 +352,7 @@ async function onOfferPlaced(ctx: Ctx, p: Record<string, unknown>) {
       const content = [
         greeting(lead.first_name ?? undefined),
         paragraph(`<strong>${escapeHtml(dealerName(dealer))}</strong>${dealer.company_city ? ` aus ${escapeHtml(dealer.company_city)}` : ""} hat Ihnen ein Angebot für Ihre Küche gemacht.`),
-        infoBox("Angebot", [detailRow("Preis", formatEuro(Number(p.price_eur))), tender.estimate_min_eur ? detailRow("KI-Schätzung", `${formatEuro(tender.estimate_min_eur)} – ${formatEuro(tender.estimate_max_eur)}`) : ""].join(""), "success"),
+        infoBox("Angebot", [detailRow("Preis", formatEuro(Number(p.price_eur))), tender.estimate_min_eur ? detailRow(isFunnelSummary(tender.public_summary ?? {}) ? "Preisschätzung" : "KI-Schätzung", `${formatEuro(tender.estimate_min_eur)} – ${formatEuro(tender.estimate_max_eur)}`) : ""].join(""), "success"),
         button("Angebote vergleichen", link),
         paragraph("Sie müssen nicht sofort entscheiden – weitere Studios können noch bieten."),
       ].join("");

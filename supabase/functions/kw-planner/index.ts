@@ -30,6 +30,7 @@ import {
   serve,
   serviceClient,
   sha256Hex,
+  validIp,
 } from "../_shared/kw-http.ts";
 import { verifyTurnstileToken } from "../_shared/turnstile.ts";
 import {
@@ -53,7 +54,8 @@ import {
   type PlannerConfig,
   type RoomInput,
 } from "../_shared/kitchen-catalog.ts";
-import { describeRoom, estimateKitchenPrice, mergeRateCard, type KitchenEstimate } from "../_shared/kitchen-pricing.ts";
+import { describeRoom, estimateKitchenPrice, type KitchenEstimate } from "../_shared/kitchen-pricing.ts";
+import { loadRateCard } from "../_shared/rate-card.ts";
 import { buildRenderPrompt } from "../_shared/kitchen-prompt.ts";
 import { buildFalInput, falResultImage, falStatus, falSubmit } from "../_shared/fal-queue.ts";
 import { BRAND } from "../_shared/brand-config.ts";
@@ -92,12 +94,6 @@ type Session = {
 
 const SESSION_COLUMNS =
   "id, session_token, lead_id, status, spec, room, estimate, photo_paths, current_render_id, utm_source, utm_medium, utm_campaign, utm_content, utm_term";
-
-function validIp(ip: string): string | null {
-  if (/^\d{1,3}(\.\d{1,3}){3}$/.test(ip)) return ip;
-  if (/^[0-9a-f:]+$/i.test(ip) && ip.includes(":")) return ip;
-  return null;
-}
 
 function newSessionToken(): string {
   const buf = new Uint8Array(24);
@@ -152,15 +148,6 @@ async function ensureSession(
 async function signedUrl(sb: SupabaseClient, path: string, ttl = SIGNED_URL_TTL): Promise<string | null> {
   const { data } = await sb.storage.from(BUCKET).createSignedUrl(path, ttl);
   return data?.signedUrl ?? null;
-}
-
-async function loadRateCard(sb: SupabaseClient) {
-  const { data } = await sb
-    .from("kitchen_pricing_rate_cards")
-    .select("version, overrides")
-    .eq("is_active", true)
-    .maybeSingle();
-  return { card: mergeRateCard(data?.overrides ?? {}), version: (data?.version as number | undefined) ?? null };
 }
 
 function buildPublicSummary(

@@ -2,10 +2,11 @@
  * kw-project — Projektseite für Endkunden (Capability-Link /projekt/<token>)
  *
  * Aktionen (POST { action, token, ... }):
- *   get      Projekt, Ausschreibung, Angebote, Visualisierungen
- *   accept   Angebot eines Studios annehmen (bid_id)
- *   cancel   Projekt beenden (reason)
- *   resend   Projektlink(s) per E-Mail neu zusenden (email) – ohne Token
+ *   get        Projekt, Ausschreibung, Angebote, Visualisierungen
+ *   accept     Angebot eines Studios annehmen (bid_id)
+ *   cancel     Projekt beenden (reason)
+ *   add-phone  Telefonnummer nachtragen (phone, consent_call), nur solange keine hinterlegt ist
+ *   resend     Projektlink(s) per E-Mail neu zusenden (email) – ohne Token
  *
  * Der Token wird nie gespeichert, nur sein SHA-256-Hash (lead_access_tokens).
  */
@@ -18,13 +19,16 @@ import {
   enforceRateLimit,
   isEmail,
   jsonResponse,
+  normalizePhone,
   readJson,
   serve,
   serviceClient,
   sha256Hex,
+  validIp,
 } from "../_shared/kw-http.ts";
 
 const SIGNED_URL_TTL = 60 * 60;
+const CONSENT_TEXT_VERSION = "kw-anfrage-2026-09";
 
 async function resolveLead(sb: SupabaseClient, req: Request, token: unknown): Promise<string> {
   if (typeof token !== "string" || !/^[A-Za-z0-9_-]{32,64}$/.test(token)) {
@@ -98,6 +102,40 @@ async function actionResend(req: Request, sb: SupabaseClient, body: Record<strin
   return jsonResponse(req, { ok: true });
 }
 
+async function actionAddPhone(req: Request, sb: SupabaseClient, leadId: string, body: Record<string, unknown>) {
+  const ip = clientIp(req);
+  await enforceRateLimit(sb, `kw:phone:${ip}`, 3600, 10);
+  const phone = normalizePhone(body.phone);
+  if (!phone) throw new HttpError(422, "Bitte eine gültige Telefonnummer angeben.", "phone");
+
+  const { data: lead, error } = await sb.from("leads").select("phone, user_id").eq("id", leadId).maybeSingle();
+  if (error) throw error;
+  if (!lead) throw new HttpError(404, "Projekt nicht gefunden.", "not_found");
+  if (typeof lead.phone === "string" && lead.phone.trim()) return jsonResponse(req, { ok: true, already: true });
+
+  const consentCall = body.consent_call === true;
+  const { data: updated, error: updateErr } = await sb
+    .from("leads")
+    .update({ phone, consent_call: consentCall })
+    .eq("id", leadId)
+    .or('phone.is.null,phone.eq.""')
+    .select("id");
+  if (updateErr) throw updateErr;
+  if (!updated?.length) return jsonResponse(req, { ok: true, already: true });
+
+  const { error: consentErr } = await sb.from("lead_consents").insert({
+    lead_id: leadId,
+    user_id: lead.user_id ?? null,
+    purpose: "contact_by_phone",
+    granted: consentCall,
+    text_version: CONSENT_TEXT_VERSION,
+    ip_address: validIp(ip),
+    user_agent: req.headers.get("user-agent")?.slice(0, 500) ?? null,
+  });
+  if (consentErr) console.error("[kw-project] consent insert failed", consentErr.message);
+  return jsonResponse(req, { ok: true });
+}
+
 serve(async (req) => {
   const body = await readJson(req);
   const sb = serviceClient();
@@ -120,6 +158,8 @@ serve(async (req) => {
       if (error) throw error;
       return jsonResponse(req, await projectView(sb, leadId));
     }
+    case "add-phone":
+      return actionAddPhone(req, sb, leadId, body);
     default:
       throw new HttpError(400, "Unbekannte Aktion.", "unknown_action");
   }

@@ -68,6 +68,13 @@ export function clientIp(req: Request): string {
   return (req.headers.get("x-real-ip") ?? "unknown").trim();
 }
 
+/** Nur plausible IPv4/IPv6-Adressen, damit Inserts in inet-Spalten nicht scheitern. */
+export function validIp(ip: string): string | null {
+  if (/^\d{1,3}(\.\d{1,3}){3}$/.test(ip)) return ip;
+  if (/^[0-9a-f:]+$/i.test(ip) && ip.includes(":")) return ip;
+  return null;
+}
+
 export async function sha256Hex(input: string): Promise<string> {
   const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(input));
   return Array.from(new Uint8Array(digest))

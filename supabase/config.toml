@@ -287,5 +287,8 @@ verify_jwt = false
 [functions.kw-project]
 verify_jwt = false
 
+[functions.kw-lead]
+verify_jwt = false
+
 [functions.kw-market-worker]
 verify_jwt = false

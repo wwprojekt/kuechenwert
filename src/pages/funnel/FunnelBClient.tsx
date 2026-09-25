@@ -270,7 +270,7 @@ export default function FunnelBClient() {
           kitchen_style: null,
           purchase_reason: null,
           housing_type: null,
-          budget_midpoint: priceCents,
+          budget_midpoint: priceCents !== null ? Math.round(priceCents / 100) : null,
           timeframe_months:
             TIMEFRAMES.find((t) => t.slug === data.timeframe)?.months ?? null,
           delivery_mode: data.deliveryMode || null,

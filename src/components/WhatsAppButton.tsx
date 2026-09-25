@@ -18,11 +18,10 @@ export const WhatsAppButton = () => {
   const { settings } = useSettings();
   const location = useLocation();
 
-  // Hide on admin, dashboard and the sales wizard. The wizard already shows a
-  // "Kontaktieren Sie uns" link directly above its sticky bottom nav, and the
-  // floating bubble would visually collide with the back/next buttons on
-  // mobile (both fixed, both z-50, both in the lower-left corner).
-  const hiddenRoutes = ['/admin', '/dashboard', '/verkaufen/wizard'];
+  // Hide on admin, dashboard and in the funnels. Die Funnels zeigen die
+  // Support-Nummer im Kopf, und die schwebende Blase würde auf Mobile die
+  // fixierte Zurück/Weiter-Leiste verdecken.
+  const hiddenRoutes = ['/admin', '/dashboard', '/funnel'];
   const shouldHide = hiddenRoutes.some(route => location.pathname.startsWith(route));
 
   if (shouldHide) {
@@ -53,7 +52,7 @@ export const WhatsAppButton = () => {
   // Extract phone number and site name from settings
   const phoneNumber = (settings?.whatsapp_number || settings?.support_phone)?.replace(/\D/g, '') || '';
   const siteName = settings?.site_name || BRAND.name;
-  const whatsappUrl = `https://wa.me/${phoneNumber}?text=Hallo! Ich habe eine Frage zu ${siteName}.`;
+  const whatsappUrl = `https://wa.me/${phoneNumber}?text=${encodeURIComponent(`Hallo! Ich habe eine Frage zu ${siteName}.`)}`;
 
   const handleWhatsAppClick = () => {
     trackWhatsAppClick(location.pathname);
@@ -86,10 +85,10 @@ export const WhatsAppButton = () => {
           
           <div className="space-y-2">
             <div className="text-xs text-muted-foreground">
-              • Fragen zum Verkaufsprozess
+              • Fragen zu Ihrer Küchenanfrage
             </div>
             <div className="text-xs text-muted-foreground">
-              • Technischer Support
+              • Angebote vergleichen und entscheiden
             </div>
             <div className="text-xs text-muted-foreground">
               • Allgemeine Anfragen

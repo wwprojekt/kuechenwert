@@ -31,43 +31,6 @@ export const AVATARS = {
   anna: "https://i.pravatar.cc/120?img=44",
 };
 
-/** Funnel: Kuechen-Formen (Wahl-Karten) */
-export const FUNNEL_KITCHEN_FORMS = {
-  zeile: u("1600489000022-c2086d79f9d4", 600),       // gerade Kuechenzeile
-  "l-form": u("1600585154340-be6161a56a0c", 600),    // L-Form Kueche
-  "u-form": u("1556909114-f6e7ad7d3136", 600),       // U-Form
-  zweizeilig: u("1565538810643-b5bdb714032a", 600),  // zweizeilig
-  kochinsel: u("1556911220-bff31c812dba", 600),      // Insel modern
-  unsicher: u("1560448204-e02f11c3d0e2", 600),       // generisch / Skandi
-};
-
-/**
- * Funnel: Kuechen-Stile (Wahl-Karten)
- * Wir nutzen 6 der 7 verifizierten Unsplash-IDs, so dass jede Stil-Karte
- * ein eigenes Motiv zeigt.
- */
-export const FUNNEL_KITCHEN_STYLES = {
-  modern: u("1556911220-bff31c812dba", 600),            // dunkel-modern
-  landhaus: u("1565538810643-b5bdb714032a", 600),       // warm-hell (Landhaus-Anmutung)
-  klassisch: u("1600585154340-be6161a56a0c", 600),      // L-Form, hell-klassisch
-  minimalistisch: u("1556909212-d5b604d0c90d", 600),    // weiss minimal
-  industrial: u("1600566753190-17f0baa2a6c8", 600),     // dunkel/Insel industrial
-  individuell: u("1560448204-e02f11c3d0e2", 600),       // skandinavisch offen
-};
-
-/**
- * Funnel A: Arbeitsplatten-Material-Kategorien
- * Foto-basierte Karten (Unsplash) passend zum Material-Look.
- */
-export const FUNNEL_WORKTOP_CATEGORIES = {
-  holz: u("1565538810643-b5bdb714032a", 600),
-  naturstein: u("1556911220-bff31c812dba", 600),
-  quarz: u("1556909212-d5b604d0c90d", 600),
-  keramik: u("1600566753190-17f0baa2a6c8", 600),
-  schichtstoff: u("1600585154340-be6161a56a0c", 600),
-  unsicher: u("1560448204-e02f11c3d0e2", 600),
-};
-
 /** Mapping Kuechenform -> Thumbnail */
 export function imageForKitchenForm(form: string | null): string {
   switch ((form ?? "").toLowerCase()) {

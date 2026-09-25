@@ -19,6 +19,16 @@ export default {
     extend: {
       fontFamily: {
         sans: ['Fira Sans', 'system-ui', 'sans-serif'],
+        display: ['Fira Sans', 'system-ui', 'sans-serif'],
+      },
+      letterSpacing: {
+        "tight-2": "-0.02em",
+      },
+      boxShadow: {
+        card: "0 1px 2px 0 rgb(0 0 0 / 0.04), 0 8px 24px -12px rgb(0 0 0 / 0.10)",
+        "card-hover": "0 2px 4px 0 rgb(0 0 0 / 0.05), 0 14px 32px -12px rgb(0 0 0 / 0.16)",
+        "card-active": "0 0 0 1px hsl(var(--primary) / 0.20), 0 12px 28px -14px hsl(var(--primary) / 0.50)",
+        "card-elevated": "0 24px 56px -16px rgb(0 0 0 / 0.30)",
       },
       colors: {
         border: "hsl(var(--border))",
@@ -65,6 +75,32 @@ export default {
           "accent-foreground": "hsl(var(--sidebar-accent-foreground))",
           border: "hsl(var(--sidebar-border))",
           ring: "hsl(var(--sidebar-ring))",
+        },
+        // Feste Skala zur Primärfarbe (brand-600 = --primary 160 32% 30%) für die
+        // Funnel-Komponenten; bei einem Rebrand zusammen mit --primary anpassen.
+        brand: {
+          50: "hsl(160 30% 96% / <alpha-value>)",
+          100: "hsl(160 28% 91% / <alpha-value>)",
+          200: "hsl(160 26% 82% / <alpha-value>)",
+          300: "hsl(160 24% 68% / <alpha-value>)",
+          400: "hsl(160 26% 50% / <alpha-value>)",
+          500: "hsl(160 32% 36% / <alpha-value>)",
+          600: "hsl(160 32% 30% / <alpha-value>)",
+          700: "hsl(160 34% 25% / <alpha-value>)",
+          800: "hsl(160 36% 20% / <alpha-value>)",
+          900: "hsl(160 38% 15% / <alpha-value>)",
+        },
+        ink: {
+          DEFAULT: "hsl(var(--foreground))",
+          muted: "hsl(var(--muted-foreground))",
+          subtle: "hsl(var(--muted-foreground) / 0.75)",
+        },
+        surface: {
+          soft: "hsl(var(--muted) / 0.45)",
+          strong: "hsl(var(--muted))",
+        },
+        success: {
+          600: "hsl(142 64% 32% / <alpha-value>)",
         },
       },
       borderRadius: {
@@ -118,6 +154,10 @@ export default {
           "0%, 100%": { opacity: "1" },
           "50%": { opacity: "0.7" }
         },
+        "step-in": {
+          "0%": { opacity: "0", transform: "translateY(8px)" },
+          "100%": { opacity: "1", transform: "translateY(0)" }
+        },
       },
       animation: {
         "accordion-down": "accordion-down 0.2s ease-out",
@@ -131,6 +171,7 @@ export default {
         "shimmer": "shimmer 3s linear infinite",
         "timer-blink": "timer-blink 1s ease-in-out infinite",
         "timer-pulse": "timer-pulse 2.5s ease-in-out infinite",
+        "step-in": "step-in 0.3s ease-out both",
       },
     },
   },

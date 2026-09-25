@@ -1,118 +1,90 @@
 import {
-  Sparkles,
-  Wrench,
-  Truck,
-  RefreshCw,
-  HelpCircle,
-  Building2,
+  ArrowDownToLine,
+  Baby,
   Building,
+  Building2,
+  Calendar,
+  CalendarClock,
+  CalendarDays,
+  CircleDot,
+  Clock,
+  Coffee,
+  Columns2,
+  CookingPot,
+  Copy,
+  DoorClosed,
+  DoorOpen,
+  Droplets,
+  Expand,
+  Eye,
+  EyeOff,
+  Flame,
+  HeartHandshake,
+  Heater,
+  HelpCircle,
   Home,
   Key,
-  Minimize2,
-  Square,
   Maximize2,
-  Expand,
-  Zap,
-  Calendar,
-  CalendarDays,
-  CalendarClock,
-  Clock,
-  CircleDashed,
-  Ruler,
-  Sun,
-  Moon,
-  TreePine,
-  Palette,
-  Contrast,
-  Flame,
-  Grid3x3,
-  ArrowDown,
-  ArrowUp,
-  Copy,
-  User,
-  Users,
-  Baby,
+  MessageCircle,
+  MessagesSquare,
+  Microwave,
+  Minimize2,
   PartyPopper,
-  Coffee,
+  PencilRuler,
+  Recycle,
+  RefreshCw,
+  Refrigerator,
+  Ruler,
+  Snowflake,
+  Sofa,
+  Sparkles,
+  Square,
+  Timer,
+  Truck,
+  User,
+  UserCog,
+  Users,
+  Wind,
+  Wine,
+  Wrench,
+  Zap,
+  type LucideIcon,
 } from "lucide-react";
+import { UNSURE } from "@/features/funnel-a/catalog";
+import type { ChoiceField, ExtraApplianceId } from "@/features/funnel-a/steps";
 
-/**
- * Lucide-Icon-Maps fuer die Text-Card-Steps in Funnel A.
- * Werden im Client-Code an CardStep.options.icon uebergeben.
- *
- * Ziel: Parity zu kuechenportal.de, wo jede Option ein kleines
- * Line-Icon bekommt, damit die Karten nicht wie leere Textboxen wirken.
- */
-
-const iconClass = "h-5 w-5";
-
-export const OCCASION_ICONS: Record<string, React.ReactNode> = {
-  neukauf: <Sparkles className={iconClass} />,
-  renovierung: <Wrench className={iconClass} />,
-  umzug: <Truck className={iconClass} />,
-  modernisierung: <RefreshCw className={iconClass} />,
-  unsicher: <HelpCircle className={iconClass} />,
+/** Icons je Antwortfeld und Katalog-ID; „unsicher“ fällt auf HelpCircle zurück. */
+const CHOICE_ICONS: Partial<Record<ChoiceField, Record<string, LucideIcon>>> = {
+  kitchen_form: { [UNSURE]: MessagesSquare },
+  room_type: { offen: Sofa, geschlossen: DoorClosed, halboffen: DoorOpen, planung: PencilRuler },
+  kitchen_size: { klein: Minimize2, mittel: Square, gross: Maximize2, xl: Expand, [UNSURE]: Ruler },
+  kitchen_style: { [UNSURE]: MessagesSquare },
+  cooktop_type: { induktion: Zap, kochfeldabzug: Wind, ceran: CircleDot, gas: Flame },
+  oven_placement: { "unter-kochfeld": ArrowDownToLine, augenhoehe: Eye, doppelt: Copy },
+  cooling: { einbau: Refrigerator, kombi: Snowflake, side_by_side: Columns2, vorhanden: Recycle },
+  cooking_style: { allein: User, paar: Users, familie: Baby, freunde: PartyPopper, selten: Timer },
+  purchase_reason: { neukauf: Sparkles, renovierung: RefreshCw, umzug: Truck, modernisierung: Wrench },
+  housing: { rent_apartment: Building2, rent_house: Home, own_apartment: Building, own_house: Key, [UNSURE]: EyeOff },
+  decision_maker: { allein: User, gemeinsam: HeartHandshake, andere: UserCog },
+  timeframe: {
+    asap: Zap,
+    "1-3": Calendar,
+    "4-6": CalendarDays,
+    "7-12": CalendarClock,
+    spaeter: Clock,
+    beratung: MessageCircle,
+  },
 };
 
-export const HOUSING_ICONS: Record<string, React.ReactNode> = {
-  rent_apartment: <Building2 className={iconClass} />,
-  rent_house: <Home className={iconClass} />,
-  own_apartment: <Building className={iconClass} />,
-  own_house: <Key className={iconClass} />,
-  unsicher: <HelpCircle className={iconClass} />,
-};
+export function choiceIcon(field: ChoiceField, id: string): LucideIcon | undefined {
+  return CHOICE_ICONS[field]?.[id] ?? (id === UNSURE ? HelpCircle : undefined);
+}
 
-export const SIZE_ICONS: Record<string, React.ReactNode> = {
-  klein: <Minimize2 className={iconClass} />,
-  mittel: <Square className={iconClass} />,
-  gross: <Maximize2 className={iconClass} />,
-  xl: <Expand className={iconClass} />,
-  unsicher: <Ruler className={iconClass} />,
+export const EXTRA_APPLIANCE_ICONS: Partial<Record<ExtraApplianceId, LucideIcon>> = {
+  geschirrspueler: Droplets,
+  mikrowelle: Microwave,
+  dampfgarer: CookingPot,
+  kaffee: Coffee,
+  weinkuehler: Wine,
+  waermeschublade: Heater,
 };
-
-export const TIMEFRAME_ICONS: Record<string, React.ReactNode> = {
-  asap: <Zap className={iconClass} />,
-  "1-3": <Calendar className={iconClass} />,
-  "4-6": <CalendarDays className={iconClass} />,
-  "7-12": <CalendarClock className={iconClass} />,
-  spaeter: <Clock className={iconClass} />,
-  unsicher: <HelpCircle className={iconClass} />,
-};
-
-// ----- NEU: Farbwelt --------------------------------------------
-export const COLOR_ICONS: Record<string, React.ReactNode> = {
-  hell: <Sun className={iconClass} />,
-  holz: <TreePine className={iconClass} />,
-  dunkel: <Moon className={iconClass} />,
-  farbig: <Palette className={iconClass} />,
-  mix: <Contrast className={iconClass} />,
-  unsicher: <HelpCircle className={iconClass} />,
-};
-
-// ----- NEU: Kochfeld --------------------------------------------
-export const COOKTOP_ICONS: Record<string, React.ReactNode> = {
-  induktion: <Zap className={iconClass} />,
-  ceran: <Grid3x3 className={iconClass} />,
-  gas: <Flame className={iconClass} />,
-  unsicher: <HelpCircle className={iconClass} />,
-};
-
-// ----- NEU: Backofen --------------------------------------------
-export const OVEN_ICONS: Record<string, React.ReactNode> = {
-  "unter-kochfeld": <ArrowDown className={iconClass} />,
-  augenhoehe: <ArrowUp className={iconClass} />,
-  doppelt: <Copy className={iconClass} />,
-  unsicher: <HelpCircle className={iconClass} />,
-};
-
-// ----- NEU: Kochstil --------------------------------------------
-export const COOKSTYLE_ICONS: Record<string, React.ReactNode> = {
-  allein: <User className={iconClass} />,
-  paar: <Users className={iconClass} />,
-  familie: <Baby className={iconClass} />,
-  freunde: <PartyPopper className={iconClass} />,
-  selten: <Coffee className={iconClass} />,
-  unsicher: <HelpCircle className={iconClass} />,
-};
-
-export const WORKTOP_FALLBACK_ICON = <CircleDashed className={iconClass} />;

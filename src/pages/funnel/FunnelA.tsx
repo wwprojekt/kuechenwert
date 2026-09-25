@@ -1,72 +1,36 @@
 import { useEffect } from "react";
-import { useParams, Navigate, useSearchParams } from "react-router-dom";
-import { FunnelAClient } from "./FunnelAClient";
-import { useFunnelAStammdaten } from "./useFunnelAStammdaten";
-import { FUNNEL_A_STEPS } from "@/config/funnel-a";
-import { captureUtmParams } from "@/lib/utm";
+import { Navigate, useLocation, useParams } from "react-router-dom";
 import { FunnelSeo } from "@/components/funnel/funnel-seo";
-import { Loader2 } from "lucide-react";
+import { FUNNEL_A_FIRST_SLUG, isFunnelAStepSlug, stepPath } from "@/features/funnel-a/steps";
+import { captureUtmParams } from "@/lib/utm";
+import { FunnelAClient } from "./FunnelAClient";
 
 /**
- * Wrapper-Page fuer Funnel A.
- *
- * Route: /funnel/a/:step
- *
- * Haendelt:
- *   - URL-Param :step -> StepSlug
- *   - UTM-Capture beim ersten Besuch (persistiert in sessionStorage)
- *   - Query-Param ?plz=... als Hero-Handoff (wenn der User auf der Homepage
- *     die PLZ schon eingegeben hat, starten wir Funnel A damit vorausgefuellt)
- *   - Stammdaten-Loading (catalog_front_materials + catalog_appliance_brands +
- *     catalog_worktop_materials) via react-query
- *   - Redirect bei unbekanntem Step-Slug
+ * Funnel A („Küchenangebote einholen“), Route /funnel/a/:step.
+ * Unbekannte oder alte Slugs (z. B. telefon, fronten aus v1) führen zum
+ * ersten Schritt; Query-Parameter (utm_*, form, plz …) bleiben dabei erhalten.
  */
 export default function FunnelA() {
-  const { step: stepSlug } = useParams<{ step: string }>();
-  const [searchParams] = useSearchParams();
-  const initialPlz = searchParams.get("plz") ?? "";
-  const { data: stammdaten, isLoading } = useFunnelAStammdaten();
+  const { step } = useParams<{ step?: string }>();
+  const { search } = useLocation();
 
   useEffect(() => {
     captureUtmParams();
   }, []);
 
-  if (!stepSlug) {
-    return <Navigate to={`/funnel/a/${FUNNEL_A_STEPS[0]?.slug}`} replace />;
-  }
-
-  const isValidStep = FUNNEL_A_STEPS.some((s) => s.slug === stepSlug);
-  if (!isValidStep) {
-    return <Navigate to={`/funnel/a/${FUNNEL_A_STEPS[0]?.slug}`} replace />;
-  }
-
-  if (isLoading) {
-    return (
-      <>
-        <FunnelSeo
-          title="Küchenangebote vergleichen"
-          description="Beschreiben Sie Ihre Traumküche — bis zu 3 geprüfte Studios erstellen unverbindliche Angebote. Kostenlos und in wenigen Minuten."
-          canonicalPath="/funnel/a"
-        />
-        <div className="flex min-h-[60vh] items-center justify-center">
-          <Loader2 className="h-6 w-6 animate-spin text-primary" />
-        </div>
-      </>
-    );
+  if (!isFunnelAStepSlug(step)) {
+    return <Navigate to={{ pathname: stepPath(FUNNEL_A_FIRST_SLUG), search }} replace />;
   }
 
   return (
     <>
       <FunnelSeo
-        title="Küchenangebote vergleichen"
-        description="Beschreiben Sie Ihre Traumküche — bis zu 3 geprüfte Studios erstellen unverbindliche Angebote. Kostenlos und in wenigen Minuten."
-        canonicalPath="/funnel/a"
+        title="Küchenangebote einholen"
+        description="Beschreiben Sie Ihre Wunschküche in wenigen Klicks und erhalten Sie kostenlos Angebote geprüfter Küchenstudios aus Ihrer Region."
+        canonicalPath="/formular"
+        noIndex
       />
-      <FunnelAClient
-        stepSlug={stepSlug}
-        initialPlz={initialPlz}
-        stammdaten={stammdaten}
-      />
+      <FunnelAClient slug={step} />
     </>
   );
 }

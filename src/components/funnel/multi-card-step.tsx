@@ -1,130 +1,79 @@
-import { useCallback } from "react";
-import { clsx } from "clsx";
+import { Check } from "lucide-react";
+import type { ReactNode } from "react";
+import { cn } from "@/lib/utils";
 
-export interface MultiCardOption {
-  id: string;
+export interface MultiCardOption<Id extends string = string> {
+  id: Id;
   label: string;
-  icon?: React.ReactNode;
+  icon?: ReactNode;
 }
 
-interface MultiCardStepProps {
-  options: MultiCardOption[];
-  selected: string[];
-  onSelectionChange: (ids: string[]) => void;
-  columns?: 2 | 3 | 4;
-  /** Maximum number of selections allowed. 0 = unlimited */
-  maxSelections?: number;
-  hint?: string;
+interface MultiCardStepProps<Id extends string> {
+  options: readonly MultiCardOption<Id>[];
+  selected: readonly Id[];
+  onSelectionChange: (ids: Id[]) => void;
+  columns?: 1 | 2;
+  labelledBy?: string;
 }
 
-export function MultiCardStep({
+/** Mehrfachauswahl als Umschalt-Kacheln (aria-pressed). */
+export function MultiCardStep<Id extends string>({
   options,
   selected,
   onSelectionChange,
-  columns = 3,
-  maxSelections = 0,
-  hint,
-}: MultiCardStepProps) {
-  const toggle = useCallback(
-    (id: string) => {
-      if (selected.includes(id)) {
-        onSelectionChange(selected.filter((s) => s !== id));
-      } else {
-        if (maxSelections > 0 && selected.length >= maxSelections) return;
-        onSelectionChange([...selected, id]);
-      }
-    },
-    [selected, onSelectionChange, maxSelections],
-  );
-
-  const gridCols: Record<number, string> = {
-    2: "grid-cols-1 sm:grid-cols-2",
-    3: "grid-cols-1 sm:grid-cols-2 lg:grid-cols-3",
-    4: "grid-cols-2 lg:grid-cols-4",
+  columns = 2,
+  labelledBy,
+}: MultiCardStepProps<Id>) {
+  const toggle = (id: Id) => {
+    onSelectionChange(selected.includes(id) ? selected.filter((s) => s !== id) : [...selected, id]);
   };
 
   return (
-    <div>
-      {hint && (
-        <p className="mb-4 text-sm text-zinc-500">{hint}</p>
-      )}
-      <div className={clsx("grid gap-3", gridCols[columns])}>
-        {options.map((opt) => {
-          const isActive = selected.includes(opt.id);
-          const isDisabled =
-            !isActive && maxSelections > 0 && selected.length >= maxSelections;
-
-          return (
-            <button
-              key={opt.id}
-              type="button"
-              onClick={() => toggle(opt.id)}
-              disabled={isDisabled}
-              className={clsx(
-                "flex items-center gap-3 rounded-xl border-2 px-4 py-4 text-left transition-all",
-                isActive
-                  ? "border-brand-600 bg-brand-50 shadow-sm"
-                  : isDisabled
-                    ? "cursor-not-allowed border-zinc-100 bg-zinc-50 opacity-50"
-                    : "border-zinc-200 bg-white hover:border-brand-300",
+    <div
+      role="group"
+      aria-labelledby={labelledBy}
+      className={cn("grid grid-cols-1 gap-2.5 sm:gap-3", columns === 2 && "sm:grid-cols-2")}
+    >
+      {options.map((opt) => {
+        const isActive = selected.includes(opt.id);
+        return (
+          <button
+            key={opt.id}
+            type="button"
+            onClick={() => toggle(opt.id)}
+            aria-pressed={isActive}
+            className={cn(
+              "group flex min-h-14 items-center gap-3 rounded-xl border-2 px-4 py-3 text-left transition-all duration-200",
+              "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
+              isActive ? "border-primary bg-brand-50 shadow-sm" : "border-border bg-card hover:border-brand-300",
+            )}
+          >
+            <span
+              aria-hidden="true"
+              className={cn(
+                "grid h-5 w-5 flex-none place-items-center rounded-md border-2 transition-colors",
+                isActive ? "border-primary bg-primary text-primary-foreground" : "border-input bg-card",
               )}
             >
-              {/* Checkbox */}
-              <div
-                className={clsx(
-                  "flex h-5 w-5 shrink-0 items-center justify-center rounded border-2 transition",
-                  isActive
-                    ? "border-brand-600 bg-brand-600"
-                    : "border-zinc-300",
-                )}
-              >
-                {isActive && (
-                  <svg
-                    className="h-3 w-3 text-white"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    strokeWidth={3}
-                    stroke="currentColor"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      d="M4.5 12.75l6 6 9-13.5"
-                    />
-                  </svg>
-                )}
-              </div>
-
-              {opt.icon && (
-                <div
-                  className={clsx(
-                    "flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-sm",
-                    isActive
-                      ? "bg-brand-100 text-brand-700"
-                      : "bg-zinc-100 text-zinc-500",
-                  )}
-                >
-                  {opt.icon}
-                </div>
-              )}
-
+              {isActive && <Check className="h-3.5 w-3.5" strokeWidth={3} />}
+            </span>
+            {opt.icon && (
               <span
-                className={clsx(
-                  "text-sm font-medium",
-                  isActive ? "text-brand-800" : "text-zinc-700",
+                aria-hidden="true"
+                className={cn(
+                  "grid h-9 w-9 flex-none place-items-center rounded-lg transition-colors [&>svg]:h-5 [&>svg]:w-5",
+                  isActive ? "bg-brand-100 text-brand-700" : "bg-surface-strong text-ink-muted",
                 )}
               >
-                {opt.label}
+                {opt.icon}
               </span>
-            </button>
-          );
-        })}
-      </div>
-      {maxSelections > 0 && (
-        <p className="mt-3 text-right text-xs text-zinc-400">
-          {selected.length} / {maxSelections} ausgewählt
-        </p>
-      )}
+            )}
+            <span className={cn("text-sm font-medium sm:text-[15px]", isActive ? "text-brand-900" : "text-foreground")}>
+              {opt.label}
+            </span>
+          </button>
+        );
+      })}
     </div>
   );
 }

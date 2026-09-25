@@ -7,6 +7,8 @@ export interface ChoiceOption<T extends string> {
   label: string;
   hint?: string;
   image?: string;
+  /** Zeichnung statt Foto (z. B. Grundriss), gleiche Fläche wie image. */
+  visual?: ReactNode;
   icon?: ReactNode;
   badge?: string;
 }
@@ -61,15 +63,19 @@ export function ChoiceGrid<T extends string>({
                 : "border-border hover:-translate-y-0.5 hover:border-primary/50 hover:shadow-md",
             )}
           >
-            {opt.image && (
+            {(opt.image || opt.visual) && (
               <span className={cn("block w-full overflow-hidden bg-muted", size === "lg" ? "aspect-[4/3]" : "aspect-[16/10]")}>
-                <img
-                  src={opt.image}
-                  alt=""
-                  loading="lazy"
-                  decoding="async"
-                  className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
-                />
+                {opt.image ? (
+                  <img
+                    src={opt.image}
+                    alt=""
+                    loading="lazy"
+                    decoding="async"
+                    className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
+                  />
+                ) : (
+                  <span className="flex h-full w-full items-center justify-center bg-muted/60 p-3">{opt.visual}</span>
+                )}
               </span>
             )}
             <span className={cn("flex flex-1 items-start gap-2.5", size === "sm" ? "p-2.5" : "p-3.5")}>

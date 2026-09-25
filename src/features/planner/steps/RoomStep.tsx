@@ -1,4 +1,5 @@
 import { Lightbulb, Ruler } from "lucide-react";
+import { KitchenFormPlan } from "@/components/kitchen/KitchenFormPlan";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { KITCHEN_FORMS, formById, type KitchenFormId, type RoomInput } from "../core";
@@ -66,7 +67,7 @@ export function RoomStep({
             id: f.id,
             label: f.label,
             hint: f.hint,
-            image: `/images/planner/forms/${f.id}.webp`,
+            visual: <KitchenFormPlan form={f.id} />,
           }))}
         />
       </Section>

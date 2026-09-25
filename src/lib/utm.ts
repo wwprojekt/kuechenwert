@@ -7,9 +7,11 @@ const UTM_KEYS = [
 ] as const;
 
 const SESSION_KEY = "kw_utm";
+const ENTRY_KEY = "kw_entry_path";
 
 export type UtmParams = Partial<Record<(typeof UTM_KEYS)[number], string>>;
 
+/** Merkt sich UTM-Parameter und den ersten Einstieg (Pfad) der Sitzung. */
 export function captureUtmParams(): void {
   if (typeof window === "undefined") return;
   const params = new URLSearchParams(window.location.search);
@@ -24,8 +26,15 @@ export function captureUtmParams(): void {
     }
   }
 
-  if (hasAny) {
-    sessionStorage.setItem(SESSION_KEY, JSON.stringify(utm));
+  try {
+    if (hasAny) {
+      sessionStorage.setItem(SESSION_KEY, JSON.stringify(utm));
+    }
+    if (!sessionStorage.getItem(ENTRY_KEY)) {
+      sessionStorage.setItem(ENTRY_KEY, window.location.pathname);
+    }
+  } catch {
+    // Privater Modus / Speicher voll: Attribution ist nicht kritisch.
   }
 }
 
@@ -36,5 +45,15 @@ export function getStoredUtm(): UtmParams {
     return raw ? JSON.parse(raw) : {};
   } catch {
     return {};
+  }
+}
+
+/** Erster Pfad, auf dem captureUtmParams in dieser Sitzung lief (z. B. /formular). */
+export function getEntryPath(): string | null {
+  if (typeof window === "undefined") return null;
+  try {
+    return sessionStorage.getItem(ENTRY_KEY);
+  } catch {
+    return null;
   }
 }

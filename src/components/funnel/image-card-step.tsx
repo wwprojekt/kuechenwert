@@ -1,163 +1,171 @@
-import { useCallback } from "react";
-import { clsx } from "clsx";
+import { Check } from "lucide-react";
+import { useEffect, useRef, type ReactNode } from "react";
+import { cn } from "@/lib/utils";
 
 export interface ImageOption {
   id: string;
   label: string;
   description?: string;
-  /** Tailwind background class als Fallback */
-  bgClass: string;
-  /** Optional image URL (Unsplash/CDN) */
   imageSrc?: string;
-  /** Optional SVG-Pictogramm (rendert statt Image, in Brand-Color) */
-  pictogram?: React.ReactNode;
+  /** SVG-Piktogramm statt Foto, auf getöntem Hintergrund (bgClass). */
+  pictogram?: ReactNode;
+  bgClass?: string;
+  /** Ohne Bild: volle Zeile mit Icon unter dem Raster, z. B. „Steht noch nicht fest“. */
+  icon?: ReactNode;
 }
 
 interface ImageCardStepProps {
-  options: ImageOption[];
-  selected: string[];
-  onSelectionChange: (ids: string[]) => void;
-  /** Single select or multi select */
-  multiple?: boolean;
+  options: readonly ImageOption[];
+  selected: string;
+  onSelect: (id: string) => void;
   columns?: 2 | 3;
-  /** Auto-Advance bei Single-Select nach Klick (ms, 0 = aus) */
   autoAdvanceMs?: number;
   onAutoAdvance?: () => void;
+  labelledBy?: string;
 }
 
+const GRID_COLS = {
+  2: "grid-cols-2",
+  3: "grid-cols-2 sm:grid-cols-3",
+} as const;
+
+const TILE_BASE =
+  "group relative overflow-hidden rounded-2xl border-2 text-left transition-all duration-200 " +
+  "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2";
+
+function tileState(isActive: boolean) {
+  return isActive
+    ? "border-primary bg-brand-50 shadow-card-active"
+    : "border-border bg-card shadow-sm hover:border-brand-300 hover:shadow-card-hover motion-safe:hover:-translate-y-0.5";
+}
+
+function SelectedBadge() {
+  return (
+    <span
+      aria-hidden="true"
+      className="absolute right-2 top-2 z-10 grid h-6 w-6 place-items-center rounded-full bg-primary text-primary-foreground shadow-md"
+    >
+      <Check className="h-3.5 w-3.5" strokeWidth={3} />
+    </span>
+  );
+}
+
+function Visual({ option, isActive }: { option: ImageOption; isActive: boolean }) {
+  if (option.pictogram) {
+    return (
+      <span
+        className={cn(
+          "flex aspect-[4/3] items-center justify-center p-3 transition-colors sm:p-4",
+          isActive ? "bg-brand-100/70" : option.bgClass || "bg-surface-soft",
+        )}
+      >
+        <span className={cn("h-full w-full transition-colors", isActive ? "text-brand-700" : "text-foreground/70")}>
+          {option.pictogram}
+        </span>
+      </span>
+    );
+  }
+  return (
+    <span className={cn("block aspect-[4/3] overflow-hidden bg-muted", option.bgClass)}>
+      {option.imageSrc && (
+        <img
+          src={option.imageSrc}
+          alt=""
+          decoding="async"
+          className={cn(
+            "h-full w-full object-cover transition-transform duration-500 motion-reduce:transition-none",
+            isActive ? "scale-[1.03]" : "motion-safe:group-hover:scale-105",
+          )}
+        />
+      )}
+    </span>
+  );
+}
+
+/**
+ * Einzelauswahl mit Fotos oder Piktogrammen (Küchenform, Stil, Arbeitsplatte).
+ * Optionen mit icon statt Bild stehen als volle Zeile unter dem Raster.
+ */
 export function ImageCardStep({
   options,
   selected,
-  onSelectionChange,
-  multiple = false,
-  columns = 2,
-  autoAdvanceMs = 0,
+  onSelect,
+  columns = 3,
+  autoAdvanceMs = 250,
   onAutoAdvance,
+  labelledBy,
 }: ImageCardStepProps) {
-  const toggle = useCallback(
-    (id: string) => {
-      if (multiple) {
-        if (selected.includes(id)) {
-          onSelectionChange(selected.filter((s) => s !== id));
-        } else {
-          onSelectionChange([...selected, id]);
-        }
-      } else {
-        onSelectionChange([id]);
-        if (onAutoAdvance && autoAdvanceMs > 0) {
-          setTimeout(onAutoAdvance, autoAdvanceMs);
-        }
-      }
-    },
-    [selected, onSelectionChange, multiple, autoAdvanceMs, onAutoAdvance],
-  );
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const gridCols: Record<number, string> = {
-    2: "grid-cols-2",
-    3: "grid-cols-2 sm:grid-cols-3",
-  };
+  useEffect(() => {
+    return () => {
+      if (timerRef.current) clearTimeout(timerRef.current);
+    };
+  }, []);
+
+  function handleClick(id: string) {
+    onSelect(id);
+    if (!onAutoAdvance) return;
+    if (timerRef.current) clearTimeout(timerRef.current);
+    timerRef.current = setTimeout(onAutoAdvance, autoAdvanceMs);
+  }
 
   return (
-    <div className={clsx("grid gap-3 sm:gap-4", gridCols[columns])}>
+    <div role="group" aria-labelledby={labelledBy} className={cn("grid gap-3 sm:gap-4", GRID_COLS[columns])}>
       {options.map((opt) => {
-        const isActive = selected.includes(opt.id);
-        const hasPictogram = !!opt.pictogram;
-
+        const isActive = selected === opt.id;
+        const isRow = !opt.imageSrc && !opt.pictogram;
         return (
           <button
             key={opt.id}
             type="button"
-            onClick={() => toggle(opt.id)}
+            onClick={() => handleClick(opt.id)}
             aria-pressed={isActive}
-            className={clsx(
-              "group relative overflow-hidden rounded-2xl border-2 bg-white text-left transition-all",
-              isActive
-                ? "border-brand-500 shadow-card-active ring-4 ring-brand-500/15"
-                : "border-neutral-200 shadow-sm hover:-translate-y-0.5 hover:border-neutral-300 hover:shadow-card-hover",
+            className={cn(
+              TILE_BASE,
+              tileState(isActive),
+              isRow ? "col-span-full flex items-center gap-4 p-4" : "flex flex-col",
             )}
           >
-            {/* Visual-Header: Pictogram auf material-getöntem Hintergrund ODER Foto */}
-            {hasPictogram ? (
-              <div
-                className={clsx(
-                  "relative flex aspect-[4/3] items-center justify-center p-3 transition-colors sm:p-4",
-                  // Aktive Karte: kräftiger Brand-Tint überschreibt den Material-Tint
-                  // (klare Selection-Signalisierung). Inaktiv: Material-Tint aus bgClass.
-                  isActive ? "bg-brand-50" : opt.bgClass || "bg-neutral-50",
-                )}
-              >
-                <div
-                  className={clsx(
-                    "h-full w-full transition-colors",
-                    isActive ? "text-brand-700" : "text-ink/70",
-                  )}
-                >
-                  {opt.pictogram}
-                </div>
-              </div>
-            ) : (
-              <div className={clsx("relative aspect-[4/3] overflow-hidden", opt.bgClass)}>
-                {opt.imageSrc && (
-                  <>
-                    <img
-                      src={opt.imageSrc}
-                      alt={opt.label}
-                      loading="lazy"
-                      decoding="async"
-                      sizes="(max-width: 640px) 50vw, 280px"
-                      className={clsx(
-                        "absolute inset-0 h-full w-full object-cover transition-transform duration-500",
-                        isActive ? "scale-[1.03]" : "group-hover:scale-105",
-                      )}
-                    />
-                    {/* Subtiler Gradient am unteren Rand für bessere Lesbarkeit
-                        des Label-Bars (der direkt darunter kommt) */}
-                    <div
-                      aria-hidden
-                      className="pointer-events-none absolute inset-x-0 bottom-0 h-1/3 bg-gradient-to-t from-black/20 to-transparent"
-                    />
-                    {isActive && (
-                      <div
-                        aria-hidden
-                        className="pointer-events-none absolute right-2 top-2 grid h-7 w-7 place-items-center rounded-full bg-brand-500 text-white shadow-lg"
-                      >
-                        <svg
-                          className="h-4 w-4"
-                          viewBox="0 0 20 20"
-                          fill="none"
-                          strokeWidth={3}
-                          stroke="currentColor"
-                        >
-                          <path strokeLinecap="round" strokeLinejoin="round" d="M4 10l4 4 8-9" />
-                        </svg>
-                      </div>
+            {isActive && <SelectedBadge />}
+            {isRow ? (
+              <>
+                {opt.icon && (
+                  <span
+                    aria-hidden="true"
+                    className={cn(
+                      "grid h-12 w-12 flex-none place-items-center rounded-2xl transition-colors [&>svg]:h-6 [&>svg]:w-6",
+                      isActive ? "bg-primary text-primary-foreground" : "bg-brand-50 text-brand-600 group-hover:bg-brand-100",
                     )}
-                  </>
+                  >
+                    {opt.icon}
+                  </span>
                 )}
-              </div>
+                <span className="min-w-0 flex-1 pr-6">
+                  <span className="block font-display text-[15px] font-semibold leading-tight text-foreground sm:text-base">
+                    {opt.label}
+                  </span>
+                  {opt.description && <span className="mt-0.5 block text-xs text-ink-muted sm:text-sm">{opt.description}</span>}
+                </span>
+              </>
+            ) : (
+              <>
+                <Visual option={opt} isActive={isActive} />
+                <span className="flex flex-1 flex-col justify-center px-2.5 py-2 text-center sm:px-3 sm:py-2.5">
+                  <span
+                    className={cn(
+                      "font-display text-[13px] font-semibold leading-tight sm:text-sm",
+                      isActive ? "text-brand-900" : "text-foreground",
+                    )}
+                  >
+                    {opt.label}
+                  </span>
+                  {opt.description && (
+                    <span className="mt-0.5 text-[11px] leading-tight text-ink-muted sm:text-xs">{opt.description}</span>
+                  )}
+                </span>
+              </>
             )}
-
-            {/* Label-Bar (zentriert, KP-Style) */}
-            <div
-              className={clsx(
-                "px-2.5 py-2 text-center transition sm:px-3 sm:py-2.5",
-                isActive ? "bg-brand-50" : "bg-white",
-              )}
-            >
-              <div
-                className={clsx(
-                  "font-display text-[13px] font-bold leading-tight sm:text-sm",
-                  isActive ? "text-brand-900" : "text-black",
-                )}
-              >
-                {opt.label}
-              </div>
-              {opt.description && (
-                <div className="mt-0.5 text-[11px] leading-tight text-ink-muted sm:text-xs">
-                  {opt.description}
-                </div>
-              )}
-            </div>
           </button>
         );
       })}

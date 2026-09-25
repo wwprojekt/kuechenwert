@@ -1,99 +1,71 @@
-import { useState, useEffect } from "react";
-import { clsx } from "clsx";
-import { getRegionByPlz } from "@/config/regions";
+import { CircleCheck, MapPin } from "lucide-react";
+import type { FormEvent } from "react";
+import { regionForPostalCode } from "@/features/funnel-a/catalog";
+import { cn } from "@/lib/utils";
 
 interface PlzStepProps {
   value: string;
   onChange: (plz: string) => void;
+  /** Enter bzw. „Los“ auf der Handytastatur bei gültiger PLZ. */
+  onSubmit?: () => void;
 }
 
-export function PlzStep({ value, onChange }: PlzStepProps) {
-  const [region, setRegion] = useState<string | null>(null);
+export function PlzStep({ value, onChange, onSubmit }: PlzStepProps) {
+  const isComplete = /^\d{5}$/.test(value);
+  const region = isComplete ? regionForPostalCode(value) : null;
 
-  useEffect(() => {
-    if (value.length === 5) {
-      const r = getRegionByPlz(value);
-      setRegion(r?.label ?? null);
-    } else {
-      setRegion(null);
-    }
-  }, [value]);
-
-  const isValid = /^\d{5}$/.test(value);
+  const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (isComplete) onSubmit?.();
+  };
 
   return (
-    <div className="mx-auto max-w-sm space-y-4">
+    <form onSubmit={handleSubmit} noValidate className="mx-auto max-w-sm space-y-3">
+      <label htmlFor="funnel-plz" className="block text-center text-sm font-medium text-ink-muted">
+        Postleitzahl des Einbauorts
+      </label>
       <div className="relative">
         <input
+          id="funnel-plz"
           type="text"
           inputMode="numeric"
-          pattern="[0-9]{5}"
+          pattern="[0-9]*"
           maxLength={5}
-          placeholder="z.B. 10115"
+          placeholder="z. B. 30159"
           name="postal-code"
           autoComplete="postal-code"
-          aria-label="Postleitzahl"
-          value={value}
-          onChange={(e) =>
-            onChange(e.target.value.replace(/\D/g, "").slice(0, 5))
-          }
-          className={clsx(
-            "w-full rounded-xl border-2 bg-white px-5 py-4 text-center text-2xl font-bold tracking-widest outline-none transition",
-            isValid
-              ? "border-brand-600 text-brand-800"
-              : "border-zinc-300 text-zinc-800 focus:border-brand-500",
-          )}
+          enterKeyHint="go"
           autoFocus
+          value={value}
+          onChange={(event) => onChange(event.target.value.replace(/\D/g, "").slice(0, 5))}
+          aria-describedby="funnel-plz-status"
+          className={cn(
+            "h-16 w-full rounded-xl border-2 bg-card px-12 text-center font-display text-2xl font-bold tabular-nums tracking-[0.2em] text-foreground outline-none transition-colors placeholder:font-sans placeholder:text-lg placeholder:font-normal placeholder:tracking-normal placeholder:text-ink-subtle",
+            "focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
+            isComplete ? "border-primary" : "border-input focus:border-brand-400",
+          )}
         />
-        {isValid && (
-          <div className="absolute right-4 top-1/2 -translate-y-1/2">
-            <svg
-              className="h-6 w-6 text-green-600"
-              fill="none"
-              viewBox="0 0 24 24"
-              strokeWidth={2.5}
-              stroke="currentColor"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                d="M4.5 12.75l6 6 9-13.5"
-              />
-            </svg>
-          </div>
+        {isComplete && (
+          <CircleCheck
+            aria-hidden="true"
+            className="pointer-events-none absolute right-4 top-1/2 h-6 w-6 -translate-y-1/2 text-success-600"
+          />
         )}
       </div>
 
-      {region && (
-        <div className="flex items-center justify-center gap-2 rounded-lg bg-brand-50 px-4 py-2.5">
-          <svg
-            className="h-4 w-4 text-brand-600"
-            fill="none"
-            viewBox="0 0 24 24"
-            strokeWidth={2}
-            stroke="currentColor"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              d="M15 10.5a3 3 0 11-6 0 3 3 0 016 0z"
-            />
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 0115 0z"
-            />
-          </svg>
-          <span className="text-sm font-medium text-brand-700">
-            Region: {region}
+      <p id="funnel-plz-status" role="status" aria-live="polite" className="min-h-[2.75rem]">
+        {region && (
+          <span className="flex items-center justify-center gap-2 rounded-lg bg-brand-50 px-4 py-2.5 text-sm font-medium text-brand-800">
+            <MapPin className="h-4 w-4 flex-none text-brand-600" aria-hidden="true" />
+            Region {region}
           </span>
-        </div>
-      )}
-
-      <p className="text-center text-xs text-zinc-400">
-        Wir nutzen Ihre PLZ ausschließlich, um Küchenstudios in Ihrer Nähe zu
-        finden.
+        )}
+        {isComplete && !region && (
+          <span className="block px-2 py-2.5 text-center text-sm text-ink-muted">
+            Diesen PLZ-Bereich kennen wir nicht – bitte prüfen Sie Ihre Eingabe.
+          </span>
+        )}
       </p>
-    </div>
+    </form>
   );
 }

@@ -3230,6 +3230,7 @@ export type Database = {
           max_contact_purchases: number
           min_offer_ratio: number
           tender_duration_hours: number
+          tender_duration_hours_unterbieten: number
           updated_at: string
         }
         Insert: {
@@ -3243,6 +3244,7 @@ export type Database = {
           max_contact_purchases?: number
           min_offer_ratio?: number
           tender_duration_hours?: number
+          tender_duration_hours_unterbieten?: number
           updated_at?: string
         }
         Update: {
@@ -3256,6 +3258,7 @@ export type Database = {
           max_contact_purchases?: number
           min_offer_ratio?: number
           tender_duration_hours?: number
+          tender_duration_hours_unterbieten?: number
           updated_at?: string
         }
         Relationships: []
@@ -6556,6 +6559,7 @@ export type Database = {
         Returns: Database["public"]["Enums"]["app_role"]
       }
       get_public_platform_stats: { Args: never; Returns: Json }
+      get_public_site_settings: { Args: never; Returns: Json }
       get_request_anonymous_id: { Args: never; Returns: string }
       get_vapid_keys: { Args: never; Returns: Json }
       handle_autobid_atomic: {
@@ -6575,6 +6579,10 @@ export type Database = {
         Returns: boolean
       }
       hash_review_ip: { Args: { p_ip: string }; Returns: string }
+      kw_admin_open_tender: {
+        Args: { p_lead_id: string; p_notify_customer?: boolean }
+        Returns: string
+      }
       kw_admin_publish_tender: { Args: { p_auction_id: string }; Returns: Json }
       kw_can_view_planner_media: {
         Args: { p_object_name: string }
@@ -6651,6 +6659,10 @@ export type Database = {
       }
       kw_is_active_dealer: { Args: { p_uid: string }; Returns: boolean }
       kw_lead_accepts_uploads: { Args: { p_lead_id: string }; Returns: boolean }
+      kw_lead_public_summary: {
+        Args: { p_lead: Database["public"]["Tables"]["leads"]["Row"] }
+        Returns: Json
+      }
       kw_lead_tier_score: {
         Args: {
           p_has_dimensions: boolean

@@ -28,22 +28,31 @@ import {
 } from "@/components/ui/dialog";
 import { Loader2, Eye } from "lucide-react";
 import type { Database } from "@/integrations/supabase/types";
+import { fetchTenderStatuses } from "@/features/marketplace/admin-api";
+import { AdminTenderPanel, TenderStatusBadge } from "@/features/marketplace/components/AdminTenderPanel";
 
 type Lead = Database["public"]["Tables"]["leads"]["Row"];
 
 const FUNNEL_TYPE_LABELS: Record<string, string> = {
-  a: "Lead-Gen",
-  b: "Offer-Compare",
-  traumkueche: "Traumkueche",
+  a: "A · Angebote",
+  b: "B · Unterbieten",
+  traumkueche: "C · Traumküche",
 };
 
-const STATUS_LABELS: Record<string, { label: string; variant: "default" | "secondary" | "destructive" | "outline" }> = {
+// Spiegelt das Enum public.lead_status.
+const STATUS_LABELS: Record<Lead["status"], { label: string; variant: "default" | "secondary" | "destructive" | "outline" }> = {
   new: { label: "Neu", variant: "default" },
   qualified: { label: "Qualifiziert", variant: "secondary" },
-  auctioning: { label: "Auktion laeuft", variant: "secondary" },
-  sold: { label: "Verkauft", variant: "secondary" },
-  rejected: { label: "Abgelehnt", variant: "destructive" },
-  archived: { label: "Archiviert", variant: "outline" },
+  disqualified: { label: "Aussortiert", variant: "destructive" },
+  matched: { label: "Zugeordnet", variant: "secondary" },
+  in_auction: { label: "In Ausschreibung", variant: "secondary" },
+  sold: { label: "Kontakt verkauft", variant: "secondary" },
+  contacted: { label: "Kontaktiert", variant: "secondary" },
+  appointment_set: { label: "Termin vereinbart", variant: "secondary" },
+  offer_sent: { label: "Angebot gesendet", variant: "secondary" },
+  closed_won: { label: "Gewonnen", variant: "default" },
+  closed_lost: { label: "Verloren", variant: "outline" },
+  disputed: { label: "Reklamiert", variant: "destructive" },
 };
 
 function formatEuro(cents: number | null): string {
@@ -80,6 +89,13 @@ export default function AdminLeads() {
       return data ?? [];
     },
     refetchInterval: 30_000,
+  });
+
+  const leadIds = useMemo(() => (leads ?? []).map((l) => l.id), [leads]);
+  const { data: tenderStatuses } = useQuery({
+    queryKey: ["admin-lead-tenders", leadIds],
+    queryFn: () => fetchTenderStatuses(leadIds),
+    enabled: leadIds.length > 0,
   });
 
   const filtered = useMemo(() => {
@@ -121,7 +137,7 @@ export default function AdminLeads() {
       <div>
         <h1 className="text-3xl font-bold tracking-tight">Leads</h1>
         <p className="mt-1 text-sm text-muted-foreground">
-          Alle eingehenden Lead-Anfragen aus Funnels A / B / Traumkueche.
+          Alle Anfragen aus Funnel A, B und dem Traumküche-Konfigurator – inklusive Ausschreibung und Freigabe.
         </p>
       </div>
 
@@ -131,15 +147,15 @@ export default function AdminLeads() {
           <div className="mt-1 text-2xl font-bold">{counts.total}</div>
         </Card>
         <Card className="p-4">
-          <div className="text-xs uppercase tracking-wide text-muted-foreground">Funnel A (Lead-Gen)</div>
+          <div className="text-xs uppercase tracking-wide text-muted-foreground">{FUNNEL_TYPE_LABELS.a}</div>
           <div className="mt-1 text-2xl font-bold">{counts.a}</div>
         </Card>
         <Card className="p-4">
-          <div className="text-xs uppercase tracking-wide text-muted-foreground">Funnel B (Compare)</div>
+          <div className="text-xs uppercase tracking-wide text-muted-foreground">{FUNNEL_TYPE_LABELS.b}</div>
           <div className="mt-1 text-2xl font-bold">{counts.b}</div>
         </Card>
         <Card className="p-4">
-          <div className="text-xs uppercase tracking-wide text-muted-foreground">Traumkueche</div>
+          <div className="text-xs uppercase tracking-wide text-muted-foreground">{FUNNEL_TYPE_LABELS.traumkueche}</div>
           <div className="mt-1 text-2xl font-bold">{counts.traumkueche}</div>
         </Card>
       </div>
@@ -158,9 +174,9 @@ export default function AdminLeads() {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">Alle Funnels</SelectItem>
-              <SelectItem value="a">Funnel A (Lead-Gen)</SelectItem>
-              <SelectItem value="b">Funnel B (Compare)</SelectItem>
-              <SelectItem value="traumkueche">Traumkueche</SelectItem>
+              <SelectItem value="a">{FUNNEL_TYPE_LABELS.a}</SelectItem>
+              <SelectItem value="b">{FUNNEL_TYPE_LABELS.b}</SelectItem>
+              <SelectItem value="traumkueche">{FUNNEL_TYPE_LABELS.traumkueche}</SelectItem>
             </SelectContent>
           </Select>
           <Select value={statusFilter} onValueChange={setStatusFilter}>
@@ -199,6 +215,7 @@ export default function AdminLeads() {
                 <TableHead>Datum</TableHead>
                 <TableHead>Funnel</TableHead>
                 <TableHead>Status</TableHead>
+                <TableHead>Ausschreibung</TableHead>
                 <TableHead>Name</TableHead>
                 <TableHead>Kontakt</TableHead>
                 <TableHead>PLZ</TableHead>
@@ -226,6 +243,9 @@ export default function AdminLeads() {
                     </TableCell>
                     <TableCell>
                       <Badge variant={status.variant}>{status.label}</Badge>
+                    </TableCell>
+                    <TableCell>
+                      <TenderStatusBadge status={tenderStatuses?.[lead.id]} />
                     </TableCell>
                     <TableCell>
                       {lead.first_name || lead.last_name
@@ -265,6 +285,7 @@ export default function AdminLeads() {
                 </DialogDescription>
               </DialogHeader>
               <div className="space-y-4 text-sm">
+                <AdminTenderPanel leadId={selected.id} funnelType={selected.funnel_type} />
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <div className="text-xs uppercase text-muted-foreground">E-Mail</div>

@@ -98,7 +98,7 @@
 - [ ] Google Ads: LANDING_PAGE_LEAD von Primary auf Secondary umstellen
 - [ ] Veraltete Unit-Tests (Caravan-Rename nicht nachgezogen): useWizardForm, security, validation, useUserRole, AuthContext – 13 Fehler, vor 25.09.2026 entstanden
 - [ ] Restliche ~250 Typfehler in Caravan-Altmodulen (Listings, AuctionDetail, Admin-Seiten) – `npm run typecheck:all`
-- [ ] Turnstile: `CLOUDFLARE_TURNSTILE_SECRET` + `VITE_TURNSTILE_SITE_KEY` setzen (CSP erlaubt challenges.cloudflare.com jetzt)
+- [ ] Turnstile einrichten: Der bis 25.09.2026 fest eingebaute Site-Key ist für kuechenwert24.de nicht freigegeben (Fehler 110200, Widget aus der Caravan-Zeit) und wurde entfernt; ohne Key lädt Turnstile gar nicht. In Cloudflare ein Widget mit Hostname `kuechenwert24.de` anlegen (Modus „Managed“ oder „Invisible“), `VITE_TURNSTILE_SITE_KEY` als Build-Variable in Dokploy und `CLOUDFLARE_TURNSTILE_SECRET` als Supabase-Secret setzen. Bis dahin schützen Honeypot und Rate-Limit.
 - [ ] Supabase Auth: Leaked-Password-Protection aktivieren (Dashboard)
 - [ ] Alte Edge Functions `kw-planner-generate` / `kw-planner-submit-lead` löschen, sobald der neue Konfigurator live verifiziert ist
 - [ ] `send-lead-notification`: deployte Fassung (21.08., gebündelt) mit Repo abgleichen, bevor sie neu deployt wird

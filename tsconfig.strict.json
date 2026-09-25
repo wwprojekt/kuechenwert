@@ -48,6 +48,8 @@
     "src/contexts/SettingsContext.tsx",
     "src/config/funnel-b-stammdaten.ts",
     "src/lib/utm.ts",
+    "src/hooks/useTurnstile.ts",
+    "src/hooks/__tests__/**/*",
     "supabase/functions/_shared/kitchen-catalog.ts",
     "supabase/functions/_shared/kitchen-pricing.ts",
     "supabase/functions/_shared/kitchen-prompt.ts",

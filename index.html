@@ -300,12 +300,6 @@
         loadFbq(b.fb);
         loadUet(b.uet);
         loadClixtell();
-
-        // Cloudflare Turnstile (statisch – kein Tracking-Config-Eingriff nötig)
-        var t = document.createElement('script');
-        t.async = true;
-        t.src = 'https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit';
-        document.head.appendChild(t);
       }
 
       // Wenn Consent erst nachträglich erteilt wird (CookieBanner Akzeptieren),

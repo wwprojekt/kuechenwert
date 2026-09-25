@@ -57,8 +57,6 @@ const BRAND = {
 
   // Sonstiges
   font: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif",
-  // Liegt als Platzhalter in public/logo-email.png. Solange es das nicht
-  // gibt, fallback: alt-Text ("KuechenWert") greift im Mail-Client.
   logoUrl: BRAND_LOGO_URLS.email,
 };
 

@@ -9,6 +9,7 @@ export function BeforeAfterSlider({
   afterLabel = "Nachher",
   className,
   initial = 50,
+  priority = false,
 }: {
   before: string;
   after: string;
@@ -16,18 +17,31 @@ export function BeforeAfterSlider({
   afterLabel?: string;
   className?: string;
   initial?: number;
+  /** Above-the-fold (LCP): Bilder sofort und mit hoher Priorität laden. */
+  priority?: boolean;
 }) {
   const [pos, setPos] = useState(initial);
   const id = useId();
+  const loading = priority ? "eager" : "lazy";
   return (
     <div className={cn("relative overflow-hidden rounded-2xl bg-muted select-none", className)}>
-      <img src={after} alt={afterLabel} className="block h-full w-full object-cover" draggable={false} />
+      <img
+        src={after}
+        alt={afterLabel}
+        className="block h-full w-full object-cover"
+        draggable={false}
+        loading={loading}
+        fetchPriority={priority ? "high" : undefined}
+        decoding="async"
+      />
       <img
         src={before}
         alt={beforeLabel}
         className="absolute inset-0 h-full w-full object-cover"
         style={{ clipPath: `inset(0 ${100 - pos}% 0 0)` }}
         draggable={false}
+        loading={loading}
+        decoding="async"
       />
       <div className="pointer-events-none absolute inset-y-0" style={{ left: `${pos}%` }}>
         <div className="absolute inset-y-0 -ml-px w-0.5 bg-white shadow-[0_0_0_1px_rgba(0,0,0,0.15)]" />

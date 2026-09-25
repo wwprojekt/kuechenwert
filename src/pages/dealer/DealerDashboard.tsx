@@ -792,7 +792,6 @@ const DealerDashboard = () => {
                             alt={`${auction.kitchen?.manufacturer} ${auction.kitchen?.model}`}
                             loading="lazy"
                             className="w-full h-full object-cover"
-                            loading="lazy"
                             decoding="async"
                           />
                         ) : (

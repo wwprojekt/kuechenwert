@@ -24,8 +24,8 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
-import dealerProfessional from "@/assets/dealer-professional.webp";
-import handshakeDeal from "@/assets/handshake-deal.webp";
+import studioConsultant from "@/assets/studio-consultant.webp";
+import kitchenConsultation from "@/assets/kitchen-consultation.webp";
 import { useSettings } from "@/contexts/SettingsContext";
 import { BRAND } from "@/lib/brand/config";
 
@@ -65,7 +65,7 @@ const UeberUns = () => {
       year: "2024",
       title: "Die Idee",
       description:
-        "Als Betreiber erfolgreicher Vermittlungsplattformen (wohnwert24.de, caravanwert.de) erkennen wir: Küchenkauf ist heute für viele intransparent und teuer — das muss nicht so sein.",
+        "Aus der Erfahrung mit digitalen Vermittlungsplattformen erkennen wir: Küchenkauf ist heute für viele intransparent und teuer — das muss nicht so sein.",
     },
     {
       year: "2026",
@@ -79,6 +79,12 @@ const UeberUns = () => {
       description: `${siteName} geht an den Start — mit dem Ziel, den Kauf einer neuen Küche transparenter, schneller und fairer zu gestalten.`,
     },
     {
+      year: "Sep 2026",
+      title: "KI-Konfigurator & Projekt-Börse",
+      description:
+        "Kund:innen sehen ihre Traumküche per KI im eigenen Raum und erhalten eine Preisschätzung – geprüfte Studios bieten um das Projekt.",
+    },
+    {
       year: "Ab 2026",
       title: "Wachstum",
       description:
@@ -90,7 +96,7 @@ const UeberUns = () => {
     {
       name: "Branchenübergreifende Expertise",
       description:
-        "Erfahrung aus Immobilien- und Fahrzeug-Vermittlung, angewandt auf den Küchenmarkt",
+        "Langjährige Erfahrung in digitaler Vermittlung, angewandt auf den Küchenmarkt",
     },
     {
       name: "Persönlicher Kundenservice",
@@ -110,7 +116,7 @@ const UeberUns = () => {
 
   const achievements = [
     { number: "Bundesweit", label: "Verfügbar" },
-    { number: "48 h", label: "Ø bis Angebote" },
+    { number: "Sofort", label: "Preis & KI-Vorschau" },
     { number: "Geprüft", label: "Studio-Netzwerk" },
     { number: "100 %", label: "Kostenlos für Kund:innen" },
   ];
@@ -177,8 +183,8 @@ const UeberUns = () => {
                 <p>
                   {siteName} wurde 2026 gestartet — aus einer klaren
                   Überzeugung heraus: Der Kauf einer neuen Küche sollte genauso
-                  einfach, transparent und fair ablaufen wie der Vergleich eines
-                  Immobilien- oder Fahrzeug-Angebots. Niemand sollte zehn
+                  einfach, transparent und fair ablaufen wie ein guter
+                  Online-Preisvergleich. Niemand sollte zehn
                   Küchenstudios abklappern müssen, um einen fairen Preis zu
                   bekommen.
                 </p>
@@ -191,15 +197,6 @@ const UeberUns = () => {
                     className="text-primary hover:underline"
                   >
                     wohnwert24.de
-                  </a>{" "}
-                  und{" "}
-                  <a
-                    href="https://caravanwert.de"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-primary hover:underline"
-                  >
-                    caravanwert.de
                   </a>{" "}
                   — haben wir umfangreiche Erfahrung in der digitalen
                   Vermittlung und Lead-Generierung gesammelt. Diese Expertise
@@ -220,8 +217,10 @@ const UeberUns = () => {
             <div className="relative animate-fade-in animate-delay-200">
               <div className="absolute -inset-4 gradient-hero opacity-20 blur-3xl rounded-full" />
               <img
-                src={dealerProfessional}
-                alt={`${siteName} — professionelle Küchen-Vermittlung`}
+                src={studioConsultant}
+                alt={`${siteName} — Küchenberaterin in einem Partner-Studio`}
+                width={1920}
+                height={1088}
                 className="relative rounded-2xl shadow-premium hover-lift"
                 loading="lazy"
                 decoding="async"
@@ -309,8 +308,10 @@ const UeberUns = () => {
             <div className="relative order-2 lg:order-1 animate-fade-in">
               <div className="absolute -inset-4 gradient-hero opacity-20 blur-3xl rounded-full" />
               <img
-                src={handshakeDeal}
-                alt="Vertrauensvolle Küchen-Vermittlung — Händler und Verkäufer"
+                src={kitchenConsultation}
+                alt="Küchenplanung mit Grundriss und Materialmustern"
+                width={1600}
+                height={896}
                 className="relative rounded-2xl shadow-premium hover-lift"
                 loading="lazy"
                 decoding="async"
@@ -323,8 +324,8 @@ const UeberUns = () => {
               </h2>
               <p className="text-lg opacity-90 mb-8 leading-relaxed">
                 Bei {siteName} verbinden wir digitale Kompetenz mit
-                persönlichem Service. Unsere Erfahrung aus dem Immobilien- und
-                Wohnmobil-Markt hilft uns, auch im Küchen-Segment die besten
+                persönlichem Service. Unsere Erfahrung aus der digitalen
+                Vermittlung hilft uns, auch im Küchen-Segment die besten
                 Lösungen für Sie zu finden.
               </p>
 

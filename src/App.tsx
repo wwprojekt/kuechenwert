@@ -226,7 +226,8 @@ const App = () => (
               {/* Alte Caravan-Wizard-Route leitet auf den neuen Kuechen-Funnel um. */}
               <Route path="/verkaufen/wizard" element={<Navigate to="/funnel/a" replace />} />
               <Route path="/verkaufen/danke" element={<VerkaufenDanke />} />
-              <Route path="/ankaufstationen" element={<Ankaufstationen />} />
+              <Route path="/kuechenstudios" element={<Ankaufstationen />} />
+              <Route path="/ankaufstationen" element={<Navigate to="/kuechenstudios" replace />} />
               {/* Legacy Wert-Routen → neuer KuechenRechner (Phase 3 Rebrand).
                   Komponenten liefern nur noch <Navigate to="/kuechenrechner" />. */}
               <Route path="/wertermittlung" element={<Wertermittlung />} />

@@ -90,13 +90,13 @@ const Ankaufstationen = () => {
       title={`Küchenstudios & Showrooms in Ihrer Nähe | ${BRAND.name}`}
       description={`Lokale ${BRAND.name}-Partner-Studios: Showroom-Besuch, Vor-Ort-Beratung, Aufmass und Montage. Finden Sie Ihren passenden Studio-Partner oder starten Sie direkt mit einer kostenlosen Anfrage.`}
       keywords="küchenstudio nähe, küchen showroom, küchen vor ort beratung, küchen partner, küchen montage"
-      canonicalPath="/ankaufstationen"
+      canonicalPath="/kuechenstudios"
       structuredData={[
         generateServiceSchema(
           "Küchenstudio-Partner & Showrooms",
           `Lokale Partner aus dem ${BRAND.name}-Netzwerk bieten Ihnen Showroom-Besuch, individuelle Beratung, Aufmass und fachgerechte Montage Ihrer neuen Küche.`
         ),
-        generateBreadcrumbSchema(getBreadcrumbsFromPath("/ankaufstationen")),
+        generateBreadcrumbSchema(getBreadcrumbsFromPath("/kuechenstudios")),
       ]}
     >
       <PageHero size="md">

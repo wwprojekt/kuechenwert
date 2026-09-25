@@ -9,6 +9,7 @@ import { useLocation } from "react-router-dom";
 import { getCanonicalUrl, injectStructuredData } from "@/lib/seo";
 import type { BreadcrumbItem } from "@/lib/seo";
 import { BRAND } from "@/lib/brand/config";
+import { BRAND_LOGOS } from "@/lib/brand/assets";
 
 interface PageLayoutProps {
   children: ReactNode;
@@ -45,11 +46,7 @@ const PageLayout = ({
 
   // Use provided canonical path or current location
   const canonical = getCanonicalUrl(canonicalPath || location.pathname);
-  // Interim OG-Image: Unsplash-Kueche bis ein eigenes designed ist. Das alte
-  // /og-image.png (Caravan-Erbe) wurde beim Cleanup entfernt.
-  const defaultOgImage =
-    "https://images.unsplash.com/photo-1556909114-f6e7ad7d3136?auto=format&fit=crop&w=1200&h=630&q=80";
-  const ogImageUrl = ogImage || defaultOgImage;
+  const ogImageUrl = ogImage || `${BRAND.baseUrl}${BRAND_LOGOS.ogImage}`;
 
   // Determine if breadcrumbs should be shown
   const showBreadcrumbs = breadcrumbs !== undefined && breadcrumbs !== false;

@@ -14,7 +14,7 @@
  * JS files. This version fixes that by using Network-First for all hashed build assets.
  */
 
-const CACHE_VERSION = 'v6';
+const CACHE_VERSION = 'v7';
 const STATIC_CACHE_NAME = `kuechenwert-static-${CACHE_VERSION}`;
 const ASSETS_CACHE_NAME = `kuechenwert-assets-${CACHE_VERSION}`;
 const DYNAMIC_CACHE_NAME = `kuechenwert-dynamic-${CACHE_VERSION}`;
@@ -144,7 +144,7 @@ function isImmutableAsset(url) {
   return url.origin === location.origin && (
     url.pathname.endsWith('.woff') ||
     url.pathname.endsWith('.woff2') ||
-    url.pathname === '/manifest.json' ||
+    url.pathname === '/manifest.webmanifest' ||
     url.pathname === '/favicon.ico' ||
     url.pathname === '/favicon.png'
   );

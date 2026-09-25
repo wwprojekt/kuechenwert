@@ -20,10 +20,14 @@
          worth the residual benefit for a tiny minority of non-DE visitors. -->
     <meta name="google" content="notranslate" />
     
-    <!-- Favicon — SVG als Primary (vektorskaliert, ~1 KB), PNG-Fallback fuer Apple.
-         Altes /favicon.webp war noch das CaravanWert-Logo. -->
+    <!-- Icons: ICO fuer Alt-Clients/Crawler, SVG fuer moderne Browser,
+         Apple Touch als PNG (iOS rendert kein SVG). Rasterdateien erzeugt
+         scripts/generate-logo-assets.mjs. -->
+    <link rel="icon" href="/favicon.ico?v=2" sizes="32x32" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-    <link rel="apple-touch-icon" href="/favicon.svg" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <meta name="theme-color" content="#336753" />
 
     <!-- Preconnect for critical resources.
          Supabase preconnect (statt nur dns-prefetch) ist kritisch, weil JEDE
@@ -64,9 +68,9 @@
          DSGVO-konform laden wir es erst nach explizitem Consent. -->
 
     <!-- Primary Meta Tags -->
-    <title>KüchenWert — Neue Küche günstig planen | Angebote vergleichen & Preis unterbieten</title>
-    <meta name="description" content="Drei Wege zu Ihrer Traumküche: kostenlose Angebote von geprüften Küchenstudios einholen, Studio-Preise per Reverse-Auktion unterbieten lassen oder mit KI visualisieren. Bis zu 30 % sparen." />
-    <meta name="keywords" content="Küche kaufen, neue Küche planen, Küche vergleichen, Küchenstudio Angebot, Küchen Preisvergleich, Reverse-Auktion Küche, KI Küchenplaner, Nobilia, Häcker, Nolte, SieMatic, Bulthaup, KüchenWert, KüchenRechner" />
+    <title>KüchenWert — Traumküche mit KI planen, Preis sehen & Studio-Angebote vergleichen</title>
+    <meta name="description" content="Foto Ihres Raums hochladen, Küche konfigurieren und sofort sehen, wie sie aussieht und was sie ungefähr kostet. Geprüfte Küchenstudios bieten um Ihr Projekt – Sie wählen. Kostenlos & unverbindlich." />
+    <meta name="keywords" content="Küche planen, Küchenplaner online, Küche visualisieren, KI Küchenplaner, Küche Preis berechnen, Küchenstudio Angebote vergleichen, neue Küche kaufen, Küchen Preisvergleich, Nobilia, Häcker, Nolte, KüchenWert" />
     <meta name="author" content="KüchenWert" />
     <meta name="robots" content="index, follow" />
 
@@ -74,23 +78,20 @@
     <meta property="og:type" content="website" />
     <meta property="og:site_name" content="KüchenWert" />
     <meta property="og:locale" content="de_DE" />
-    <meta property="og:title" content="KüchenWert — Neue Küche günstig planen" />
-    <meta property="og:description" content="Drei Wege zur Traumküche: Angebote vergleichen, Studio-Preis unterbieten oder mit KI visualisieren. Kostenlos, unverbindlich, deutschlandweit." />
+    <meta property="og:title" content="KüchenWert — Ihre Traumküche im eigenen Raum visualisiert" />
+    <meta property="og:description" content="Foto hochladen, Küche konfigurieren, Preis sehen – und Angebote geprüfter Küchenstudios vergleichen. Kostenlos & unverbindlich." />
     <meta property="og:url" content="https://kuechenwert24.de" />
-    <!-- Eigenes KuechenWert-OG-Bild (1200x630, PNG). Zeigt eine moderne
-         Salbei-Gruen-Kueche mit Preisvergleichs-Badge "3 Angebote vergleichen"
-         und dem Claim "Traumküche. Schlau geplant." — ersetzt das interim
-         Unsplash-Bild aus der Rebrand-Phase. -->
-    <meta property="og:image" content="https://kuechenwert24.de/og-image.png" />
+    <meta property="og:image" content="https://kuechenwert24.de/og-image.jpg" />
+    <meta property="og:image:type" content="image/jpeg" />
     <meta property="og:image:width" content="1200" />
     <meta property="og:image:height" content="630" />
-    <meta property="og:image:alt" content="Moderne Traumküche in Salbei-Grün — mit KüchenWert 3 Angebote vergleichen und schlau planen" />
+    <meta property="og:image:alt" content="Küche vorher und als KI-Vorschau nachher – KüchenWert visualisiert die Traumküche im eigenen Raum" />
 
     <!-- Twitter -->
     <meta name="twitter:card" content="summary_large_image" />
-    <meta name="twitter:title" content="KüchenWert — Neue Küche günstig planen" />
-    <meta name="twitter:description" content="Drei Wege zur Traumküche: Angebote vergleichen, Studio-Preis unterbieten oder mit KI visualisieren." />
-    <meta name="twitter:image" content="https://kuechenwert24.de/og-image.png" />
+    <meta name="twitter:title" content="KüchenWert — Ihre Traumküche im eigenen Raum visualisiert" />
+    <meta name="twitter:description" content="Foto hochladen, Küche konfigurieren, Preis sehen – und Angebote geprüfter Küchenstudios vergleichen." />
+    <meta name="twitter:image" content="https://kuechenwert24.de/og-image.jpg" />
 
     <!-- Structured Data - Organization Schema -->
     <script type="application/ld+json">
@@ -98,10 +99,10 @@
       "@context": "https://schema.org",
       "@type": ["Organization", "LocalBusiness"],
       "name": "KüchenWert",
-      "description": "Deutschlands Vergleichsportal für neue Küchen — Angebote von geprüften Studios einholen, Studio-Preise unterbieten lassen oder mit KI visualisieren.",
+      "description": "Vergleichsportal für neue Küchen: Traumküche mit KI im eigenen Raum visualisieren, Preis schätzen und Angebote geprüfter Küchenstudios vergleichen.",
       "url": "https://kuechenwert24.de",
-      "logo": "https://kuechenwert24.de/logo.svg",
-      "image": "https://kuechenwert24.de/og-image.png",
+      "logo": "https://kuechenwert24.de/logo.png?v=2",
+      "image": "https://kuechenwert24.de/og-image.jpg",
       "telephone": "+49-511-51532476",
       "email": "info@kuechenwert24.de",
       "address": {

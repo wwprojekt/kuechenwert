@@ -25,18 +25,18 @@ const CTA = () => {
               </p>
             </div>
             <div className="flex flex-col sm:flex-row gap-3 w-full md:w-auto">
-              <Link to="/kuechenrechner" className="w-full sm:w-auto">
-                <Button className="bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 shadow-lg w-full sm:w-auto">
+              <Button asChild className="bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 shadow-lg w-full sm:w-auto">
+                <Link to="/kuechenrechner">
                   <Calculator className="h-4 w-4 mr-2" />
                   Preis-Check starten
-                </Button>
-              </Link>
-              <Link to="/funnel/b" className="w-full sm:w-auto">
-                <Button variant="outline" className="border-amber-300 hover:bg-amber-50 w-full sm:w-auto">
+                </Link>
+              </Button>
+              <Button asChild variant="outline" className="border-amber-300 hover:bg-amber-50 w-full sm:w-auto">
+                <Link to="/funnel/b">
                   <Gavel className="h-4 w-4 mr-2" />
                   Studio-Angebot unterbieten
-                </Button>
-              </Link>
+                </Link>
+              </Button>
             </div>
           </div>
         </div>
@@ -81,37 +81,37 @@ const CTA = () => {
               </h2>
 
               <p className="text-base sm:text-lg md:text-xl lg:text-2xl text-white/90 max-w-3xl mx-auto leading-relaxed animate-fade-in animate-delay-200 px-4">
-                Starten Sie mit der kostenlosen Anfrage — und bekommen Sie in 48 h
-                konkrete Angebote von geprüften Küchenstudios in Ihrer Region.
-                Oder lassen Sie ein vorhandenes Studio-Angebot unterbieten.
+                Planen Sie Ihre Küche in wenigen Minuten – mit KI-Vorschau im
+                eigenen Raum und Preisschätzung. Geprüfte Studios aus Ihrer Region
+                bieten um Ihr Projekt, Sie wählen das beste Angebot.
               </p>
 
               <div className="flex flex-col sm:flex-row gap-4 sm:gap-6 justify-center pt-4 sm:pt-6 animate-fade-in animate-delay-300">
-                <Link to="/funnel/a" className="w-full sm:w-auto">
-                  <Button
-                    size="lg"
-                    className="bg-white text-primary hover:bg-white/90 shadow-glow h-12 sm:h-14 px-8 sm:px-12 text-sm sm:text-base hover-lift font-bold group w-full"
-                  >
-                    Angebote einholen
+                <Button
+                  asChild
+                  size="lg"
+                  className="bg-white text-primary hover:bg-white/90 shadow-glow h-12 sm:h-14 px-8 sm:px-12 text-sm sm:text-base hover-lift font-bold group w-full sm:w-auto"
+                >
+                  <Link to="/funnel/c">
+                    Traumküche planen
                     <ArrowRight className="ml-2 sm:ml-3 h-5 sm:h-6 w-5 sm:w-6 group-hover:translate-x-2 transition-smooth" />
-                  </Button>
-                </Link>
-                <Link to="/funnel/b" className="w-full sm:w-auto">
-                  <Button
-                    size="lg"
-                    variant="outline"
-                    className="h-12 sm:h-14 px-8 sm:px-12 text-sm sm:text-base hover-lift-sm border-2 border-white bg-white/10 text-white hover:bg-white/20 hover:text-white hover:border-white font-semibold backdrop-blur-sm w-full"
-                  >
-                    Preis unterbieten lassen
-                  </Button>
-                </Link>
+                  </Link>
+                </Button>
+                <Button
+                  asChild
+                  size="lg"
+                  variant="outline"
+                  className="h-12 sm:h-14 px-8 sm:px-12 text-sm sm:text-base hover-lift-sm border-2 border-white bg-white/10 text-white hover:bg-white/20 hover:text-white hover:border-white font-semibold backdrop-blur-sm w-full sm:w-auto"
+                >
+                  <Link to="/funnel/a">Angebote einholen</Link>
+                </Button>
               </div>
 
               <div className="flex flex-wrap justify-center gap-4 sm:gap-6 lg:gap-8 pt-6 sm:pt-8 lg:pt-10 text-white animate-fade-in animate-delay-400">
                 {[
                   "Kostenlos & unverbindlich",
                   "Kein Login nötig",
-                  "Erste Angebote in 48 h",
+                  "KI-Vorschau in ca. 1 Minute",
                 ].map((feature) => (
                   <div
                     key={feature}

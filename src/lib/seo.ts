@@ -12,11 +12,8 @@ const BASE_URL = BRAND.baseUrl;
 // Logo-URL fuer Structured Data (Google, Facebook). SVG ist seit 2024 offiziell
 // in schema.org ImageObject erlaubt und wird von Google fuer Organization-Logos
 // akzeptiert.
-const SCHEMA_LOGO_URL = `${BASE_URL}/logo.svg`;
-// Fallback-Bild fuer Artikel/Produkte ohne eigenes Foto. Unsplash-Kueche bis
-// eigenes Branded-Placeholder existiert.
-const SCHEMA_IMAGE_FALLBACK =
-  "https://images.unsplash.com/photo-1556909114-f6e7ad7d3136?auto=format&fit=crop&w=1200&h=630&q=80";
+const SCHEMA_LOGO_URL = `${BASE_URL}/logo.png?v=2`;
+const SCHEMA_IMAGE_FALLBACK = `${BASE_URL}/og-image.jpg`;
 
 /**
  * Generate canonical URL for a given path
@@ -50,7 +47,7 @@ export function generateOrganizationSchema(settings?: OrganizationSchemaSettings
     '@context': 'https://schema.org',
     '@type': ['Organization', 'LocalBusiness'],
     name: settings?.site_name || BRAND.name,
-    description: settings?.site_description || 'Ihre Plattform für den Verkauf und Kauf gebrauchter Küchen',
+    description: settings?.site_description || 'Traumküche im eigenen Raum mit KI visualisieren, Preis schätzen und Angebote geprüfter Küchenstudios vergleichen.',
     url: BASE_URL,
     logo: SCHEMA_LOGO_URL,
     image: SCHEMA_IMAGE_FALLBACK,
@@ -252,7 +249,8 @@ export function getBreadcrumbsFromPath(path: string): BreadcrumbItem[] {
     '/ratgeber': 'Ratgeber',
     '/ueber-uns': 'Über uns',
     '/haendler': 'Für Küchenstudios',
-    '/ankaufstationen': 'Studios & Showrooms',
+    '/kuechenstudios': 'Küchenstudios & Showrooms',
+    '/projekt': 'Mein Projekt',
     '/faq': 'FAQ',
     '/blog': 'Blog',
     '/impressum': 'Impressum',

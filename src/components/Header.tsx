@@ -1,5 +1,23 @@
 import { Button } from "@/components/ui/button";
-import { Menu, X, Phone, Mail, LogOut, User, Building2, LayoutDashboard, Car, Gavel, Heart, Calendar, MessageSquare, FileText, FileCheck, Zap, Calculator } from "lucide-react";
+import {
+  Briefcase,
+  Building2,
+  Calculator,
+  ClipboardList,
+  FileText,
+  FolderOpen,
+  HandCoins,
+  LayoutDashboard,
+  LogOut,
+  Mail,
+  Menu,
+  MessageSquare,
+  Phone,
+  Sparkles,
+  User,
+  X,
+  type LucideIcon,
+} from "lucide-react";
 import { DarkModeToggle, DarkModeSimpleToggle } from "@/components/DarkModeToggle";
 import { useEffect, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
@@ -11,6 +29,7 @@ import { SiteLogo } from "@/components/SiteLogo";
 import { trackPhoneClick, trackEmailClick } from "@/lib/gadsConversionService";
 import { trackMetaPhoneClick } from "@/lib/metaPixelService";
 import NotificationCenter from "@/components/NotificationCenter";
+import { cn } from "@/lib/utils";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -20,35 +39,76 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 
-// Language selector removed – site is German-only for now
+interface NavItem {
+  to: string;
+  label: string;
+  icon?: LucideIcon;
+  /** Erst ab xl – zwischen 1024 und 1280 px passt die Leiste sonst nicht neben das Logo. */
+  wideOnly?: boolean;
+}
+
+const MAIN_NAV: NavItem[] = [
+  { to: "/funnel/a", label: "Angebote holen" },
+  { to: "/funnel/b", label: "Preis unterbieten" },
+  { to: "/kuechenrechner", label: "KüchenRechner", wideOnly: true },
+  { to: "/kuechenstudios", label: "Küchenstudios", wideOnly: true },
+];
+
+const TOP_NAV: NavItem[] = [
+  { to: "/ueber-uns", label: "Über uns" },
+  { to: "/ratgeber", label: "Ratgeber" },
+  { to: "/faq", label: "FAQ" },
+  { to: "/kontakt", label: "Kontakt" },
+  { to: "/projekt", label: "Mein Projekt", icon: FolderOpen },
+];
+
+interface AccountLink {
+  to: string;
+  label: string;
+  icon: LucideIcon;
+}
+
+const ADMIN_ACCOUNT: AccountLink[] = [{ to: "/admin", label: "Admin Dashboard", icon: LayoutDashboard }];
+
+const DEALER_ACCOUNT: AccountLink[] = [
+  { to: "/dashboard", label: "Übersicht", icon: LayoutDashboard },
+  { to: "/dashboard/projekte", label: "Projekt-Börse", icon: Briefcase },
+  { to: "/dashboard/projekte?tab=mine", label: "Meine Angebote & Kunden", icon: HandCoins },
+  { to: "/dashboard/messages", label: "Nachrichten", icon: MessageSquare },
+  { to: "/dashboard/invoices", label: "Rechnungen", icon: FileText },
+  { to: "/dashboard/profile", label: "Profil", icon: User },
+];
+
+const CONSUMER_ACCOUNT: AccountLink[] = [
+  { to: "/dashboard", label: "Übersicht", icon: LayoutDashboard },
+  { to: "/dashboard/listings", label: "Meine Inserate", icon: ClipboardList },
+  { to: "/dashboard/messages", label: "Nachrichten", icon: MessageSquare },
+  { to: "/dashboard/documents", label: "Dokumente", icon: FileText },
+  { to: "/dashboard/profile", label: "Profil", icon: User },
+];
 
 const Header = () => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  // Language state removed – site is German-only
   const location = useLocation();
   const { user, signOut } = useAuth();
   const { settings } = useSettings();
-
-  // Use shared role hook for consistent cache behavior
   const { isAdmin, isDealer } = useUserRole();
 
-  const isActive = (path: string) => location.pathname === path;
+  const isActive = (path: string) => location.pathname === path || location.pathname.startsWith(`${path}/`);
+  const phone = settings?.support_phone || "+49 511 51532476";
+  const email = settings?.contact_email || BRAND.supportEmail;
+  const accountLinks = isAdmin ? ADMIN_ACCOUNT : isDealer ? DEALER_ACCOUNT : CONSUMER_ACCOUNT;
 
   const handleSignOut = async () => {
     await signOut();
     setMobileMenuOpen(false);
   };
 
-  // Auto-close the mobile menu whenever the route changes (e.g. user taps a
-  // link). Without this the menu stays open after navigation and overlays
-  // the new page content.
+  // Menü schließt bei jeder Navigation, sonst überlagert es die neue Seite.
   useEffect(() => {
     setMobileMenuOpen(false);
-  }, [location.pathname]);
+  }, [location.pathname, location.search]);
 
-  // While the mobile menu is open: lock body scroll (so the page behind
-  // doesn't scroll under the finger) and listen for Escape to close.
-  // Restored on unmount / when menu closes.
   useEffect(() => {
     if (!mobileMenuOpen) return;
     const previousOverflow = document.body.style.overflow;
@@ -63,112 +123,90 @@ const Header = () => {
     };
   }, [mobileMenuOpen]);
 
+  const plannerActive = isActive("/funnel/c") || isActive("/traumkueche");
+
   return (
     <>
-      {/* Skip Link for Keyboard Navigation (Accessibility) */}
-      <a 
-        href="#main-content" 
-        className="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 
-                   focus:z-[100] focus:px-4 focus:py-2 focus:bg-primary focus:text-primary-foreground 
+      <a
+        href="#main-content"
+        className="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4
+                   focus:z-[100] focus:px-4 focus:py-2 focus:bg-primary focus:text-primary-foreground
                    focus:rounded-md focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
       >
         Zum Hauptinhalt springen
       </a>
-      
+
       {/* Top Header Bar */}
-      <div className="w-full bg-slate-900 text-slate-300 py-2.5 hidden md:block border-b border-slate-800">
+      <div className="w-full bg-slate-900 text-slate-300 py-2.5 hidden lg:block border-b border-slate-800">
         <div className="container flex items-center justify-between text-sm">
           <div className="flex items-center gap-6">
-            {(() => { const phone = settings?.support_phone || '+49 511 51532476'; return (
-              <a href={`tel:${phone.replace(/\s/g, '')}`} onClick={() => { trackPhoneClick(phone, location.pathname); trackMetaPhoneClick(); }} className="flex items-center gap-2 hover:text-white transition-colors">
-                <Phone className="h-3.5 w-3.5" />
-                <span>{phone}</span>
-              </a>
-            ); })()}
-            {(() => { const email = settings?.contact_email || BRAND.supportEmail; return (
-              <a href={`mailto:${email}`} onClick={() => trackEmailClick(location.pathname)} className="flex items-center gap-2 hover:text-white transition-colors">
-                <Mail className="h-3.5 w-3.5" />
-                <span>{email}</span>
-              </a>
-            ); })()}
+            <a
+              href={`tel:${phone.replace(/\s/g, "")}`}
+              onClick={() => {
+                trackPhoneClick(phone, location.pathname);
+                trackMetaPhoneClick();
+              }}
+              className="flex items-center gap-2 hover:text-white transition-colors"
+            >
+              <Phone className="h-3.5 w-3.5" />
+              <span>{phone}</span>
+            </a>
+            <a href={`mailto:${email}`} onClick={() => trackEmailClick(location.pathname)} className="hidden xl:flex items-center gap-2 hover:text-white transition-colors">
+              <Mail className="h-3.5 w-3.5" />
+              <span>{email}</span>
+            </a>
           </div>
-          <div className="flex items-center gap-5">
-            <div className="flex items-center gap-4">
-              <Link to="/ueber-uns" className="hover:text-white transition-colors">Über uns</Link>
-              <span className="text-slate-600">•</span>
-              <Link to="/ratgeber" className="hover:text-white transition-colors">Ratgeber</Link>
-              <span className="text-slate-600">•</span>
-              <Link to="/faq" className="hover:text-white transition-colors">FAQ</Link>
-              <span className="text-slate-600">•</span>
-              <Link to="/haendler" className="hover:text-white transition-colors flex items-center gap-1.5">
-                <Building2 className="h-3.5 w-3.5" />
-                Für Händler
-              </Link>
-            </div>
-            {/* Language selector removed – site is German-only */}
+          <div className="flex items-center gap-4">
+            {TOP_NAV.map((item, i) => (
+              <span key={item.to} className="flex items-center gap-4">
+                {i > 0 && <span className="text-slate-600">•</span>}
+                <Link to={item.to} className="flex items-center gap-1.5 hover:text-white transition-colors">
+                  {item.icon && <item.icon className="h-3.5 w-3.5" />}
+                  {item.label}
+                </Link>
+              </span>
+            ))}
+            <span className="text-slate-600">•</span>
+            <Link to="/haendler" className="flex items-center gap-1.5 font-semibold text-white hover:text-primary-foreground/80 transition-colors">
+              <Building2 className="h-3.5 w-3.5" />
+              Für Küchenstudios
+            </Link>
           </div>
         </div>
       </div>
 
       {/* Main Header */}
       <header className="sticky top-0 z-50 w-full bg-background/95 backdrop-blur-md border-b border-border/50 shadow-sm safe-top">
-        <nav className="container flex h-20 items-center justify-between">
+        <nav className="container flex h-20 items-center justify-between gap-4" aria-label="Hauptnavigation">
           <SiteLogo variant="icon-text" />
 
-          {/* Desktop Navigation */}
-          <div className="hidden lg:flex items-center gap-6">
-            <Link 
-              to="/funnel/a" 
-              className={`text-sm font-semibold transition-smooth px-3.5 py-1.5 rounded-full ${
-                isActive('/funnel/a') || location.pathname.startsWith('/funnel/a')
-                  ? 'bg-primary text-white shadow-md' 
-                  : 'bg-primary/20 text-primary hover:bg-primary/30'
-              }`}
+          <div className="hidden lg:flex items-center gap-5">
+            <Link
+              to="/funnel/c"
+              aria-current={plannerActive ? "page" : undefined}
+              className={cn(
+                "inline-flex items-center gap-1.5 rounded-full px-4 py-2 text-sm font-semibold shadow-sm transition-all",
+                "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
+                plannerActive ? "bg-primary text-primary-foreground" : "bg-primary text-primary-foreground hover:bg-primary/90 hover:shadow-md",
+              )}
             >
-              Angebote holen
+              <Sparkles className="h-4 w-4" />
+              Traumküche planen
             </Link>
-            <Link 
-              to="/funnel/b" 
-              className={`text-sm font-semibold transition-smooth px-3.5 py-1.5 rounded-full ${
-                isActive('/funnel/b') 
-                  ? 'bg-primary text-white shadow-sm' 
-                  : 'text-primary bg-primary/10 hover:bg-primary/15'
-              }`}
-            >
-              Preis unterbieten
-            </Link>
-            <Link 
-              to="/kuechenrechner" 
-              className={`text-sm font-medium transition-smooth ${
-                isActive('/kuechenrechner') ? 'text-primary' : 'text-foreground/80 hover:text-primary'
-              }`}
-            >
-              KüchenRechner
-            </Link>
-            <Link 
-              to="/preise" 
-              className={`text-sm font-medium transition-smooth ${
-                isActive('/preise') ? 'text-primary' : 'text-foreground/80 hover:text-primary'
-              }`}
-            >
-              Preise
-            </Link>
-            <Link 
-              to="/ankaufstationen" 
-              className={`text-sm font-medium transition-smooth ${
-                isActive('/ankaufstationen') ? 'text-primary' : 'text-foreground/80 hover:text-primary'
-              }`}
-            >
-              Studios & Showrooms
-            </Link>
-            <Link 
-              to="/kontakt" 
-              className={`text-sm font-medium transition-smooth ${
-                isActive('/kontakt') ? 'text-primary' : 'text-foreground/80 hover:text-primary'
-              }`}
-            >
-              Kontakt
-            </Link>
+            {MAIN_NAV.map((item) => (
+              <Link
+                key={item.to}
+                to={item.to}
+                aria-current={isActive(item.to) ? "page" : undefined}
+                className={cn(
+                  "whitespace-nowrap text-sm font-medium transition-colors rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
+                  isActive(item.to) ? "text-primary" : "text-foreground/80 hover:text-primary",
+                  item.wideOnly && "hidden xl:inline",
+                )}
+              >
+                {item.label}
+              </Link>
+            ))}
             <div className="h-6 w-px bg-border/50" />
             <DarkModeToggle />
             <div className="flex items-center gap-2">
@@ -181,317 +219,111 @@ const Header = () => {
                       Mein Konto
                     </Button>
                   </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-56">
-                  <DropdownMenuLabel className="flex items-center gap-2">
-                    <div className="flex flex-col">
+                  <DropdownMenuContent align="end" className="w-60">
+                    <DropdownMenuLabel className="flex flex-col">
                       <span className="text-sm font-medium">Mein Konto</span>
-                      <span className="text-xs text-muted-foreground font-normal truncate max-w-[180px]">{user.email}</span>
-                    </div>
-                  </DropdownMenuLabel>
-                  <DropdownMenuSeparator />
-                  {isAdmin ? (
-                    <DropdownMenuItem asChild>
-                      <Link to="/admin" className="cursor-pointer">
-                        <LayoutDashboard className="h-4 w-4 mr-2" />
-                        Admin Dashboard
-                      </Link>
+                      <span className="text-xs text-muted-foreground font-normal truncate max-w-[200px]">{user.email}</span>
+                    </DropdownMenuLabel>
+                    <DropdownMenuSeparator />
+                    {accountLinks.map((item) => (
+                      <DropdownMenuItem key={item.to} asChild>
+                        <Link to={item.to} className="cursor-pointer">
+                          <item.icon className="h-4 w-4 mr-2" />
+                          {item.label}
+                        </Link>
+                      </DropdownMenuItem>
+                    ))}
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem onClick={handleSignOut} className="cursor-pointer text-destructive focus:text-destructive focus:bg-destructive/10">
+                      <LogOut className="h-4 w-4 mr-2" />
+                      Abmelden
                     </DropdownMenuItem>
-                  ) : (
-                    <>
-                      <DropdownMenuItem asChild>
-                        <Link to="/dashboard" className="cursor-pointer">
-                          <LayoutDashboard className="h-4 w-4 mr-2" />
-                          Übersicht
-                        </Link>
-                      </DropdownMenuItem>
-                      {!isDealer && (
-                        <DropdownMenuItem asChild>
-                          <Link to="/dashboard/listings" className="cursor-pointer">
-                            <Car className="h-4 w-4 mr-2" />
-                            Meine Inserate
-                          </Link>
-                        </DropdownMenuItem>
-                      )}
-                      {isDealer && (
-                        <>
-                          <DropdownMenuItem asChild>
-                            <Link to="/dashboard/bids" className="cursor-pointer">
-                              <Gavel className="h-4 w-4 mr-2" />
-                              Meine Gebote
-                            </Link>
-                          </DropdownMenuItem>
-                          <DropdownMenuItem asChild>
-                            <Link to="/dashboard/favorites" className="cursor-pointer">
-                              <Heart className="h-4 w-4 mr-2" />
-                              Meine Favoriten
-                            </Link>
-                          </DropdownMenuItem>
-                          <DropdownMenuItem asChild>
-                            <Link to="/dashboard/kaufchancen" className="cursor-pointer">
-                              <Zap className="h-4 w-4 mr-2" />
-                              Kaufchancen
-                            </Link>
-                          </DropdownMenuItem>
-                          <DropdownMenuItem asChild>
-                            <Link to="/dashboard/appointments" className="cursor-pointer">
-                              <Calendar className="h-4 w-4 mr-2" />
-                              Meine Termine
-                            </Link>
-                          </DropdownMenuItem>
-                        </>
-                      )}
-                      <DropdownMenuItem asChild>
-                        <Link to="/dashboard/messages" className="cursor-pointer">
-                          <MessageSquare className="h-4 w-4 mr-2" />
-                          Nachrichten
-                        </Link>
-                      </DropdownMenuItem>
-                      {isDealer && (
-                        <DropdownMenuItem asChild>
-                          <Link to="/dashboard/contracts" className="cursor-pointer">
-                            <FileCheck className="h-4 w-4 mr-2" />
-                            Kaufverträge
-                          </Link>
-                        </DropdownMenuItem>
-                      )}
-                      {isDealer && (
-                        <DropdownMenuItem asChild>
-                          <Link to="/dashboard/invoices" className="cursor-pointer">
-                            <FileText className="h-4 w-4 mr-2" />
-                            Rechnungen
-                          </Link>
-                        </DropdownMenuItem>
-                      )}
-                      {!isDealer && (
-                        <DropdownMenuItem asChild>
-                          <Link to="/dashboard/documents" className="cursor-pointer">
-                            <FileText className="h-4 w-4 mr-2" />
-                            Dokumente
-                          </Link>
-                        </DropdownMenuItem>
-                      )}
-                      <DropdownMenuSeparator />
-                      <DropdownMenuItem asChild>
-                        <Link to="/dashboard/profile" className="cursor-pointer">
-                          <User className="h-4 w-4 mr-2" />
-                          Profil
-                        </Link>
-                      </DropdownMenuItem>
-                    </>
-                  )}
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem onClick={handleSignOut} className="cursor-pointer text-destructive focus:text-destructive focus:bg-destructive/10">
-                    <LogOut className="h-4 w-4 mr-2" />
-                    Abmelden
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            ) : (
-              <>
-                <Link to="/login">
-                  <Button variant="outline" className="h-10 px-5 text-sm font-medium">
-                    Anmelden
-                  </Button>
-                </Link>
-                <Link to="/register">
-                  <Button className="h-10 px-5 text-sm font-semibold bg-primary hover:bg-primary/90 shadow-lg hover:shadow-xl transition-all">
-                    Registrieren
-                  </Button>
-                </Link>
-              </>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              ) : (
+                <Button asChild variant="outline" className="h-10 px-5 text-sm font-medium">
+                  <Link to="/login">Anmelden</Link>
+                </Button>
               )}
             </div>
           </div>
 
-          {/* Mobile Notification + Menu Buttons */}
+          {/* Mobile */}
           <div className="lg:hidden flex items-center gap-1">
+            {!plannerActive && (
+              <Button asChild size="sm" className="h-9 gap-1.5 px-3 font-semibold">
+                <Link to="/funnel/c">
+                  <Sparkles className="h-4 w-4" />
+                  Planen
+                </Link>
+              </Button>
+            )}
             {user && isDealer && <NotificationCenter />}
             <button
               className="p-2.5"
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
               aria-label={mobileMenuOpen ? "Menü schließen" : "Menü öffnen"}
               aria-expanded={mobileMenuOpen}
+              aria-controls="mobile-menu"
             >
-            {mobileMenuOpen ? (
-              <X className="h-6 w-6" />
-            ) : (
-              <Menu className="h-6 w-6" />
-            )}
+              {mobileMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
             </button>
           </div>
         </nav>
 
-        {/* Mobile Navigation
-            max-h with dvh + scroll: with many menu items (especially when
-            logged in as dealer/admin) the menu would otherwise overflow
-            the viewport. overscroll-contain prevents the page underneath
-            from scrolling once the menu reaches its top/bottom. */}
         {mobileMenuOpen && (
-          <div className="lg:hidden border-t bg-background/95 max-h-[calc(100dvh-5rem)] overflow-y-auto overscroll-contain">
+          <div id="mobile-menu" className="lg:hidden border-t bg-background/95 max-h-[calc(100dvh-5rem)] overflow-y-auto overscroll-contain">
             <div className="container py-4 flex flex-col gap-1 pb-[max(1rem,env(safe-area-inset-bottom))]">
               <Link
-                to="/funnel/a"
-                className="flex items-center justify-center gap-2 text-sm font-semibold py-3 px-4 rounded-lg bg-primary text-white shadow-sm hover:bg-primary/90 transition-all"
-                onClick={() => setMobileMenuOpen(false)}
+                to="/funnel/c"
+                className="flex items-center justify-center gap-2 rounded-lg bg-primary px-4 py-3 text-sm font-semibold text-primary-foreground shadow-sm hover:bg-primary/90"
               >
-                Angebote einholen
+                <Sparkles className="h-4 w-4" />
+                Traumküche planen (KI)
               </Link>
-              <Link
-                to="/funnel/b"
-                className={`text-sm font-semibold transition-smooth py-2.5 px-4 rounded-lg ${
-                  isActive('/funnel/b') 
-                    ? 'bg-primary text-white shadow-sm' 
-                    : 'text-primary bg-primary/10 hover:bg-primary/15'
-                }`}
-                onClick={() => setMobileMenuOpen(false)}
-              >
-                Studio-Preis unterbieten
-              </Link>
-              <Link
-                to="/kuechenrechner"
-                className="flex items-center justify-center gap-2 text-sm font-semibold py-3 px-4 rounded-lg bg-amber-500 text-white shadow-sm hover:bg-amber-600 transition-all mt-1"
-                onClick={() => setMobileMenuOpen(false)}
-              >
+              <div className="mt-1 grid grid-cols-2 gap-2">
+                <Link to="/funnel/a" className="rounded-lg bg-primary/10 px-3 py-2.5 text-center text-sm font-semibold text-primary hover:bg-primary/15">
+                  Angebote holen
+                </Link>
+                <Link to="/funnel/b" className="rounded-lg bg-primary/10 px-3 py-2.5 text-center text-sm font-semibold text-primary hover:bg-primary/15">
+                  Preis unterbieten
+                </Link>
+              </div>
+              <Link to="/kuechenrechner" className="mt-2 flex items-center gap-2 py-3 text-sm font-medium text-foreground/80 hover:text-primary">
                 <Calculator className="h-4 w-4" />
                 KüchenRechner (Preis-Check)
               </Link>
-              <Link
-                to="/preise"
-                className={`text-sm font-medium transition-smooth py-3 ${
-                  isActive('/preise') ? 'text-primary' : 'text-foreground/80 hover:text-primary'
-                }`}
-                onClick={() => setMobileMenuOpen(false)}
-              >
-                Preise & Leistungen
-              </Link>
-              <Link
-                to="/ankaufstationen"
-                className={`text-sm font-medium transition-smooth py-3 ${
-                  isActive('/ankaufstationen') ? 'text-primary' : 'text-foreground/80 hover:text-primary'
-                }`}
-                onClick={() => setMobileMenuOpen(false)}
-              >
-                Studios & Showrooms
-              </Link>
-              <Link
-                to="/ratgeber"
-                className={`text-sm font-medium transition-smooth py-3 ${
-                  isActive('/ratgeber') ? 'text-primary' : 'text-foreground/80 hover:text-primary'
-                }`}
-                onClick={() => setMobileMenuOpen(false)}
-              >
-                Ratgeber
-              </Link>
-              <Link
-                to="/kontakt"
-                className={`text-sm font-medium transition-smooth py-3 ${
-                  isActive('/kontakt') ? 'text-primary' : 'text-foreground/80 hover:text-primary'
-                }`}
-                onClick={() => setMobileMenuOpen(false)}
-              >
-                Kontakt
-              </Link>
+              {[{ to: "/kuechenstudios", label: "Küchenstudios & Showrooms" }, ...TOP_NAV].map((item) => (
+                <Link
+                  key={item.to}
+                  to={item.to}
+                  className={cn("py-3 text-sm font-medium transition-colors", isActive(item.to) ? "text-primary" : "text-foreground/80 hover:text-primary")}
+                >
+                  {item.label}
+                </Link>
+              ))}
               <div className="h-px bg-border/50" />
-              <div className="flex items-center justify-between">
+              <div className="flex items-center justify-between py-1">
                 <span className="text-sm font-medium text-foreground/80">Dark Mode</span>
                 <DarkModeSimpleToggle />
               </div>
               <div className="h-px bg-border/50" />
               {user ? (
                 <>
-                  <p className="text-xs text-muted-foreground truncate">{user.email}</p>
-                  {isAdmin ? (
-                    <Link to="/admin" onClick={() => setMobileMenuOpen(false)}>
-                      <Button variant="outline" size="sm" className="w-full">
-                        <LayoutDashboard className="h-4 w-4 mr-2" />
-                        Admin Dashboard
+                  <p className="text-xs text-muted-foreground truncate pt-1">{user.email}</p>
+                  <div className="flex flex-col gap-1">
+                    {accountLinks.map((item) => (
+                      <Button key={item.to} asChild variant="ghost" size="sm" className="w-full justify-start">
+                        <Link to={item.to}>
+                          <item.icon className="h-4 w-4 mr-2" />
+                          {item.label}
+                        </Link>
                       </Button>
-                    </Link>
-                  ) : (
-                    <div className="flex flex-col gap-2">
-                      <Link to="/dashboard" onClick={() => setMobileMenuOpen(false)}>
-                        <Button variant="outline" size="sm" className="w-full justify-start">
-                          <LayoutDashboard className="h-4 w-4 mr-2" />
-                          Übersicht
-                        </Button>
-                      </Link>
-                      {!isDealer && (
-                        <Link to="/dashboard/listings" onClick={() => setMobileMenuOpen(false)}>
-                          <Button variant="ghost" size="sm" className="w-full justify-start">
-                            <Car className="h-4 w-4 mr-2" />
-                            Meine Inserate
-                          </Button>
-                        </Link>
-                      )}
-                      {isDealer && (
-                        <>
-                          <Link to="/dashboard/bids" onClick={() => setMobileMenuOpen(false)}>
-                            <Button variant="ghost" size="sm" className="w-full justify-start">
-                              <Gavel className="h-4 w-4 mr-2" />
-                              Meine Gebote
-                            </Button>
-                          </Link>
-                          <Link to="/dashboard/favorites" onClick={() => setMobileMenuOpen(false)}>
-                            <Button variant="ghost" size="sm" className="w-full justify-start">
-                              <Heart className="h-4 w-4 mr-2" />
-                              Meine Favoriten
-                            </Button>
-                          </Link>
-                          <Link to="/dashboard/kaufchancen" onClick={() => setMobileMenuOpen(false)}>
-                            <Button variant="ghost" size="sm" className="w-full justify-start">
-                              <Zap className="h-4 w-4 mr-2" />
-                              Kaufchancen
-                            </Button>
-                          </Link>
-                          <Link to="/dashboard/appointments" onClick={() => setMobileMenuOpen(false)}>
-                            <Button variant="ghost" size="sm" className="w-full justify-start">
-                              <Calendar className="h-4 w-4 mr-2" />
-                              Meine Termine
-                            </Button>
-                          </Link>
-                        </>
-                      )}
-                      <Link to="/dashboard/messages" onClick={() => setMobileMenuOpen(false)}>
-                        <Button variant="ghost" size="sm" className="w-full justify-start">
-                          <MessageSquare className="h-4 w-4 mr-2" />
-                          Nachrichten
-                        </Button>
-                      </Link>
-                      {isDealer && (
-                        <Link to="/dashboard/contracts" onClick={() => setMobileMenuOpen(false)}>
-                          <Button variant="ghost" size="sm" className="w-full justify-start">
-                            <FileCheck className="h-4 w-4 mr-2" />
-                            Kaufverträge
-                          </Button>
-                        </Link>
-                      )}
-                      {isDealer && (
-                        <Link to="/dashboard/invoices" onClick={() => setMobileMenuOpen(false)}>
-                          <Button variant="ghost" size="sm" className="w-full justify-start">
-                            <FileText className="h-4 w-4 mr-2" />
-                            Rechnungen
-                          </Button>
-                        </Link>
-                      )}
-                      {!isDealer && (
-                        <Link to="/dashboard/documents" onClick={() => setMobileMenuOpen(false)}>
-                          <Button variant="ghost" size="sm" className="w-full justify-start">
-                            <FileText className="h-4 w-4 mr-2" />
-                            Dokumente
-                          </Button>
-                        </Link>
-                      )}
-                      <Link to="/dashboard/profile" onClick={() => setMobileMenuOpen(false)}>
-                        <Button variant="ghost" size="sm" className="w-full justify-start">
-                          <User className="h-4 w-4 mr-2" />
-                          Profil
-                        </Button>
-                      </Link>
-                    </div>
-                  )}
-                  <Button 
-                    variant="outline" 
-                    size="sm" 
+                    ))}
+                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
                     className="w-full text-destructive border-destructive/30 bg-destructive/5 hover:bg-destructive/10"
                     onClick={handleSignOut}
                   >
@@ -500,28 +332,18 @@ const Header = () => {
                   </Button>
                 </>
               ) : (
-                <>
-                  <div className="flex gap-2">
-                    <Link to="/login" onClick={() => setMobileMenuOpen(false)} className="flex-1">
-                      <Button size="sm" variant="outline" className="w-full">
-                        Anmelden
-                      </Button>
-                    </Link>
-                    <Link to="/register" onClick={() => setMobileMenuOpen(false)} className="flex-1">
-                      <Button size="sm" className="w-full bg-primary hover:bg-primary/90">
-                        Registrieren
-                      </Button>
-                    </Link>
-                  </div>
-                  <Link 
-                    to="/haendler" 
-                    onClick={() => setMobileMenuOpen(false)}
-                    className="text-sm text-center text-muted-foreground hover:text-primary transition-colors flex items-center justify-center gap-1.5"
+                <div className="flex flex-col gap-2 pt-1">
+                  <Button asChild size="sm" variant="outline" className="w-full">
+                    <Link to="/login">Anmelden</Link>
+                  </Button>
+                  <Link
+                    to="/haendler"
+                    className="flex items-center justify-center gap-1.5 py-2 text-sm text-muted-foreground transition-colors hover:text-primary"
                   >
                     <Building2 className="h-3.5 w-3.5" />
-                    Für Händler
+                    Für Küchenstudios
                   </Link>
-                </>
+                </div>
               )}
             </div>
           </div>

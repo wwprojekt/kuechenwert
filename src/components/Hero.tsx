@@ -1,219 +1,190 @@
-import { Button } from "@/components/ui/button";
-import {
-  ArrowRight,
-  Sparkles,
-  ShieldCheck,
-  TrendingDown,
-  Calculator,
-  Users,
-} from "lucide-react";
+import { ArrowRight, BadgeCheck, Calculator, Inbox, Lock, ShieldCheck, Sparkles, TrendingDown, type LucideIcon } from "lucide-react";
 import { Link } from "react-router-dom";
+import { BeforeAfterSlider } from "@/features/planner/components/BeforeAfterSlider";
 import { BRAND_IMAGES } from "@/lib/brand";
+import { cn } from "@/lib/utils";
 
-// Lokales, Vite-gehashtes Asset (src/assets/hero-kitchen.webp, ~110 KB).
-// Vorher wurde das Bild live von Unsplash geladen — jetzt bundled, damit der
-// Hero kein Drittanbieter-Request mehr zieht und Lighthouse-LCP stabil bleibt.
-const HERO_IMAGE_URL = BRAND_IMAGES.heroHome;
+interface Path {
+  to: string;
+  icon: LucideIcon;
+  title: string;
+  description: string;
+  cta: string;
+  featured?: boolean;
+}
+
+const PATHS: Path[] = [
+  {
+    to: "/funnel/c",
+    icon: Sparkles,
+    title: "Traumküche visualisieren",
+    description: "Raumfoto & Maße hochladen, Küche gestalten – KI-Vorschau und Preisschätzung in wenigen Minuten.",
+    cta: "Jetzt Küche planen",
+    featured: true,
+  },
+  {
+    to: "/funnel/a",
+    icon: Inbox,
+    title: "Angebote einholen",
+    description: "Wünsche angeben – geprüfte Studios aus Ihrer Region schicken Angebote.",
+    cta: "Angebote holen",
+  },
+  {
+    to: "/funnel/b",
+    icon: TrendingDown,
+    title: "Angebot unterbieten lassen",
+    description: "Vorhandenes Studio-Angebot hochladen – andere Studios bieten weniger.",
+    cta: "Preis drücken",
+  },
+];
+
+const TRUST = [
+  { icon: ShieldCheck, text: "Kostenlos & unverbindlich" },
+  { icon: BadgeCheck, text: "Nur geprüfte Küchenstudios" },
+  { icon: Lock, text: "Kontaktdaten nur mit Ihrer Einwilligung" },
+];
+
+const EXAMPLE_OFFERS = [
+  { studio: "Studio A", price: "22.900 €" },
+  { studio: "Studio B", price: "21.400 €" },
+  { studio: "Studio C", price: "19.800 €", best: true },
+];
+
+function PathCard({ path }: { path: Path }) {
+  const Icon = path.icon;
+  return (
+    <Link
+      to={path.to}
+      className={cn(
+        "group relative flex h-full gap-4 rounded-2xl border-2 p-4 shadow-sm transition-all duration-200 sm:p-5",
+        "hover:-translate-y-0.5 hover:shadow-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
+        path.featured
+          ? "border-primary bg-primary text-primary-foreground hover:bg-primary/95"
+          : "border-border bg-card text-card-foreground hover:border-primary",
+      )}
+    >
+      <span
+        className={cn(
+          "grid h-11 w-11 flex-none place-items-center rounded-xl",
+          path.featured ? "bg-white/15 text-primary-foreground" : "bg-primary/10 text-primary",
+        )}
+        aria-hidden="true"
+      >
+        <Icon className="h-5 w-5" />
+      </span>
+      <span className="flex min-w-0 flex-1 flex-col">
+        <span className="flex flex-wrap items-center gap-2">
+          <span className="text-base font-bold leading-tight sm:text-lg">{path.title}</span>
+          {path.featured && (
+            <span className="rounded-full bg-white px-2 py-0.5 text-[11px] font-bold uppercase tracking-wide text-primary">Neu · KI</span>
+          )}
+        </span>
+        <span className={cn("mt-1 text-sm leading-snug", path.featured ? "text-primary-foreground/85" : "text-muted-foreground")}>
+          {path.description}
+        </span>
+        <span
+          className={cn(
+            "mt-3 inline-flex w-fit items-center gap-1.5 rounded-full px-3.5 py-1.5 text-sm font-semibold transition-colors",
+            path.featured ? "bg-white text-primary" : "bg-primary/10 text-primary group-hover:bg-primary group-hover:text-primary-foreground",
+          )}
+        >
+          {path.cta}
+          <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" aria-hidden="true" />
+        </span>
+      </span>
+    </Link>
+  );
+}
 
 /**
- * Homepage-Hero — KuechenWert "drei Wege zur Traumkueche"
- *
- * Positionierung:
- *   - Kunde will eine NEUE Kueche kaufen/planen (nicht "verkaufen")
- *   - 3 parallele Wege:
- *       A) Angebote einholen       (Funnel A — Lead-Gen an Studios)
- *       B) Preis unterbieten       (Funnel B — Reverse-Auktion auf existierendes Angebot)
- *       C) Traumkueche visualisieren (Funnel C — KI-Planer, noch "bald")
- *   - Kuechenrechner (Budget-Schaetzer) als zero-friction Einstieg
+ * Startseiten-Hero: Kernversprechen (Traumküche im eigenen Raum visualisieren)
+ * plus drei klar klickbare Einstiege. Der KI-Konfigurator ist der empfohlene
+ * Weg; Angebote einholen und Unterbieten bleiben gleichwertig erreichbar.
  */
 const Hero = () => {
-  const benefits = [
-    { icon: TrendingDown, text: "Bis zu 30 % Ersparnis gegenüber Studio-Preis" },
-    { icon: ShieldCheck, text: "100 % kostenlos & unverbindlich" },
-    { icon: Users, text: "Geprüfte Küchen-Studios deutschlandweit" },
-  ];
-
+  const [featured, ...others] = PATHS;
   return (
-    <section className="relative min-h-fit lg:min-h-[85vh] overflow-hidden">
-      <img
-        src={HERO_IMAGE_URL}
-        alt=""
-        width={1920}
-        height={1080}
-        fetchPriority="high"
-        decoding="async"
-        className="absolute inset-0 w-full h-full object-cover lg:object-right"
-      />
-
-      <div
-        className="absolute inset-0"
-        style={{
-          background: `linear-gradient(to right, 
-            rgba(255,255,255,0.94) 0%, 
-            rgba(255,255,255,0.88) 25%, 
-            rgba(255,255,255,0.60) 45%, 
-            rgba(255,255,255,0.25) 65%, 
-            rgba(255,255,255,0.05) 80%
-          )`,
-        }}
-      />
-
-      <div className="absolute inset-0 bg-white/70 dark:bg-black/70 lg:hidden" />
-
-      <div className="container relative px-4 sm:px-6 lg:px-8 py-8 sm:py-12 lg:py-20">
-        {/* Mobile-only top CTAs: Angebote holen + Budget rechnen */}
-        <div className="flex gap-3 mb-6 lg:hidden z-10 relative animate-fade-in">
-          <Link to="/funnel/a" className="flex-1">
-            <Button size="lg" className="gradient-hero h-12 text-sm font-semibold group w-full">
-              Angebote holen
-              <ArrowRight className="ml-1.5 h-4 w-4 group-hover:translate-x-1 transition-smooth" />
-            </Button>
-          </Link>
-          <Link to="/kuechenrechner" className="flex-1">
-            <Button
-              size="lg"
-              className="h-12 text-sm font-semibold w-full bg-amber-500 hover:bg-amber-600 text-white shadow-md"
-            >
-              <Calculator className="mr-1.5 h-4 w-4" />
-              Preis-Check
-            </Button>
-          </Link>
-        </div>
-
-        <div className="flex flex-col-reverse lg:grid lg:grid-cols-2 gap-8 lg:gap-12 items-center min-h-fit lg:min-h-[70vh]">
-          {/* Left Column — Hero Text & Benefits */}
-          <div className="space-y-6 lg:space-y-8 z-10">
-            <div className="inline-block animate-fade-in">
-              <span className="inline-flex items-center rounded-full bg-primary/10 border border-primary/20 px-4 py-2 text-sm font-semibold text-primary shadow-sm">
-                <Sparkles className="w-4 h-4 mr-2 fill-primary" />
-                Deutschlands Küchen-Vergleichsportal
-              </span>
-            </div>
-
-            <div className="space-y-4 animate-fade-in animate-delay-100">
-              <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-extrabold tracking-tight leading-[1.1]">
-                Ihre Traumküche,
-              </h1>
-              <h2 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-extrabold tracking-tight leading-[1.1] text-primary">
-                schlau geplant.
-              </h2>
-            </div>
-
-            <p className="text-lg sm:text-xl lg:text-2xl text-muted-foreground leading-relaxed animate-fade-in animate-delay-200 max-w-xl">
-              <span className="font-semibold text-foreground">Vergleichen. Unterbieten. Visualisieren.</span>{" "}
-              Drei Wege zu Ihrer neuen Küche — kostenlos, unverbindlich und
-              ohne Abnahmezwang.
+    <section className="relative overflow-hidden bg-gradient-to-b from-primary/[0.07] via-background to-background">
+      <div className="container px-4 pb-14 pt-8 sm:px-6 sm:pt-12 lg:px-8 lg:pb-20 lg:pt-16">
+        <div className="grid items-center gap-10 lg:grid-cols-[1.05fr_1fr] lg:gap-14">
+          <div className="min-w-0">
+            <span className="inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/10 px-3.5 py-1.5 text-sm font-semibold text-primary">
+              <Sparkles className="h-4 w-4" aria-hidden="true" />
+              Neu: KI-Visualisierung im eigenen Raum
+            </span>
+            <h1 className="mt-5 text-4xl font-extrabold leading-[1.06] tracking-tight text-foreground sm:text-5xl lg:text-[3.5rem]">
+              Ihre Traumküche – <span className="text-primary">im eigenen Raum</span> visualisiert.
+            </h1>
+            <p className="mt-5 max-w-xl text-lg leading-relaxed text-muted-foreground sm:text-xl">
+              Foto hochladen, Küche konfigurieren, Preis sofort sehen. Geprüfte Küchenstudios aus Ihrer Region bieten um Ihr
+              Projekt – <strong className="font-semibold text-foreground">Sie wählen das beste Angebot.</strong>
             </p>
 
-            <div className="space-y-3 animate-fade-in animate-delay-300">
-              {benefits.map((benefit, index) => (
-                <div key={index} className="flex items-center gap-3">
-                  <div className="flex-shrink-0 w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
-                    <benefit.icon className="w-4 h-4 text-primary" />
-                  </div>
-                  <span className="text-base sm:text-lg font-medium text-foreground">
-                    {benefit.text}
-                  </span>
-                </div>
+            <nav aria-label="Drei Wege zur neuen Küche" className="mt-8 grid gap-3">
+              <PathCard path={featured} />
+              <div className="grid gap-3 sm:grid-cols-2">
+                {others.map((p) => (
+                  <PathCard key={p.to} path={p} />
+                ))}
+              </div>
+            </nav>
+
+            <ul className="mt-6 flex flex-wrap gap-x-5 gap-y-2 text-sm text-muted-foreground">
+              {TRUST.map(({ icon: Icon, text }) => (
+                <li key={text} className="flex items-center gap-1.5">
+                  <Icon className="h-4 w-4 text-primary" aria-hidden="true" />
+                  {text}
+                </li>
               ))}
-            </div>
-
-            {/* CTA Buttons — Funnel A primary, Küchenrechner secondary */}
-            <div className="flex flex-col sm:flex-row gap-4 pt-4 animate-fade-in animate-delay-400">
-              <Link to="/funnel/a" className="w-full sm:w-auto">
-                <Button
-                  size="lg"
-                  className="gradient-hero hover:shadow-glow h-14 px-8 text-base font-semibold group w-full"
-                >
-                  Kostenlose Angebote erhalten
-                  <ArrowRight className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-smooth" />
-                </Button>
-              </Link>
-              <Link to="/kuechenrechner" className="w-full sm:w-auto">
-                <Button
-                  variant="outline"
-                  size="lg"
-                  className="h-14 px-8 text-base font-semibold w-full border-2 group hover:border-primary"
-                >
-                  <Calculator className="mr-2 h-5 w-5 group-hover:scale-110 transition-transform" />
-                  Budget-Check
-                </Button>
-              </Link>
-            </div>
-
-            <p className="text-sm text-muted-foreground animate-fade-in animate-delay-500">
-              Schon ein Studio-Angebot zur Hand?{" "}
-              <Link to="/funnel/b" className="font-semibold text-primary hover:underline">
-                Hier unterbieten lassen →
+            </ul>
+            <p className="mt-4 text-sm text-muted-foreground">
+              Erst mal nur das Budget prüfen?{" "}
+              <Link to="/kuechenrechner" className="inline-flex items-center gap-1 font-semibold text-primary underline-offset-4 hover:underline">
+                <Calculator className="h-4 w-4" aria-hidden="true" />
+                KüchenRechner öffnen
               </Link>
             </p>
           </div>
 
-          {/* Right Column — 3-Wege-Card */}
-          <div className="relative lg:animate-slide-in-right z-10 lg:pl-8">
-            <div className="rounded-2xl bg-white/95 dark:bg-slate-900/95 backdrop-blur-md shadow-2xl border border-primary/10 p-6 sm:p-8 max-w-md mx-auto lg:ml-auto">
-              <div className="text-center mb-5">
-                <p className="text-xs font-bold uppercase tracking-wider text-primary mb-2">
-                  Drei Wege zur Traumküche
-                </p>
-                <h3 className="text-2xl font-extrabold text-foreground">
-                  Welcher passt zu Ihnen?
-                </h3>
-              </div>
-              <ol className="space-y-4 mb-6">
-                {[
-                  {
-                    n: "A",
-                    t: "Angebote einholen",
-                    d: "Kurz Ihre Wünsche sagen — geprüfte Küchenstudios melden sich mit Angeboten",
-                    to: "/funnel/a",
-                  },
-                  {
-                    n: "B",
-                    t: "Studio-Preis unterbieten lassen",
-                    d: "Vorhandenes Angebot hochladen — Händler unterbieten in 72 h",
-                    to: "/funnel/b",
-                  },
-                  {
-                    n: "C",
-                    t: "Traumküche visualisieren",
-                    d: "Mit KI entwerfen, Preis schätzen, passendes Studio finden",
-                    to: "/funnel/c",
-                  },
-                ].map((s) => (
-                  <li key={s.n}>
-                    <Link
-                      to={s.to}
-                      className="flex gap-3 rounded-lg border border-transparent hover:border-primary/20 hover:bg-primary/5 p-2 -m-2 transition-colors"
-                    >
-                      <div className="flex-shrink-0 w-8 h-8 rounded-full bg-primary text-white font-bold flex items-center justify-center text-sm">
-                        {s.n}
-                      </div>
-                      <div>
-                        <p className="font-semibold text-foreground">{s.t}</p>
-                        <p className="text-sm text-muted-foreground">{s.d}</p>
-                      </div>
-                    </Link>
+          <div className="relative mx-auto w-full max-w-xl lg:max-w-none">
+            <BeforeAfterSlider
+              before={BRAND_IMAGES.kitchenBefore}
+              after={BRAND_IMAGES.kitchenAfter}
+              beforeLabel="Ihr Raum heute"
+              afterLabel="KI-Vorschau"
+              initial={42}
+              priority
+              className="aspect-[4/3] shadow-2xl ring-1 ring-black/5"
+            />
+
+            <div className="pointer-events-none absolute -bottom-6 left-3 rounded-2xl border bg-card/95 px-4 py-3 shadow-xl backdrop-blur sm:left-5">
+              <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Preisschätzung · Beispiel</p>
+              <p className="text-lg font-extrabold tabular-nums text-foreground">ca. 18.500 – 24.000 €</p>
+              <p className="text-xs text-muted-foreground">inkl. Geräte, Lieferung & Montage</p>
+            </div>
+
+            <div className="pointer-events-none absolute -right-2 bottom-10 hidden w-56 rounded-2xl border bg-card/95 p-3 shadow-xl backdrop-blur sm:block lg:-right-6">
+              <p className="px-1 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Studio-Angebote · Beispiel</p>
+              <ul className="mt-1.5 space-y-1">
+                {EXAMPLE_OFFERS.map((o) => (
+                  <li
+                    key={o.studio}
+                    className={cn(
+                      "flex items-center justify-between rounded-lg px-2 py-1.5 text-sm",
+                      o.best ? "bg-primary/10 font-bold text-primary" : "text-foreground",
+                    )}
+                  >
+                    <span className="flex items-center gap-1.5">
+                      {o.best && <BadgeCheck className="h-4 w-4" aria-hidden="true" />}
+                      {o.studio}
+                    </span>
+                    <span className="tabular-nums">{o.price}</span>
                   </li>
                 ))}
-              </ol>
-              <Link to="/funnel/a" className="block">
-                <Button size="lg" className="gradient-hero w-full h-12 text-base font-semibold group">
-                  Jetzt kostenlos starten
-                  <ArrowRight className="ml-2 h-4 w-4 group-hover:translate-x-1 transition-smooth" />
-                </Button>
-              </Link>
-              <p className="text-xs text-center text-muted-foreground mt-3">
-                Kostenlos · Unverbindlich · DSGVO-konform
-              </p>
+              </ul>
             </div>
           </div>
         </div>
-      </div>
-
-      <div className="absolute bottom-0 left-0 right-0 h-32 pointer-events-none overflow-hidden">
-        <div className="absolute bottom-0 left-1/4 w-48 h-24 bg-gradient-to-t from-primary/5 to-transparent rounded-t-3xl transform -skew-x-6" />
-        <div className="absolute bottom-0 right-1/4 w-64 h-20 bg-gradient-to-t from-primary/3 to-transparent rounded-t-2xl transform skew-x-3" />
       </div>
     </section>
   );

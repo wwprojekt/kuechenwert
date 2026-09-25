@@ -9,8 +9,8 @@ import {
   ArrowRight,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import dealerImage from "@/assets/dealer-professional.webp";
-import handshakeImage from "@/assets/handshake-deal.webp";
+import consultantImage from "@/assets/studio-consultant.webp";
+import consultationImage from "@/assets/kitchen-consultation.webp";
 import { useSettings } from "@/contexts/SettingsContext";
 import { BRAND } from "@/lib/brand/config";
 
@@ -19,7 +19,7 @@ const benefits = [
     icon: TrendingDown,
     title: "Bis zu 30 % sparen",
     description:
-      "Durch unsere Reverse-Auktion unterbieten geprüfte Händler Ihr vorhandenes Studio-Angebot — faire Preise statt Listenpreis.",
+      "Studios konkurrieren um Ihr Projekt und können ihr Angebot nur senken — faire Marktpreise statt Listenpreis.",
   },
   {
     icon: Shield,
@@ -31,7 +31,7 @@ const benefits = [
     icon: Users,
     title: "Persönliche Beratung",
     description:
-      "Vor jeder Auktion prüft unser Experten-Team Ihr Angebot kostenlos am Telefon. Keine Bots, keine Callcenter — echte Küchen-Profis.",
+      "Vor jeder Unterbieten-Auktion prüft unser Team Ihr Angebot kostenlos am Telefon. Keine Bots, keine Callcenter — echte Küchen-Profis.",
   },
   {
     icon: Heart,
@@ -49,7 +49,7 @@ const benefits = [
     icon: Lock,
     title: "DSGVO-konform",
     description:
-      "Ihre Daten bleiben bei uns. Händler sehen Ihre vollen Kontaktdaten erst, wenn Sie deren Angebot aktiv freigeben.",
+      "Studios sehen Ihr Projekt nur anonymisiert. Kontaktdaten erhalten höchstens drei Studios für Rückfragen und das Studio Ihrer Wahl — nur mit Ihrer Einwilligung.",
   },
 ];
 
@@ -128,11 +128,12 @@ const Benefits = () => {
           <div className="order-1 lg:order-2">
             <div className="relative rounded-lg overflow-hidden shadow-xl hover-lift">
               <img
-                src={dealerImage}
-                alt="Küchenberater im Studio"
+                src={consultantImage}
+                alt="Küchenberaterin in einem Küchenstudio"
                 loading="lazy"
+                decoding="async"
                 width={1920}
-                height={1080}
+                height={1088}
                 className="w-full h-auto"
               />
             </div>
@@ -145,11 +146,12 @@ const Benefits = () => {
             <div className="order-2 md:order-1">
               <div className="relative rounded-lg overflow-hidden shadow-lg">
                 <img
-                  src={handshakeImage}
-                  alt="Zufriedene Kunden nach Küchenkauf"
+                  src={consultationImage}
+                  alt="Küchenplanung mit Grundriss und Materialmustern"
                   loading="lazy"
-                  width={1280}
-                  height={720}
+                  decoding="async"
+                  width={1600}
+                  height={896}
                   className="w-full h-auto"
                 />
               </div>
@@ -159,9 +161,10 @@ const Benefits = () => {
                 Für Sie kostenlos — <span className="text-primary">immer</span>
               </h3>
               <p className="text-base sm:text-lg text-muted-foreground leading-relaxed">
-                Bei {siteName} gibt es für Privatkunden keine Gebühren. Unsere
-                Vermittlungsprovision wird ausschließlich vom Küchenstudio gezahlt
-                — und zwar nur dann, wenn Sie am Ende tatsächlich kaufen.
+                Bei {siteName} gibt es für Privatkunden keine Gebühren. Wir
+                finanzieren uns ausschließlich über die Küchenstudios — über
+                Kontaktfreischaltungen und eine Provision, wenn Sie deren
+                Angebot annehmen.
               </p>
               <div className="grid grid-cols-2 gap-3 sm:gap-4 pt-2">
                 <div className="bg-primary/5 border border-primary/20 rounded-lg p-4 sm:p-6 text-center">
@@ -183,12 +186,12 @@ const Benefits = () => {
 
         {/* Section CTA */}
         <div className="text-center mt-12 sm:mt-16">
-          <Link to="/funnel/a">
-            <Button size="lg" className="gradient-hero hover:gradient-hero-hover">
-              Kostenlos Angebote einholen
+          <Button asChild size="lg" className="gradient-hero hover:gradient-hero-hover">
+            <Link to="/funnel/c">
+              Traumküche kostenlos planen
               <ArrowRight className="ml-2 h-4 w-4" />
-            </Button>
-          </Link>
+            </Link>
+          </Button>
         </div>
       </div>
     </section>

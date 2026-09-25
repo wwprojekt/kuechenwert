@@ -9,10 +9,10 @@
  * SPIEGEL von supabase/functions/_shared/brand-config.ts.
  * WICHTIG: Bei Aenderung IMMER beide Dateien anpassen.
  *
- * Domain-Strategie (Stand 2026-04-30):
+ * Domain-Strategie:
  *   Primary:  kuechenwert24.de (ASCII, Umlaut-frei, problemlos ueberall)
- *   Aliases:  kuechenwert.de   → 301 auf kuechenwert24.de (Cloudflare Rule)
- *             küchenwert.de    → 301 auf kuechenwert24.de (Punycode-Probleme)
+ *   Alias:    küchenwert.de (xn--kchenwert-q9a.de) → 301 auf kuechenwert24.de
+ *   ACHTUNG:  kuechenwert.de (ohne Umlaut) gehört NICHT uns – nie verwenden.
  *
  * Alle URLs, E-Mail-Adressen, OG-Tags, Sitemap und Links nutzen
  * kuechenwert24.de, damit weder Mail-Relays, noch Cookie-Scopes, noch
@@ -30,7 +30,7 @@ export const BRAND = {
   legalName: "WohnWert GmbH",
 
   // Produkt-Claim / Subline.
-  tagline: "Küchen einfach verkaufen & kaufen",
+  tagline: "Traumküche planen & Angebote vergleichen",
 
   // Primaere Landing-Domain (ohne Protokoll). ASCII-safe, Umlaut-frei.
   domain: "kuechenwert24.de",

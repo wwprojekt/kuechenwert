@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
 import { FunnelSeo } from "@/components/funnel/funnel-seo";
 import { errorMessage } from "@/features/marketplace/api-client";
@@ -10,6 +10,7 @@ import {
   submitProject,
   uploadPhoto,
 } from "@/features/planner/api";
+import { KITCHEN_FORMS, STYLES } from "@/features/planner/core";
 import { PlannerShell } from "@/features/planner/PlannerShell";
 import { PLANNER_STEPS, clearPlannerStorage, usePlanner, useRenderPolling, type PlannerStep } from "@/features/planner/state";
 import { AppliancesStep } from "@/features/planner/steps/AppliancesStep";
@@ -46,6 +47,23 @@ export default function FunnelC() {
   useEffect(() => {
     captureUtmParams();
   }, []);
+
+  // Einstiege wie /funnel/c?stil=landhaus&form=u (Stil-Kacheln, Ratgeber, Ads):
+  // einmalig übernehmen und aus der URL entfernen, damit ein Reload spätere
+  // Änderungen nicht überschreibt.
+  const [searchParams, setSearchParams] = useSearchParams();
+  const { patchConfig, setForm } = planner;
+  useEffect(() => {
+    const style = STYLES.find((s) => s.id === searchParams.get("stil"))?.id;
+    const form = KITCHEN_FORMS.find((f) => f.id === searchParams.get("form"))?.id;
+    if (!style && !form) return;
+    if (style) patchConfig({ style });
+    if (form) setForm(form);
+    const next = new URLSearchParams(searchParams);
+    next.delete("stil");
+    next.delete("form");
+    setSearchParams(next, { replace: true });
+  }, [searchParams, setSearchParams, patchConfig, setForm]);
 
   const index = PLANNER_STEPS.findIndex((s) => s.id === state.step);
 

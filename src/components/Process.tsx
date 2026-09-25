@@ -1,183 +1,146 @@
-import { Button } from "@/components/ui/button";
-import { ClipboardList, MessageSquare, Scale, Handshake, CheckCircle2 } from "lucide-react";
+import { ArrowRight, CheckCircle2, ClipboardList, Handshake, Scale, Sparkles } from "lucide-react";
 import { Link } from "react-router-dom";
-import interiorImage from "@/assets/kitchen-interior.webp";
-import familyImage from "@/assets/happy-family.webp";
+import { Button } from "@/components/ui/button";
+import coupleImage from "@/assets/couple-kitchen.webp";
+import showroomImage from "@/assets/kitchen-showroom.webp";
 
-const steps = [
+const STEPS = [
   {
     icon: ClipboardList,
-    title: "Wünsche angeben",
-    description:
-      "Sie beantworten 17 kurze Fragen zu Ihrer Traumküche: Anlass, Form, Stil, Budget, PLZ. Alles optional bis auf Kontakt & Zeitrahmen.",
-    duration: "2 Min",
+    title: "Projekt anlegen",
+    description: "Raumfoto und Maße im Konfigurator, kurzer Fragebogen oder Ihr vorhandenes Studio-Angebot – ganz wie Sie möchten.",
+    duration: "2–5 Min",
   },
   {
-    icon: MessageSquare,
-    title: "Experten-Check",
-    description:
-      "Unser Küchen-Team prüft Ihre Anfrage und klärt offene Punkte in einem kurzen Rückruf. Keine Studios hören bis dahin mit.",
-    duration: "1 Werktag",
+    icon: Sparkles,
+    title: "Preis & Vorschau",
+    description: "Sie sehen sofort eine realistische Preisspanne – im Konfigurator zusätzlich die KI-Vorschau Ihrer Küche im eigenen Raum.",
+    duration: "Sofort",
   },
   {
     icon: Scale,
-    title: "Angebote vergleichen",
-    description:
-      "Geprüfte Küchenstudios in Ihrer Region senden Ihnen bis zu 3 Angebote. Sie vergleichen bequem in Ihrem persönlichen Dashboard.",
-    duration: "24–48 h",
+    title: "Studios bieten",
+    description: "Geprüfte Studios aus Ihrer Region sehen Ihr Projekt anonymisiert und geben Angebote ab. Ein Angebot kann nur gesenkt werden.",
+    duration: "bis 7 Tage",
   },
   {
     icon: Handshake,
-    title: "Angebot wählen",
-    description:
-      "Sie entscheiden, mit welchem Studio Sie weitergehen — inklusive Beratungstermin, Aufmaß und finalem Angebot direkt vor Ort.",
+    title: "Sie wählen",
+    description: "Sie vergleichen alle Angebote auf Ihrer Projektseite und nehmen das beste an – dann meldet sich das Studio für Aufmaß und Feinplanung.",
     duration: "Sie bestimmen",
   },
 ];
 
 const Process = () => {
   return (
-    <section className="py-12 sm:py-16 md:py-20 lg:py-28 bg-background">
+    <section className="bg-background py-12 sm:py-16 md:py-20 lg:py-28">
       <div className="container px-4 sm:px-6 lg:px-8">
-        <div className="text-center max-w-3xl mx-auto mb-10 sm:mb-12 lg:mb-16 space-y-3 sm:space-y-4">
-          <div className="inline-block">
-            <span className="inline-flex items-center rounded-full bg-primary/10 border border-primary/20 px-4 py-1.5 text-sm font-semibold text-primary">
-              Ihr Weg zur Traumküche
-            </span>
-          </div>
-          <h2 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl xl:text-6xl font-extrabold text-foreground tracking-tight">
+        <div className="mx-auto mb-10 max-w-3xl space-y-3 text-center sm:mb-12 sm:space-y-4 lg:mb-16">
+          <span className="inline-flex items-center rounded-full border border-primary/20 bg-primary/10 px-4 py-1.5 text-sm font-semibold text-primary">
+            Ihr Weg zur Traumküche
+          </span>
+          <h2 className="text-2xl font-extrabold tracking-tight text-foreground sm:text-3xl md:text-4xl lg:text-5xl">
             In 4 Schritten zu Ihrer neuen Küche
           </h2>
-          <p className="text-base sm:text-lg md:text-xl text-muted-foreground leading-relaxed">
-            Unser Prozess ist so gebaut, dass Sie ohne Druck und ohne Telefon-Marathon
-            die besten Angebote bekommen — und am Ende frei entscheiden.
+          <p className="text-base leading-relaxed text-muted-foreground sm:text-lg md:text-xl">
+            Ohne Telefon-Marathon und ohne Druck: Die Studios kommen mit ihren Angeboten zu Ihnen – und Sie entscheiden frei.
           </p>
         </div>
 
-        <div className="max-w-5xl mx-auto mb-12 sm:mb-16 lg:mb-20">
-          <div className="relative">
-            <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6 sm:gap-8">
-              {steps.map((step, index) => {
-                const IconComponent = step.icon;
-                return (
-                  <div key={step.title} className="relative">
-                    <div className="flex flex-col items-center text-center space-y-4">
-                      <div className="relative z-10">
-                        <div className="h-20 w-20 rounded-lg gradient-hero flex items-center justify-center shadow-lg hover-lift">
-                          <IconComponent className="h-10 w-10 text-white" />
-                        </div>
-                        <div className="absolute -bottom-2 -right-2 h-8 w-8 bg-secondary rounded-full flex items-center justify-center text-white font-bold text-sm shadow-lg">
-                          {index + 1}
-                        </div>
-                      </div>
+        <ol className="mx-auto mb-12 grid max-w-5xl gap-6 sm:mb-16 sm:gap-8 md:grid-cols-2 lg:mb-20 lg:grid-cols-4">
+          {STEPS.map((step, index) => (
+            <li key={step.title} className="flex flex-col items-center space-y-4 text-center">
+              <div className="relative">
+                <div className="gradient-hero flex h-20 w-20 items-center justify-center rounded-lg shadow-lg">
+                  <step.icon className="h-10 w-10 text-white" aria-hidden="true" />
+                </div>
+                <div className="absolute -bottom-2 -right-2 flex h-8 w-8 items-center justify-center rounded-full bg-secondary text-sm font-bold text-white shadow-lg" aria-hidden="true">
+                  {index + 1}
+                </div>
+              </div>
+              <span className="inline-block rounded-full bg-primary/10 px-3 py-1 text-xs font-semibold text-primary">{step.duration}</span>
+              <h3 className="text-xl font-bold text-foreground">{step.title}</h3>
+              <p className="text-sm leading-relaxed text-muted-foreground">{step.description}</p>
+            </li>
+          ))}
+        </ol>
 
-                      <div className="space-y-2">
-                        <div className="inline-block px-3 py-1 bg-primary/10 rounded-full">
-                          <span className="text-xs font-semibold text-primary">
-                            {step.duration}
-                          </span>
-                        </div>
-                        <h3 className="text-xl font-bold text-foreground">{step.title}</h3>
-                        <p className="text-sm text-muted-foreground leading-relaxed">
-                          {step.description}
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        </div>
-
-        {/* Image Sections */}
-        <div className="grid lg:grid-cols-2 gap-8 sm:gap-10 lg:gap-12 mb-10 sm:mb-12">
-          <div className="space-y-4 sm:space-y-6 flex flex-col justify-center">
-            <h3 className="text-2xl sm:text-3xl font-extrabold text-foreground">
-              Individuelle Angebote von{" "}
-              <span className="text-primary">geprüften Küchenstudios</span>
+        <div className="mb-10 grid gap-8 sm:mb-12 sm:gap-10 lg:grid-cols-2 lg:gap-12">
+          <div className="flex flex-col justify-center space-y-4 sm:space-y-6">
+            <h3 className="text-2xl font-extrabold text-foreground sm:text-3xl">
+              Echte Angebote von <span className="text-primary">geprüften Küchenstudios</span>
             </h3>
-            <p className="text-base sm:text-lg text-muted-foreground leading-relaxed">
-              Ihre Anfrage geht nur an Partner, die wirklich zu Ihrer Region und
-              Ihrem Budget passen. So bekommen Sie Angebote, die Sie vergleichen
-              können — statt einer Flut unbrauchbarer Anrufe.
+            <p className="text-base leading-relaxed text-muted-foreground sm:text-lg">
+              Ihr Projekt geht nur an Studios, deren Einzugsgebiet Ihre Region abdeckt. Die Studios sehen Maße, Wünsche und
+              Visualisierung – aber nicht, wer Sie sind. So bekommen Sie vergleichbare Angebote statt einer Flut von Anrufen.
             </p>
             <ul className="space-y-3">
-              {[
-                "Regional passende Studios",
-                "Bis zu 3 Vergleichsangebote",
-                "Beratungstermine nach Ihrem Zeitplan",
-              ].map((item) => (
+              {["Nur Studios aus Ihrer Region", "Angebote können nur sinken", "Kontaktdaten nur mit Ihrer Einwilligung"].map((item) => (
                 <li key={item} className="flex items-center gap-3">
-                  <div className="h-6 w-6 rounded-full bg-primary/10 flex items-center justify-center">
-                    <CheckCircle2 className="h-4 w-4 text-primary" />
-                  </div>
-                  <span className="text-foreground font-medium">{item}</span>
+                  <span className="flex h-6 w-6 items-center justify-center rounded-full bg-primary/10">
+                    <CheckCircle2 className="h-4 w-4 text-primary" aria-hidden="true" />
+                  </span>
+                  <span className="font-medium text-foreground">{item}</span>
                 </li>
               ))}
             </ul>
           </div>
-          <div className="rounded-lg overflow-hidden shadow-xl hover-lift">
+          <div className="overflow-hidden rounded-lg shadow-xl">
             <img
-              src={interiorImage}
-              alt="Moderne Küche — geplant mit KüchenWert"
+              src={showroomImage}
+              alt="Moderne Küche mit Kochinsel im Studio-Showroom"
               loading="lazy"
-              width={1280}
-              height={720}
-              className="w-full h-auto"
+              decoding="async"
+              width={1600}
+              height={896}
+              className="h-auto w-full"
             />
           </div>
         </div>
 
-        <div className="grid lg:grid-cols-2 gap-8 sm:gap-10 lg:gap-12 mb-10 sm:mb-12 lg:mb-16">
-          <div className="rounded-lg overflow-hidden shadow-xl hover-lift order-2 lg:order-1">
+        <div className="mb-10 grid gap-8 sm:mb-12 sm:gap-10 lg:mb-16 lg:grid-cols-2 lg:gap-12">
+          <div className="order-2 overflow-hidden rounded-lg shadow-xl lg:order-1">
             <img
-              src={familyImage}
-              alt="Zufriedene Familie in neuer Traumküche"
+              src={coupleImage}
+              alt="Paar kocht gemeinsam in der neuen Küche"
               loading="lazy"
-              width={1280}
-              height={720}
-              className="w-full h-auto"
+              decoding="async"
+              width={1600}
+              height={896}
+              className="h-auto w-full"
             />
           </div>
-          <div className="space-y-4 sm:space-y-6 flex flex-col justify-center order-1 lg:order-2">
-            <h3 className="text-2xl sm:text-3xl font-extrabold text-foreground">
+          <div className="order-1 flex flex-col justify-center space-y-4 sm:space-y-6 lg:order-2">
+            <h3 className="text-2xl font-extrabold text-foreground sm:text-3xl">
               Persönlicher <span className="text-primary">Service für Sie</span>
             </h3>
-            <p className="text-base sm:text-lg text-muted-foreground leading-relaxed">
-              Wir begleiten Sie vom ersten Klick bis zur Montage. Unser Küchen-Team
-              hilft bei Fachbegriffen, vergleicht Angebote mit Ihnen und ist nach
-              dem Kauf weiter Ansprechpartner — auf Augenhöhe.
+            <p className="text-base leading-relaxed text-muted-foreground sm:text-lg">
+              Unser Küchen-Team hilft bei Fachbegriffen, prüft vorhandene Angebote und ist bei Fragen zu Ihrem Projekt für Sie da –
+              von der ersten Idee bis zur Montage.
             </p>
             <div className="grid grid-cols-3 gap-3 sm:gap-4">
-              <div className="text-center p-3 sm:p-4 bg-muted/50 rounded-lg">
-                <div className="text-lg sm:text-2xl font-bold text-primary">Persönlich</div>
-                <div className="text-xs text-muted-foreground mt-1">Betreuung</div>
-              </div>
-              <div className="text-center p-3 sm:p-4 bg-muted/50 rounded-lg">
-                <div className="text-lg sm:text-2xl font-bold text-primary">24 h</div>
-                <div className="text-xs text-muted-foreground mt-1">Ø Antwortzeit</div>
-              </div>
-              <div className="text-center p-3 sm:p-4 bg-muted/50 rounded-lg">
-                <div className="text-lg sm:text-2xl font-bold text-primary">100 %</div>
-                <div className="text-xs text-muted-foreground mt-1">Kostenlos</div>
-              </div>
+              {[
+                { value: "Persönlich", label: "Betreuung" },
+                { value: "Mo–Fr", label: "10–18 Uhr erreichbar" },
+                { value: "100 %", label: "Kostenlos" },
+              ].map((s) => (
+                <div key={s.label} className="rounded-lg bg-muted/50 p-3 text-center sm:p-4">
+                  <div className="text-lg font-bold text-primary sm:text-2xl">{s.value}</div>
+                  <div className="mt-1 text-xs text-muted-foreground">{s.label}</div>
+                </div>
+              ))}
             </div>
           </div>
         </div>
 
         <div className="text-center">
-          <Link to="/funnel/a">
-            <Button
-              size="lg"
-              className="gradient-hero hover:shadow-glow text-base sm:text-lg h-12 sm:h-14 px-8 sm:px-10 font-semibold"
-            >
-              Jetzt kostenlos starten
-            </Button>
-          </Link>
-          <p className="mt-4 text-sm text-muted-foreground">
-            Kein Login zum Starten nötig • Unverbindlich • Keine Abnahmepflicht
-          </p>
+          <Button asChild size="lg" className="gradient-hero h-12 px-8 text-base font-semibold hover:shadow-glow sm:h-14 sm:px-10 sm:text-lg">
+            <Link to="/funnel/c">
+              Jetzt Traumküche planen
+              <ArrowRight className="ml-2 h-5 w-5" />
+            </Link>
+          </Button>
+          <p className="mt-4 text-sm text-muted-foreground">Kein Login nötig • Unverbindlich • Keine Abnahmepflicht</p>
         </div>
       </div>
     </section>

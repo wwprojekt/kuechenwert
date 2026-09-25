@@ -59,6 +59,11 @@
 
 - [x] P0 Audit-Batch 21.08.2026: site_settings Secrets gesperrt, Google-Review-RPCs gehärtet, Funnel Helmet+Tracking, km/Wohnmobil-Copy auf Karten/Dashboard, Funnel-CSS, request-price-change verify_jwt=false, AGENTS.md/project.md auf KüchenWert
 - [x] DealerListingCreate auf Küchenfelder (Marke/Form/Jahr/Zustand), body_type-Enum um Layouts erweitert, ListingEdit ohne Fahrzeug-Tabs (21.08.2026)
+- [x] Marktplatz 25.09.2026: Security-Hardening (Lead-PII, Definer-Views, offene RPCs), Ausschreibungen/Studio-Angebote/Kontaktkauf/Annahme als RPCs, Outbox + kw-market-worker (E-Mails), PLZ-Umkreis, Funnel-B-Laufzeit 72 h (`tender_duration_hours_unterbieten`), Admin-Freigabe/Anlage von Ausschreibungen (`kw_admin_open_tender`, AdminLeads)
+- [x] Traumküche-Konfigurator v2 (/funnel/c): Raumfoto + Maße, Stil/Fronten/Geräte, KI-Edit (fal.ai), Preis-Engine (shared TS + Tests), Projektseite /projekt/:token, Studio-Projekt-Börse /dashboard/projekte inkl. JSON/DXF-Export (25.09.2026)
+- [x] Branding 25.09.2026: Caravan-Rasterlogos/OG-Bild/Favicons ersetzt (`scripts/generate-logo-assets.mjs`), Caravan-Bilder entfernt, Hero mit klickbaren 3 Wegen, Landing-Texte an echte Abläufe angepasst, FAQ als eine Quelle (`src/data/faq.ts`), nginx: immutable nur für /assets/
+- [x] Site-Settings wieder live: `public_site_settings` lieferte seit 21.08. für anon 401 → RPC `get_public_site_settings` + localStorage-Cache; Laufzeit-Farbüberschreibung entfernt (DB-HSL ohne %, überschrieb Dark Mode) (25.09.2026)
+- [x] Supabase-Client: `lockAcquireTimeout` entfernt (hat Database-Typen des Clients zerstört, Typfehler 1962 → ~250) (25.09.2026)
 
 ### Offene Aufgaben
 - [x] Funnel A/B/C: send-lead-notification type=funnel + track-conversion (Click-IDs) (21.08.2026)
@@ -86,3 +91,10 @@
 - [ ] Fuzzy-Search für Tippfehler (z.B. "Exzellent" → "Excellent")
 - [ ] GA4_API_SECRET erstellen (Google Analytics Admin → Data Streams)
 - [ ] Google Ads: LANDING_PAGE_LEAD von Primary auf Secondary umstellen
+- [ ] Veraltete Unit-Tests (Caravan-Rename nicht nachgezogen): useWizardForm, security, validation, useUserRole, AuthContext – 13 Fehler, vor 25.09.2026 entstanden
+- [ ] Restliche ~250 Typfehler in Caravan-Altmodulen (Listings, AuctionDetail, Admin-Seiten) – `npm run typecheck:all`
+- [ ] Turnstile: `CLOUDFLARE_TURNSTILE_SECRET` + `VITE_TURNSTILE_SITE_KEY` setzen (CSP erlaubt challenges.cloudflare.com jetzt)
+- [ ] Supabase Auth: Leaked-Password-Protection aktivieren (Dashboard)
+- [ ] Alte Edge Functions `kw-planner-generate` / `kw-planner-submit-lead` löschen, sobald der neue Konfigurator live verifiziert ist
+- [ ] `send-lead-notification`: deployte Fassung (21.08., gebündelt) mit Repo abgleichen, bevor sie neu deployt wird
+- [ ] Planungssoftware: CARAT-/IDM-Direktanbindung klären (siehe docs/planning-software-integration.md)

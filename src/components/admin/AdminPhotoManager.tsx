@@ -151,7 +151,6 @@ function SortablePhotoItem({
           alt={`Foto ${index + 1}`}
           loading="lazy"
           className="w-full h-full object-cover"
-          loading="lazy"
         />
       </div>
 

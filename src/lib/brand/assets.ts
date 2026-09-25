@@ -16,37 +16,31 @@
  */
 
 import heroKitchen from "@/assets/hero-kitchen.webp";
-import heroLifestyle from "@/assets/happy-family.webp";
-import dealerProfessional from "@/assets/dealer-professional.webp";
-import handshakeDeal from "@/assets/handshake-deal.webp";
-import kitchenInterior from "@/assets/kitchen-interior.webp";
-import iconAuction from "@/assets/icon-auction.webp";
-import iconInstantPrice from "@/assets/icon-instant-price.webp";
-import iconStation from "@/assets/icon-station.webp";
+import kitchenBefore from "@/assets/kitchen-before.webp";
+import kitchenAfter from "@/assets/kitchen-after.webp";
+import heroLifestyle from "@/assets/couple-kitchen.webp";
+import studioConsultant from "@/assets/studio-consultant.webp";
+import kitchenConsultation from "@/assets/kitchen-consultation.webp";
+import kitchenShowroom from "@/assets/kitchen-showroom.webp";
 
 /**
- * Statische Logo-Pfade (public/). Absolute Pfade, damit E-Mail-Templates
- * sie ueber die Base-URL einbinden koennen.
+ * Statische Logo-Pfade (public/), relativ zur Site-Root. Rasterdateien
+ * erzeugt scripts/generate-logo-assets.mjs aus den SVG-Quellen.
  */
 export const BRAND_LOGOS = {
-  /** Standard-Logo farbig auf hellem Hintergrund (SVG, vektorskaliert). */
+  /** Icon farbig (SVG, vektorskaliert). */
   primary: "/logo.svg",
-  /** HiDPI-Alias (SVG skaliert automatisch, identisch zu primary). */
-  primary2x: "/logo.svg",
-  /** Weisses Logo fuer dunklen Hintergrund (Teal-auf-Weiss-Variante). */
+  /** Wortmarke dunkel auf hell, 964×260. */
+  primary2x: "/logo-2x.png",
+  /** Icon hell fuer dunkle Hintergruende (SVG). */
   white: "/logo-white.svg",
-  /** E-Mail-Logo. SVG hat in manchen Clients (Outlook Desktop) keinen Support,
-   *  daher bleibt bei E-Mails bis zur Bereitstellung eines PNG-Exports das
-   *  Primary-Logo in Nutzung. */
-  email: "/logo.svg",
-  /** Favicon. SVG als Primary — moderne Browser (Chrome/FF/Safari) unterstuetzen
-   *  SVG-Favicons seit 2020. Apple Touch Icon nutzt denselben Pfad. */
-  faviconIco: "/favicon.svg",
-  faviconPng: "/favicon.svg",
-  /** Open-Graph-Sharing-Bild. Soziale Netze rendern KEIN SVG — daher Unsplash
-   *  als interim Bild bis ein eigenes 1200x630-PNG gestaltet ist. */
-  ogImage:
-    "https://images.unsplash.com/photo-1556909114-f6e7ad7d3136?auto=format&fit=crop&w=1200&h=630&q=80",
+  /** Wortmarke hell fuer den dunkelgruenen E-Mail-Header (PNG, Outlook-tauglich). */
+  email: "/logo-email.png",
+  faviconIco: "/favicon.ico",
+  faviconPng: "/favicon.png",
+  appleTouchIcon: "/apple-touch-icon.png",
+  /** Open-Graph-Bild 1200×630 (JPEG; soziale Netze rendern kein SVG). */
+  ogImage: "/og-image.jpg",
 } as const;
 
 /**
@@ -54,17 +48,11 @@ export const BRAND_LOGOS = {
  */
 export const BRAND_IMAGES = {
   heroHome: heroKitchen,
+  /** Echtes KI-Beispiel: Raumfoto vorher und Nano-Banana-Edit nachher. */
+  kitchenBefore,
+  kitchenAfter,
   heroLifestyle,
-  dealerProfessional,
-  handshakeDeal,
-  kitchenInterior,
-} as const;
-
-/**
- * Icon-Illustrationen fuer Feature-Karten.
- */
-export const BRAND_ICONS = {
-  auction: iconAuction,
-  instantPrice: iconInstantPrice,
-  station: iconStation,
+  studioConsultant,
+  kitchenConsultation,
+  kitchenShowroom,
 } as const;

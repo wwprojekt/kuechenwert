@@ -416,7 +416,7 @@ export function getPageTitle(path: string): string {
     '/ueber-uns': 'Über uns',
     '/kontakt': 'Kontakt',
     '/haendler': 'Für Händler',
-    '/ankaufstationen': 'Ankaufstationen',
+    '/kuechenstudios': 'Küchenstudios',
     '/wertermittlung': 'Wertermittlung',
     '/wertrechner': 'Wertrechner',
     '/impressum': 'Impressum',

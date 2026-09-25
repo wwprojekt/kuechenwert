@@ -3,27 +3,13 @@
  * No Node.js image libraries needed — uses libwebp-tools from Alpine.
  *
  * - Compresses all .webp files in dist/ with quality 72
- * - Creates responsive variants (-sm 400px, -md 800px) for key images
  */
 import { execSync } from 'child_process';
 import { readdir, stat } from 'fs/promises';
-import { join, extname, basename } from 'path';
+import { join, extname } from 'path';
 
 const QUALITY = 72;
 const DIRS = ['dist/images', 'dist/assets'];
-
-const NEEDS_RESPONSIVE = [
-  'hero-motorhome',
-  'motorhome-integrated',
-  'motorhome-alcove',
-  'motorhome-van',
-  'caravan-touring',
-];
-
-const BREAKPOINTS = [
-  { suffix: '-sm', width: 400 },
-  { suffix: '-md', width: 800 },
-];
 
 function hasCwebp() {
   try {
@@ -81,22 +67,6 @@ async function processDir(dir) {
       }
     }
     run(`rm -f "${tmpPath}"`);
-
-    // Create responsive variants for key images
-    const name = basename(file, ext);
-    if (!NEEDS_RESPONSIVE.some(n => name.includes(n))) continue;
-
-    for (const bp of BREAKPOINTS) {
-      const outFile = file.replace(ext, `${bp.suffix}${ext}`);
-      const outPath = join(dir, outFile);
-
-      if (run(`dwebp "${filePath}" -o "${tmpPath}"`) &&
-          run(`cwebp -q ${QUALITY} -m 6 -resize ${bp.width} 0 "${tmpPath}" -o "${outPath}"`)) {
-        const outStat = await stat(outPath);
-        console.log(`  + ${outFile}: ${(outStat.size / 1024).toFixed(1)}KB (${bp.width}px)`);
-      }
-      run(`rm -f "${tmpPath}"`);
-    }
   }
 }
 

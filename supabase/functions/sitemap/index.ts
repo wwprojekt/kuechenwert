@@ -3,7 +3,7 @@
 // Ablauf: Der nginx im Frontend-Container proxied GET /sitemap.xml an diese
 // Edge Function (siehe docker/default.conf). Hier werden statische KuechenWert-
 // Routen (Homepage, Funnels, Content-Seiten, Legal-Pages) mit dynamischen
-// Quellen (Blog-Posts, aktive Auktionen, Showrooms) zusammengefuehrt und als
+// Quellen (Blog-Posts, aktive Auktionen) zusammengefuehrt und als
 // gueltiges sitemaps.org-XML zurueckgegeben.
 //
 // Geschichte: Diese Function stammt aus dem Caravanwert-Fork und listete dort
@@ -62,8 +62,8 @@ serve(async (req) => {
       { loc: `${baseUrl}/faq`, lastmod: today, changefreq: 'weekly', priority: '0.7' },
       { loc: `${baseUrl}/preise`, lastmod: today, changefreq: 'monthly', priority: '0.6' },
 
-      // Partner / Showrooms.
-      { loc: `${baseUrl}/ankaufstationen`, lastmod: today, changefreq: 'monthly', priority: '0.6' },
+      // Partner-Studios / Showrooms.
+      { loc: `${baseUrl}/kuechenstudios`, lastmod: today, changefreq: 'monthly', priority: '0.6' },
 
       // Unternehmen.
       { loc: `${baseUrl}/ueber-uns`, lastmod: today, changefreq: 'monthly', priority: '0.6' },
@@ -109,20 +109,7 @@ serve(async (req) => {
       priority: '0.8',
     }))
 
-    // Kuechen-Showrooms / Partner-Studios fuer Vor-Ort-Beratung.
-    const { data: stations } = await supabase
-      .from('purchase_stations')
-      .select('id, updated_at')
-      .eq('is_active', true)
-
-    const stationUrls: SitemapUrl[] = (stations || []).map((station) => ({
-      loc: `${baseUrl}/ankaufstationen/${station.id}`,
-      lastmod: station.updated_at || today,
-      changefreq: 'monthly',
-      priority: '0.7',
-    }))
-
-    const allUrls = [...staticUrls, ...blogUrls, ...auctionUrls, ...stationUrls]
+    const allUrls = [...staticUrls, ...blogUrls, ...auctionUrls]
 
     const sitemap = `<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"

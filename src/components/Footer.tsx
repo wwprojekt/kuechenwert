@@ -47,8 +47,8 @@ const Footer = () => {
                 </div>
               )}
               <div>
-                <p className="text-sm font-semibold text-slate-900 dark:text-slate-100">Geprüfte Händler</p>
-                <p className="text-xs text-slate-500 dark:text-slate-400">Verifizierter Service</p>
+                <p className="text-sm font-semibold text-slate-900 dark:text-slate-100">Geprüfte Küchenstudios</p>
+                <p className="text-xs text-slate-500 dark:text-slate-400">Verifizierte Fachbetriebe</p>
               </div>
             </div>
 
@@ -57,8 +57,8 @@ const Footer = () => {
                 <Clock className="h-6 w-6 text-primary" />
               </div>
               <div>
-                <p className="text-sm font-semibold text-slate-900 dark:text-slate-100">48h Angebote</p>
-                <p className="text-xs text-slate-500 dark:text-slate-400">Schnelle Rückmeldung</p>
+                <p className="text-sm font-semibold text-slate-900 dark:text-slate-100">Preis sofort</p>
+                <p className="text-xs text-slate-500 dark:text-slate-400">Schätzung in wenigen Minuten</p>
               </div>
             </div>
 
@@ -84,26 +84,23 @@ const Footer = () => {
                 Bereit für Ihre Traumküche?
               </h3>
               <p className="text-slate-400 text-sm">
-                Kostenlose Angebote von geprüften Küchenstudios – unverbindlich und in nur 2 Minuten.
+                Raumfoto hochladen, Küche gestalten, Preis sehen – geprüfte Studios bieten um Ihr Projekt.
               </p>
             </div>
             <div className="flex flex-col sm:flex-row gap-3 w-full lg:w-auto">
-              <Link to="/funnel/a" className="w-full sm:w-auto">
-                <Button
-                  className="h-11 px-6 bg-primary hover:bg-primary/90 text-white font-medium w-full sm:w-auto"
-                >
-                  Angebote einholen
+              <Button asChild className="h-11 px-6 bg-primary hover:bg-primary/90 text-white font-medium w-full sm:w-auto">
+                <Link to="/funnel/c">
+                  Traumküche planen
                   <ArrowRight className="ml-2 h-4 w-4" />
-                </Button>
-              </Link>
-              <Link to="/kuechenrechner" className="w-full sm:w-auto">
-                <Button
-                  variant="outline"
-                  className="h-11 px-6 border-slate-700 text-slate-300 hover:text-white hover:bg-slate-800 w-full sm:w-auto"
-                >
-                  Budget-Check
-                </Button>
-              </Link>
+                </Link>
+              </Button>
+              <Button
+                asChild
+                variant="outline"
+                className="h-11 px-6 border-slate-700 bg-transparent text-slate-300 hover:text-white hover:bg-slate-800 w-full sm:w-auto"
+              >
+                <Link to="/funnel/a">Angebote einholen</Link>
+              </Button>
             </div>
           </div>
         </div>
@@ -149,7 +146,12 @@ const Footer = () => {
               <h3 className="font-semibold text-white mb-5 text-sm">Services</h3>
               <ul className="space-y-3">
                 <li>
-                  <Link to="/funnel/a" className="text-sm text-slate-400 hover:text-white transition-colors font-medium">
+                  <Link to="/funnel/c" className="text-sm text-slate-400 hover:text-white transition-colors font-medium">
+                    Traumküche planen (KI)
+                  </Link>
+                </li>
+                <li>
+                  <Link to="/funnel/a" className="text-sm text-slate-400 hover:text-white transition-colors">
                     Angebote einholen
                   </Link>
                 </li>
@@ -159,8 +161,8 @@ const Footer = () => {
                   </Link>
                 </li>
                 <li>
-                  <Link to="/funnel/c" className="text-sm text-slate-400 hover:text-white transition-colors">
-                    KI-Küchenplaner
+                  <Link to="/projekt" className="text-sm text-slate-400 hover:text-white transition-colors">
+                    Mein Projekt & Angebote
                   </Link>
                 </li>
                 <li>

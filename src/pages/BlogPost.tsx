@@ -94,12 +94,10 @@ const BlogPost = () => {
       name: siteName,
       logo: {
         '@type': 'ImageObject',
-        url: `${BRAND.baseUrl}/logo.svg`,
+        url: `${BRAND.baseUrl}/logo.png?v=2`,
       },
     },
-    image:
-      post.featured_image_url ||
-      "https://images.unsplash.com/photo-1556909114-f6e7ad7d3136?auto=format&fit=crop&w=1200&h=630&q=80",
+    image: post.featured_image_url || `${BRAND.baseUrl}/og-image.jpg`,
     articleSection: post.category,
     mainEntityOfPage: {
       '@type': 'WebPage',

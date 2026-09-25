@@ -9,9 +9,8 @@ import {
   Wand2,
   ArrowRight,
   Clock,
-  CheckCircle2,
+  FolderOpen,
   Hash,
-  ImageIcon,
 } from "lucide-react";
 
 import { supabase } from "@/integrations/supabase/client";
@@ -23,19 +22,16 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 
 /**
- * "Meine Küchen-Journey" – Customer-Dashboard Einstieg fuer den neuen
- * Lead-zentrierten Flow.
+ * "Meine Küchen-Journey" – Customer-Dashboard Einstieg.
  *
- * Zeigt:
- *  1. Alle Leads des eingeloggten Users (Funnel A = Angebote einholen,
- *     Funnel B = Studio-Preis unterbieten, Funnel C = Traumkueche-KI)
- *  2. Alle Traumkueche-KI-Visualisierungen aus planner_sessions
- *  3. Wenn beides leer ist: Einen 3-Funnel-CTA-Block, damit der User
- *     startet.
+ * Zeigt die Anfragen des eingeloggten Users (Funnel A/B/C) bzw. einen
+ * 3-Wege-Einstieg. Angebote und Visualisierungen liegen auf der
+ * token-geschützten Projektseite (/projekt/:token) – Renders im privaten
+ * Bucket planner-media sind für Kund:innen nur über kw-project signiert
+ * abrufbar, deshalb verlinkt die Karte dorthin statt Bilder zu laden.
  *
- * Wichtig: `leads.user_id` wird nur gesetzt, wenn der Funnel waehrend
- * einer eingeloggten Session abgesendet wurde. Aeltere Guest-Leads sind
- * daher nicht sichtbar -- das ist gewollt.
+ * `leads.user_id` wird nur gesetzt, wenn der Funnel während einer
+ * eingeloggten Session abgesendet wurde – Gast-Leads erscheinen nicht.
  */
 
 type LeadRow = {
@@ -49,16 +45,6 @@ type LeadRow = {
   existing_offer_price_cents: number | null;
   existing_offer_studio: string | null;
   timeframe_months: number | null;
-  created_at: string;
-};
-
-type PlannerSessionRow = {
-  id: string;
-  session_token: string;
-  spec: Record<string, unknown> | null;
-  image_url: string | null;
-  status: string;
-  lead_id: string | null;
   created_at: string;
 };
 
@@ -88,12 +74,12 @@ const FUNNEL_META: Record<
     description: "Bestehendes Küchen-Angebot von verifizierten Händlern unterbieten lassen.",
   },
   traumkueche: {
-    title: "Traumküche-KI",
+    title: "Traumküche planen",
     href: "/funnel/c",
     icon: Wand2,
     color:
       "text-purple-600 bg-purple-50 border-purple-200 dark:bg-purple-950/20 dark:border-purple-800",
-    description: "Ihre Vorstellungen als KI-Visualisierung – qualifiziert Ihre Anfrage.",
+    description: "Küche im eigenen Raum visualisieren, Preis sehen und Studios bieten lassen.",
   },
 };
 
@@ -169,39 +155,9 @@ export function MyKuechenJourney() {
     staleTime: 30_000,
   });
 
-  const { data: sessions, isLoading: sessionsLoading } = useQuery({
-    queryKey: ["myPlannerSessions", user?.id],
-    queryFn: async () => {
-      if (!user) return [] as PlannerSessionRow[];
-      const sessionOk = await ensureValidRLSSession();
-      if (!sessionOk) throw new Error("Sitzung abgelaufen. Bitte neu anmelden.");
-      // Planner-Sessions ohne `user_id`-Spalte -> ueber lead_id joinen:
-      // Alle Sessions auflisten, deren lead_id zu einem User-Lead gehoert.
-      const { data: leadIds } = await supabase
-        .from("leads")
-        .select("id")
-        .eq("user_id", user.id)
-        .eq("funnel_type", "traumkueche");
-      const ids = (leadIds ?? []).map((l) => l.id);
-      if (ids.length === 0) return [] as PlannerSessionRow[];
-      const { data, error } = await supabase
-        .from("planner_sessions")
-        .select("id,session_token,spec,image_url,status,lead_id,created_at")
-        .in("lead_id", ids)
-        .order("created_at", { ascending: false })
-        .limit(6);
-      if (error) throw error;
-      return (data ?? []) as PlannerSessionRow[];
-    },
-    enabled: !!user,
-    staleTime: 30_000,
-  });
-
-  const isLoading = leadsLoading || sessionsLoading;
   const hasLeads = (leads?.length ?? 0) > 0;
-  const hasSessions = (sessions?.length ?? 0) > 0;
 
-  if (isLoading) {
+  if (leadsLoading) {
     return (
       <Card>
         <CardHeader>
@@ -219,7 +175,7 @@ export function MyKuechenJourney() {
   }
 
   // Empty state: keine Anfragen -> 3-Funnel-CTA
-  if (!hasLeads && !hasSessions) {
+  if (!hasLeads) {
     return (
       <Card className="border-2 border-dashed border-primary/30">
         <CardContent className="p-6 sm:p-10">
@@ -231,9 +187,9 @@ export function MyKuechenJourney() {
               Starten Sie Ihre Küchen-Planung
             </h3>
             <p className="text-muted-foreground max-w-xl mx-auto text-sm sm:text-base">
-              Drei Wege zur Traumküche – suchen Sie sich den passenden aus. Sie
-              sehen Ihre Anfragen und eingehende Studio-Angebote anschließend
-              hier im Dashboard.
+              Drei Wege zur Traumküche – suchen Sie sich den passenden aus. Ihre
+              Anfragen sehen Sie anschließend hier, alle Studio-Angebote auf
+              Ihrer persönlichen Projektseite.
             </p>
           </div>
           <div className="grid gap-4 sm:grid-cols-3">
@@ -267,7 +223,6 @@ export function MyKuechenJourney() {
 
   return (
     <div className="space-y-4">
-      {hasLeads && (
         <Card>
           <CardHeader className="pb-3">
             <div className="flex items-center justify-between">
@@ -278,11 +233,11 @@ export function MyKuechenJourney() {
                   {leads?.length ?? 0}
                 </Badge>
               </CardTitle>
-              <Link to="/funnel/a">
-                <Button variant="ghost" size="sm" className="gap-1 h-8">
-                  Neue Anfrage <ArrowRight className="w-3.5 h-3.5" />
-                </Button>
-              </Link>
+              <Button asChild variant="ghost" size="sm" className="gap-1 h-8">
+                <Link to="/funnel/c">
+                  Neues Projekt <ArrowRight className="w-3.5 h-3.5" />
+                </Link>
+              </Button>
             </div>
           </CardHeader>
           <CardContent className="space-y-3">
@@ -342,71 +297,20 @@ export function MyKuechenJourney() {
                 </div>
               );
             })}
-            <p className="text-xs text-muted-foreground pt-2 border-t">
-              Sobald Küchenstudios auf Ihre Anfragen reagieren, erscheinen die
-              Angebote hier.
-            </p>
-          </CardContent>
-        </Card>
-      )}
-
-      {hasSessions && (
-        <Card>
-          <CardHeader className="pb-3">
-            <div className="flex items-center justify-between">
-              <CardTitle className="flex items-center gap-2 text-lg">
-                <Wand2 className="w-5 h-5 text-primary" />
-                Meine Traumküche-Visualisierungen
-                <Badge variant="secondary" className="ml-1">
-                  {sessions?.length ?? 0}
-                </Badge>
-              </CardTitle>
-              <Link to="/funnel/c">
-                <Button variant="ghost" size="sm" className="gap-1 h-8">
-                  Neue erzeugen <ArrowRight className="w-3.5 h-3.5" />
-                </Button>
-              </Link>
-            </div>
-          </CardHeader>
-          <CardContent>
-            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-              {sessions?.map((s) => (
-                <div
-                  key={s.id}
-                  className="rounded-lg border overflow-hidden bg-background"
-                >
-                  <div className="aspect-video bg-muted flex items-center justify-center">
-                    {s.image_url ? (
-                      <img
-                        src={s.image_url}
-                        alt="Traumküche-Render"
-                        className="w-full h-full object-cover"
-                        loading="lazy"
-                      />
-                    ) : (
-                      <ImageIcon className="w-8 h-8 text-muted-foreground/40" />
-                    )}
-                  </div>
-                  <div className="p-3 text-xs">
-                    <div className="flex items-center gap-1 text-muted-foreground mb-1">
-                      <Clock className="w-3 h-3" />
-                      {format(new Date(s.created_at), "dd.MM.yyyy HH:mm", {
-                        locale: de,
-                      })}
-                    </div>
-                    {s.lead_id && (
-                      <div className="flex items-center gap-1 text-emerald-600">
-                        <CheckCircle2 className="w-3 h-3" />
-                        Als Anfrage abgesendet
-                      </div>
-                    )}
-                  </div>
-                </div>
-              ))}
+            <div className="flex flex-col gap-3 border-t pt-3 sm:flex-row sm:items-center sm:justify-between">
+              <p className="text-xs text-muted-foreground">
+                Angebote, Visualisierungen und Ihre Entscheidung finden Sie auf der
+                Projektseite – den Link haben wir Ihnen per E-Mail geschickt.
+              </p>
+              <Button asChild variant="outline" size="sm" className="flex-none gap-1.5">
+                <Link to="/projekt">
+                  <FolderOpen className="w-3.5 h-3.5" />
+                  Projektlink anfordern
+                </Link>
+              </Button>
             </div>
           </CardContent>
         </Card>
-      )}
     </div>
   );
 }

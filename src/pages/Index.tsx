@@ -13,15 +13,15 @@ const Index = () => {
   const { settings } = useSettings();
   const organizationSchema = generateOrganizationSchema(settings);
   const serviceSchema = generateServiceSchema(
-    "Küchen-Vergleich & Vermittlung",
-    "Deutschlands Vergleichsportal für neue Küchen: Angebote von geprüften Studios einholen, vorhandene Studio-Preise per Reverse-Auktion unterbieten lassen oder die Traumküche mit KI visualisieren."
+    "KI-Küchenplanung & Studio-Angebote",
+    "Traumküche im eigenen Raum mit KI visualisieren, Preis schätzen und Angebote geprüfter Küchenstudios vergleichen – oder ein vorhandenes Studio-Angebot unterbieten lassen."
   );
 
   return (
     <PageLayout
-      title="Neue Küche günstig kaufen — Angebote vergleichen & Preis unterbieten"
-      description="Drei Wege zu Ihrer Traumküche: Kostenlose Angebote von geprüften Küchenstudios einholen, vorhandene Studio-Preise unterbieten lassen oder mit KI visualisieren. Bis zu 30 % sparen, unverbindlich, deutschlandweit."
-      keywords="Küche kaufen, neue Küche, Küche planen, Küchenstudio, Küche vergleichen, Küchenangebot, Reverse-Auktion Küche, KI Küchenplaner, Nobilia, Häcker, Nolte, SieMatic, günstig Küche, Budget Küche"
+      title="Traumküche mit KI planen, Preis sehen & Studio-Angebote vergleichen"
+      description="Foto Ihres Raums hochladen, Küche konfigurieren und sofort sehen, wie sie aussieht und was sie ungefähr kostet. Geprüfte Küchenstudios bieten um Ihr Projekt – Sie wählen. Kostenlos & unverbindlich."
+      keywords="Küche planen, Küchenplaner online, Küche visualisieren, KI Küchenplaner, Küche Preis berechnen, Küchenstudio Angebote vergleichen, neue Küche kaufen, Küchen Preisvergleich, Nobilia, Häcker, Nolte"
       canonicalPath="/"
       structuredData={[organizationSchema, serviceSchema]}
     >

@@ -2,256 +2,188 @@ import PageLayout from "@/components/PageLayout";
 import PageHero from "@/components/PageHero";
 import RelatedContent, { haendlerRelatedLinks } from "@/components/RelatedContent";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import {
-  TrendingUp,
-  Users,
-  Zap,
-  Shield,
-  CheckCircle2,
-  Handshake,
-  Target,
-  Inbox,
-} from "lucide-react";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { BellRing, CheckCircle2, FileDown, Handshake, KeyRound, MapPinned, Sparkles, TrendingDown } from "lucide-react";
 import { Link } from "react-router-dom";
-import dealerProfessional from "@/assets/dealer-professional.webp";
+import studioConsultant from "@/assets/studio-consultant.webp";
 import { useSettings } from "@/contexts/SettingsContext";
 import { BRAND } from "@/lib/brand/config";
+
+const BENEFITS = [
+  {
+    icon: Sparkles,
+    title: "Projekte statt Adressen",
+    description:
+      "Jedes Projekt kommt mit Raumfoto, Wandmaßen, Grundriss, Wunschkonfiguration, KI-Visualisierung und Preisschätzung – Sie kalkulieren sofort.",
+  },
+  {
+    icon: MapPinned,
+    title: "Nur Ihre Region",
+    description: "Sie legen PLZ und Umkreis fest und sehen ausschließlich Projekte aus Ihrem Einzugsgebiet.",
+  },
+  {
+    icon: TrendingDown,
+    title: "Fairer Wettbewerb",
+    description:
+      "Sie sehen das aktuell niedrigste Angebot und Ihren Rang. Angebote lassen sich bis zum Ende der Angebotsphase senken, nie erhöhen.",
+  },
+  {
+    icon: Handshake,
+    title: "Zahlen bei Erfolg",
+    description:
+      "Registrierung und Angebote sind kostenlos. Die Provision fällt nur an, wenn die Kund:in Ihr Angebot annimmt.",
+  },
+];
+
+const SERVICES = [
+  {
+    title: "Projekt-Börse",
+    description: "Alle offenen Kundenprojekte in Ihrem Einzugsgebiet – mit Entfernung, Budget-Rahmen und Restlaufzeit.",
+    features: ["Filter: offen, alle, meine Angebote", "E-Mail bei neuen Projekten in Ihrer Region", "Laufzeit 7 Tage, Unterbieten 72 Stunden"],
+  },
+  {
+    title: "Strukturierte Angebote",
+    description: "Preis, Lieferzeit, enthaltene Leistungen und eine persönliche Nachricht – in einer Minute abgegeben.",
+    features: ["Leistungen: Lieferung, Montage, Geräte, Aufmaß …", "Gültigkeit und Standard-Vorstellungstext", "Senken oder zurückziehen bis Angebotsende"],
+  },
+  {
+    title: "Kontakt freischalten",
+    description: "Sie möchten vor der Entscheidung beraten? Schalten Sie die Kontaktdaten frei – höchstens drei Studios pro Projekt.",
+    features: ["Preis je nach Projektwert, vor dem Kauf sichtbar", "Einwilligung der Kund:in liegt vor", "Kontakt jederzeit im Dashboard abrufbar"],
+  },
+  {
+    title: "Export für Ihre Planungssoftware",
+    description: "Übernehmen Sie Projekte direkt in Ihr Planungsprogramm statt Maße abzutippen.",
+    features: ["Planungsbriefing als JSON", "Grundriss als DXF (CARAT, Winner Flex, KPS, pCon …)", "Druckansicht für die Beratung"],
+  },
+];
+
+const STATS = [
+  { number: "Deutschlandweit", label: "Kundenprojekte" },
+  { number: "Mit KI-Bild", label: "Raumfoto & Maße" },
+  { number: "Kostenlos", label: "Registrierung & Angebote" },
+  { number: "Nur bei Zuschlag", label: "Provision" },
+];
+
+const PROCESS = [
+  {
+    step: "1",
+    title: "Kostenlos registrieren",
+    description: "Online-Registrierung mit Gewerbenachweis und USt-ID – Freischaltung innerhalb von 1–2 Werktagen.",
+  },
+  {
+    step: "2",
+    title: "Einzugsgebiet festlegen",
+    description: "PLZ und Umkreis wählen – ab dann erhalten Sie passende Projekte per E-Mail und in der Projekt-Börse.",
+  },
+  {
+    step: "3",
+    title: "Angebot abgeben",
+    description: "Projekt prüfen, Preis und Leistungen eintragen, optional den Kontakt für eine Vorab-Beratung freischalten.",
+  },
+  {
+    step: "4",
+    title: "Zuschlag erhalten",
+    description: "Die Kund:in wählt Ihr Angebot – Sie erhalten alle Kontaktdaten und vereinbaren Aufmaß und Detailplanung.",
+  },
+];
+
+const EXTRAS = [
+  "E-Mail, sobald ein Projekt in Ihrem Umkreis startet",
+  "Benachrichtigung, wenn Sie unterboten wurden",
+  "Rechnungen für Kontakte und Provisionen digital im Dashboard",
+  "Keine Grundgebühr, keine Mindestabnahme, keine Vertragslaufzeit",
+];
 
 const Haendler = () => {
   const { settings } = useSettings();
   const siteName = settings?.site_name || BRAND.name;
 
-  const benefits = [
-    {
-      icon: TrendingUp,
-      title: "Kaufbereite Küchen-Leads",
-      description:
-        "Erhalten Sie Anfragen von Kund:innen, die konkret eine neue Küche planen — mit Budget, Stil-Wünschen, Wohnsituation und Zeitrahmen.",
-    },
-    {
-      icon: Shield,
-      title: "Sichere Abwicklung",
-      description:
-        "Rechtlich abgesicherte Verträge, transparente Provisionen und DSGVO-konforme Prozesse — Provision nur bei erfolgreichem Kauf.",
-    },
-    {
-      icon: Users,
-      title: "Vorqualifiziert",
-      description:
-        "Jeder Lead wird von unserem Küchen-Team telefonisch auf Ernsthaftigkeit und Budget geprüft — bevor er Sie überhaupt erreicht.",
-    },
-    {
-      icon: Zap,
-      title: "Wenig Aufwand",
-      description:
-        "Keine eigene Akquise nötig. Sie wählen selbst, welche Leads Sie annehmen und welche Sie passen lassen.",
-    },
-  ];
-
-  const services = [
-    {
-      title: "Lead-Inbox",
-      description:
-        "Alle neuen Küchen-Anfragen in einer übersichtlichen Inbox — filterbar nach Region, Budget und Stil.",
-      features: [
-        "Täglich neue, vorqualifizierte Lead-Anfragen",
-        "17 Datenpunkte pro Lead (Stil, Form, Budget, Zeitrahmen)",
-        "Beispielbilder und Wohnsituation direkt im Lead",
-      ],
-    },
-    {
-      title: "Angebots-System",
-      description:
-        "Senden Sie strukturierte Angebote an Kund:innen — digital, rechtssicher und mit eigenen Vorlagen.",
-      features: [
-        "1-Click-Angebote mit eigenen Vorlagen",
-        "Reverse-Auktion: Gegen andere Studios bieten",
-        "Vertrags-Vorlagen &amp; digitale Unterschrift",
-      ],
-    },
-    {
-      title: "Reverse-Auktion (Funnel B)",
-      description:
-        "Kund:innen laden ein bestehendes Studio-Angebot hoch — Sie unterbieten den Preis und gewinnen den Auftrag.",
-      features: [
-        "Preistransparenz ohne Konkurrenz-Namen",
-        "72-Stunden-Bietphase",
-        "Kund:in entscheidet bei Angebotsende",
-      ],
-    },
-    {
-      title: "Händler-Dashboard",
-      description:
-        "Behalten Sie den Überblick über Ihre Leads, offenen Angebote und abgeschlossenen Aufträge.",
-      features: [
-        "Echtzeit-Benachrichtigungen bei neuen Leads",
-        "Lead-Verlauf &amp; Angebotsübersicht",
-        "Rechnungen &amp; Verträge digital",
-      ],
-    },
-  ];
-
-  const stats = [
-    { number: "Deutschlandweit", label: "Verfügbar" },
-    { number: "Täglich", label: "Neue Leads" },
-    { number: "Kostenlos", label: "Registrierung" },
-    { number: "Nur bei Zuschlag", label: "Provision" },
-  ];
-
-  const process = [
-    {
-      step: "1",
-      title: "Kostenlos registrieren",
-      description:
-        "Schnelle Online-Registrierung mit Gewerbenachweis und USt-ID — Freischaltung innerhalb von 1–2 Werktagen.",
-    },
-    {
-      step: "2",
-      title: "Leads entdecken",
-      description:
-        "Erhalten Sie neue Anfragen aus Ihrer Region — mit Budget, Stil, Wohnsituation und Zeitrahmen.",
-    },
-    {
-      step: "3",
-      title: "Angebot senden",
-      description:
-        "Senden Sie Ihr Beratungs- oder Kauf-Angebot direkt über die Plattform. Bei Funnel B unterbieten Sie bestehende Angebote.",
-    },
-    {
-      step: "4",
-      title: "Auftrag gewinnen",
-      description:
-        "Bei Zuschlag: Digitaler Vertrag, Beratungstermin, finales Aufmass, Lieferung und Montage — transparent abgewickelt.",
-    },
-  ];
-
   const serviceSchema = {
     "@context": "https://schema.org",
     "@type": "Service",
-    name: `${siteName}-Händler-Plattform`,
+    name: `${siteName} Projekt-Börse für Küchenstudios`,
     description:
-      "B2B-Plattform für Küchenstudios & Fachhändler: Qualifizierte Küchen-Leads, Reverse-Auktion auf Studio-Preise, digitale Angebotsabwicklung und sichere Vertragsschließung.",
-    provider: {
-      "@type": "Organization",
-      name: siteName,
-      url: BRAND.baseUrl,
-    },
-    areaServed: {
-      "@type": "Place",
-      name: "Deutschland",
-    },
-    serviceType: "B2B Kitchen Lead Marketplace",
+      "B2B-Plattform für Küchenstudios: Kundenprojekte mit Raumfoto, Maßen, KI-Visualisierung und Preisschätzung aus der eigenen Region, Angebotsabgabe im Wettbewerb und Export für Küchenplanungssoftware.",
+    provider: { "@type": "Organization", name: siteName, url: BRAND.baseUrl },
+    areaServed: { "@type": "Place", name: "Deutschland" },
+    serviceType: "B2B Kitchen Project Marketplace",
   };
 
   return (
     <PageLayout
       breadcrumbs={true}
-      title="Für Küchenstudios & Fachhändler — qualifizierte Leads direkt in Ihre Inbox"
-      description="Als geprüftes Partner-Studio erhalten Sie kaufbereite Küchen-Leads aus Ihrer Region. Kostenlose Registrierung, Provision nur bei Erfolg, Reverse-Auktion optional."
-      keywords="Küchenstudio Partner, Küchen Leads, Küchenhändler Lead, Reverse-Auktion Küche, B2B Küchen-Plattform"
+      title="Für Küchenstudios – Kundenprojekte mit Maßen & KI-Visualisierung"
+      description="Als geprüftes Partner-Studio erhalten Sie Küchenprojekte aus Ihrer Region – mit Raumfoto, Maßen, Wunschkonfiguration und Preisschätzung. Angebot abgeben, Zuschlag erhalten, Provision nur bei Erfolg."
+      keywords="Küchenstudio Partner, Küchen Leads, Küchenprojekte, Küchenhändler Kunden gewinnen, Küchen Anfragen, B2B Küchen-Plattform"
       canonicalPath="/haendler"
       structuredData={serviceSchema}
     >
-      {/* Hero Section */}
       <PageHero size="lg">
-        <div className="grid lg:grid-cols-2 gap-12 items-center">
+        <div className="grid items-center gap-12 lg:grid-cols-2">
           <div className="animate-fade-in">
-            <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold mb-6 leading-tight">
-              Kaufbereite Küchen-Leads{" "}
-              <span className="gradient-text">direkt in Ihre Inbox</span>
+            <h1 className="mb-6 text-4xl font-bold leading-tight md:text-5xl lg:text-6xl">
+              Küchenprojekte aus Ihrer Region – <span className="gradient-text">fertig zum Kalkulieren</span>
             </h1>
-            <p className="text-lg md:text-xl text-muted-foreground mb-8 leading-relaxed">
-              Als geprüftes Partner-Studio erhalten Sie vorqualifizierte Anfragen
-              von Kund:innen, die gerade eine neue Küche planen — inkl. Budget,
-              Stil und Zeitrahmen. Provision nur bei Erfolg.
+            <p className="mb-8 text-lg leading-relaxed text-muted-foreground md:text-xl">
+              Kund:innen planen bei {siteName} ihre Küche mit Raumfoto, Maßen und KI-Visualisierung. Sie sehen das Projekt,
+              geben Ihr Angebot ab und gewinnen den Auftrag – Provision nur bei Zuschlag.
             </p>
-            <div className="flex flex-col sm:flex-row gap-4">
-              <Link to="/register/haendler">
-                <Button
-                  size="lg"
-                  className="w-full sm:w-auto gradient-hero hover:gradient-hero-hover shadow-lg hover:shadow-glow"
-                >
-                  Jetzt Händler werden
-                </Button>
-              </Link>
-              <Link to="/kontakt">
-                <Button size="lg" variant="outline" className="w-full sm:w-auto">
-                  Beratung anfordern
-                </Button>
-              </Link>
+            <div className="flex flex-col gap-4 sm:flex-row">
+              <Button asChild size="lg" className="gradient-hero shadow-lg hover:gradient-hero-hover hover:shadow-glow">
+                <Link to="/register/haendler">Kostenlos Partner werden</Link>
+              </Button>
+              <Button asChild size="lg" variant="outline">
+                <Link to="/login/haendler">Zum Studio-Login</Link>
+              </Button>
             </div>
           </div>
 
           <div className="relative animate-fade-in animate-delay-200">
-            <div className="absolute -inset-4 gradient-hero opacity-20 blur-3xl rounded-full" />
+            <div className="gradient-hero absolute -inset-4 rounded-full opacity-20 blur-3xl" />
             <img
-              src={dealerProfessional}
-              alt="Professionelle Küchen-Händler-Partner bei KüchenWert"
-              className="relative rounded-2xl shadow-premium hover-lift"
+              src={studioConsultant}
+              alt="Küchenberaterin in einem Partner-Studio"
+              width={1920}
+              height={1088}
+              className="relative rounded-2xl shadow-premium"
             />
           </div>
         </div>
       </PageHero>
 
-      {/* Stats Section */}
-      <section className="py-20 bg-secondary text-secondary-foreground">
+      <section className="bg-secondary py-20 text-secondary-foreground">
         <div className="container">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
-            {stats.map((stat, index) => (
-              <div
-                key={index}
-                className="text-center animate-fade-in"
-                style={{ animationDelay: `${index * 0.1}s` }}
-              >
-                <div className="text-3xl md:text-4xl font-bold gradient-text mb-2">
-                  {stat.number}
-                </div>
-                <div className="text-sm md:text-base opacity-90">
-                  {stat.label}
-                </div>
+          <div className="grid grid-cols-2 gap-8 md:grid-cols-4">
+            {STATS.map((stat) => (
+              <div key={stat.label} className="text-center">
+                <div className="gradient-text mb-2 text-3xl font-bold md:text-4xl">{stat.number}</div>
+                <div className="text-sm opacity-90 md:text-base">{stat.label}</div>
               </div>
             ))}
           </div>
         </div>
       </section>
 
-      {/* Benefits Section */}
       <section className="py-20">
         <div className="container">
-          <div className="text-center mb-16">
-            <h2 className="text-xl sm:text-2xl md:text-3xl md:text-4xl font-bold mb-4">
-              Ihre Vorteile als Partner
-            </h2>
-            <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-              Profitieren Sie von unserem Lead-Marktplatz und Reverse-Auktion —
-              und steigern Sie Ihren Umsatz bei minimalem Akquise-Aufwand.
+          <div className="mb-16 text-center">
+            <h2 className="mb-4 text-2xl font-bold sm:text-3xl md:text-4xl">Ihre Vorteile als Partner-Studio</h2>
+            <p className="mx-auto max-w-2xl text-lg text-muted-foreground">
+              Weniger Akquise, bessere Anfragen: Sie sehen vor dem ersten Gespräch, was die Kund:in möchte und was der Raum hergibt.
             </p>
           </div>
-
-          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
-            {benefits.map((benefit, index) => (
-              <Card
-                key={index}
-                className="hover-lift border-2 animate-fade-in"
-                style={{ animationDelay: `${index * 0.1}s` }}
-              >
+          <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-4">
+            {BENEFITS.map((benefit) => (
+              <Card key={benefit.title} className="border-2">
                 <CardHeader>
-                  <div className="h-14 w-14 rounded-xl gradient-hero flex items-center justify-center mb-4 shadow-glow-sm">
-                    <benefit.icon className="h-7 w-7 text-primary-foreground" />
+                  <div className="gradient-hero mb-4 flex h-14 w-14 items-center justify-center rounded-xl shadow-glow-sm">
+                    <benefit.icon className="h-7 w-7 text-primary-foreground" aria-hidden="true" />
                   </div>
                   <CardTitle className="text-xl">{benefit.title}</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <CardDescription className="text-base">
-                    {benefit.description}
-                  </CardDescription>
+                  <CardDescription className="text-base">{benefit.description}</CardDescription>
                 </CardContent>
               </Card>
             ))}
@@ -259,36 +191,24 @@ const Haendler = () => {
         </div>
       </section>
 
-      {/* Services Section */}
-      <section className="py-20 bg-muted/30">
+      <section className="bg-muted/30 py-20">
         <div className="container">
-          <div className="text-center mb-16">
-            <h2 className="text-xl sm:text-2xl md:text-3xl md:text-4xl font-bold mb-4">
-              Unsere Partner-Services
-            </h2>
-            <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-              Alles, was Ihr Küchenstudio für effiziente Lead-Bearbeitung braucht.
-            </p>
+          <div className="mb-16 text-center">
+            <h2 className="mb-4 text-2xl font-bold sm:text-3xl md:text-4xl">Ihr Studio-Portal</h2>
+            <p className="mx-auto max-w-2xl text-lg text-muted-foreground">Alles, was Sie brauchen, um aus Projekten Aufträge zu machen.</p>
           </div>
-
-          <div className="grid md:grid-cols-2 gap-8">
-            {services.map((service, index) => (
-              <Card
-                key={index}
-                className="hover-lift-sm animate-fade-in"
-                style={{ animationDelay: `${index * 0.1}s` }}
-              >
+          <div className="grid gap-8 md:grid-cols-2">
+            {SERVICES.map((service) => (
+              <Card key={service.title}>
                 <CardHeader>
                   <CardTitle className="text-2xl">{service.title}</CardTitle>
-                  <CardDescription className="text-base">
-                    {service.description}
-                  </CardDescription>
+                  <CardDescription className="text-base">{service.description}</CardDescription>
                 </CardHeader>
                 <CardContent>
                   <ul className="space-y-3">
-                    {service.features.map((feature, idx) => (
-                      <li key={idx} className="flex items-center gap-3">
-                        <CheckCircle2 className="h-5 w-5 text-primary flex-shrink-0" />
+                    {service.features.map((feature) => (
+                      <li key={feature} className="flex items-center gap-3">
+                        <CheckCircle2 className="h-5 w-5 flex-shrink-0 text-primary" aria-hidden="true" />
                         <span className="text-sm">{feature}</span>
                       </li>
                     ))}
@@ -300,215 +220,120 @@ const Haendler = () => {
         </div>
       </section>
 
-      {/* How It Works */}
       <section className="py-20">
         <div className="container">
-          <div className="text-center mb-16">
-            <h2 className="text-xl sm:text-2xl md:text-3xl md:text-4xl font-bold mb-4">
-              In 4 Schritten zum ersten Auftrag
-            </h2>
-            <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-              So einfach gewinnen Sie neue Kund:innen über {siteName}.
-            </p>
+          <div className="mb-16 text-center">
+            <h2 className="mb-4 text-2xl font-bold sm:text-3xl md:text-4xl">In 4 Schritten zum ersten Auftrag</h2>
+            <p className="mx-auto max-w-2xl text-lg text-muted-foreground">So gewinnen Sie neue Kund:innen über {siteName}.</p>
           </div>
-
-          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
-            {process.map((item, index) => (
-              <div
-                key={index}
-                className="relative animate-fade-in"
-                style={{ animationDelay: `${index * 0.15}s` }}
-              >
-                <div className="text-center">
-                  <div className="inline-flex h-20 w-20 items-center justify-center rounded-full gradient-hero text-white text-3xl font-bold mb-6 shadow-lg">
-                    {item.step}
-                  </div>
-                  <h3 className="text-xl font-bold mb-3">{item.title}</h3>
-                  <p className="text-muted-foreground leading-relaxed">
-                    {item.description}
-                  </p>
+          <ol className="grid gap-8 md:grid-cols-2 lg:grid-cols-4">
+            {PROCESS.map((item) => (
+              <li key={item.step} className="text-center">
+                <div className="gradient-hero mb-6 inline-flex h-20 w-20 items-center justify-center rounded-full text-3xl font-bold text-white shadow-lg">
+                  {item.step}
                 </div>
-              </div>
+                <h3 className="mb-3 text-xl font-bold">{item.title}</h3>
+                <p className="leading-relaxed text-muted-foreground">{item.description}</p>
+              </li>
             ))}
-          </div>
+          </ol>
         </div>
       </section>
 
-      {/* Why Partner With Us */}
-      <section className="py-20 bg-secondary text-secondary-foreground">
+      <section className="bg-secondary py-20 text-secondary-foreground">
         <div className="container">
-          <div className="max-w-4xl mx-auto">
-            <div className="text-center mb-12">
-              <h2 className="text-xl sm:text-2xl md:text-3xl md:text-4xl font-bold mb-4">
-                Warum {siteName}-Partner werden?
-              </h2>
+          <div className="mx-auto grid max-w-5xl gap-10 md:grid-cols-2 md:items-center">
+            <div>
+              <h2 className="mb-4 text-2xl font-bold sm:text-3xl md:text-4xl">Warum {siteName}-Partner werden?</h2>
               <p className="text-lg opacity-90">
-                Ihr direkter Draht zu kaufbereiten Kund:innen — ohne Werbebudget-Verbrennung.
+                Ihr direkter Draht zu Menschen, die konkret eine neue Küche planen – ohne Werbebudget, ohne Kaltakquise.
               </p>
+              <div className="mt-6 grid gap-3 text-sm">
+                <p className="flex items-start gap-2">
+                  <BellRing className="mt-0.5 h-5 w-5 flex-none text-primary" aria-hidden="true" />
+                  Sofort informiert, wenn ein Projekt in Ihrer Region startet.
+                </p>
+                <p className="flex items-start gap-2">
+                  <KeyRound className="mt-0.5 h-5 w-5 flex-none text-primary" aria-hidden="true" />
+                  Höchstens drei Studios pro Projekt können den Kontakt vorab freischalten.
+                </p>
+                <p className="flex items-start gap-2">
+                  <FileDown className="mt-0.5 h-5 w-5 flex-none text-primary" aria-hidden="true" />
+                  Maße und Grundriss direkt in Ihre Planungssoftware übernehmen.
+                </p>
+              </div>
             </div>
-
-            <div className="grid md:grid-cols-3 gap-8 mb-12">
-              {[
-                {
-                  icon: Inbox,
-                  title: "Stetig neue Leads",
-                  description:
-                    "Täglich kommen neue Küchen-Anfragen von kaufbereiten Kund:innen in Ihre Inbox — gefiltert nach Ihrer Region.",
-                },
-                {
-                  icon: Target,
-                  title: "Vorqualifizierte Anfragen",
-                  description:
-                    "Jeder Lead enthält Budget, Stil, Wohnsituation und Zeitrahmen — bereits vom KüchenWert-Team auf Ernsthaftigkeit geprüft.",
-                },
-                {
-                  icon: Handshake,
-                  title: "Faire Konditionen",
-                  description:
-                    "Transparente Provision nur bei erfolgreichem Kauf. Keine monatlichen Gebühren, keine Mindestabnahmen.",
-                },
-              ].map((item, index) => (
-                <Card
-                  key={index}
-                  className="text-center border-primary/20 animate-fade-in"
-                  style={{ animationDelay: `${index * 0.1}s` }}
-                >
-                  <CardHeader>
-                    <div className="h-14 w-14 rounded-xl gradient-hero flex items-center justify-center mb-3 shadow-glow-sm mx-auto">
-                      <item.icon className="h-7 w-7 text-primary-foreground" />
-                    </div>
-                    <CardTitle className="text-lg">{item.title}</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <CardDescription className="text-base">
-                      {item.description}
-                    </CardDescription>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-
             <Card className="border-primary/20">
               <CardHeader>
                 <CardTitle className="text-2xl">Das bieten wir Ihnen</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div className="flex items-start gap-3">
-                  <CheckCircle2 className="h-6 w-6 text-primary flex-shrink-0 mt-0.5" />
-                  <p className="text-base">
-                    Push-Benachrichtigungen bei neuen Leads in Ihrer Region —
-                    Sie verpassen kein Angebot
-                  </p>
-                </div>
-                <div className="flex items-start gap-3">
-                  <CheckCircle2 className="h-6 w-6 text-primary flex-shrink-0 mt-0.5" />
-                  <p className="text-base">
-                    Echtzeit-Benachrichtigungen wenn Sie in einer Reverse-Auktion
-                    überboten werden
-                  </p>
-                </div>
-                <div className="flex items-start gap-3">
-                  <CheckCircle2 className="h-6 w-6 text-primary flex-shrink-0 mt-0.5" />
-                  <p className="text-base">
-                    Vertrag und Rechnung automatisch bei Zuschlag
-                  </p>
-                </div>
-                <div className="flex items-start gap-3">
-                  <CheckCircle2 className="h-6 w-6 text-primary flex-shrink-0 mt-0.5" />
-                  <p className="text-base">
-                    Provision nur bei erfolgreichem Küchenkauf — keine laufenden Kosten
-                  </p>
-                </div>
+                {EXTRAS.map((text) => (
+                  <div key={text} className="flex items-start gap-3">
+                    <CheckCircle2 className="mt-0.5 h-6 w-6 flex-shrink-0 text-primary" aria-hidden="true" />
+                    <p className="text-base">{text}</p>
+                  </div>
+                ))}
               </CardContent>
             </Card>
           </div>
         </div>
       </section>
 
-      {/* SEO Content */}
       <section className="py-20">
         <div className="container">
-          <div className="max-w-4xl mx-auto prose prose-lg">
-            <h2 className="text-xl sm:text-2xl md:text-3xl font-bold mb-6">
-              Häufige Fragen von Küchenstudios &amp; Fachhändlern
-            </h2>
+          <div className="prose prose-lg mx-auto max-w-4xl">
+            <h2 className="mb-6 text-2xl font-bold sm:text-3xl">Häufige Fragen von Küchenstudios</h2>
 
-            <h3 className="text-2xl font-bold mt-8 mb-4">
-              Für wen ist die Plattform geeignet?
-            </h3>
-            <p className="text-muted-foreground leading-relaxed mb-6">
-              Unsere Lead-Plattform richtet sich an Küchenstudios,
-              Küchen-Fachgeschäfte, Möbelhäuser mit Küchenabteilung sowie
-              freie Küchenmonteure und Schreinereien, die ihre Auftragsbücher
-              über qualifizierte Endkunden-Leads füllen möchten.
-              Egal ob Sie regelmäßig oder gelegentlich Leads annehmen —
-              Sie zahlen nur bei erfolgreichem Kauf.
+            <h3 className="mb-4 mt-8 text-2xl font-bold">Für wen ist die Plattform geeignet?</h3>
+            <p className="mb-6 leading-relaxed text-muted-foreground">
+              Für Küchenstudios, Küchen-Fachgeschäfte, Möbelhäuser mit Küchenabteilung sowie Schreinereien, die neue Küchen planen,
+              liefern und montieren. Sie entscheiden bei jedem Projekt selbst, ob Sie ein Angebot abgeben.
             </p>
 
-            <h3 className="text-2xl font-bold mt-8 mb-4">
-              Wie funktioniert der Lead-Prozess?
-            </h3>
-            <p className="text-muted-foreground leading-relaxed mb-6">
-              Jeder Küchen-Lead, der in Ihre Region passt, erscheint in Ihrer
-              Inbox. Sie sehen alle relevanten Details (Stil, Form, Budget,
-              Wohnsituation, Zeitrahmen, Beispielbilder) und können direkt ein
-              Angebot oder einen Beratungstermin anbieten. Bei einer
-              Reverse-Auktion (Funnel B) bieten mehrere Studios — die Kund:in
-              wählt das beste Angebot. Bei Zuschlag erhalten Sie automatisch
-              Vertrag und Rechnung.
+            <h3 className="mb-4 mt-8 text-2xl font-bold">Wie läuft ein Projekt ab?</h3>
+            <p className="mb-6 leading-relaxed text-muted-foreground">
+              Sobald eine Kund:in ihr Projekt absendet, erscheint es anonymisiert in der Projekt-Börse aller Studios, deren
+              Einzugsgebiet die PLZ abdeckt. Sie sehen Maße, Grundriss, Konfiguration, Raumfoto und Visualisierung und geben Ihr
+              Angebot ab. Die Angebotsphase dauert 7 Tage, beim Unterbieten eines vorhandenen Angebots 72 Stunden. Danach wählt die
+              Kund:in – mit dem Zuschlag erhalten Sie alle Kontaktdaten.
             </p>
 
-            <h3 className="text-2xl font-bold mt-8 mb-4">
-              Was kostet die Teilnahme?
-            </h3>
-            <p className="text-muted-foreground leading-relaxed mb-6">
-              Die Registrierung ist kostenlos. Es fällt nur eine Provision an,
-              wenn Sie einen Lead erfolgreich in einen Küchen-Kauf überführen
-              — also nur bei tatsächlich zustande gekommenem Auftrag. Keine
-              monatlichen Gebühren, keine Mindestabnahmen. Die Provisionsstaffel
-              ist transparent in Ihrem Partner-Dashboard einsehbar.
+            <h3 className="mb-4 mt-8 text-2xl font-bold">Was kostet die Teilnahme?</h3>
+            <p className="mb-6 leading-relaxed text-muted-foreground">
+              Registrierung, Projekt-Börse und Angebotsabgabe sind kostenlos. Kosten entstehen nur in zwei Fällen: wenn Sie freiwillig
+              einen Kontakt vorab freischalten (Preis je nach Projektwert, vor dem Kauf angezeigt) und als Provision, wenn die Kund:in
+              Ihr Angebot annimmt. Die Provision ist nach Auftragswert gestaffelt und in Ihrem Dashboard einsehbar.
+            </p>
+
+            <h3 className="mb-4 mt-8 text-2xl font-bold">Kann ich Projekte in meine Planungssoftware übernehmen?</h3>
+            <p className="mb-6 leading-relaxed text-muted-foreground">
+              Ja. Jedes Projekt lässt sich als Planungsbriefing (JSON) und als Grundriss im DXF-Format exportieren. DXF lesen CARAT,
+              Winner Flex, KPS, pCon.planner und jedes gängige CAD-Programm – Maße müssen nicht abgetippt werden.
             </p>
           </div>
         </div>
       </section>
 
-      {/* Related Content for Internal Linking */}
       <RelatedContent
-        title="Weitere Informationen für Küchen-Händler"
-        description="Alles was Sie für eine erfolgreiche Partnerschaft wissen müssen"
+        title="Weitere Informationen für Küchenstudios"
+        description="Alles, was Sie für eine erfolgreiche Partnerschaft wissen müssen"
         links={haendlerRelatedLinks}
       />
 
-      {/* CTA Section */}
-      <section
-        id="partner-werden"
-        className="py-20 bg-gradient-to-br from-primary via-primary-light to-primary text-primary-foreground"
-      >
+      <section id="partner-werden" className="bg-gradient-to-br from-primary via-primary-light to-primary py-20 text-primary-foreground">
         <div className="container">
-          <div className="max-w-3xl mx-auto text-center">
-            <h2 className="text-xl sm:text-2xl md:text-3xl md:text-4xl font-bold mb-6">
-              Jetzt kostenlos registrieren
-            </h2>
-            <p className="text-xl mb-8 opacity-95">
-              Erhalten Sie ab sofort qualifizierte Küchen-Leads direkt in Ihre
-              Inbox — Registrierung in 2 Minuten.
-            </p>
-            <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <Link to="/register/haendler">
-                <Button size="lg" variant="secondary" className="w-full sm:w-auto">
-                  Jetzt registrieren
-                </Button>
-              </Link>
+          <div className="mx-auto max-w-3xl text-center">
+            <h2 className="mb-6 text-2xl font-bold sm:text-3xl md:text-4xl">Jetzt kostenlos registrieren</h2>
+            <p className="mb-8 text-xl opacity-95">Registrierung in 2 Minuten – nach der Freischaltung sehen Sie sofort alle Projekte in Ihrer Region.</p>
+            <div className="flex flex-col justify-center gap-4 sm:flex-row">
+              <Button asChild size="lg" variant="secondary">
+                <Link to="/register/haendler">Jetzt registrieren</Link>
+              </Button>
               {settings?.support_phone && (
-                <a href={`tel:${settings.support_phone.replace(/\s/g, "")}`}>
-                  <Button
-                    size="lg"
-                    variant="outline"
-                    className="w-full sm:w-auto bg-white/10 border-white/30 hover:bg-white/20 text-white"
-                  >
-                    Beratung anfordern
-                  </Button>
-                </a>
+                <Button asChild size="lg" variant="outline" className="border-white/30 bg-white/10 text-white hover:bg-white/20">
+                  <a href={`tel:${settings.support_phone.replace(/\s/g, "")}`}>Beratung anfordern</a>
+                </Button>
               )}
             </div>
           </div>

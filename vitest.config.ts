@@ -14,6 +14,10 @@ export default defineConfig({
     globals: true,
     environment: 'jsdom',
     setupFiles: ['./src/test/setup.ts'],
+    // Playwright-Specs (tests/e2e) laufen über `npm run test:e2e`; src/app ist
+    // ein nicht versionierter Rest des alten Next.js-Projekts.
+    include: ['src/**/*.{test,spec}.{ts,tsx}'],
+    exclude: ['node_modules/**', 'dist/**', 'src/app/**'],
     css: true,
     coverage: {
       reporter: ['text', 'json', 'html'],

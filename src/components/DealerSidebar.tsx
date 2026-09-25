@@ -1,25 +1,18 @@
 import { NavLink, useNavigate } from "react-router-dom";
 import {
   LayoutDashboard,
-  Package,
-  Gavel,
   LogOut,
   Home,
-  Zap,
-  Calendar,
   MessageSquare,
   FileText,
-  FileCheck,
   User,
   Settings,
   Lock,
-  Heart,
-  AlertTriangle,
-  Search,
-  ShoppingBag,
   ClipboardList,
   HandCoins,
   PlusCircle,
+  Briefcase,
+  MapPinned,
 } from "lucide-react";
 import {
   Sidebar,
@@ -56,39 +49,14 @@ function useDealerBadges() {
       const sessionValid = await ensureValidRLSSession();
       if (!sessionValid) return null;
 
-      const [
-        activeAuctionsRes,
-        notificationsRes,
-        messagesRes,
-        appointmentsRes,
-        claimsRes,
-      ] = await Promise.all([
-        // Aktive Auktionen (Gesamtzahl)
-        // P4-Hardening: select() braucht die Spalten aus .eq()/.gt(), sonst
-        // verliert Supabase die Type-Information. '*' geht nicht, weil das
-        // Tabellen-SELECT auf public.auctions für authenticated revoked ist.
-        supabase
-          .from('auctions')
-          .select('id, status, end_time', { count: 'exact', head: true })
-          .eq('status', 'active')
-          .gt('end_time', new Date().toISOString()),
-        // Ungelesene Benachrichtigungen
-        supabase.from('dealer_notifications').select('*', { count: 'exact', head: true }).eq('user_id', user.id).eq('is_read', false),
-        // Offene Support-Nachrichten mit Admin-Antwort (neue Antworten)
-        supabase.from('support_messages').select('*', { count: 'exact', head: true }).eq('user_id', user.id).not('admin_response', 'is', null).or('status.eq.open,status.is.null'),
-        // Anstehende Termine: appointments-Tabelle hat kein buyer_id;
-        // Dealer-Termine werden separat geladen wenn die MyAppointments-Seite aufgerufen wird
-        Promise.resolve({ count: 0, error: null } as { count: number | null; error: null }),
-        // Offene Reklamationen mit Status-Update
-        supabase.from('claims').select('*', { count: 'exact', head: true }).eq('dealer_id', user.id).or('status.eq.submitted,status.eq.in_review'),
+      const [notificationsRes, messagesRes] = await Promise.all([
+        supabase.from('dealer_notifications').select('id', { count: 'exact', head: true }).eq('user_id', user.id).eq('is_read', false),
+        supabase.from('support_messages').select('id', { count: 'exact', head: true }).eq('user_id', user.id).not('admin_response', 'is', null).or('status.eq.open,status.is.null'),
       ]);
 
       return {
-        activeAuctions: activeAuctionsRes.count ?? 0,
         notifications: notificationsRes.count ?? 0,
         messages: messagesRes.count ?? 0,
-        appointments: appointmentsRes.count ?? 0,
-        claims: claimsRes.count ?? 0,
       };
     },
     enabled: !!user?.id,
@@ -123,22 +91,18 @@ const menuGroups: MenuGroup[] = [
     label: "Übersicht",
     items: [
       { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard, allowWhenLocked: true },
-      { title: "Marktplatz", url: "/kaufen", icon: ShoppingBag, allowWhenLocked: true, highlight: true },
     ],
   },
   {
-    label: "Kaufen",
+    label: "Kundenprojekte",
     items: [
-      { title: "Aktive Auktionen", url: "/dashboard/auctions", icon: Gavel, showCountBadge: true, badgeKey: "activeAuctions" },
-      { title: "Inventar", url: "/dashboard/inventory", icon: Package },
-      { title: "Meine Gebote", url: "/dashboard/bids", icon: HandCoins },
-      { title: "Meine Favoriten", url: "/dashboard/favorites", icon: Heart },
-      { title: "Kaufchancen", url: "/dashboard/kaufchancen", icon: Zap },
-      { title: "Suchaufträge", url: "/dashboard/search-alerts", icon: Search },
+      { title: "Projekt-Börse", url: "/dashboard/projekte", icon: Briefcase, highlight: true },
+      { title: "Meine Angebote & Kunden", url: "/dashboard/projekte?tab=mine", icon: HandCoins },
+      { title: "Einzugsgebiet", url: "/dashboard/projekte/einstellungen", icon: MapPinned },
     ],
   },
   {
-    label: "Verkaufen",
+    label: "Ausstellungsküchen",
     items: [
       { title: "Meine Inserate", url: "/dashboard/listings", icon: ClipboardList },
       { title: "Küche inserieren", url: "/dashboard/listings/new", icon: PlusCircle },
@@ -147,11 +111,8 @@ const menuGroups: MenuGroup[] = [
   {
     label: "Konto",
     items: [
-      { title: "Meine Termine", url: "/dashboard/appointments", icon: Calendar, badgeKey: "appointments" },
       { title: "Nachrichten", url: "/dashboard/messages", icon: MessageSquare, badgeKey: "messages" },
-      { title: "Kaufverträge", url: "/dashboard/contracts", icon: FileCheck },
       { title: "Rechnungen", url: "/dashboard/invoices", icon: FileText },
-      { title: "Reklamationen", url: "/dashboard/claims", icon: AlertTriangle, badgeKey: "claims" },
       { title: "Profil", url: "/dashboard/profile", icon: User, allowWhenLocked: true },
       { title: "Einstellungen", url: "/dashboard/settings", icon: Settings, allowWhenLocked: true },
     ],
@@ -193,11 +154,8 @@ export function DealerSidebar() {
   };
 
   const badgeCounts: Record<string, number> = {
-    activeAuctions: badges?.activeAuctions || 0,
     notifications: badges?.notifications || 0,
     messages: badges?.messages || 0,
-    appointments: badges?.appointments || 0,
-    claims: badges?.claims || 0,
   };
 
   const handleSignOut = async () => {

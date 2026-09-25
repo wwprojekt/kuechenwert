@@ -23,17 +23,14 @@ const SUPABASE_ANON_KEY =
   import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY ||
   'sb_publishable_y310eCMmlhSjvXbOKDgY1Q_p2v56GAz';
 
+// Keine unbekannten Auth-Optionen ergänzen (z. B. `lockAcquireTimeout`):
+// supabase-js reicht nur typisierte Felder an den Auth-Client durch, und ein
+// Excess-Property-Fehler hier lässt den gesamten Client seine Database-Typen
+// verlieren.
 export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_ANON_KEY, {
   auth: {
     storage: localStorage,
     persistSession: true,
     autoRefreshToken: true,
-    // Timeout für Lock-Erwerb auf 10 Sekunden setzen.
-    // Erhöht von 5s auf 10s um Lock-Steal-Konflikte zu reduzieren,
-    // die bei parallelen Auth-Operationen (z.B. getSession + onAuthStateChange)
-    // auftreten können. Bei Timeout wird vom SDK (v2.100+) ein sauberer
-    // Steal-Fallback mit Cascade-Schutz ausgeführt.
-    // Bekannte Supabase-Issues: #2013, #1594, #2111
-    lockAcquireTimeout: 10000,
   }
 });

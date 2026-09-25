@@ -9,6 +9,8 @@
     "build:no-optimize": "vite build",
     "build:dev": "vite build --mode development",
     "lint": "eslint .",
+    "typecheck": "node scripts/typecheck-strict.mjs",
+    "typecheck:all": "tsc -p tsconfig.app.json --noEmit",
     "preview": "vite preview",
     "test": "vitest",
     "test:run": "vitest run",

@@ -1,0 +1,24 @@
+{
+  "extends": "./tsconfig.app.json",
+  "compilerOptions": {
+    "strict": true,
+    "noImplicitAny": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "noFallthroughCasesInSwitch": true,
+    "noEmit": true
+  },
+  "include": [
+    "src/vite-env.d.ts",
+    "src/features/**/*",
+    "src/pages/projekt/**/*",
+    "src/pages/funnel/FunnelC.tsx",
+    "src/pages/dealer/DealerHome.tsx",
+    "src/pages/dealer/DealerProjects.tsx",
+    "src/pages/dealer/DealerProjectDetail.tsx",
+    "src/pages/dealer/DealerMarketSettings.tsx",
+    "supabase/functions/_shared/kitchen-catalog.ts",
+    "supabase/functions/_shared/kitchen-pricing.ts",
+    "supabase/functions/_shared/kitchen-prompt.ts"
+  ]
+}

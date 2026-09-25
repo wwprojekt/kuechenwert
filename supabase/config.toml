@@ -279,3 +279,13 @@ verify_jwt = false
 
 [functions.kw-planner-submit-lead]
 verify_jwt = false
+
+# --- Marktplatz / Traumküche v2 (eigene Auth: Session-Token, Projekt-Token, Cron-Secret) ---
+[functions.kw-planner]
+verify_jwt = false
+
+[functions.kw-project]
+verify_jwt = false
+
+[functions.kw-market-worker]
+verify_jwt = false

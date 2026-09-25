@@ -2,7 +2,9 @@ import { supabase } from "@/integrations/supabase/client";
 import { getTrackingData } from "@/lib/clickIdService";
 
 /**
- * Bestätigungsmail + serverseitiges Conversion-Tracking (GA4/Ads Click-IDs).
+ * Serverseitiges Conversion-Tracking (GA4/Ads Click-IDs) für Funnel-Leads.
+ * Die Bestätigungsmail mit Projektlink verschickt der Marktplatz-Worker
+ * (kw-market-worker, Event project_created), daher skipUserEmail.
  * Fire-and-forget: ein Fehlschlag darf den Funnel-Dankeschön-Schritt nicht blockieren.
  */
 export function notifyKitchenFunnelLead(opts: {
@@ -36,6 +38,7 @@ export function notifyKitchenFunnelLead(opts: {
         wbraid: tracking.wbraid || undefined,
         ga4ClientId: tracking.ga4ClientId || undefined,
         transactionId: opts.transactionId,
+        skipUserEmail: true,
       },
     })
     .catch((err) => {

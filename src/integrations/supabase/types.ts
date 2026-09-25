@@ -506,13 +506,6 @@ export type Database = {
             referencedRelation: "auctions"
             referencedColumns: ["id"]
           },
-          {
-            foreignKeyName: "auction_addenda_auction_id_fkey"
-            columns: ["auction_id"]
-            isOneToOne: false
-            referencedRelation: "auctions_public"
-            referencedColumns: ["id"]
-          },
         ]
       }
       auctions: {
@@ -683,13 +676,6 @@ export type Database = {
             columns: ["auction_id"]
             isOneToOne: false
             referencedRelation: "auctions"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "bids_auction_id_fkey"
-            columns: ["auction_id"]
-            isOneToOne: false
-            referencedRelation: "auctions_public"
             referencedColumns: ["id"]
           },
           {
@@ -1259,13 +1245,6 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "claims_auction_id_fkey"
-            columns: ["auction_id"]
-            isOneToOne: false
-            referencedRelation: "auctions_public"
-            referencedColumns: ["id"]
-          },
-          {
             foreignKeyName: "claims_dealer_id_fkey"
             columns: ["dealer_id"]
             isOneToOne: false
@@ -1327,13 +1306,6 @@ export type Database = {
             columns: ["auction_id"]
             isOneToOne: false
             referencedRelation: "auctions"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "commission_calculations_auction_id_fkey"
-            columns: ["auction_id"]
-            isOneToOne: false
-            referencedRelation: "auctions_public"
             referencedColumns: ["id"]
           },
           {
@@ -1818,6 +1790,7 @@ export type Database = {
           created_at: string
           id: string
           is_read: boolean
+          lead_auction_id: string | null
           link: string | null
           message: string
           title: string
@@ -1829,6 +1802,7 @@ export type Database = {
           created_at?: string
           id?: string
           is_read?: boolean
+          lead_auction_id?: string | null
           link?: string | null
           message: string
           title: string
@@ -1840,6 +1814,7 @@ export type Database = {
           created_at?: string
           id?: string
           is_read?: boolean
+          lead_auction_id?: string | null
           link?: string | null
           message?: string
           title?: string
@@ -1855,10 +1830,10 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "dealer_notifications_auction_id_fkey"
-            columns: ["auction_id"]
+            foreignKeyName: "dealer_notifications_lead_auction_id_fkey"
+            columns: ["lead_auction_id"]
             isOneToOne: false
-            referencedRelation: "auctions_public"
+            referencedRelation: "lead_auctions"
             referencedColumns: ["id"]
           },
         ]
@@ -2037,13 +2012,6 @@ export type Database = {
             columns: ["auction_id"]
             isOneToOne: false
             referencedRelation: "auctions"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "dealer_reviews_auction_id_fkey"
-            columns: ["auction_id"]
-            isOneToOne: false
-            referencedRelation: "auctions_public"
             referencedColumns: ["id"]
           },
           {
@@ -2533,6 +2501,8 @@ export type Database = {
           invoice_number: string
           invoice_type: string
           kitchen_id: string | null
+          lead_auction_id: string | null
+          lead_id: string | null
           net_amount: number
           notes: string | null
           paid_at: string | null
@@ -2566,6 +2536,8 @@ export type Database = {
           invoice_number: string
           invoice_type?: string
           kitchen_id?: string | null
+          lead_auction_id?: string | null
+          lead_id?: string | null
           net_amount: number
           notes?: string | null
           paid_at?: string | null
@@ -2599,6 +2571,8 @@ export type Database = {
           invoice_number?: string
           invoice_type?: string
           kitchen_id?: string | null
+          lead_auction_id?: string | null
+          lead_id?: string | null
           net_amount?: number
           notes?: string | null
           paid_at?: string | null
@@ -2627,13 +2601,6 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "invoices_auction_id_fkey"
-            columns: ["auction_id"]
-            isOneToOne: false
-            referencedRelation: "auctions_public"
-            referencedColumns: ["id"]
-          },
-          {
             foreignKeyName: "invoices_dealer_id_fkey"
             columns: ["dealer_id"]
             isOneToOne: false
@@ -2645,6 +2612,20 @@ export type Database = {
             columns: ["kitchen_id"]
             isOneToOne: false
             referencedRelation: "kitchens"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "invoices_lead_auction_id_fkey"
+            columns: ["lead_auction_id"]
+            isOneToOne: false
+            referencedRelation: "lead_auctions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "invoices_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "leads"
             referencedColumns: ["id"]
           },
         ]
@@ -2680,13 +2661,6 @@ export type Database = {
             columns: ["auction_id"]
             isOneToOne: false
             referencedRelation: "auctions"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "kaufchance_invitations_auction_id_fkey"
-            columns: ["auction_id"]
-            isOneToOne: false
-            referencedRelation: "auctions_public"
             referencedColumns: ["id"]
           },
         ]
@@ -2779,6 +2753,44 @@ export type Database = {
           worktop_tier?: Database["public"]["Enums"]["worktop_tier_enum"]
         }
         Relationships: []
+      }
+      kitchen_pricing_rate_cards: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          id: string
+          is_active: boolean
+          notes: string | null
+          overrides: Json
+          version: number
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          is_active?: boolean
+          notes?: string | null
+          overrides?: Json
+          version: number
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          is_active?: boolean
+          notes?: string | null
+          overrides?: Json
+          version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "kitchen_pricing_rate_cards_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       kitchen_questions: {
         Row: {
@@ -3168,6 +3180,172 @@ export type Database = {
           },
         ]
       }
+      kw_dealer_market_profiles: {
+        Row: {
+          dealer_id: string
+          min_project_value_eur: number | null
+          notify_new_projects: boolean
+          offer_intro: string | null
+          service_postal_code: string | null
+          service_radius_km: number
+          updated_at: string
+        }
+        Insert: {
+          dealer_id: string
+          min_project_value_eur?: number | null
+          notify_new_projects?: boolean
+          offer_intro?: string | null
+          service_postal_code?: string | null
+          service_radius_km?: number
+          updated_at?: string
+        }
+        Update: {
+          dealer_id?: string
+          min_project_value_eur?: number | null
+          notify_new_projects?: boolean
+          offer_intro?: string | null
+          service_postal_code?: string | null
+          service_radius_km?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "kw_dealer_market_profiles_dealer_id_fkey"
+            columns: ["dealer_id"]
+            isOneToOne: true
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      kw_marketplace_settings: {
+        Row: {
+          auto_publish_funnel_a: boolean
+          auto_publish_funnel_c: boolean
+          bid_visibility: string
+          contact_price_fallback_cents: number
+          decision_window_days: number
+          default_service_radius_km: number
+          id: boolean
+          max_contact_purchases: number
+          min_offer_ratio: number
+          tender_duration_hours: number
+          updated_at: string
+        }
+        Insert: {
+          auto_publish_funnel_a?: boolean
+          auto_publish_funnel_c?: boolean
+          bid_visibility?: string
+          contact_price_fallback_cents?: number
+          decision_window_days?: number
+          default_service_radius_km?: number
+          id?: boolean
+          max_contact_purchases?: number
+          min_offer_ratio?: number
+          tender_duration_hours?: number
+          updated_at?: string
+        }
+        Update: {
+          auto_publish_funnel_a?: boolean
+          auto_publish_funnel_c?: boolean
+          bid_visibility?: string
+          contact_price_fallback_cents?: number
+          decision_window_days?: number
+          default_service_radius_km?: number
+          id?: boolean
+          max_contact_purchases?: number
+          min_offer_ratio?: number
+          tender_duration_hours?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      kw_outbox: {
+        Row: {
+          attempts: number
+          available_at: string
+          created_at: string
+          event_type: string
+          id: number
+          last_error: string | null
+          payload: Json
+          processed_at: string | null
+        }
+        Insert: {
+          attempts?: number
+          available_at?: string
+          created_at?: string
+          event_type: string
+          id?: never
+          last_error?: string | null
+          payload?: Json
+          processed_at?: string | null
+        }
+        Update: {
+          attempts?: number
+          available_at?: string
+          created_at?: string
+          event_type?: string
+          id?: never
+          last_error?: string | null
+          payload?: Json
+          processed_at?: string | null
+        }
+        Relationships: []
+      }
+      kw_plz3_centroids: {
+        Row: {
+          lat: number
+          lng: number
+          plz3: string
+        }
+        Insert: {
+          lat: number
+          lng: number
+          plz3: string
+        }
+        Update: {
+          lat?: number
+          lng?: number
+          plz3?: string
+        }
+        Relationships: []
+      }
+      lead_access_tokens: {
+        Row: {
+          created_at: string
+          id: string
+          last_used_at: string | null
+          lead_id: string
+          revoked_at: string | null
+          token_hash: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          last_used_at?: string | null
+          lead_id: string
+          revoked_at?: string | null
+          token_hash: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          last_used_at?: string | null
+          lead_id?: string
+          revoked_at?: string | null
+          token_hash?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lead_access_tokens_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       lead_auction_spec_items: {
         Row: {
           auction_id: string
@@ -3226,16 +3404,27 @@ export type Database = {
       }
       lead_auctions: {
         Row: {
+          bid_visibility: string
+          cancelled_reason: string | null
+          contact_price_cents: number | null
           created_at: string
+          decided_at: string | null
+          decision_deadline_at: string | null
           duration_hours: number
           ends_at: string | null
+          estimate_max_eur: number | null
+          estimate_min_eur: number | null
           id: string
           is_published: boolean
           lead_id: string
+          max_contact_purchases: number
           min_bid_eur: number | null
           offer_price_eur: number | null
           penalty_state: string
+          planner_session_id: string | null
+          public_summary: Json
           published_at: string | null
+          reference_price_eur: number | null
           spec_sheet: Json | null
           starts_at: string | null
           status: string
@@ -3243,16 +3432,27 @@ export type Database = {
           won_bid_id: string | null
         }
         Insert: {
+          bid_visibility?: string
+          cancelled_reason?: string | null
+          contact_price_cents?: number | null
           created_at?: string
+          decided_at?: string | null
+          decision_deadline_at?: string | null
           duration_hours?: number
           ends_at?: string | null
+          estimate_max_eur?: number | null
+          estimate_min_eur?: number | null
           id?: string
           is_published?: boolean
           lead_id: string
+          max_contact_purchases?: number
           min_bid_eur?: number | null
           offer_price_eur?: number | null
           penalty_state?: string
+          planner_session_id?: string | null
+          public_summary?: Json
           published_at?: string | null
+          reference_price_eur?: number | null
           spec_sheet?: Json | null
           starts_at?: string | null
           status?: string
@@ -3260,16 +3460,27 @@ export type Database = {
           won_bid_id?: string | null
         }
         Update: {
+          bid_visibility?: string
+          cancelled_reason?: string | null
+          contact_price_cents?: number | null
           created_at?: string
+          decided_at?: string | null
+          decision_deadline_at?: string | null
           duration_hours?: number
           ends_at?: string | null
+          estimate_max_eur?: number | null
+          estimate_min_eur?: number | null
           id?: string
           is_published?: boolean
           lead_id?: string
+          max_contact_purchases?: number
           min_bid_eur?: number | null
           offer_price_eur?: number | null
           penalty_state?: string
+          planner_session_id?: string | null
+          public_summary?: Json
           published_at?: string | null
+          reference_price_eur?: number | null
           spec_sheet?: Json | null
           starts_at?: string | null
           status?: string
@@ -3285,15 +3496,44 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "lead_auctions_lead_id_fkey"
-            columns: ["lead_id"]
+            foreignKeyName: "lead_auctions_planner_session_id_fkey"
+            columns: ["planner_session_id"]
             isOneToOne: false
-            referencedRelation: "leads_masked"
+            referencedRelation: "planner_sessions"
             referencedColumns: ["id"]
           },
           {
             foreignKeyName: "lead_auctions_won_bid_fkey"
             columns: ["won_bid_id"]
+            isOneToOne: false
+            referencedRelation: "lead_bids"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      lead_bid_revisions: {
+        Row: {
+          bid_id: string
+          created_at: string
+          id: string
+          price_eur: number
+        }
+        Insert: {
+          bid_id: string
+          created_at?: string
+          id?: string
+          price_eur: number
+        }
+        Update: {
+          bid_id?: string
+          created_at?: string
+          id?: string
+          price_eur?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lead_bid_revisions_bid_id_fkey"
+            columns: ["bid_id"]
             isOneToOne: false
             referencedRelation: "lead_bids"
             referencedColumns: ["id"]
@@ -3307,11 +3547,16 @@ export type Database = {
           dealer_id: string
           delivery_weeks: number | null
           id: string
+          includes: Json
           is_winning: boolean
           montage_included: boolean | null
           notes: string | null
           payment_terms: Json | null
           price_eur: number
+          revision: number
+          status: string
+          updated_at: string
+          valid_until: string | null
           warranty_months: number | null
         }
         Insert: {
@@ -3320,11 +3565,16 @@ export type Database = {
           dealer_id: string
           delivery_weeks?: number | null
           id?: string
+          includes?: Json
           is_winning?: boolean
           montage_included?: boolean | null
           notes?: string | null
           payment_terms?: Json | null
           price_eur: number
+          revision?: number
+          status?: string
+          updated_at?: string
+          valid_until?: string | null
           warranty_months?: number | null
         }
         Update: {
@@ -3333,11 +3583,16 @@ export type Database = {
           dealer_id?: string
           delivery_weeks?: number | null
           id?: string
+          includes?: Json
           is_winning?: boolean
           montage_included?: boolean | null
           notes?: string | null
           payment_terms?: Json | null
           price_eur?: number
+          revision?: number
+          status?: string
+          updated_at?: string
+          valid_until?: string | null
           warranty_months?: number | null
         }
         Relationships: [
@@ -3439,13 +3694,6 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "lead_consents_lead_id_fkey"
-            columns: ["lead_id"]
-            isOneToOne: false
-            referencedRelation: "leads_masked"
-            referencedColumns: ["id"]
-          },
-          {
             foreignKeyName: "lead_consents_user_id_fkey"
             columns: ["user_id"]
             isOneToOne: false
@@ -3496,44 +3744,53 @@ export type Database = {
             referencedRelation: "leads"
             referencedColumns: ["id"]
           },
-          {
-            foreignKeyName: "lead_files_lead_id_fkey"
-            columns: ["lead_id"]
-            isOneToOne: false
-            referencedRelation: "leads_masked"
-            referencedColumns: ["id"]
-          },
         ]
       }
       lead_match_candidates: {
         Row: {
+          access_source: string
+          auction_id: string | null
           created_at: string
           dealer_id: string
           id: string
+          invoice_id: string | null
           is_purchased: boolean
           lead_id: string
           price_cents: number | null
           purchased_at: string | null
         }
         Insert: {
+          access_source?: string
+          auction_id?: string | null
           created_at?: string
           dealer_id: string
           id?: string
+          invoice_id?: string | null
           is_purchased?: boolean
           lead_id: string
           price_cents?: number | null
           purchased_at?: string | null
         }
         Update: {
+          access_source?: string
+          auction_id?: string | null
           created_at?: string
           dealer_id?: string
           id?: string
+          invoice_id?: string | null
           is_purchased?: boolean
           lead_id?: string
           price_cents?: number | null
           purchased_at?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "lead_match_candidates_auction_id_fkey"
+            columns: ["auction_id"]
+            isOneToOne: false
+            referencedRelation: "lead_auctions"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "lead_match_candidates_dealer_id_fkey"
             columns: ["dealer_id"]
@@ -3542,17 +3799,17 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "lead_match_candidates_lead_id_fkey"
-            columns: ["lead_id"]
+            foreignKeyName: "lead_match_candidates_invoice_id_fkey"
+            columns: ["invoice_id"]
             isOneToOne: false
-            referencedRelation: "leads"
+            referencedRelation: "invoices"
             referencedColumns: ["id"]
           },
           {
             foreignKeyName: "lead_match_candidates_lead_id_fkey"
             columns: ["lead_id"]
             isOneToOne: false
-            referencedRelation: "leads_masked"
+            referencedRelation: "leads"
             referencedColumns: ["id"]
           },
         ]
@@ -3623,13 +3880,6 @@ export type Database = {
             columns: ["lead_id"]
             isOneToOne: false
             referencedRelation: "leads"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "lead_penalty_charges_lead_id_fkey"
-            columns: ["lead_id"]
-            isOneToOne: false
-            referencedRelation: "leads_masked"
             referencedColumns: ["id"]
           },
           {
@@ -3729,13 +3979,6 @@ export type Database = {
             referencedRelation: "leads"
             referencedColumns: ["id"]
           },
-          {
-            foreignKeyName: "lead_qualification_calls_lead_id_fkey"
-            columns: ["lead_id"]
-            isOneToOne: false
-            referencedRelation: "leads_masked"
-            referencedColumns: ["id"]
-          },
         ]
       }
       lead_views: {
@@ -3770,13 +4013,6 @@ export type Database = {
             columns: ["lead_id"]
             isOneToOne: false
             referencedRelation: "leads"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "lead_views_lead_id_fkey"
-            columns: ["lead_id"]
-            isOneToOne: false
-            referencedRelation: "leads_masked"
             referencedColumns: ["id"]
           },
         ]
@@ -4230,18 +4466,24 @@ export type Database = {
           created_at: string
           error_message: string | null
           fal_request_id: string | null
+          fal_response_url: string | null
+          fal_status_url: string | null
           generation_ms: number | null
           id: string
           image_height: number | null
           image_path: string | null
           image_width: number | null
+          input_image_path: string | null
+          mode: string
           model_slug: string | null
           negative_prompt: string | null
           prompt: string
           session_id: string
           spec_snapshot: Json
           status: string
+          storage_bucket: string
           user_message: string | null
+          variant_label: string | null
           version: number
         }
         Insert: {
@@ -4250,18 +4492,24 @@ export type Database = {
           created_at?: string
           error_message?: string | null
           fal_request_id?: string | null
+          fal_response_url?: string | null
+          fal_status_url?: string | null
           generation_ms?: number | null
           id?: string
           image_height?: number | null
           image_path?: string | null
           image_width?: number | null
+          input_image_path?: string | null
+          mode?: string
           model_slug?: string | null
           negative_prompt?: string | null
           prompt: string
           session_id: string
           spec_snapshot: Json
           status?: string
+          storage_bucket?: string
           user_message?: string | null
+          variant_label?: string | null
           version?: number
         }
         Update: {
@@ -4270,18 +4518,24 @@ export type Database = {
           created_at?: string
           error_message?: string | null
           fal_request_id?: string | null
+          fal_response_url?: string | null
+          fal_status_url?: string | null
           generation_ms?: number | null
           id?: string
           image_height?: number | null
           image_path?: string | null
           image_width?: number | null
+          input_image_path?: string | null
+          mode?: string
           model_slug?: string | null
           negative_prompt?: string | null
           prompt?: string
           session_id?: string
           spec_snapshot?: Json
           status?: string
+          storage_bucket?: string
           user_message?: string | null
+          variant_label?: string | null
           version?: number
         }
         Relationships: [
@@ -4299,14 +4553,18 @@ export type Database = {
           contact_captured_at: string | null
           created_at: string
           current_render_id: string | null
+          estimate: Json | null
           expert_note: string | null
           id: string
           ip_address: unknown
           lead_id: string | null
+          photo_paths: string[]
           price_range_max_cents: number | null
           price_range_min_cents: number | null
+          room: Json
           session_token: string
           spec: Json
+          spec_version: number
           status: string
           updated_at: string
           user_agent: string | null
@@ -4320,14 +4578,18 @@ export type Database = {
           contact_captured_at?: string | null
           created_at?: string
           current_render_id?: string | null
+          estimate?: Json | null
           expert_note?: string | null
           id?: string
           ip_address?: unknown
           lead_id?: string | null
+          photo_paths?: string[]
           price_range_max_cents?: number | null
           price_range_min_cents?: number | null
+          room?: Json
           session_token: string
           spec?: Json
+          spec_version?: number
           status?: string
           updated_at?: string
           user_agent?: string | null
@@ -4341,14 +4603,18 @@ export type Database = {
           contact_captured_at?: string | null
           created_at?: string
           current_render_id?: string | null
+          estimate?: Json | null
           expert_note?: string | null
           id?: string
           ip_address?: unknown
           lead_id?: string | null
+          photo_paths?: string[]
           price_range_max_cents?: number | null
           price_range_min_cents?: number | null
+          room?: Json
           session_token?: string
           spec?: Json
+          spec_version?: number
           status?: string
           updated_at?: string
           user_agent?: string | null
@@ -4371,13 +4637,6 @@ export type Database = {
             columns: ["lead_id"]
             isOneToOne: false
             referencedRelation: "leads"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "planner_sessions_lead_id_fkey"
-            columns: ["lead_id"]
-            isOneToOne: false
-            referencedRelation: "leads_masked"
             referencedColumns: ["id"]
           },
         ]
@@ -4437,13 +4696,6 @@ export type Database = {
             columns: ["auction_id"]
             isOneToOne: false
             referencedRelation: "auctions"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "post_auction_offers_auction_id_fkey"
-            columns: ["auction_id"]
-            isOneToOne: false
-            referencedRelation: "auctions_public"
             referencedColumns: ["id"]
           },
         ]
@@ -4506,13 +4758,6 @@ export type Database = {
             columns: ["auction_id"]
             isOneToOne: false
             referencedRelation: "auctions"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "price_change_requests_auction_id_fkey"
-            columns: ["auction_id"]
-            isOneToOne: false
-            referencedRelation: "auctions_public"
             referencedColumns: ["id"]
           },
           {
@@ -4746,13 +4991,6 @@ export type Database = {
             columns: ["auction_id"]
             isOneToOne: false
             referencedRelation: "auctions"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "purchase_contracts_auction_id_fkey"
-            columns: ["auction_id"]
-            isOneToOne: false
-            referencedRelation: "auctions_public"
             referencedColumns: ["id"]
           },
           {
@@ -5777,71 +6015,6 @@ export type Database = {
         }
         Relationships: []
       }
-      auctions_public: {
-        Row: {
-          auction_round: number | null
-          created_at: string | null
-          current_bid: number | null
-          end_time: string | null
-          id: string | null
-          kaufchance_expires_at: string | null
-          kaufchance_min_price: number | null
-          kitchen_id: string | null
-          last_price_reduction_at: string | null
-          marketing_phase_started_at: string | null
-          reserve_price: number | null
-          soft_close_extension_minutes: number | null
-          start_time: string | null
-          starting_bid: number | null
-          status: Database["public"]["Enums"]["auction_status"] | null
-          updated_at: string | null
-        }
-        Insert: {
-          auction_round?: number | null
-          created_at?: string | null
-          current_bid?: number | null
-          end_time?: string | null
-          id?: string | null
-          kaufchance_expires_at?: string | null
-          kaufchance_min_price?: number | null
-          kitchen_id?: string | null
-          last_price_reduction_at?: string | null
-          marketing_phase_started_at?: string | null
-          reserve_price?: number | null
-          soft_close_extension_minutes?: number | null
-          start_time?: string | null
-          starting_bid?: number | null
-          status?: Database["public"]["Enums"]["auction_status"] | null
-          updated_at?: string | null
-        }
-        Update: {
-          auction_round?: number | null
-          created_at?: string | null
-          current_bid?: number | null
-          end_time?: string | null
-          id?: string | null
-          kaufchance_expires_at?: string | null
-          kaufchance_min_price?: number | null
-          kitchen_id?: string | null
-          last_price_reduction_at?: string | null
-          marketing_phase_started_at?: string | null
-          reserve_price?: number | null
-          soft_close_extension_minutes?: number | null
-          start_time?: string | null
-          starting_bid?: number | null
-          status?: Database["public"]["Enums"]["auction_status"] | null
-          updated_at?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "auctions_kitchen_id_fkey"
-            columns: ["kitchen_id"]
-            isOneToOne: true
-            referencedRelation: "kitchens"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       bids_public: {
         Row: {
           amount: number | null
@@ -5876,13 +6049,6 @@ export type Database = {
             columns: ["auction_id"]
             isOneToOne: false
             referencedRelation: "auctions"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "bids_auction_id_fkey"
-            columns: ["auction_id"]
-            isOneToOne: false
-            referencedRelation: "auctions_public"
             referencedColumns: ["id"]
           },
           {
@@ -5923,84 +6089,6 @@ export type Database = {
           severity: string | null
           unresolved_count: number | null
           user_role: string | null
-        }
-        Relationships: []
-      }
-      leads_masked: {
-        Row: {
-          budget_midpoint: number | null
-          created_at: string | null
-          delivery_mode: string | null
-          desired_delivery_at: string | null
-          existing_offer_price_cents: number | null
-          funnel_answers: Json | null
-          funnel_type: Database["public"]["Enums"]["lead_funnel_type"] | null
-          has_existing_offer: boolean | null
-          housing_type: string | null
-          id: string | null
-          kitchen_form: string | null
-          kitchen_style: string | null
-          payment_financing: string | null
-          postal_code: string | null
-          purchase_reason: string | null
-          region: string | null
-          score: number | null
-          special_wishes: string[] | null
-          status: Database["public"]["Enums"]["lead_status"] | null
-          tier: Database["public"]["Enums"]["lead_tier"] | null
-          timeframe_months: number | null
-          updated_at: string | null
-          waste_separation_system: boolean | null
-        }
-        Insert: {
-          budget_midpoint?: number | null
-          created_at?: string | null
-          delivery_mode?: string | null
-          desired_delivery_at?: string | null
-          existing_offer_price_cents?: number | null
-          funnel_answers?: Json | null
-          funnel_type?: Database["public"]["Enums"]["lead_funnel_type"] | null
-          has_existing_offer?: boolean | null
-          housing_type?: string | null
-          id?: string | null
-          kitchen_form?: string | null
-          kitchen_style?: string | null
-          payment_financing?: string | null
-          postal_code?: string | null
-          purchase_reason?: string | null
-          region?: string | null
-          score?: number | null
-          special_wishes?: string[] | null
-          status?: Database["public"]["Enums"]["lead_status"] | null
-          tier?: Database["public"]["Enums"]["lead_tier"] | null
-          timeframe_months?: number | null
-          updated_at?: string | null
-          waste_separation_system?: boolean | null
-        }
-        Update: {
-          budget_midpoint?: number | null
-          created_at?: string | null
-          delivery_mode?: string | null
-          desired_delivery_at?: string | null
-          existing_offer_price_cents?: number | null
-          funnel_answers?: Json | null
-          funnel_type?: Database["public"]["Enums"]["lead_funnel_type"] | null
-          has_existing_offer?: boolean | null
-          housing_type?: string | null
-          id?: string | null
-          kitchen_form?: string | null
-          kitchen_style?: string | null
-          payment_financing?: string | null
-          postal_code?: string | null
-          purchase_reason?: string | null
-          region?: string | null
-          score?: number | null
-          special_wishes?: string[] | null
-          status?: Database["public"]["Enums"]["lead_status"] | null
-          tier?: Database["public"]["Enums"]["lead_tier"] | null
-          timeframe_months?: number | null
-          updated_at?: string | null
-          waste_separation_system?: boolean | null
         }
         Relationships: []
       }
@@ -6487,6 +6575,162 @@ export type Database = {
         Returns: boolean
       }
       hash_review_ip: { Args: { p_ip: string }; Returns: string }
+      kw_admin_publish_tender: { Args: { p_auction_id: string }; Returns: Json }
+      kw_can_view_planner_media: {
+        Args: { p_object_name: string }
+        Returns: boolean
+      }
+      kw_create_market_invoice: {
+        Args: {
+          p_auction_id: string
+          p_dealer_id: string
+          p_description: string
+          p_lead_id: string
+          p_net_cents: number
+          p_type: string
+        }
+        Returns: string
+      }
+      kw_dealer_origin: {
+        Args: { p_uid: string }
+        Returns: {
+          postal_code: string
+          radius_km: number
+        }[]
+      }
+      kw_dealer_place_offer: {
+        Args: {
+          p_auction_id: string
+          p_delivery_weeks?: number
+          p_includes?: Json
+          p_message?: string
+          p_price_eur: number
+          p_valid_until?: string
+        }
+        Returns: Json
+      }
+      kw_dealer_project: { Args: { p_auction_id: string }; Returns: Json }
+      kw_dealer_projects: {
+        Args: { p_limit?: number; p_offset?: number; p_scope?: string }
+        Returns: {
+          auction_id: string
+          awarded_to_me: boolean
+          contact_price_cents: number
+          contact_purchases: number
+          contact_unlocked: boolean
+          decision_deadline_at: string
+          distance_km: number
+          ends_at: string
+          estimate_max_eur: number
+          estimate_min_eur: number
+          funnel_type: string
+          in_service_area: boolean
+          lowest_offer_eur: number
+          max_contact_purchases: number
+          my_offer: Json
+          offer_count: number
+          postal_prefix: string
+          published_at: string
+          reference_price_eur: number
+          region: string
+          status: string
+          summary: Json
+        }[]
+      }
+      kw_dealer_unlock_contact: {
+        Args: { p_auction_id: string }
+        Returns: Json
+      }
+      kw_dealer_withdraw_offer: {
+        Args: { p_auction_id: string }
+        Returns: Json
+      }
+      kw_enqueue: {
+        Args: { p_delay?: string; p_event_type: string; p_payload: Json }
+        Returns: undefined
+      }
+      kw_is_active_dealer: { Args: { p_uid: string }; Returns: boolean }
+      kw_lead_accepts_uploads: { Args: { p_lead_id: string }; Returns: boolean }
+      kw_lead_tier_score: {
+        Args: {
+          p_has_dimensions: boolean
+          p_has_phone: boolean
+          p_has_photo: boolean
+          p_timeframe_months: number
+          p_value_eur: number
+        }
+        Returns: {
+          score: number
+          tier: Database["public"]["Enums"]["lead_tier"]
+        }[]
+      }
+      kw_marketplace_tick: { Args: never; Returns: Json }
+      kw_open_tender: {
+        Args: {
+          p_estimate_max_eur: number
+          p_estimate_min_eur: number
+          p_lead_id: string
+          p_planner_session_id?: string
+          p_public_summary: Json
+          p_publish: boolean
+          p_reference_price_eur: number
+        }
+        Returns: string
+      }
+      kw_outbox_claim: {
+        Args: { p_limit?: number }
+        Returns: {
+          attempts: number
+          available_at: string
+          created_at: string
+          event_type: string
+          id: number
+          last_error: string | null
+          payload: Json
+          processed_at: string | null
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "kw_outbox"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
+      kw_outbox_finish: {
+        Args: { p_error?: string; p_id: number }
+        Returns: undefined
+      }
+      kw_plz_distance_km: {
+        Args: { p_a: string; p_b: string }
+        Returns: number
+      }
+      kw_project_accept_offer: {
+        Args: { p_bid_id: string; p_lead_id: string }
+        Returns: Json
+      }
+      kw_project_cancel: {
+        Args: { p_lead_id: string; p_reason?: string }
+        Returns: Json
+      }
+      kw_project_issue_token: {
+        Args: { p_lead_id: string; p_token_hash: string }
+        Returns: undefined
+      }
+      kw_project_resolve_token: {
+        Args: { p_token_hash: string }
+        Returns: string
+      }
+      kw_project_view: { Args: { p_lead_id: string }; Returns: Json }
+      kw_tender_recipients: {
+        Args: { p_auction_id: string }
+        Returns: {
+          company_name: string
+          dealer_id: string
+          distance_km: number
+          email: string
+          notify_email: boolean
+        }[]
+      }
       lift_dealer_restriction: {
         Args: { dealer_id_param: string }
         Returns: boolean
@@ -6778,12 +7022,12 @@ export type Tables<
   DefaultSchemaTableNameOrOptions extends
     | keyof (DefaultSchema["Tables"] & DefaultSchema["Views"])
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
         DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])
-    : never = never,
+    : never) = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -6807,11 +7051,11 @@ export type TablesInsert<
   DefaultSchemaTableNameOrOptions extends
     | keyof DefaultSchema["Tables"]
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
-    : never = never,
+    : never) = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -6832,11 +7076,11 @@ export type TablesUpdate<
   DefaultSchemaTableNameOrOptions extends
     | keyof DefaultSchema["Tables"]
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
-    : never = never,
+    : never) = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -6857,11 +7101,11 @@ export type Enums<
   DefaultSchemaEnumNameOrOptions extends
     | keyof DefaultSchema["Enums"]
     | { schema: keyof DatabaseWithoutInternals },
-  EnumName extends DefaultSchemaEnumNameOrOptions extends {
+  EnumName extends (DefaultSchemaEnumNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"]
-    : never = never,
+    : never) = never,
 > = DefaultSchemaEnumNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -6874,11 +7118,11 @@ export type CompositeTypes<
   PublicCompositeTypeNameOrOptions extends
     | keyof DefaultSchema["CompositeTypes"]
     | { schema: keyof DatabaseWithoutInternals },
-  CompositeTypeName extends PublicCompositeTypeNameOrOptions extends {
+  CompositeTypeName extends (PublicCompositeTypeNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"]
-    : never = never,
+    : never) = never,
 > = PublicCompositeTypeNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }

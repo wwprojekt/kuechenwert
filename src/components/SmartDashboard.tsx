@@ -27,8 +27,12 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import EmailVerificationBanner from '@/components/dashboard/EmailVerificationBanner';
 import SetPasswordDialog from '@/components/dashboard/SetPasswordDialog';
 import { supabase } from '@/integrations/supabase/client';
+import { BRAND } from '@/lib/brand/config';
 
-const DealerDashboard = lazyRetry(() => import('@/pages/dealer/DealerDashboard'));
+const DealerHome = lazyRetry(() => import('@/pages/dealer/DealerHome'));
+const DealerProjects = lazyRetry(() => import('@/pages/dealer/DealerProjects'));
+const DealerProjectDetail = lazyRetry(() => import('@/pages/dealer/DealerProjectDetail'));
+const DealerMarketSettings = lazyRetry(() => import('@/pages/dealer/DealerMarketSettings'));
 const DashboardOverview = lazyRetry(() => import('@/pages/dashboard/DashboardOverview'));
 
 /**
@@ -195,7 +199,7 @@ const DealerDashboardWrapper = () => {
     <DealerLayoutContent>
       <Routes>
         {/* Exact match for /dashboard */}
-        <Route index element={<DealerDashboard />} />
+        <Route index element={<LazyPage Component={DealerHome} />} />
         
         {/* Routes that remain accessible even when locked */}
         <Route path="profile" element={<LazyPage Component={UserProfile} />} />
@@ -204,7 +208,12 @@ const DealerDashboardWrapper = () => {
         {/* All other routes: only accessible when NOT locked */}
         {!isLocked && (
           <>
-            {/* Dealer-specific routes */}
+            {/* Projekt-Börse (Küchenprojekte, Angebote, Kontaktkauf) */}
+            <Route path="projekte" element={<LazyPage Component={DealerProjects} />} />
+            <Route path="projekte/einstellungen" element={<LazyPage Component={DealerMarketSettings} />} />
+            <Route path="projekte/:id" element={<LazyPage Component={DealerProjectDetail} />} />
+
+            {/* Ausstellungsküchen & Legacy-Auktionen */}
             <Route path="auctions" element={<LazyPage Component={DealerAuctions} />} />
             <Route path="inventory" element={<LazyPage Component={DealerInventory} />} />
             <Route path="inventory/:id" element={<LazyPage Component={ListingDetail} />} />
@@ -231,7 +240,7 @@ const DealerDashboardWrapper = () => {
         
         {/* Fallback: show main dealer dashboard for unknown sub-routes
             When locked, ALL locked routes also fall through here */}
-        <Route path="*" element={<DealerDashboard />} />
+        <Route path="*" element={<LazyPage Component={DealerHome} />} />
       </Routes>
     </DealerLayoutContent>
   );
@@ -307,7 +316,7 @@ const DealerLayoutContent = ({ children }: { children: React.ReactNode }) => {
     ? "Händler (Antrag in Prüfung)"
     : isRejectedDealer
     ? "Händler (Antrag abgelehnt)"
-    : `Händler • ${settings?.site_name || "CaravanWert"}`;
+    : `Küchenstudio • ${settings?.site_name || BRAND.name}`;
 
   return (
     <SidebarProvider>
@@ -427,7 +436,7 @@ const UserLayoutContent = ({ children }: { children: React.ReactNode }) => {
                       {user?.email?.split("@")[0]}
                     </p>
                     <p className="text-xs text-muted-foreground">
-                      {settings?.site_name || "CaravanWert"}
+                      {settings?.site_name || BRAND.name}
                     </p>
                   </div>
                 </Link>

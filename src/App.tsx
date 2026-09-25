@@ -114,6 +114,8 @@ const FunnelA = lazyRetry(() => import("./pages/funnel/FunnelA"));
 const FunnelB = lazyRetry(() => import("./pages/funnel/FunnelB"));
 const FunnelC = lazyRetry(() => import("./pages/funnel/FunnelC"));
 const FunnelDanke = lazyRetry(() => import("./pages/funnel/FunnelDanke"));
+const ProjectPage = lazyRetry(() => import("./pages/projekt/ProjectPage"));
+const ProjectLinkPage = lazyRetry(() => import("./pages/projekt/ProjectLinkPage"));
 
 // Dashboard
 const SmartDashboard = lazyRetry(() => import("./components/SmartDashboard").then(m => ({ default: m.SmartDashboard })));
@@ -238,7 +240,10 @@ const App = () => (
               <Route path="/funnel/a/:step" element={<FunnelA />} />
               <Route path="/funnel/b" element={<FunnelB />} />
               <Route path="/funnel/c" element={<FunnelC />} />
+              <Route path="/traumkueche" element={<Navigate to="/funnel/c" replace />} />
               <Route path="/funnel/danke" element={<FunnelDanke />} />
+              <Route path="/projekt" element={<ProjectLinkPage />} />
+              <Route path="/projekt/:token" element={<ProjectPage />} />
               <Route path="/ratgeber" element={<Ratgeber />} />
               <Route path="/ratgeber/:slug" element={<RatgeberPage />} />
               <Route path="/ueber-uns" element={<UeberUns />} />

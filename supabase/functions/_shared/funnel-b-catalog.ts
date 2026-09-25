@@ -243,7 +243,7 @@ export const TIMEFRAMES = [
   { slug: "3-6",  name: "In 3-6 Monaten", months: 5 },
   { slug: "6-12", name: "In 6-12 Monaten", months: 9 },
   { slug: "12+",  name: "Später als 12 Monate", months: 15 },
-  { slug: "flexibel", name: "Flexibel / Bestes Angebot zaehlt", months: null as number | null },
+  { slug: "flexibel", name: "Flexibel / Bestes Angebot zählt", months: null as number | null },
 ];
 
 export const DELIVERY_MODES = [

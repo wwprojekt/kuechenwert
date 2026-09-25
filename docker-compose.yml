@@ -1,4 +1,4 @@
-# Docker Compose configuration for CaravanWert
+# Docker Compose configuration for KüchenWert
 # Supports both development and production environments
 
 version: '3.8'
@@ -29,7 +29,7 @@ services:
       retries: 3
       start_period: 40s
     networks:
-      - caravanwert
+      - kuechenwert
 
   # Development environment
   app-dev:
@@ -50,7 +50,7 @@ services:
     profiles:
       - development
     networks:
-      - caravanwert
+      - kuechenwert
 
   # Redis for caching (optional, for future use)
   redis:
@@ -65,7 +65,7 @@ services:
       - production
       - redis
     networks:
-      - caravanwert
+      - kuechenwert
 
   # Nginx proxy (for more complex setups)
   proxy:
@@ -81,10 +81,10 @@ services:
     profiles:
       - proxy
     networks:
-      - caravanwert
+      - kuechenwert
 
 networks:
-  caravanwert:
+  kuechenwert:
     driver: bridge
 
 volumes:

@@ -26,7 +26,7 @@ Field required [type=missing, ...]
 
 ```json
 {
-  "project_id": "zcrwqxsyptjwkuxfacvq",
+  "project_id": "gzqayoalwtmypndrmqes",
   "name": "my-function",
   "entrypoint_path": "index.ts",
   "verify_jwt": true,
@@ -61,5 +61,12 @@ Wenn die Edge Function aus mehreren Dateien besteht:
 
 ## Supabase-Projekt Referenz
 
-- **Projekt-ID:** `zcrwqxsyptjwkuxfacvq`
-- **Region:** eu-west-1
+- **Projekt-ID:** `gzqayoalwtmypndrmqes` (KuechenWert)
+- **Region:** eu-central-1
+- `zcrwqxsyptjwkuxfacvq` ist das CaravanWert-Projekt — dorthin **niemals** deployen.
+
+## Shared-Module
+
+Functions importieren gemeinsame Helfer aus `../_shared/*.ts`. Diese Dateien muessen im
+`files`-Array mit dem relativen Namen mitgegeben werden, z. B.
+`{"name": "../_shared/cors.ts", "content": "..."}`.

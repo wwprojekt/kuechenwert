@@ -17,16 +17,9 @@ SUPABASE_URL = "https://gzqayoalwtmypndrmqes.supabase.co"
 SUPABASE_ANON_KEY = "sb_publishable_y310eCMmlhSjvXbOKDgY1Q_p2v56GAz"
 
 # Routes
-# Hinweis: Der Worker ist aktuell NICHT deployed fuer KuechenWert — das
-# Image-Proxy ist in src/lib/imageTransform.ts auf null geschaltet.
-# Die Routes sind vorkonfiguriert, falls der Worker spaeter (fuer Prerender /
-# Image-Proxy) aktiviert wird. Domain kuechenwert.de ist ueber Cloudflare
-# proxied; kuechenwert24.de laeuft ueber Dokploy/Traefik (nicht via CF) und ist
-# daher bewusst nicht als Worker-Route eingetragen.
-[[routes]]
-pattern = "kuechenwert.de/*"
-zone_name = "kuechenwert.de"
-
-[[routes]]
-pattern = "www.kuechenwert.de/*"
-zone_name = "kuechenwert.de"
+# Der Worker ist fuer KuechenWert NICHT deployed (Image-Proxy in
+# src/lib/imageTransform.ts ist deaktiviert, Worker-Code stammt aus dem
+# CaravanWert-Fork). Bewusst keine Routes: `kuechenwert.de` (ohne Umlaut)
+# gehoert nicht uns. Bei einer spaeteren Aktivierung Routes ausschliesslich
+# fuer kuechenwert24.de eintragen und worker/src/index.js auf KuechenWert
+# umstellen.

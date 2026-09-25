@@ -1,4 +1,4 @@
-# Multi-stage Dockerfile for CaravanWert
+# Multi-stage Dockerfile for KüchenWert
 # Optimized for production deployment with Coolify/Dokploy
 
 # ============================================================================

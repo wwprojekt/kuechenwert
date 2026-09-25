@@ -1,16 +1,10 @@
 name: Deploy Cloudflare Pre-Render Worker
 
+# Der Pre-Render-Worker ist fuer KuechenWert (noch) nicht aktiv: es gibt keine
+# Cloudflare-Secrets in diesem Repo und die Worker-Logik stammt aus dem
+# CaravanWert-Fork. Deshalb nur manueller Start, damit nicht jeder Push auf
+# main einen roten Workflow erzeugt oder versehentlich deployt.
 on:
-  push:
-    branches: [main]
-    paths:
-      - 'src/pages/**'
-      - 'src/data/ratgeber/**'
-      - 'src/data/landing-pages/**'
-      - 'src/components/PageLayout.tsx'
-      - 'src/lib/seo.ts'
-      - 'worker/**'
-
   workflow_dispatch:
 
 jobs:

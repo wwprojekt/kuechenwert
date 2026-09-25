@@ -1,0 +1,38 @@
+---
+description: Git- und Supabase-Deployment-Workflow für Agents in diesem Projekt
+alwaysApply: true
+---
+
+# Agent-Deployment-Workflow
+
+Verbindliche Konvention für KüchenWert. Der Agent handelt **autonom und proaktiv** — ohne Rückfragen bei Standard-Arbeit. Architektur-Details und Code-Konventionen stehen in `AGENTS.md`.
+
+## Git
+
+- Session-Start: `git fetch origin main` + `git status`. Lokale Stände nie per Force-Push durchdrücken.
+- **Direkt auf `main` committen und pushen** — kein Feature-Branch, kein PR, keine Rückfrage.
+- Nach jeder inhaltlich abgeschlossenen Änderung: `git add` → `git commit -F <tmp>` → `git fetch origin main` → `git push origin main`.
+- Commit-Messages auf Deutsch, Conventional-Commits (`feat:`, `fix:`, `refactor:`, `docs:`, `chore:` …), prägnant, mit Kurzbegründung.
+- **Nicht mehrere Mini-Commits** — logisch zusammengehörende Änderungen in einem Commit bündeln.
+- PowerShell hat kein `&&` und kein Heredoc → Befehle einzeln ausführen, Commit-Message über `git commit -F .tmp_commit_msg.txt` (Temp-File danach löschen).
+- Push auf `main` triggert den Dokploy-Webhook → Production (`https://kuechenwert24.de`), Go-Live nach ca. 2–4 Minuten.
+
+## Supabase (End-to-End)
+
+Der Agent ist für **alle** Supabase-Änderungen verantwortlich: Migrations, Edge Functions, RLS, Policies, Storage-Buckets, Seeds, Types.
+
+**Primärer Weg: MCP-Server `plugin-supabase-supabase`, Projekt `gzqayoalwtmypndrmqes`**
+
+- Schema-Änderungen: SQL-File unter `supabase/migrations/<YYYYMMDDHHMMSS>_<beschreibung>.sql` **zuerst** anlegen, dann via `apply_migration` auf Production ausführen und in `supabase_migrations.schema_migrations` verifizieren.
+- Ad-hoc-Queries/Seeds: `execute_sql` (immer erst `list_tables` / `get_advisors` als Sanity-Check).
+- Edge Functions: `supabase/functions/<name>/index.ts` anlegen, `supabase/config.toml` (`verify_jwt`) pflegen, dann `deploy_edge_function` mit **allen** Dateien (inkl. `../_shared/*`).
+- Types nach Schema-Änderung: `generate_typescript_types` ausführen, Output nach `src/integrations/supabase/types.ts` committen.
+- Neue SECURITY-DEFINER-Funktionen: `set search_path`, eigene Rollenprüfung, `revoke execute ... from public, anon` und nur gezielt granten.
+
+**Destruktive Operationen (DROP, TRUNCATE, Daten-Löschen) direkt durchziehen** — keine Rückfrage. Aber: immer erst als versionierte Migration-Datei schreiben, damit die Änderung reproduzierbar ist.
+
+## Safety
+
+- Niemals `SUPABASE_SERVICE_ROLE_KEY`, API-Keys oder Secrets ins Repo committen (`.env*` ist gitignored).
+- Vor jedem Push: `npm run typecheck` (strikter Check für den Marktplatz-/Planer-Code) und `npm run build` müssen grün sein. Build-Failure = Fix erst, dann Push.
+- Nach jedem Push: kurz Deploy-Status erwähnen (Commit + erwartete Go-Live-Zeit).

@@ -1,5 +1,5 @@
 /**
- * Service Worker for CaravanWert
+ * Service Worker for KüchenWert
  * 
  * Caching strategies:
  *   - Hashed build assets (/assets/*.js, /assets/*.css): Network-First with cache fallback
@@ -14,11 +14,11 @@
  * JS files. This version fixes that by using Network-First for all hashed build assets.
  */
 
-const CACHE_VERSION = 'v5';
-const STATIC_CACHE_NAME = `caravanwert-static-${CACHE_VERSION}`;
-const ASSETS_CACHE_NAME = `caravanwert-assets-${CACHE_VERSION}`;
-const DYNAMIC_CACHE_NAME = `caravanwert-dynamic-${CACHE_VERSION}`;
-const IMAGE_CACHE_NAME = `caravanwert-images-${CACHE_VERSION}`;
+const CACHE_VERSION = 'v6';
+const STATIC_CACHE_NAME = `kuechenwert-static-${CACHE_VERSION}`;
+const ASSETS_CACHE_NAME = `kuechenwert-assets-${CACHE_VERSION}`;
+const DYNAMIC_CACHE_NAME = `kuechenwert-dynamic-${CACHE_VERSION}`;
+const IMAGE_CACHE_NAME = `kuechenwert-images-${CACHE_VERSION}`;
 
 // Only truly immutable files that rarely change.
 // IMPORTANT: Do NOT precache '/' or '/index.html' here!
@@ -333,11 +333,11 @@ self.addEventListener('push', (event) => {
   console.log('Service Worker: Push received');
 
   let data = {
-    title: 'CaravanWert',
+    title: 'KüchenWert',
     body: 'Neue Benachrichtigung',
     icon: '/logo.png',
     badge: '/favicon.png',
-    url: 'https://caravanwert.de',
+    url: self.location.origin,
     tag: 'default',
   };
 
@@ -390,7 +390,7 @@ self.addEventListener('notificationclick', (event) => {
   console.log('Service Worker: Notification clicked', event.action);
   event.notification.close();
 
-  const url = event.notification.data?.url || 'https://caravanwert.de';
+  const url = event.notification.data?.url || self.location.origin;
 
   if (event.action === 'dismiss') return;
 
@@ -398,7 +398,7 @@ self.addEventListener('notificationclick', (event) => {
     clients.matchAll({ type: 'window', includeUncontrolled: true })
       .then((clientList) => {
         for (const client of clientList) {
-          if (client.url.includes('caravanwert.de') && 'focus' in client) {
+          if (client.url.startsWith(self.location.origin) && 'focus' in client) {
             client.navigate(url);
             return client.focus();
           }

@@ -91,12 +91,11 @@ class CommissionCalculatorService {
       logger.error('Commission calculation error:', error);
       
       // Fallback calculation using site settings
-      const { data: settings } = await supabase
-        .from('public_site_settings')
-        .select('commission_rate_percent')
-        .single();
-
-      const fallbackRate = settings?.commission_rate_percent || 1.5;
+      const { data: settings } = await supabase.rpc('get_public_site_settings');
+      const configuredRate = Number(
+        (settings as { commission_rate_percent?: unknown } | null)?.commission_rate_percent,
+      );
+      const fallbackRate = configuredRate > 0 ? configuredRate : 1.5;
       const fallbackCommission = saleAmount * (fallbackRate / 100);
 
       return {

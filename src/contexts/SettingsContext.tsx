@@ -70,129 +70,73 @@ interface SiteSettings {
 interface SettingsContextType {
   settings: SiteSettings | null;
   loading: boolean;
-  /**
-   * Lädt Settings neu. Standard-Aufruf nutzt den Edge-Worker-Cache (5 min FRESH).
-   * Wenn der Admin gerade Settings im Backend gespeichert hat und das Ergebnis
-   * sofort sehen will, mit `{ forceFresh: true }` aufrufen — das umgeht den
-   * Worker und holt direkt aus Supabase, sodass die Änderung 0-Latenz sichtbar ist.
-   */
-  refreshSettings: (opts?: { forceFresh?: boolean }) => Promise<void>;
+  /** Lädt die öffentlichen Settings neu (z. B. nach einem Save im Admin). */
+  refreshSettings: () => Promise<void>;
 }
 
 const SettingsContext = createContext<SettingsContextType | undefined>(undefined);
 
-const SETTINGS_ID = '00000000-0000-0000-0000-000000000000';
+const CACHE_KEY = "kw-site-settings-v1";
+
+function readCache(): SiteSettings | null {
+  try {
+    const raw = localStorage.getItem(CACHE_KEY);
+    return raw ? (JSON.parse(raw) as SiteSettings) : null;
+  } catch {
+    return null;
+  }
+}
+
+function writeCache(settings: SiteSettings) {
+  try {
+    localStorage.setItem(CACHE_KEY, JSON.stringify(settings));
+  } catch {
+    /* privater Modus / Speicher voll – Settings kommen beim nächsten Load neu */
+  }
+}
+
+// Farben und Dark Mode kommen ausschließlich aus index.css bzw. next-themes:
+// Die DB-Werte (z. B. "160 32 30" ohne %) sind kein gültiges CSS-HSL und
+// würden Dark-Mode-Farben und Akzent überschreiben.
+function applyFavicon(settings: SiteSettings) {
+  if (!settings.favicon_url) return;
+  let favicon = document.querySelector('link[rel="icon"][type="image/svg+xml"], link[rel="icon"]') as HTMLLinkElement | null;
+  if (!favicon) {
+    favicon = document.createElement("link");
+    favicon.rel = "icon";
+    document.head.appendChild(favicon);
+  }
+  favicon.href = settings.favicon_url;
+}
+
+function publish(settings: SiteSettings) {
+  applyFavicon(settings);
+  // Synchroner Global-Zugriff für Tracking-Services außerhalb von React.
+  setTrackingConfig((settings as { tracking_config?: unknown }).tracking_config);
+}
 
 export function SettingsProvider({ children }: { children: ReactNode }) {
-  const [settings, setSettings] = useState<SiteSettings | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [settings, setSettings] = useState<SiteSettings | null>(() => readCache());
+  const [loading, setLoading] = useState(() => readCache() === null);
 
-  const loadSettings = useCallback(async (opts?: { forceFresh?: boolean }) => {
-    const forceFresh = opts?.forceFresh === true;
+  const loadSettings = useCallback(async () => {
     try {
-      // ─── Hauptpfad: Edge-Cached Worker-Bundle ───────────────────────
-      // /api/site-settings liefert die gleichen Spalten wie public_site_settings,
-      // aber aus dem CF-KV-Edge-Cache (5 min FRESH / 30 min STALE). Bei
-      // ~2.4k Page-Loads/24h spart das ~99% der Supabase-Calls auf diese View.
-      // Localhost umgeht den Worker (sonst CORS gegen prod-Worker).
-      // forceFresh überspringt den Worker komplett — gedacht für den Admin
-      // direkt nach einem Settings-Save, damit die Änderung sofort sichtbar ist.
-      let workerData: SiteSettings | null = null;
-      if (
-        !forceFresh &&
-        typeof window !== "undefined" &&
-        window.location.hostname !== "localhost"
-      ) {
-        try {
-          const res = await fetch("/api/site-settings", {
-            headers: { accept: "application/json" },
-            signal: AbortSignal.timeout(4000),
-          });
-          if (res.ok) {
-            workerData = (await res.json()) as SiteSettings;
-          }
-        } catch (e) {
-          // Worker timeout / network error → silently fall back to Supabase.
-          logger.debug?.("site-settings worker fetch failed, using fallback", e);
-        }
-      }
-
-      if (workerData) {
-        setSettings(workerData);
-        applyBranding(workerData);
-        setTrackingConfig(
-          (workerData as { tracking_config?: unknown }).tracking_config,
-        );
-        return;
-      }
-
-      // ─── Fallback / Force-Fresh: Direkter Supabase-Call ─────────────
-      const { data, error } = await supabase
-        .from('public_site_settings')
-        .select('*')
-        .eq('id', SETTINGS_ID)
-        .single();
-
+      // site_settings ist nur für Admins lesbar; get_public_site_settings
+      // liefert die öffentlichen Spalten (security definer, keine Secrets).
+      const { data, error } = await supabase.rpc("get_public_site_settings");
       if (error) throw error;
-      
-      if (data) {
-        setSettings(data as SiteSettings);
-        applyBranding(data as SiteSettings);
-        // Publish tracking config to a synchronous global so non-React
-        // service files (gadsConversionService, etc.) can read it without
-        // round-tripping through React state.
-        setTrackingConfig((data as { tracking_config?: unknown }).tracking_config);
+      if (data && typeof data === "object") {
+        const fresh = data as unknown as SiteSettings;
+        setSettings(fresh);
+        writeCache(fresh);
+        publish(fresh);
       }
     } catch (error) {
-      logger.error('Error loading settings:', error);
+      logger.error("Error loading settings:", error);
     } finally {
       setLoading(false);
     }
   }, []);
-
-  const applyBranding = (settings: SiteSettings) => {
-    const root = document.documentElement;
-    
-    // Apply primary color and create gradient variations
-    root.style.setProperty('--primary', settings.primary_color);
-    root.style.setProperty('--secondary', settings.secondary_color);
-    
-    // Parse the HSL values to create gradient variations
-    const [h, s, l] = settings.primary_color.split(' ').map(v => parseFloat(v));
-    const lightL = Math.min(l + 5, 100);
-    const darkL = Math.max(l - 6, 0); // Reduced from -12 to -6 for less contrast
-    
-    // Create gradient CSS variables using the primary color
-    root.style.setProperty('--primary-light', `${h} ${s} ${lightL}`);
-    root.style.setProperty('--primary-dark', `${h} ${s} ${darkL}`);
-    root.style.setProperty('--gradient-hero', `linear-gradient(135deg, hsl(${h} ${s}% ${lightL}%) 0%, hsl(${h} ${s}% ${darkL}%) 100%)`);
-    root.style.setProperty('--gradient-hero-hover', `linear-gradient(135deg, hsl(${h} ${s}% ${lightL + 3}%) 0%, hsl(${h} ${s}% ${darkL + 3}%) 100%)`);
-    root.style.setProperty('--shadow-glow', `0 0 32px hsl(${h} ${s}% ${l}% / 0.35)`);
-    root.style.setProperty('--shadow-glow-sm', `0 0 16px hsl(${h} ${s}% ${l}% / 0.25)`);
-    root.style.setProperty('--ring', settings.primary_color);
-    root.style.setProperty('--accent', settings.primary_color);
-    
-    // Apply dark mode class
-    if (settings.dark_mode_enabled) {
-      root.classList.add('dark');
-    } else {
-      root.classList.remove('dark');
-    }
-    
-    // Note: document.title and meta description are managed per-page by PageLayout's <Helmet>.
-    // Do NOT set them here — it would override page-specific SEO tags.
-    
-    // Update favicon if set
-    if (settings.favicon_url) {
-      let favicon = document.querySelector('link[rel="icon"]') as HTMLLinkElement;
-      if (!favicon) {
-        favicon = document.createElement('link');
-        favicon.rel = 'icon';
-        document.head.appendChild(favicon);
-      }
-      favicon.href = settings.favicon_url;
-    }
-  };
 
   // Settings ändern sich praktisch nie zur Laufzeit (nur Admin im Backend).
   // Früher gab es einen Realtime-Channel auf `site_settings`, aber die Tabelle
@@ -201,7 +145,9 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   // Stattdessen: Initial laden, fertig. Wer Settings im Admin ändert, sieht das
   // Ergebnis nach Reload (oder ruft `refreshSettings()` manuell auf).
   useEffect(() => {
-    loadSettings();
+    const cached = readCache();
+    if (cached) publish(cached);
+    void loadSettings();
   }, [loadSettings]);
 
   return (

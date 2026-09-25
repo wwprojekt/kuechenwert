@@ -66,6 +66,7 @@
 - [x] Supabase-Client: `lockAcquireTimeout` entfernt (hat Database-Typen des Clients zerstört, Typfehler 1962 → ~250) (25.09.2026)
 
 ### Offene Aufgaben
+- [ ] **Production-Deploy freischalten**: Live läuft noch der Build vom 10.05.2026. Repo-Secrets `DOKPLOY_URL`, `DOKPLOY_API_KEY`, `DOKPLOY_APP_ID` setzen (dann deployt `.github/workflows/deploy.yml` jeden Push) oder in Dokploy einmal manuell deployen. Docker-Build-Fehler (pnpm `ERR_PNPM_IGNORED_BUILDS`) ist seit 25.09.2026 behoben.
 - [x] Funnel A/B/C: send-lead-notification type=funnel + track-conversion (Click-IDs) (21.08.2026)
 - [x] sessionGuard: ensureValidRLSSession auf Seller/Dealer-Reads (MyBids, DealerInventory, DealerClaims, MyKuechenJourney, NotificationPreferences, DealerDashboard, ListingEdit) (21.08.2026)
 - [x] Query-Keys: ConvertToKitchenDialog + Admin-Delete invalidieren myListings/myLeads/admin-leads (21.08.2026)

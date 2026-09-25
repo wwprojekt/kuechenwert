@@ -1,22 +1,22 @@
 import { useState, useMemo, useEffect } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { ensureValidRLSSession } from "@/lib/sessionGuard";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
-  Gavel, Car, Users, TrendingUp, Clock, UserPlus, Mail,
-  Phone, AlertCircle, MessageSquare, Building2, FileText,
-  CheckCircle2, Eye, ArrowRight, Bell, Inbox, CalendarClock,
-  RefreshCw, ChevronRight, ExternalLink, Timer, PhoneOff,
-  AlertTriangle, Star, FileWarning, Flame, Euro, Activity, BarChart3, Banknote, Receipt, PhoneCall,
+  Gavel, Car, Users, TrendingUp, UserPlus, Mail,
+  AlertCircle, MessageSquare, Building2, FileText,
+  CheckCircle2, ArrowRight, Bell, Inbox, CalendarClock,
+  RefreshCw, ChevronRight, ExternalLink, Timer,
+  AlertTriangle, Euro, Activity, BarChart3, Banknote, Receipt, PhoneCall,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Separator } from "@/components/ui/separator";
 import { Link } from "react-router-dom";
-import { format, formatDistanceToNow, differenceInHours, differenceInMinutes, differenceInDays, isPast } from "date-fns";
+import { formatDistanceToNow, differenceInHours, differenceInMinutes, differenceInDays, isPast } from "date-fns";
 import { de } from "date-fns/locale";
 import { FunnelCInsightCard } from "@/components/admin/FunnelCInsightCard";
+import { formLabel, styleLabel } from "@/features/funnel-a/catalog";
 
 // ============================================================================
 // Types
@@ -90,6 +90,12 @@ function useDashboardStats() {
 // Action Items Hook - Sammelt alle offenen Aufgaben
 // ============================================================================
 
+const LEAD_TYPE_LABELS: Record<string, string> = {
+  a: "Angebote einholen",
+  b: "Unterbieten",
+  traumkueche: "Traumküchen-KI",
+};
+
 function useActionItems() {
   return useQuery({
     queryKey: ["adminActionItems"],
@@ -131,29 +137,22 @@ function useActionItems() {
         }
       }
 
-      // 2. Neue Leads (alle Funnel, letzte 24 h, noch nicht im Wizard-Block abgedeckt).
+      // 2. Neue Leads aller Funnel (A, B, Traumküche) der letzten 24 h.
       // leads hat keine is_viewed/disposition-Spalte, also blenden wir einfach die
-      // letzten Einträge ein, wenn sie nicht aus Funnel A stammen (Funnel A ist
-      // schon oben durch wizard_sessions).
+      // letzten Einträge ein.
       const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
       const { data: recentLeads } = await supabase
         .from("leads")
         .select("id, funnel_type, first_name, last_name, email, postal_code, kitchen_style, kitchen_form, budget_midpoint, created_at")
         .gte("created_at", twentyFourHoursAgo)
-        .neq("funnel_type", "angebot")
         .order("created_at", { ascending: false })
         .limit(10);
 
       if (recentLeads) {
         for (const l of recentLeads) {
-          const typeLabel =
-            l.funnel_type === "traumkueche"
-              ? "Traumküchen-KI"
-              : l.funnel_type === "preis_unterbieten"
-              ? "Preis-Unterbietung"
-              : "Lead";
+          const typeLabel = LEAD_TYPE_LABELS[l.funnel_type] ?? "Lead";
           const summary =
-            [l.kitchen_style, l.kitchen_form].filter(Boolean).join(" · ")
+            [styleLabel(l.kitchen_style) ?? l.kitchen_style, formLabel(l.kitchen_form) ?? l.kitchen_form].filter(Boolean).join(" · ")
             || (l.budget_midpoint ? `Budget ${l.budget_midpoint.toLocaleString("de-DE")} €` : "ohne Details");
           items.push({
             id: `lead-${l.id}`,
@@ -668,8 +667,8 @@ function useUnreadCounts() {
         supabase.from("support_messages").select("*", { count: "exact", head: true }).or("status.eq.open,status.is.null"),
         supabase.from("contact_messages").select("*", { count: "exact", head: true }).eq("status", "new"),
         supabase.from("wizard_sessions").select("*", { count: "exact", head: true }).eq("status", "completed").or("is_viewed.is.null,is_viewed.eq.false").is("disposition", null),
-        // Funnel B + C Leads der letzten 24 h (Funnel A geht via wizard_sessions).
-        supabase.from("leads").select("*", { count: "exact", head: true }).neq("funnel_type", "angebot").gte("created_at", twentyFourHoursAgo),
+        // Leads aller Funnel (A, B, Traumküche) der letzten 24 h.
+        supabase.from("leads").select("id", { count: "exact", head: true }).gte("created_at", twentyFourHoursAgo),
         supabase.from("dealer_applications").select("*", { count: "exact", head: true }).eq("status", "pending"),
         supabase.from("kitchen_questions").select("*", { count: "exact", head: true }).is("answer", null),
       ]);

@@ -28,8 +28,10 @@ import {
 } from "@/components/ui/dialog";
 import { Loader2, Eye } from "lucide-react";
 import type { Database } from "@/integrations/supabase/types";
+import { formLabel, leadSummaryFromRow, styleLabel } from "@/features/funnel-a/catalog";
 import { fetchTenderStatuses } from "@/features/marketplace/admin-api";
 import { AdminTenderPanel, TenderStatusBadge } from "@/features/marketplace/components/AdminTenderPanel";
+import { ProjectAnswers } from "@/features/marketplace/components/ProjectAnswers";
 
 type Lead = Database["public"]["Tables"]["leads"]["Row"];
 
@@ -304,12 +306,12 @@ export default function AdminLeads() {
                     <div>{formatEuro(selected.budget_midpoint)}</div>
                   </div>
                   <div>
-                    <div className="text-xs uppercase text-muted-foreground">Kuechenform</div>
-                    <div>{selected.kitchen_form ?? "-"}</div>
+                    <div className="text-xs uppercase text-muted-foreground">Küchenform</div>
+                    <div>{formLabel(selected.kitchen_form) ?? selected.kitchen_form ?? "-"}</div>
                   </div>
                   <div>
-                    <div className="text-xs uppercase text-muted-foreground">Kuechenstil</div>
-                    <div>{selected.kitchen_style ?? "-"}</div>
+                    <div className="text-xs uppercase text-muted-foreground">Küchenstil</div>
+                    <div>{styleLabel(selected.kitchen_style) ?? selected.kitchen_style ?? "-"}</div>
                   </div>
                   <div>
                     <div className="text-xs uppercase text-muted-foreground">Anlass</div>
@@ -346,6 +348,7 @@ export default function AdminLeads() {
                     </div>
                   </div>
                 </div>
+                <ProjectAnswers summary={leadSummaryFromRow(selected)} title="Angaben aus der Anfrage" wide />
                 <div>
                   <div className="mb-2 text-xs uppercase text-muted-foreground">
                     Funnel-Antworten (JSONB)

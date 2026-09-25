@@ -17,6 +17,8 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { ApiError, errorMessage } from "@/features/marketplace/api-client";
 import { OfferCard } from "@/features/marketplace/components/OfferCard";
+import { PhoneCaptureCard } from "@/features/marketplace/components/PhoneCaptureCard";
+import { ProjectAnswers } from "@/features/marketplace/components/ProjectAnswers";
 import { acceptOffer, cancelProject, getProject, type ProjectOffer, type ProjectView } from "@/features/marketplace/project-api";
 import { BeforeAfterSlider } from "@/features/planner/components/BeforeAfterSlider";
 import { ProjectLinkRequest } from "./ProjectLinkRequest";
@@ -64,6 +66,7 @@ export default function ProjectPage() {
   const [pending, setPending] = useState<ProjectOffer | null>(null);
   const [cancelOpen, setCancelOpen] = useState(false);
   const [cancelReason, setCancelReason] = useState("");
+  const [phoneSaved, setPhoneSaved] = useState(false);
 
   const query = useQuery({
     queryKey: ["kw-project", token],
@@ -134,6 +137,12 @@ export default function ProjectPage() {
   const photo = view.photos.find((p) => p.url);
   const labels = tender?.summary?.labels;
   const endsIn = remaining(tender?.ends_at ?? null);
+  const closed = !!tender && ["awarded", "cancelled", "expired"].includes(tender.status);
+  const asksForPhone = view.lead.has_phone === false && (view.lead.funnel_type === "a" || view.lead.funnel_type === "b") && !closed;
+  // Bleibt nach dem Speichern stehen (has_phone ist dann true), damit die Bestätigung sichtbar bleibt.
+  const phoneCard = (asksForPhone || phoneSaved) && (
+    <PhoneCaptureCard token={token} onSaved={() => setPhoneSaved(true)} className={isNew ? "mb-8" : undefined} />
+  );
 
   return (
     <PageLayout title="Ihr Küchenprojekt" description="Ihre Küchenplanung und die Angebote der Studios" canonicalPath="/projekt" noIndex>
@@ -151,6 +160,7 @@ export default function ProjectPage() {
               </div>
             </div>
           )}
+          {isNew && phoneCard}
 
           <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
             <div>
@@ -161,7 +171,9 @@ export default function ProjectPage() {
             </div>
             {estimate && (
               <div className="rounded-xl border bg-card px-4 py-3">
-                <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground">KI-Preisschätzung</p>
+                <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
+                  {view.lead.funnel_type === "traumkueche" ? "KI-Preisschätzung" : "Preisschätzung"}
+                </p>
                 <p className="text-lg font-extrabold tabular-nums">
                   {euro(estimate.min)} – {euro(estimate.max)}
                 </p>
@@ -215,6 +227,7 @@ export default function ProjectPage() {
           </div>
 
           <aside className="space-y-5">
+            {!isNew && phoneCard}
             {latestRender?.url && (
               <div className="overflow-hidden rounded-2xl border bg-card">
                 {photo?.url && latestRender.mode === "edit" ? (
@@ -248,6 +261,8 @@ export default function ProjectPage() {
                 </dl>
               </div>
             )}
+
+            <ProjectAnswers summary={tender?.summary} title="Ihre Angaben" />
 
             <div className="rounded-2xl border bg-card p-5 text-sm text-muted-foreground">
               <p className="font-semibold text-foreground">Gut zu wissen</p>

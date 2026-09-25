@@ -15,6 +15,7 @@ import {
 
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
+import { formLabel, styleLabel } from "@/features/funnel-a/catalog";
 import { ensureValidRLSSession } from "@/lib/sessionGuard";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -60,7 +61,7 @@ const FUNNEL_META: Record<
 > = {
   a: {
     title: "Angebote einholen",
-    href: "/funnel/a",
+    href: "/formular",
     icon: MessageSquarePlus,
     color: "text-blue-600 bg-blue-50 border-blue-200 dark:bg-blue-950/20 dark:border-blue-800",
     description: "Bis zu 3 geprüfte Studios geben Ihnen ein unverbindliches Angebot.",
@@ -248,6 +249,8 @@ export function MyKuechenJourney() {
                 lead.existing_offer_price_cents,
                 lead.budget_midpoint,
               );
+              const form = formLabel(lead.kitchen_form);
+              const style = styleLabel(lead.kitchen_style);
               return (
                 <div
                   key={lead.id}
@@ -272,12 +275,8 @@ export function MyKuechenJourney() {
                           locale: de,
                         })}
                       </span>
-                      {lead.kitchen_form && (
-                        <span className="capitalize">Form: {lead.kitchen_form}</span>
-                      )}
-                      {lead.kitchen_style && (
-                        <span className="capitalize">Stil: {lead.kitchen_style}</span>
-                      )}
+                      {form && <span>Form: {form}</span>}
+                      {style && <span>Stil: {style}</span>}
                       {budget && (
                         <span>
                           {lead.funnel_type === "b" ? "Vorliegendes Angebot" : "Budget"}:

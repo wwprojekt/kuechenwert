@@ -1,5 +1,6 @@
 import { Clock, ImageIcon, KeyRound, MapPin, Trophy, Users } from "lucide-react";
 import { Link } from "react-router-dom";
+import { formLabel } from "@/features/funnel-a/catalog";
 import { cn } from "@/lib/utils";
 import type { DealerProjectRow } from "../dealer-api";
 
@@ -17,8 +18,9 @@ export function timeLeft(iso: string | null): string | null {
 export function projectTitle(p: Pick<DealerProjectRow, "summary" | "funnel_type">): string {
   const s = p.summary ?? {};
   if (s.room?.description) return s.room.description;
-  const form = s.kitchen_form ? s.kitchen_form.toString() : "Küche";
-  return p.funnel_type === "b" ? `Angebot unterbieten · ${form}` : `Küchenprojekt · ${form}`;
+  const title = p.funnel_type === "b" ? "Angebot unterbieten" : "Küchenprojekt";
+  const form = formLabel(s.kitchen_form);
+  return form ? `${title} · ${form}` : title;
 }
 
 export function projectValue(p: Pick<DealerProjectRow, "estimate_min_eur" | "estimate_max_eur" | "reference_price_eur">): string {

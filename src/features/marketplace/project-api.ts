@@ -85,6 +85,7 @@ export interface ProjectView {
     kitchen_style: string | null;
     budget_eur: number | null;
     timeframe_months: number | null;
+    has_phone: boolean;
   };
   tender: null | {
     id: string;
@@ -115,4 +116,7 @@ const FN = "kw-project";
 export const getProject = (token: string) => callFunction<ProjectView>(FN, { action: "get", token });
 export const acceptOffer = (token: string, bidId: string) => callFunction<ProjectView>(FN, { action: "accept", token, bid_id: bidId });
 export const cancelProject = (token: string, reason: string) => callFunction<ProjectView>(FN, { action: "cancel", token, reason });
+/** `already`: Für das Projekt war schon eine Nummer hinterlegt, sie bleibt unverändert. */
+export const addProjectPhone = (token: string, phone: string, consentCall: boolean) =>
+  callFunction<{ ok: true; already?: true }>(FN, { action: "add-phone", token, phone, consent_call: consentCall });
 export const requestProjectLink = (email: string) => callFunction<{ ok: true }>(FN, { action: "resend", email });

@@ -25,6 +25,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { errorMessage } from "@/features/marketplace/api-client";
 import { buildBriefing, buildFloorPlanDxf, downloadFile } from "@/features/marketplace/briefing-export";
 import { projectTitle, projectValue, timeLeft } from "@/features/marketplace/components/DealerProjectCard";
+import { ProjectAnswers } from "@/features/marketplace/components/ProjectAnswers";
 import {
   fetchDealerProject,
   fetchMarketProfile,
@@ -221,7 +222,6 @@ export default function DealerProjectDetail() {
   const slotsLeft = Math.max(0, d.max_contact_purchases - d.contact_purchases);
   const canUnlock = !d.contact_unlocked && !d.awarded_to_me && ["active", "completed"].includes(d.status) && slotsLeft > 0 && (d.contact_price_cents ?? 0) > 0;
   const left = timeLeft(d.ends_at);
-  const answers = s.answers && typeof s.answers === "object" ? Object.entries(s.answers).filter(([, v]) => v !== null && v !== "" && !(Array.isArray(v) && v.length === 0)) : [];
 
   const exportJson = () => {
     const briefing = buildBriefing(d, media.data ?? {});
@@ -256,7 +256,9 @@ export default function DealerProjectDetail() {
           <h1 className="mt-1 text-2xl font-extrabold tracking-tight sm:text-3xl">{projectTitle(d)}</h1>
         </div>
         <div className="text-left sm:text-right">
-          <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground">KI-Schätzung / Budget</p>
+          <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
+            {d.funnel_type === "traumkueche" ? "KI-Schätzung / Budget" : "Schätzung / Budget"}
+          </p>
           <p className="text-2xl font-extrabold tabular-nums">{projectValue(d)}</p>
         </div>
       </div>
@@ -337,19 +339,7 @@ export default function DealerProjectDetail() {
             </div>
           )}
 
-          {answers.length > 0 && (
-            <div className="rounded-2xl border bg-card p-5">
-              <h2 className="font-bold">Angaben aus der Anfrage</h2>
-              <dl className="mt-3 grid gap-2 text-sm sm:grid-cols-2">
-                {answers.map(([k, v]) => (
-                  <div key={k} className="flex gap-3">
-                    <dt className="w-36 flex-none capitalize text-muted-foreground">{k.replace(/_/g, " ")}</dt>
-                    <dd className="font-medium">{Array.isArray(v) ? v.join(", ") : typeof v === "object" ? JSON.stringify(v) : String(v)}</dd>
-                  </div>
-                ))}
-              </dl>
-            </div>
-          )}
+          <ProjectAnswers summary={s} title="Angaben aus der Anfrage" wide />
 
           <div className="flex flex-wrap gap-2 print:hidden">
             <Button variant="outline" onClick={exportJson}>

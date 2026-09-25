@@ -1,0 +1,69 @@
+name: Deploy Production (Dokploy)
+
+# Jeder Push auf main wird geprüft und danach über die Dokploy-API deployt.
+# Benötigte Repo-Secrets (Settings → Secrets and variables → Actions):
+#   DOKPLOY_URL      z. B. https://dokploy.example.de (ohne /api)
+#   DOKPLOY_API_KEY  Dokploy → Profil → API/CLI → Token
+#   DOKPLOY_APP_ID   applicationId der KüchenWert-App (nur diese App!)
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    name: Typecheck, Tests, Build
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 12
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: Strikter Typecheck (neuer Code)
+        run: npm run typecheck
+
+      - name: Unit-Tests Planer & Marktplatz
+        run: npx vitest run src/features
+
+      - name: Produktions-Build
+        run: npm run build
+
+  deploy:
+    name: Dokploy-Deploy auslösen
+    needs: verify
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Deploy anstoßen
+        env:
+          DOKPLOY_URL: ${{ secrets.DOKPLOY_URL }}
+          DOKPLOY_API_KEY: ${{ secrets.DOKPLOY_API_KEY }}
+          DOKPLOY_APP_ID: ${{ secrets.DOKPLOY_APP_ID }}
+        run: |
+          if [ -z "$DOKPLOY_URL" ] || [ -z "$DOKPLOY_API_KEY" ] || [ -z "$DOKPLOY_APP_ID" ]; then
+            echo "::error::Repo-Secrets DOKPLOY_URL, DOKPLOY_API_KEY und DOKPLOY_APP_ID fehlen – Produktion wurde NICHT aktualisiert."
+            exit 1
+          fi
+          curl --fail-with-body -sS -X POST "${DOKPLOY_URL%/}/api/application.deploy" \
+            -H "accept: application/json" \
+            -H "Content-Type: application/json" \
+            -H "x-api-key: ${DOKPLOY_API_KEY}" \
+            -d "{\"applicationId\":\"${DOKPLOY_APP_ID}\"}"

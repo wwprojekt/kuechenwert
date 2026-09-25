@@ -1,0 +1,8 @@
+# pnpm ≥ 11 bricht die Installation ab (ERR_PNPM_IGNORED_BUILDS), wenn eine
+# Abhängigkeit ein Build-Skript mitbringt, das hier nicht entschieden ist.
+# Neue Einträge nur nach Prüfung des Skripts ergänzen.
+allowBuilds:
+  esbuild: true
+  "@swc/core": true
+  # Kopiert nur den Mock-Service-Worker nach public/ – im Build nicht nötig.
+  msw: false

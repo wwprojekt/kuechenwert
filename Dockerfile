@@ -17,11 +17,12 @@ RUN apk add --no-cache \
     libc6-compat \
     libwebp-tools
 
-# Install pnpm
-RUN corepack enable && corepack prepare pnpm@latest --activate
+# pnpm-Version fest (= packageManager in package.json). "latest" hat den
+# Build unbemerkt gebrochen, als pnpm 11 ungeprüfte Build-Skripte zum Fehler machte.
+RUN npm install -g pnpm@12.6.0
 
-# Copy package files
-COPY package.json pnpm-lock.yaml ./
+# Copy package files (pnpm-workspace.yaml enthält die Build-Freigaben)
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 
 # Install all dependencies (including dev dependencies for build)
 RUN pnpm install --frozen-lockfile
@@ -61,11 +62,9 @@ WORKDIR /app
 # Install dependencies
 RUN apk add --no-cache git
 
-# Install pnpm
-RUN corepack enable && corepack prepare pnpm@latest --activate
+RUN npm install -g pnpm@12.6.0
 
-# Copy package files
-COPY package.json pnpm-lock.yaml ./
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 
 # Install all dependencies (including dev dependencies)
 RUN pnpm install

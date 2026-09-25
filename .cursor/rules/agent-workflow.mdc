@@ -15,7 +15,9 @@ Verbindliche Konvention für KüchenWert. Der Agent handelt **autonom und proakt
 - Commit-Messages auf Deutsch, Conventional-Commits (`feat:`, `fix:`, `refactor:`, `docs:`, `chore:` …), prägnant, mit Kurzbegründung.
 - **Nicht mehrere Mini-Commits** — logisch zusammengehörende Änderungen in einem Commit bündeln.
 - PowerShell hat kein `&&` und kein Heredoc → Befehle einzeln ausführen, Commit-Message über `git commit -F .tmp_commit_msg.txt` (Temp-File danach löschen).
-- Push auf `main` triggert den Dokploy-Webhook → Production (`https://kuechenwert24.de`), Go-Live nach ca. 2–4 Minuten.
+- Push auf `main` startet `.github/workflows/deploy.yml`: Prüfung (Frozen-Install, `npm run typecheck`, Feature-Tests, Build), danach Dokploy-Deploy per API → Production (`https://kuechenwert24.de`). Braucht die Repo-Secrets `DOKPLOY_URL`, `DOKPLOY_API_KEY`, `DOKPLOY_APP_ID`; fehlen sie, endet der Deploy-Job rot und Production bleibt unverändert.
+- Nach dem Deploy prüfen, ob der neue Build wirklich live ist (z. B. `CACHE_VERSION` in `/sw.js` oder `last-modified` von `/`), statt es anzunehmen.
+- pnpm-Version ist über `packageManager` gepinnt; Build-Skripte neuer Abhängigkeiten in `pnpm-workspace.yaml` (`allowBuilds`) freigeben, sonst scheitert der Install.
 
 ## Supabase (End-to-End)
 

@@ -6,7 +6,8 @@
  *
  * Strategy:
  * 1. Direct string comparison: Bearer token equals SUPABASE_SERVICE_ROLE_KEY (JWT or sb_secret)
- * 2. Legacy Supabase service_role JWT: decode payload; role + ref must match this project (CLI/API invokes)
+ * 2. Legacy Supabase service_role JWT: role + ref must match this project AND the
+ *    Auth server must accept the token (signature check, see isGenuineServiceRoleJwt)
  * 3. User JWT with admin role in user_roles
  */
 
@@ -26,6 +27,23 @@ function decodeJwtPayload(token: string): Record<string, unknown> | null {
     return JSON.parse(json);
   } catch {
     return null;
+  }
+}
+
+/**
+ * The functions run with verify_jwt = false, so the gateway does not check the
+ * signature. A decoded payload alone is forgeable; the Auth admin API only
+ * answers 2xx for a genuinely signed service_role key.
+ */
+async function isGenuineServiceRoleJwt(token: string, supabaseUrl: string): Promise<boolean> {
+  try {
+    const resp = await fetch(`${supabaseUrl}/auth/v1/admin/users?page=1&per_page=1`, {
+      headers: { apikey: token, Authorization: `Bearer ${token}` },
+    });
+    await resp.body?.cancel();
+    return resp.ok;
+  } catch {
+    return false;
   }
 }
 
@@ -65,7 +83,8 @@ export async function checkServiceRoleOrAdmin(
     if (
       payload?.role === 'service_role' &&
       typeof payload.ref === 'string' &&
-      payload.ref === expectedRef
+      payload.ref === expectedRef &&
+      await isGenuineServiceRoleJwt(token, supabaseUrl)
     ) {
       return { authorized: true };
     }

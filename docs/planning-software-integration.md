@@ -1,6 +1,6 @@
 # Anbindung an Küchenplanungs-Software
 
-Stand: 25.09.2026
+Stand: 26.09.2026
 
 ## Ziel
 
@@ -50,10 +50,25 @@ IDM-Datenstandard des DCC (Daten Competence Center).
 
 ### 3. „DataX“
 
-Unter diesem Namen haben wir kein Küchenplanungsprodukt mit öffentlicher
-Schnittstelle gefunden. Vermutlich ist ein anderes Produkt gemeint (z. B.
-Daten über DCC/IDM oder ein Warenwirtschafts-Connector). Bitte Hersteller/Link
-nennen, dann prüfen wir die Anbindung konkret.
+Ein Küchenplanungsprodukt dieses Namens gibt es nicht (Recherche 26.09.2026).
+Wahrscheinlich gemeint ist eines dieser Produkte:
+
+| Produkt | Was es kann | Passt für |
+|---|---|---|
+| **CARAT planner** (CARAT GmbH) | Browser-3D-Planer zum Einbetten, neutraler Katalog, KI-Planungsvorschläge (CARAT guide), Lead-Workflow, Übergabe an CARAT | Online-Vorplanung durch Kund:innen, Übergabe an CARAT-Studios |
+| **K:PLAN** (RMTSoft) | E-Commerce-Küchenkonfigurator mit Produktkatalog und Warenkorb-API („konfigurieren, kaufen, liefern“), Einrichtung ca. 4.900 €, dazu Cloud-Software WorkX | Direkter Online-Verkauf fester Küchenprogramme |
+| **IDM Küche 3.1** (DCC e. V.) | Branchenstandard für Herstellerkataloge; zusätzlich Web-Services für Bestellabwicklung und Planungsprüfung | Verbindliche Preise aus echten Herstellerdaten |
+| **Winner Flex** (Compusoft) | Enterprise-API nach Freischaltung | Studios, die mit Winner planen |
+| **KüchenDesk** | Cloud-Warenwirtschaft für Studios mit Schnittstellen zu CARAT, KPS, Winner, eOPUS, Hammes | Auftragsabwicklung im Studio, nicht Endkundenplanung |
+
+### 4. Einordnung für KüchenWert
+
+KüchenWert ist Vermittler: Der Kaufvertrag entsteht nach dem Aufmaß zwischen
+Kund:in und Studio (siehe Auftragsverlauf `kw_orders`). Ein Warenkorb-Planer
+wie K:PLAN passt deshalb nur für ein künftiges eigenes Festpreis-Sortiment. Für
+den Marktplatz zählt, dass Studios ohne Abtippen weiterplanen können – das
+leisten JSON-Briefing und DXF heute, ein CARAT-Projektimport wäre der nächste
+Schritt.
 
 ## Empfehlung
 
@@ -61,7 +76,8 @@ nennen, dann prüfen wir die Anbindung konkret.
    ersten Studios einholen, welche Felder im Import fehlen.
 2. **Mit CARAT sprechen** (Partnerprogramm/Schnittstellen): Gibt es einen
    dokumentierten Import für Projekt-/Raumdaten (z. B. XML) statt nur DXF?
-   Kosten eines Web-Planers pro Studio bzw. pro Plattform?
+   Lässt sich der CARAT planner als Plattform-Lizenz (statt pro Studio)
+   einbetten, sodass die Vorplanung mehrerer Studios bedient?
 3. **Erst danach** Herstellerkataloge (IDM) direkt einbinden – das ist nur
    sinnvoll, wenn wir Preise verbindlich rechnen wollen. Für die heutige
    Preisspanne reicht die parametrische Preis-Engine

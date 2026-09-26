@@ -157,8 +157,8 @@ Before every commit:
 - Dealer approval syncs company data to profiles via `approve_dealer_application()` RPC
 
 ### Email System
-- All emails via Resend API (info@caravanwert.de)
-- Shared template: `_shared/email-builder.ts` (professional HTML with CaravanWert branding)
+- All emails via Resend API (`info@kuechenwert24.de`; marketplace/order workers send from `noreply@kuechenwert24.de` with `reply_to` = info@)
+- Shared template: `_shared/email-builder.ts` (KüchenWert branding, Forest Sage); invoice wording per invoice type in `_shared/invoice-labels.ts`
 - Anti-spam: Per-type dedup via `dealer_notifications` and `admin_emails` tables
 - Rate limits: Resend Free Plan ~100/day, 3000/month
 
@@ -202,6 +202,7 @@ Before every commit:
 - `verify_jwt` matrix:
   - **`true`** for ADMIN-only functions that don't do their own auth (lets the Supabase gateway reject before code runs). Beware: gateway 401 has empty body — frontend errors will be opaque. Use only when frontend doesn't need to distinguish reasons.
   - **`false`** + own service-role check for functions with custom auth, public flows, or webhook signature verification. Most CaravanWert functions fall here.
+- **Never authorize on decoded JWT claims alone.** With `verify_jwt = false` the gateway does not check signatures, so a hand-made token with `role: service_role` decodes fine. `_shared/auth.ts` verifies such tokens against the Auth server (`isGenuineServiceRoleJwt`); a function only gets that fix when it is redeployed. Probe after deploy: forged token must return 401.
 - Catch-all `throw` → 500 is bad for UX. Use specific HTTP codes + readable error messages
 - `supabase_deploy_edge_function` ALWAYS requires the `files` parameter with file contents
 - For periodically-running functions (image processing, cleanup, digests, reminders): the function has NO own auth — instead the cron job in `cron.schedule` passes the service-role key from `vault.decrypted_secrets` in the `Authorization` header. Function reads `req.headers.get("Authorization")` and verifies it matches `Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")`.
@@ -231,6 +232,8 @@ Before every commit:
 Note: Supabase serves storage via its own Cloudflare with Bot Management (`Set-Cookie: __cf_bm`), which forces `Cache-Control: no-cache` on the wire even when metadata is correct. Browsers still benefit (304 revalidation), but for true 1-year edge cache an own Worker proxy is required.
 
 ### Database
+- **Renames do not update function bodies.** Postgres stores PL/pgSQL/SQL bodies as text; after renaming a table or column, search `pg_proc.prosrc` for the old name and fix the functions in the same migration (see `20260926133055_kw_fix_kitchen_rename_in_functions`: 28 functions still used `motorhomes` and blocked dealer approval).
+- **Outbox channels:** `kw_outbox.channel = 'market'` is processed by `kw-market-worker` (`kw_enqueue`), `'order'` by `kw-order-worker` (`kw_enqueue_order`). A new event type must be handled by the worker of its channel, otherwise it retries and then stays unprocessed.
 - `profiles.role` does NOT exist – roles ALWAYS via `user_roles` table
 - `search_path` must be set correctly in all functions (security)
 - `SECURITY INVOKER` is the default for new functions. Use `SECURITY DEFINER` ONLY when:

@@ -174,7 +174,7 @@ export const buildEmailLayout = (settings: Settings, title: string, content: str
                       &copy; ${year} ${siteName}. Alle Rechte vorbehalten.
                     </p>
                     <p style="margin: 6px 0 0; font-size: 11px; color: rgba(148,163,184,0.5);">
-                      Diese E-Mail wurde automatisch versendet. Bitte antworten Sie nicht direkt auf diese Nachricht.
+                      Fragen? Antworten Sie einfach auf diese E-Mail &ndash; sie erreicht unser Service-Team.
                     </p>
                   </td>
                 </tr>
@@ -286,7 +286,7 @@ export const button = (text: string, url: string, _settings?: Settings) => {
           </v:roundrect>
           <![endif]-->
           <!--[if !mso]><!-->
-          <a href="${url}" style="background-color: ${BRAND.primary}; color: ${BRAND.white}; padding: 15px 36px; text-decoration: none; border-radius: 8px; font-size: 16px; font-weight: 700; display: inline-block; letter-spacing: 0.3px; box-shadow: 0 2px 4px rgba(31,138,162,0.3); transition: background-color 0.2s;">
+          <a href="${url}" style="background-color: ${BRAND.primary}; color: ${BRAND.white}; padding: 15px 36px; text-decoration: none; border-radius: 8px; font-size: 16px; font-weight: 700; display: inline-block; letter-spacing: 0.3px; box-shadow: 0 2px 4px rgba(51,103,83,0.3); transition: background-color 0.2s;">
             ${text}
           </a>
           <!--<![endif]-->

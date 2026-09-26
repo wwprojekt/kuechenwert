@@ -3,17 +3,20 @@ import { getCorsHeaders, handleCorsPreflightRequest } from '../_shared/cors.ts';
 // @deno-types="https://esm.sh/jspdf@2.5.2"
 import { jsPDF } from 'https://esm.sh/jspdf@2.5.2';
 import { checkServiceRoleOrAdmin } from '../_shared/auth.ts';
+import { BRAND as BRAND_META } from '../_shared/brand-config.ts';
+import { describeInvoice } from '../_shared/invoice-labels.ts';
 
 interface InvoicePdfRequest { invoiceId: string; }
 
-const BRAND = { r: 15, g: 79, b: 92 };
-const ACCENT = { r: 31, g: 138, b: 162 };
+// Forest Sage, identisch zu _shared/email-builder.ts (primaryDarker / primary / primaryDark).
+const BRAND = { r: 25, g: 55, b: 43 };
+const ACCENT = { r: 51, g: 103, b: 83 };
 const TEXT_DARK = { r: 31, g: 41, b: 55 };
 const TEXT_MED = { r: 75, g: 85, b: 99 };
 const TEXT_LIGHT = { r: 107, g: 114, b: 128 };
-const GREEN_BG = { r: 240, g: 253, b: 250 };
-const GREEN_BORDER = { r: 153, g: 246, b: 228 };
-const GREEN_TEXT = { r: 15, g: 118, b: 110 };
+const GREEN_BG = { r: 238, g: 241, b: 236 };
+const GREEN_BORDER = { r: 190, g: 208, b: 196 };
+const GREEN_TEXT = { r: 42, g: 85, b: 68 };
 const RED_BG = { r: 254, g: 242, b: 242 };
 const RED_BORDER = { r: 252, g: 165, b: 165 };
 const RED_TEXT = { r: 185, g: 28, b: 28 };
@@ -23,12 +26,6 @@ const AMBER_TEXT = { r: 146, g: 64, b: 14 };
 const BLUE_BG = { r: 239, g: 246, b: 255 };
 const BLUE_BORDER = { r: 147, g: 197, b: 253 };
 const BLUE_TEXT = { r: 30, g: 64, b: 175 };
-
-const PENALTY_REASON_LABELS: Record<string,string> = {
-  anderweitiger_verkauf: 'Anderweitiger Verkauf während Auktion',
-  vorzeitige_ruecknahme: 'Vorzeitige Rücknahme des Fahrzeugs',
-  falsche_angaben: 'Falsche/irreführende Angaben',
-};
 
 function fmtCur(a: number|string): string {
   return Number(a).toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' €';
@@ -60,21 +57,21 @@ Deno.serve(async (req) => {
 
     const { data: invoice, error: invoiceError } = await supabase
       .from('invoices')
-      .select(`*, dealer:profiles(salutation, first_name, last_name, company_name, email, company_street, company_city, company_zip, company_country, address_street, address_city, address_zip, address_country, customer_number, vat_id), auction:auctions(kitchen:kitchens(manufacturer, model)), items:invoice_items(*)`)
+      .select(`*, dealer:profiles(salutation, first_name, last_name, company_name, email, company_street, company_city, company_zip, company_country, address_street, address_city, address_zip, address_country, customer_number, vat_id), auction:auctions(kitchen:kitchens(manufacturer, model)), lead:leads(postal_code, city), items:invoice_items(*)`)
       .eq('id', invoiceId).single();
     if (invoiceError || !invoice) throw new Error(`Invoice not found: ${invoiceError?.message}`);
 
     const { data: settings } = await supabase.from('site_settings').select('*').limit(1).maybeSingle();
 
-    const siteName = settings?.site_name || 'KuechenWert';
-    const siteDesc = settings?.site_description || 'Deutschlands führende Wohnmobil-Handelsplattform';
+    const siteName = settings?.site_name || BRAND_META.name;
+    const siteDesc = settings?.site_description || BRAND_META.tagline;
     const addr = settings?.address || 'Hannoversche Straße 106';
     const cityS = settings?.city || 'Hannover';
     const zipS = settings?.zip_code || '30627';
     const countryS = settings?.country || 'Deutschland';
-    const contactEmail = settings?.contact_email || 'info@kuechenwert24.de';
+    const contactEmail = settings?.contact_email || BRAND_META.supportEmail;
     const phoneS = settings?.support_phone || '0511 / 51532476';
-    const website = 'www.kuechenwert24.de';
+    const website = BRAND_META.domain;
     const bankIban = settings?.bank_iban || '';
     const bankBic = settings?.bank_bic || '';
     const bankName = settings?.bank_name || '';
@@ -83,7 +80,8 @@ Deno.serve(async (req) => {
     const md = settings?.managing_director || '';
     const hrb = settings?.hrb_number || '';
 
-    const isPenalty = invoice.invoice_type === 'seller_penalty';
+    const labels = describeInvoice(invoice);
+    const isPenalty = labels.isPenalty;
     const personalName = `${invoice.dealer?.first_name||''} ${invoice.dealer?.last_name||''}`.trim();
     // Penalty recipients are typically private sellers → use personal name + private
     // address. Commission recipients are dealers → prefer company name + company
@@ -108,14 +106,6 @@ Deno.serve(async (req) => {
     const dlrVatId = invoice.dealer?.vat_id || '';
     const custNum = invoice.customer_number || invoice.dealer?.customer_number || '';
     const isRC = invoice.reverse_charge === true;
-
-    const penaltyReasonLabel = isPenalty
-      ? (PENALTY_REASON_LABELS[invoice.penalty_reason] || invoice.penalty_reason || 'Vertragsstrafe')
-      : '';
-    const mhName = isPenalty
-      ? 'Vertragsstrafe'
-      : (invoice.auction?.kitchen
-        ? `${invoice.auction.kitchen.manufacturer} ${invoice.auction.kitchen.model}` : 'Vermittlungsprovision');
 
     let agbVersionStr = '';
     if (isPenalty) {
@@ -191,12 +181,12 @@ Deno.serve(async (req) => {
 
     y=Math.max(ry,my)+2;
 
-    // Reference box (vehicle or penalty)
+    // Reference box (project, kitchen or penalty)
     const refBg = isPenalty ? RED_BG : GREEN_BG;
     const refBorder = isPenalty ? RED_BORDER : GREEN_BORDER;
     const refText = isPenalty ? RED_TEXT : GREEN_TEXT;
-    const refTitle = isPenalty ? 'VERTRAGSSTRAFE' : 'FAHRZEUGREFERENZ';
-    const refDetail = isPenalty ? penaltyReasonLabel : mhName;
+    const refTitle = labels.referenceTitle.toUpperCase();
+    const refDetail = labels.referenceValue;
     doc.setFillColor(refBg.r,refBg.g,refBg.b);
     doc.setDrawColor(refBorder.r,refBorder.g,refBorder.b);
     doc.roundedRect(ml,y,cw,14,2,2,'FD');
@@ -225,23 +215,22 @@ Deno.serve(async (req) => {
     y+=10;
 
     // Rows
-    const fallbackDesc = isPenalty
-      ? `Vertragsstrafe: ${penaltyReasonLabel}`
-      : `Vermittlungsprovision: ${mhName}`;
+    const fallbackDesc = labels.fallbackItemDescription;
     const items = invoice.items?.length ? invoice.items : [{description:fallbackDesc,quantity:1,unit_price:net,total_price:net}];
     for(let i=0;i<items.length;i++){
       const it=items[i];
-      const rowDesc = isPenalty
-        ? (it.description || fallbackDesc)
-        : `Vermittlungsprovision: ${mhName}`;
+      const rowDesc = it.description || fallbackDesc;
       doc.setTextColor(TEXT_DARK.r,TEXT_DARK.g,TEXT_DARK.b); doc.setFontSize(8.5); doc.setFont('helvetica','normal');
+      // Beschreibungsspalte endet vor MENGE (ml+100, zentriert).
+      const descLines: string[] = doc.splitTextToSize(rowDesc, 72);
+      const rowH = Math.max(10, 6 + descLines.length * 3.6);
       doc.text(String(i+1),ml+4,y+4);
-      doc.text(rowDesc,ml+20,y+4);
+      doc.text(descLines,ml+20,y+4);
       doc.text(String(it.quantity||1),ml+100,y+5.5,{align:'center'});
-      doc.text(fmtCur(it.unit_price||net),ml+130,y+5.5,{align:'right'});
-      doc.text(fmtCur(it.total_price||net),ml+cw-4,y+5.5,{align:'right'});
-      doc.setDrawColor(229,231,235); doc.setLineWidth(0.2); doc.line(ml,y+8,ml+cw,y+8);
-      y+=10;
+      doc.text(fmtCur(it.unit_price??net),ml+130,y+5.5,{align:'right'});
+      doc.text(fmtCur(it.net_amount??it.total_price??net),ml+cw-4,y+5.5,{align:'right'});
+      doc.setDrawColor(229,231,235); doc.setLineWidth(0.2); doc.line(ml,y+rowH-2,ml+cw,y+rowH-2);
+      y+=rowH;
     }
 
     // Totals

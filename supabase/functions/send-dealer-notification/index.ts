@@ -3,6 +3,10 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.100.1';
 import { buildEmailLayout, infoBox, detailRow, paragraph, button, list, customerBadge } from '../_shared/email-builder.ts';
 import { getCorsHeaders, handleCorsPreflightRequest } from '../_shared/cors.ts';
 import { checkServiceRoleOrAdmin } from '../_shared/auth.ts';
+import { BRAND } from '../_shared/brand-config.ts';
+
+const PROJECTS_URL = `${BRAND.baseUrl}/dashboard/projekte`;
+const SERVICE_AREA_URL = `${BRAND.baseUrl}/dashboard/projekte/einstellungen`;
 
 const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY");
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
@@ -80,153 +84,121 @@ const handler = async (req: Request): Promise<Response> => {
       .single();
 
     const settingsData = settings || {
-      site_name: 'KÃ¼chenWert',
-      site_description: 'Deutschlands führende Wohnmobil-Handelsplattform',
-      contact_email: 'info@kuechenwert24.de',
+      site_name: BRAND.name,
+      site_description: BRAND.tagline,
+      contact_email: BRAND.supportEmail,
       support_phone: '0511 / 51532476',
     };
+
+    const costNote = 'Registrierung, Projekt-Börse und Angebotsabgabe sind kostenlos. Kosten entstehen nur, wenn Sie einen Kundenkontakt freiwillig vorab freischalten (Preis wird vor dem Kauf angezeigt) oder wenn Kund:innen Ihr Angebot annehmen (Vermittlungsprovision, gestaffelt nach Auftragswert).';
 
     let subject = "";
     let emailContent = "";
 
     switch (type) {
       case "application_received":
-        subject = "Ihre Händler-Bewerbung bei KuechenWert";
+        subject = `Ihre Studio-Registrierung bei ${BRAND.name}`;
         emailContent = `
           ${paragraph(`Hallo ${name},`)}
-          ${paragraph(`Vielen Dank für Ihre Bewerbung als Händler bei <strong>${settingsData.site_name}</strong>! Wir freuen uns über Ihr Interesse an einer Partnerschaft.`)}
-          ${infoBox('Ihre Bewerbung', `
+          ${paragraph(`vielen Dank für Ihre Registrierung als Partner-Studio bei <strong>${settingsData.site_name}</strong>. Wir freuen uns auf die Zusammenarbeit.`)}
+          ${infoBox('Ihre Registrierung', `
             ${detailRow('Unternehmen', companyName)}
-            ${detailRow('Status', '<span style="color: #f59e0b; font-weight: 700;">In Prüfung</span>')}
-            ${paragraph('Ihre Bewerbung wird derzeit von unserem Team sorgfältig geprüft. Sie erhalten eine Benachrichtigung per E-Mail, sobald die Prüfung abgeschlossen ist.')}
+            ${detailRow('Status', '<span style="color: #b45309; font-weight: 700;">In Prüfung</span>')}
+            ${paragraph('Wir prüfen Ihre Angaben und melden uns per E-Mail, sobald Ihr Studio freigeschaltet ist.')}
           `, 'info', settingsData)}
           ${confirmationUrl ? `
             ${infoBox('E-Mail-Adresse bestätigen', `
-              ${paragraph('Bitte bestätigen Sie Ihre E-Mail-Adresse, indem Sie auf den folgenden Button klicken. Dies ist erforderlich, damit wir Ihre Bewerbung bearbeiten können.')}
+              ${paragraph('Bitte bestätigen Sie Ihre E-Mail-Adresse über den folgenden Button. Erst danach können wir Ihre Registrierung bearbeiten.')}
             `, 'warning', settingsData)}
             ${button('E-Mail-Adresse bestätigen', confirmationUrl, settingsData)}
-            ${paragraph('<small style="color: #6b7280;">Falls der Button nicht funktioniert, kopieren Sie diesen Link in Ihren Browser:<br/><a href="' + confirmationUrl + '" style="color: #1f8aa2; word-break: break-all;">' + confirmationUrl + '</a></small>')}
+            ${paragraph('<small style="color: #6b7280;">Falls der Button nicht funktioniert, kopieren Sie diesen Link in Ihren Browser:<br/><a href="' + confirmationUrl + '" style="color: #336753; word-break: break-all;">' + confirmationUrl + '</a></small>')}
           ` : ''}
           ${infoBox('Wie geht es weiter?', `
             ${list([
-              'Unser Team prüft Ihre Unterlagen (1\u20132 Werktage)',
-              'Sie erhalten eine E-Mail mit dem Ergebnis der Prüfung',
-              'Nach Genehmigung erhalten Sie sofort Zugang zum Händler-Portal',
-              'Sie können dann auf Wohnmobile bieten und exklusive Angebote nutzen'
+              'Wir prüfen Ihre Unterlagen (in der Regel 1\u20132 Werktage).',
+              'Nach der Freischaltung legen Sie Ihr Einzugsgebiet fest (PLZ und Umkreis).',
+              'In der Projekt-Börse sehen Sie anonymisierte Küchenprojekte aus Ihrer Region \u2013 mit Maßen, Wünschen und Preisrahmen.',
+              'Sie geben Angebote ab; die Kund:innen vergleichen und wählen das beste Angebot.',
             ])}
           `, 'default', settingsData)}
+          ${paragraph(costNote)}
           ${paragraph('Bei Fragen stehen wir Ihnen jederzeit gerne zur Verfügung.')}
         `;
         break;
 
       case "approved": {
-        subject = "Willkommen als Händler bei KuechenWert!";
+        subject = `Ihr Studio ist bei ${BRAND.name} freigeschaltet`;
 
-        // Fetch current active auctions to show in approval email
-        let auctionPreviewHtml = '';
+        let openProjectsHtml = '';
         try {
-          const { data: activeAuctions } = await supabase
-            .from('auctions')
-            .select(`
-              id, current_bid, starting_bid, end_time,
-              kitchens!left (manufacturer, model, year, body_type, mileage, city, sale_channel, instant_price)
-            `)
-            .eq('status', 'active')
-            .order('end_time', { ascending: true })
-            .limit(5);
-
-          if (activeAuctions && activeAuctions.length > 0) {
-            let auctionRows = '';
-            for (const auction of activeAuctions) {
-              const m = auction.kitchens as any;
-              if (!m) continue;
-              const isFestpreis = m.sale_channel === 'instant_price';
-              const price = isFestpreis ? Number(m.instant_price || 0) : (auction.current_bid || auction.starting_bid || 0);
-              const priceStr = price.toLocaleString('de-DE', { style: 'currency', currency: 'EUR' });
-              const endDate = new Date(auction.end_time);
-              const remainingMs = endDate.getTime() - Date.now();
-              const remainingDays = Math.max(0, Math.floor(remainingMs / (1000 * 60 * 60 * 24)));
-              const remainingHours = Math.max(0, Math.floor((remainingMs % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60)));
-              const timeStr = remainingDays > 0 ? `${remainingDays}d ${remainingHours}h` : `${remainingHours}h`;
-
-              if (isFestpreis) {
-                auctionRows += detailRow(
-                  `<strong>${m.manufacturer} ${m.model}</strong> (${m.year})`,
-                  `Festpreis: ${priceStr} · endet in ${timeStr}`
-                );
-              } else {
-                const { count: bidCount } = await supabase
-                  .from('bids')
-                  .select('id', { count: 'exact', head: true })
-                  .eq('auction_id', auction.id);
-
-                auctionRows += detailRow(
-                  `<strong>${m.manufacturer} ${m.model}</strong> (${m.year})`,
-                  `${priceStr} · ${bidCount || 0} Gebote · endet in ${timeStr}`
-                );
-              }
-            }
-            auctionPreviewHtml = infoBox(
-              `🔥 ${activeAuctions.length} Inserate warten auf Sie`,
-              auctionRows,
+          const { count: openProjects } = await supabase
+            .from('lead_auctions')
+            .select('id', { count: 'exact', head: true })
+            .eq('status', 'active');
+          if (openProjects && openProjects > 0) {
+            openProjectsHtml = infoBox(
+              openProjects === 1
+                ? 'Gerade sucht 1 Küchenprojekt ein Studio'
+                : `Gerade suchen ${openProjects} Küchenprojekte ein Studio`,
+              paragraph('Nach dem Festlegen Ihres Einzugsgebiets sehen Sie, welche davon in Ihrer Region liegen.'),
               'info',
               settingsData
             );
           }
         } catch (err) {
-          console.error('Failed to fetch auctions for approval email:', err);
+          console.error('Failed to count open projects for approval email:', err);
         }
 
         emailContent = `
           ${paragraph(`Hallo ${name},`)}
           ${customerBadge(custNum)}
-          ${paragraph(`<strong>Herzlichen Glückwunsch! Ihre Bewerbung als Händler wurde genehmigt.</strong>`)}
-          ${infoBox(`Willkommen bei ${settingsData.site_name}!`, `
+          ${paragraph('<strong>Willkommen an Bord! Ihr Studio wurde geprüft und freigeschaltet.</strong>')}
+          ${infoBox(`Willkommen bei ${settingsData.site_name}`, `
             ${detailRow('Unternehmen', companyName)}
-            ${custNum ? detailRow('Ihre Kundennummer', `<strong style="color: #1f8aa2; font-size: 16px;">${custNum}</strong>`) : ''}
-            ${paragraph('Sie haben jetzt Zugriff auf unser Händler-Portal und können auf Wohnmobile bieten.')}
+            ${custNum ? detailRow('Ihre Kundennummer', `<strong style="font-size: 16px;">${custNum}</strong>`) : ''}
+            ${paragraph('Ab sofort sehen Sie anonymisierte Küchenprojekte aus Ihrer Region und können Angebote abgeben.')}
           `, 'success', settingsData)}
-          ${auctionPreviewHtml}
+          ${openProjectsHtml}
           ${infoBox('So starten Sie', `
             ${list([
-              '<strong>Einloggen</strong> &ndash; Melden Sie sich mit Ihren Zugangsdaten an',
-              '<strong>Auktionen durchst&ouml;bern</strong> &ndash; Finden Sie Fahrzeuge die zu Ihrem Sortiment passen',
-              '<strong>Erstes Gebot abgeben</strong> &ndash; Klicken Sie auf eine Auktion und bieten Sie mit',
-              '<strong>T&auml;glich informiert</strong> &ndash; Sie erhalten ab morgen t&auml;glich eine &Uuml;bersicht neuer Auktionen per E-Mail',
+              `<strong>Einzugsgebiet festlegen</strong> &ndash; PLZ und Umkreis, in dem Sie Küchen planen und montieren (<a href="${SERVICE_AREA_URL}" style="color: #336753;">jetzt festlegen</a>).`,
+              '<strong>Projekte prüfen</strong> &ndash; Raumfoto, Maße, Wunschkonfiguration und Preisrahmen der Kund:innen.',
+              '<strong>Angebot abgeben</strong> &ndash; Preis, Lieferzeit und Leistungen eintragen. Die Kund:innen vergleichen und wählen.',
+              '<strong>Zuschlag erhalten</strong> &ndash; Sie bekommen die Kontaktdaten und vereinbaren Aufmaß und Detailplanung.',
             ])}
           `, 'default', settingsData)}
-          ${button('Jetzt Auktionen entdecken', 'https://kuechenwert24.de/kaufen', settingsData)}
-          ${paragraph(`<strong>Tipp:</strong> Aktivieren Sie Audio-Benachrichtigungen in Ihrem Dashboard &ndash; so verpassen Sie kein Gebot!`)}
+          ${button('Zur Projekt-Börse', PROJECTS_URL, settingsData)}
+          ${paragraph(costNote)}
         `;
         break;
       }
 
       case "rejected":
-        subject = "Händler-Bewerbung - Rückmeldung";
+        subject = `Ihre Studio-Registrierung bei ${BRAND.name}`;
         emailContent = `
           ${paragraph(`Hallo ${name},`)}
-          ${paragraph(`Vielen Dank für Ihr Interesse an einer Partnerschaft mit ${settingsData.site_name}.`)}
-          ${infoBox('Ihre Bewerbung', `
+          ${paragraph(`vielen Dank für Ihr Interesse an einer Partnerschaft mit ${settingsData.site_name}.`)}
+          ${infoBox('Ihre Registrierung', `
             ${detailRow('Unternehmen', companyName)}
-            ${paragraph('Nach sorgfältiger Prüfung können wir Ihre Bewerbung derzeit leider nicht genehmigen.')}
+            ${paragraph('Nach sorgfältiger Prüfung können wir Ihr Studio derzeit leider nicht freischalten.')}
             ${rejectionReason ? paragraph(`<strong>Grund:</strong> ${rejectionReason}`) : ''}
           `, 'warning', settingsData)}
-          ${paragraph('Sie können sich jederzeit erneut bewerben. Bei Fragen stehen wir Ihnen gerne zur Verfügung.')}
+          ${paragraph('Sie können sich jederzeit erneut registrieren, zum Beispiel mit ergänzten Unterlagen. Bei Fragen stehen wir Ihnen gerne zur Verfügung.')}
         `;
         break;
 
       case "role_upgrade":
-        subject = "Ihr Konto wird zum Händlerkonto aufgewertet";
+        subject = `Ihr Konto wird zum Studio-Konto bei ${BRAND.name}`;
         emailContent = `
           ${paragraph(`Hallo ${name},`)}
-          ${paragraph(`Gute Nachrichten! Unser Admin-Team hat Ihr Konto bei ${settingsData.site_name} für ein Upgrade zum Händlerkonto vorgemerkt.`)}
-          ${infoBox('Händler-Upgrade', `
+          ${paragraph(`gute Nachrichten: Unser Team hat Ihr Konto bei ${settingsData.site_name} für die Umstellung auf ein Studio-Konto vorgemerkt.`)}
+          ${infoBox('Studio-Konto', `
             ${companyName ? detailRow('Unternehmen', companyName) : ''}
-            ${paragraph('Ihr Antrag wird derzeit geprüft. Sobald er genehmigt wurde, erhalten Sie vollen Zugriff auf das Händler-Portal und können auf Wohnmobile bieten.')}
+            ${paragraph('Wir prüfen den Antrag. Nach der Freischaltung sehen Sie Küchenprojekte aus Ihrer Region und können Angebote abgeben.')}
           `, 'info', settingsData)}
-          ${paragraph('Bitte loggen Sie sich in Ihr Dashboard ein, um den Status Ihres Antrags zu verfolgen. Dort können Sie auch weitere Unterlagen ergänzen.')}
-          ${button('Zum Dashboard', 'https://kuechenwert24.de/dashboard', settingsData)}
-          ${paragraph('Die Prüfung dauert in der Regel 1-2 Werktage.')}
+          ${paragraph('Im Dashboard sehen Sie den Status und können fehlende Unterlagen ergänzen.')}
+          ${button('Zum Dashboard', `${BRAND.baseUrl}/dashboard`, settingsData)}
+          ${paragraph('Die Prüfung dauert in der Regel 1\u20132 Werktage.')}
         `;
         break;
     }
@@ -240,7 +212,7 @@ const handler = async (req: Request): Promise<Response> => {
         "Authorization": `Bearer ${RESEND_API_KEY}`,
       },
       body: JSON.stringify({
-        from: `${settingsData.site_name} <info@kuechenwert24.de>`,
+        from: `${settingsData.site_name} <${BRAND.supportEmail}>`,
         to: [email],
         subject,
         html,
@@ -258,7 +230,7 @@ const handler = async (req: Request): Promise<Response> => {
     // Log in admin_emails for System tab
     try {
       await supabase.from('admin_emails').insert({
-        sender_email: 'info@kuechenwert24.de',
+        sender_email: BRAND.supportEmail,
         sender_name: settingsData.site_name,
         recipient_email: email,
         recipient_name: name || null,

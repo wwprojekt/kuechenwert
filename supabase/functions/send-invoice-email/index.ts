@@ -2,6 +2,8 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.100.1';
 import { buildEmailLayout, paragraph, infoBox, detailRow, amountDisplay, button, customerBadge } from '../_shared/email-builder.ts';
 import { getCorsHeaders, handleCorsPreflightRequest } from '../_shared/cors.ts';
 import { checkServiceRoleOrAdmin } from '../_shared/auth.ts';
+import { BRAND } from '../_shared/brand-config.ts';
+import { describeInvoice } from '../_shared/invoice-labels.ts';
 
 /**
  * Edge Function: send-invoice-email
@@ -11,7 +13,8 @@ import { checkServiceRoleOrAdmin } from '../_shared/auth.ts';
  * - Payment information (bank details from site_settings)
  * - PDF attachment (downloaded from storage and attached as base64)
  * 
- * Called by: close-auction, instant-buy (after invoice + PDF creation)
+ * Called by: admin invoice sending (marketplace invoices for contact
+ * purchases and commissions), close-auction, instant-buy
  * Auth: service_role or admin
  */
 
@@ -19,12 +22,6 @@ interface InvoiceEmailRequest {
   invoiceId: string;
   pdfBase64?: string; // Optional: PDF as base64 from generate-invoice-pdf
 }
-
-const PENALTY_REASON_LABELS: Record<string,string> = {
-  anderweitiger_verkauf: 'Anderweitiger Verkauf während Auktion',
-  vorzeitige_ruecknahme: 'Vorzeitige Rücknahme des Fahrzeugs',
-  falsche_angaben: 'Falsche/irreführende Angaben',
-};
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -58,7 +55,9 @@ Deno.serve(async (req) => {
         dealer:profiles(first_name, last_name, company_name, email, customer_number),
         auction:auctions(
           kitchen:kitchens(manufacturer, model)
-        )
+        ),
+        lead:leads(postal_code, city),
+        items:invoice_items(description)
       `)
       .eq('id', invoiceId)
       .single();
@@ -78,29 +77,28 @@ Deno.serve(async (req) => {
       .limit(1)
       .maybeSingle();
 
-    const siteName = settings?.site_name || 'KuechenWert';
+    const siteName = settings?.site_name || BRAND.name;
     const bankIban = settings?.bank_iban || '';
     const bankBic = settings?.bank_bic || '';
 
     const settingsData = {
       site_name: siteName,
-      site_description: settings?.site_description || 'Deutschlands führende Wohnmobil-Handelsplattform',
-      contact_email: settings?.contact_email || 'info@kuechenwert24.de',
+      site_description: settings?.site_description || BRAND.tagline,
+      contact_email: settings?.contact_email || BRAND.supportEmail,
       support_phone: settings?.support_phone || '',
     };
 
     // ─── Prepare display values ────────────────────────────────────
-    const isPenalty = invoice.invoice_type === 'seller_penalty';
-    const penaltyReasonLabel = isPenalty
-      ? (PENALTY_REASON_LABELS[invoice.penalty_reason] || invoice.penalty_reason || 'Vertragsstrafe')
-      : '';
+    const labels = describeInvoice(invoice);
+    const isPenalty = labels.isPenalty;
 
-    const dealerName = invoice.dealer.company_name || 
-      `${invoice.dealer.first_name || ''} ${invoice.dealer.last_name || ''}`.trim();
-    
-    const kitchenName = invoice.auction?.kitchen 
-      ? `${invoice.auction.kitchen.manufacturer} ${invoice.auction.kitchen.model}` 
-      : 'Vermittlungsprovision';
+    const personName = `${invoice.dealer.first_name || ''} ${invoice.dealer.last_name || ''}`.trim();
+    const dealerName = invoice.dealer.company_name || personName;
+    const salutation = invoice.dealer.company_name || !personName
+      ? 'Sehr geehrte Damen und Herren,'
+      : `Guten Tag ${personName},`;
+    const itemDescription = invoice.items?.find((it: { description?: string | null }) => it.description)?.description
+      || labels.fallbackItemDescription;
 
     const invoiceDate = invoice.invoice_date || invoice.created_at;
     const invoiceDateFormatted = new Date(invoiceDate).toLocaleDateString('de-DE', {
@@ -115,21 +113,15 @@ Deno.serve(async (req) => {
     const payDays = invoice.payment_terms_days || 14;
 
     // ─── Build email content ───────────────────────────────────────
-    const introText = isPenalty
-      ? 'hiermit erhalten Sie Ihre Rechnung &uuml;ber eine Vertragsstrafe gem&auml;&szlig; &sect; 8 Abs. 4 unserer AGB.'
-      : 'Ihre Rechnung f&uuml;r den erfolgreichen Kauf bei KuechenWert ist bereit.';
-
-    const detailLabel = isPenalty ? 'Grund' : 'Fahrzeug';
-    const detailValue = isPenalty ? penaltyReasonLabel : kitchenName;
-
     const content = `
-      ${paragraph(`Sehr geehrte/r ${dealerName},`)}
+      ${paragraph(salutation)}
       ${customerBadge(invoice.dealer.customer_number || invoice.customer_number)}
-      ${paragraph(introText)}
+      ${paragraph(labels.intro)}
       
       ${infoBox('Rechnungsdetails', `
         ${detailRow('Rechnungsnummer', invoice.invoice_number)}
-        ${detailRow(detailLabel, detailValue)}
+        ${detailRow(isPenalty ? 'Grund' : 'Leistung', isPenalty ? labels.referenceValue : itemDescription)}
+        ${!isPenalty && labels.referenceTitle !== 'Leistung' ? detailRow(labels.referenceTitle, labels.referenceValue) : ''}
         ${detailRow('Rechnungsdatum', invoiceDateFormatted)}
         ${detailRow('F&auml;lligkeitsdatum', dueDateFormatted)}
         ${detailRow('Zahlungsziel', `${payDays} Tage`)}
@@ -198,7 +190,7 @@ Deno.serve(async (req) => {
     }
 
     const emailPayload: any = {
-      from: `${siteName} <info@kuechenwert24.de>`,
+      from: `${siteName} <${BRAND.supportEmail}>`,
       to: [invoice.dealer.email],
       subject: emailSubject,
       html: emailHtml,
@@ -228,7 +220,7 @@ Deno.serve(async (req) => {
     // ─── Log in admin_emails for System tab ─────────────────────────
     try {
       await supabaseAdmin.from('admin_emails').insert({
-        sender_email: 'info@kuechenwert24.de',
+        sender_email: BRAND.supportEmail,
         sender_name: siteName,
         recipient_email: invoice.dealer.email,
         recipient_name: dealerName || null,

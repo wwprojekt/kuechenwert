@@ -6617,6 +6617,18 @@ export type Database = {
         }
         Returns: Json
       }
+      kw_dealer_order: { Args: { p_auction_id: string }; Returns: Json }
+      kw_dealer_order_update: {
+        Args: {
+          p_at?: string
+          p_auction_id: string
+          p_note?: string
+          p_reason?: string
+          p_step: string
+          p_value_eur?: number
+        }
+        Returns: Json
+      }
       kw_dealer_project: { Args: { p_auction_id: string }; Returns: Json }
       kw_dealer_projects: {
         Args: { p_limit?: number; p_offset?: number; p_scope?: string }

@@ -1,4 +1,5 @@
 import { callFunction } from "./api-client";
+import type { Order } from "./order";
 
 export type TenderStatus = "draft" | "active" | "completed" | "awarded" | "expired" | "cancelled";
 export type OfferStatus = "active" | "withdrawn" | "accepted" | "declined";
@@ -109,6 +110,8 @@ export interface ProjectView {
   offers: ProjectOffer[];
   renders: ProjectMedia[];
   photos: Array<{ path: string; url: string | null }>;
+  /** Auftragsverlauf nach dem Zuschlag; fehlt bei älteren Function-Versionen. */
+  order?: Order | null;
 }
 
 const FN = "kw-project";
@@ -120,3 +123,6 @@ export const cancelProject = (token: string, reason: string) => callFunction<Pro
 export const addProjectPhone = (token: string, phone: string, consentCall: boolean) =>
   callFunction<{ ok: true; already?: true }>(FN, { action: "add-phone", token, phone, consent_call: consentCall });
 export const requestProjectLink = (email: string) => callFunction<{ ok: true }>(FN, { action: "resend", email });
+export const confirmOrder = (token: string) => callFunction<ProjectView>(FN, { action: "order-confirm", token });
+export const reportOrderProblem = (token: string, message: string) =>
+  callFunction<ProjectView>(FN, { action: "order-problem", token, message });

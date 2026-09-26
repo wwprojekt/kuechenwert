@@ -19,6 +19,7 @@ import { ApiError, errorMessage } from "@/features/marketplace/api-client";
 import { OfferCard } from "@/features/marketplace/components/OfferCard";
 import { PhoneCaptureCard } from "@/features/marketplace/components/PhoneCaptureCard";
 import { ProjectAnswers } from "@/features/marketplace/components/ProjectAnswers";
+import { ProjectOrderCard } from "@/features/marketplace/components/ProjectOrderCard";
 import { acceptOffer, cancelProject, getProject, type ProjectOffer, type ProjectView } from "@/features/marketplace/project-api";
 import { BeforeAfterSlider } from "@/features/planner/components/BeforeAfterSlider";
 import { ProjectLinkRequest } from "./ProjectLinkRequest";
@@ -190,6 +191,8 @@ export default function ProjectPage() {
       <section className="container max-w-6xl pb-16">
         <div className="grid gap-8 lg:grid-cols-[1.35fr_1fr]">
           <div className="space-y-5">
+            {view.order && <ProjectOrderCard token={token} order={view.order} studioName={awarded?.dealer.company_name ?? "Ihr Küchenstudio"} />}
+
             <div className="flex items-end justify-between gap-3">
               <h2 className="text-2xl font-bold">
                 {offers.length > 0 ? `${activeOffers.length || offers.length} ${offers.length === 1 ? "Angebot" : "Angebote"}` : "Angebote"}

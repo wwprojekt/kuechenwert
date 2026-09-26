@@ -1,6 +1,7 @@
 import { supabase } from "@/integrations/supabase/client";
 import { ensureValidRLSSession } from "@/lib/sessionGuard";
 import { ApiError } from "./api-client";
+import type { CancelReason, Order, OrderStep } from "./order";
 import type { OfferIncludes, ProjectSummaryLabels, TenderStatus } from "./project-api";
 
 export type DealerScope = "open" | "all" | "mine";
@@ -136,6 +137,35 @@ export async function withdrawOffer(auctionId: string) {
   await guard();
   const { error } = await supabase.rpc("kw_dealer_withdraw_offer", { p_auction_id: auctionId });
   if (error) throw toApiError(error);
+}
+
+/** Auftrag nach dem Zuschlag; `null`, solange das Projekt nicht an dieses Studio vergeben ist. */
+export async function fetchDealerOrder(auctionId: string): Promise<Order | null> {
+  await guard();
+  const { data, error } = await supabase.rpc("kw_dealer_order", { p_auction_id: auctionId });
+  if (error) throw toApiError(error);
+  return (data ?? null) as unknown as Order | null;
+}
+
+export async function updateDealerOrder(input: {
+  auctionId: string;
+  step: OrderStep;
+  at?: string | null;
+  valueEur?: number | null;
+  reason?: CancelReason | null;
+  note?: string | null;
+}): Promise<Order> {
+  await guard();
+  const { data, error } = await supabase.rpc("kw_dealer_order_update", {
+    p_auction_id: input.auctionId,
+    p_step: input.step,
+    p_at: input.at ?? undefined,
+    p_value_eur: input.valueEur ?? undefined,
+    p_reason: input.reason ?? undefined,
+    p_note: input.note ?? undefined,
+  });
+  if (error) throw toApiError(error);
+  return data as unknown as Order;
 }
 
 export async function unlockContact(auctionId: string): Promise<DealerProjectDetail> {

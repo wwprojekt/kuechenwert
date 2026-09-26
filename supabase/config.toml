@@ -292,3 +292,6 @@ verify_jwt = false
 
 [functions.kw-market-worker]
 verify_jwt = false
+
+[functions.kw-order-worker]
+verify_jwt = false

@@ -2,11 +2,13 @@
  * kw-project — Projektseite für Endkunden (Capability-Link /projekt/<token>)
  *
  * Aktionen (POST { action, token, ... }):
- *   get        Projekt, Ausschreibung, Angebote, Visualisierungen
- *   accept     Angebot eines Studios annehmen (bid_id)
- *   cancel     Projekt beenden (reason)
- *   add-phone  Telefonnummer nachtragen (phone, consent_call), nur solange keine hinterlegt ist
- *   resend     Projektlink(s) per E-Mail neu zusenden (email) – ohne Token
+ *   get            Projekt, Ausschreibung, Angebote, Visualisierungen, Auftrag
+ *   accept         Angebot eines Studios annehmen (bid_id)
+ *   cancel         Projekt beenden (reason)
+ *   add-phone      Telefonnummer nachtragen (phone, consent_call), nur solange keine hinterlegt ist
+ *   order-confirm  Montage bestätigen (nach Kaufvertrag)
+ *   order-problem  Problem zum Auftrag melden (message)
+ *   resend         Projektlink(s) per E-Mail neu zusenden (email) – ohne Token
  *
  * Der Token wird nie gespeichert, nur sein SHA-256-Hash (lead_access_tokens).
  */
@@ -80,7 +82,9 @@ async function projectView(sb: SupabaseClient, leadId: string) {
     );
     delete (view.planner as Record<string, unknown>).session_token;
   }
-  return { ...view, renders, photos };
+  const { data: order, error: orderErr } = await sb.rpc("kw_project_order", { p_lead_id: leadId });
+  if (orderErr) throw orderErr;
+  return { ...view, renders, photos, order: order ?? null };
 }
 
 async function actionResend(req: Request, sb: SupabaseClient, body: Record<string, unknown>) {
@@ -160,6 +164,17 @@ serve(async (req) => {
     }
     case "add-phone":
       return actionAddPhone(req, sb, leadId, body);
+    case "order-confirm": {
+      const { error } = await sb.rpc("kw_project_order_confirm", { p_lead_id: leadId });
+      if (error) throw error;
+      return jsonResponse(req, await projectView(sb, leadId));
+    }
+    case "order-problem": {
+      await enforceRateLimit(sb, `kw:order-problem:${leadId}`, 3600, 3);
+      const { error } = await sb.rpc("kw_project_order_report", { p_lead_id: leadId, p_message: cleanText(body.message, 1000) });
+      if (error) throw error;
+      return jsonResponse(req, await projectView(sb, leadId));
+    }
     default:
       throw new HttpError(400, "Unbekannte Aktion.", "unknown_action");
   }

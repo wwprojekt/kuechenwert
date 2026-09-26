@@ -24,6 +24,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { useAuth } from "@/contexts/AuthContext";
 import { errorMessage } from "@/features/marketplace/api-client";
 import { buildBriefing, buildFloorPlanDxf, downloadFile } from "@/features/marketplace/briefing-export";
+import { DealerOrderPanel } from "@/features/marketplace/components/DealerOrderPanel";
 import { projectTitle, projectValue, timeLeft } from "@/features/marketplace/components/DealerProjectCard";
 import { ProjectAnswers } from "@/features/marketplace/components/ProjectAnswers";
 import {
@@ -267,7 +268,8 @@ export default function DealerProjectDetail() {
         <div className="flex items-start gap-3 rounded-2xl border border-primary bg-primary/5 p-4">
           <Trophy className="h-6 w-6 flex-none text-primary" />
           <p className="text-sm">
-            <strong>Zuschlag erhalten!</strong> Der Kunde hat Ihr Angebot gewählt. Bitte kontaktieren Sie ihn zeitnah für Aufmaß und Detailplanung.
+            <strong>Zuschlag erhalten!</strong> Die Kundin bzw. der Kunde hat Ihr Angebot gewählt. Bitte melden Sie sich zeitnah für Aufmaß und
+            Detailplanung und halten Sie den Auftragsstatus aktuell.
           </p>
         </div>
       )}
@@ -355,6 +357,8 @@ export default function DealerProjectDetail() {
         </div>
 
         <aside className="space-y-5 print:hidden">
+          {d.awarded_to_me && <DealerOrderPanel auctionId={d.auction_id} />}
+
           <div className="rounded-2xl border bg-card p-5">
             <p className="flex items-center gap-2 text-sm font-semibold">
               <Users className="h-4 w-4 text-primary" /> {d.offer_count} {d.offer_count === 1 ? "Angebot" : "Angebote"} abgegeben

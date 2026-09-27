@@ -98,6 +98,7 @@ RUN apk upgrade --no-cache
 
 COPY docker/nginx.conf /etc/nginx/nginx.conf
 COPY docker/default.conf /etc/nginx/conf.d/default.conf
+COPY docker/security-headers.conf /etc/nginx/snippets/security-headers.conf
 
 # Build-Output in Staging-Pfad (NICHT direkt nach /usr/share/nginx/html).
 # Der Sync vom Staging-Pfad in das html-Verzeichnis übernimmt das

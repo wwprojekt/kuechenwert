@@ -9,6 +9,8 @@
  *
  * Auth: anonym, optional Bearer-JWT zur Verknüpfung mit dem Konto.
  * Turnstile + Rate-Limit pro IP. Alle Schreibzugriffe mit service_role.
+ * Lead und Einwilligungen entstehen gemeinsam (_shared/lead-intake.ts);
+ * dieselbe submission_id liefert bei Wiederholung denselben Lead.
  */
 
 import type { SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2.100.1";
@@ -28,6 +30,7 @@ import {
   validIp,
 } from "../_shared/kw-http.ts";
 import { verifyTurnstileToken } from "../_shared/turnstile.ts";
+import { insertLeadWithConsents, leadForSubmission, parseSubmissionId, sanitizeClickIds } from "../_shared/lead-intake.ts";
 import {
   estimateFunnelA,
   housingType,
@@ -63,14 +66,44 @@ async function userIdFromAuthHeader(sb: SupabaseClient, req: Request): Promise<s
   return data?.user?.id ?? null;
 }
 
+async function projectLinkResponse(req: Request, sb: SupabaseClient, leadId: string, estimate?: unknown) {
+  const token = randomToken();
+  const { error: tokenErr } = await sb.rpc("kw_project_issue_token", {
+    p_lead_id: leadId,
+    p_token_hash: await sha256Hex(token),
+  });
+  if (tokenErr) {
+    console.error("[kw-lead] token issue failed", leadId, tokenErr.message);
+    // Der Lead ist bereits angelegt: 502 wiederholt callFunction nicht automatisch. Den
+    // Projektlink verschickt kw-market-worker ohnehin mit project_created.
+    throw new HttpError(502, "Ihre Anfrage ist eingegangen. Den Link zu Ihrem Projekt senden wir Ihnen per E-Mail.", "project_link");
+  }
+  return jsonResponse(req, {
+    ok: true,
+    lead_id: leadId,
+    project_token: token,
+    project_url: `${BRAND.baseUrl}/projekt/${token}`,
+    ...(estimate ? { estimate } : {}),
+  });
+}
+
 async function actionSubmit(req: Request, sb: SupabaseClient, body: Record<string, unknown>) {
   if (typeof body.website === "string" && body.website.trim().length > 0) {
     return jsonResponse(req, { ok: true, project_url: `${BRAND.baseUrl}/` });
   }
   const ip = clientIp(req);
-  const turnstile = await verifyTurnstileToken(typeof body.turnstile_token === "string" ? body.turnstile_token : null, ip);
+  const turnstile = await verifyTurnstileToken(
+    typeof body.turnstile_token === "string" ? body.turnstile_token : null,
+    ip,
+    { requireToken: true },
+  );
   if (!turnstile.valid) throw new HttpError(403, "Die Sicherheitsprüfung ist fehlgeschlagen. Bitte laden Sie die Seite neu.", "turnstile");
   await enforceRateLimit(sb, `kw:lead:${ip}`, 3600, 6);
+
+  // Doppelklick oder Wiederholung nach Zeitüberschreitung: denselben Lead zurückgeben.
+  const submissionId = parseSubmissionId(body.submission_id);
+  const previousLead = await leadForSubmission(sb, submissionId);
+  if (previousLead) return projectLinkResponse(req, sb, previousLead);
 
   const answers = sanitizeFunnelAAnswers(body.answers);
   const missing = missingRequired(answers)[0];
@@ -116,9 +149,11 @@ async function actionSubmit(req: Request, sb: SupabaseClient, body: Record<strin
   const salutation =
     typeof contact.salutation === "string" && SALUTATIONS.has(contact.salutation) ? contact.salutation : null;
 
-  const { data: lead, error: leadErr } = await sb
-    .from("leads")
-    .insert({
+  const { leadId } = await insertLeadWithConsents(
+    sb,
+    {
+      submission_id: submissionId,
+      ...sanitizeClickIds(body.click_ids),
       user_id: userId,
       funnel_type: "a",
       funnel_variant: "A2",
@@ -148,39 +183,16 @@ async function actionSubmit(req: Request, sb: SupabaseClient, body: Record<strin
       landing_page: cleanText(body.landing_page, 300),
       ip_address: validIp(ip),
       user_agent: userAgent,
-    })
-    .select("id")
-    .single();
-  if (leadErr || !lead) throw leadErr ?? new Error("lead insert failed");
-  const leadId = lead.id as string;
+    },
+    [
+      { purpose: "share_with_studios", granted: true },
+      { purpose: "contact_by_phone", granted: consentCall },
+      { purpose: "marketing", granted: consentMarketing },
+    ],
+    { textVersion: CONSENT_TEXT_VERSION, userId, ip: validIp(ip), userAgent },
+  );
 
-  const consentRows = [
-    { purpose: "share_with_studios", granted: true },
-    { purpose: "contact_by_phone", granted: consentCall },
-    { purpose: "marketing", granted: consentMarketing },
-  ].map((r) => ({ ...r, lead_id: leadId, user_id: userId, text_version: CONSENT_TEXT_VERSION, ip_address: validIp(ip), user_agent: userAgent }));
-  const { error: consentErr } = await sb.from("lead_consents").insert(consentRows);
-  if (consentErr) console.error("[kw-lead] consent insert failed", consentErr.message);
-
-  const token = randomToken();
-  const { error: tokenErr } = await sb.rpc("kw_project_issue_token", {
-    p_lead_id: leadId,
-    p_token_hash: await sha256Hex(token),
-  });
-  if (tokenErr) {
-    console.error("[kw-lead] token issue failed", leadId, tokenErr.message);
-    // Der Lead ist bereits angelegt: 502 wiederholt callFunction nicht automatisch (sonst doppelte
-    // Anfrage). Den Projektlink verschickt kw-market-worker ohnehin mit project_created.
-    throw new HttpError(502, "Ihre Anfrage ist eingegangen. Den Link zu Ihrem Projekt senden wir Ihnen per E-Mail.", "project_link");
-  }
-
-  return jsonResponse(req, {
-    ok: true,
-    lead_id: leadId,
-    project_token: token,
-    project_url: `${BRAND.baseUrl}/projekt/${token}`,
-    estimate: estimateRange,
-  });
+  return projectLinkResponse(req, sb, leadId, estimateRange);
 }
 
 serve(async (req) => {

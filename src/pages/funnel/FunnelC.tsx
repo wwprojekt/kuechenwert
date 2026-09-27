@@ -20,10 +20,11 @@ import { RoomStep } from "@/features/planner/steps/RoomStep";
 import { StyleStep } from "@/features/planner/steps/StyleStep";
 import { VisualizeStep } from "@/features/planner/steps/VisualizeStep";
 import { useTurnstile } from "@/hooks/useTurnstile";
-import { notifyKitchenFunnelLead } from "@/lib/funnelLeadNotify";
+import { trackFunnelStep, trackFunnelSubmitError } from "@/lib/funnelAnalytics";
 import { generateTransactionId, setEnhancedConversionFromForm, trackKitchenFunnelLead } from "@/lib/gadsConversionService";
 import { trackMetaLead } from "@/lib/metaPixelService";
-import { captureUtmParams, getStoredUtm } from "@/lib/utm";
+import { getConsentedClickIds } from "@/lib/clickIdService";
+import { captureUtmParams, getEntryPath, getStoredUtm } from "@/lib/utm";
 
 /**
  * Funnel C — Traumküche planen & visualisieren (Konfigurator v2).
@@ -66,6 +67,10 @@ export default function FunnelC() {
   }, [searchParams, setSearchParams, patchConfig, setForm]);
 
   const index = PLANNER_STEPS.findIndex((s) => s.id === state.step);
+
+  useEffect(() => {
+    trackFunnelStep("c", state.step, index, PLANNER_STEPS.length);
+  }, [state.step, index]);
 
   // Der Schritt steht in der URL (?schritt=raum …): Die Zurück-Geste geht einen Schritt
   // zurück statt den Planer zu verlassen. Navigiert wird nur über die URL.
@@ -126,8 +131,12 @@ export default function FunnelC() {
     }
   };
 
+  // Sperre gegen Doppelstart (Auto-Start plus Klick), bevor der State nachzieht.
+  const generatingRef = useRef(false);
   const handleGenerate = useCallback(
     async (variant?: { label: string; hint: string }) => {
+      if (generatingRef.current) return;
+      generatingRef.current = true;
       setGenerating(true);
       setGenError(null);
       try {
@@ -142,21 +151,25 @@ export default function FunnelC() {
           utm: utm(),
         });
         planner.setSession(res.session_token);
-        planner.addRender({
-          id: res.render_id,
-          version: res.version,
-          status: "pending",
-          mode: res.mode,
-          variant_label: variant?.label ?? null,
-          image_url: null,
-        });
+        // Läuft die Visualisierung schon, liefert der Server dieselbe render_id zurück.
+        if (!state.renders.some((r) => r.id === res.render_id)) {
+          planner.addRender({
+            id: res.render_id,
+            version: res.version,
+            status: "pending",
+            mode: res.mode,
+            variant_label: variant?.label ?? null,
+            image_url: null,
+          });
+        }
       } catch (err) {
         setGenError(errorMessage(err));
       } finally {
+        generatingRef.current = false;
         setGenerating(false);
       }
     },
-    [planner, state.sessionToken, state.config, state.room, state.selectedPhotoPath, state.postalCode],
+    [planner, state.sessionToken, state.config, state.room, state.selectedPhotoPath, state.postalCode, state.renders],
   );
 
   const handleSubmit = async (values: ContactValues) => {
@@ -190,34 +203,33 @@ export default function FunnelC() {
         housing_type: values.housing_type,
         turnstile_token: turnstileToken,
         website: values.website,
-        landing_page: document.referrer ? document.referrer.slice(0, 300) : undefined,
+        landing_page: getEntryPath() ?? window.location.pathname,
+        click_ids: getConsentedClickIds(),
       });
 
-      const transactionId = generateTransactionId("funnel_c");
-      notifyKitchenFunnelLead({
-        funnel: "c",
-        firstName: values.first_name,
-        lastName: values.last_name,
-        email: values.email,
-        phone: values.phone,
-        postalCode: values.postal_code,
-        kitchenForm: state.room.form,
-        transactionId,
-      });
-      await setEnhancedConversionFromForm({
-        email: values.email,
-        firstName: values.first_name,
-        lastName: values.last_name,
-        phone: values.phone,
-        postalCode: values.postal_code,
-      });
-      await trackKitchenFunnelLead("c", transactionId);
-      trackMetaLead({ content_name: "Funnel C", content_category: "Traumküche" });
+      // Das Projekt steht: Tracking darf ab hier nichts mehr blockieren.
+      if (!res.already_submitted) {
+        try {
+          const transactionId = generateTransactionId("funnel_c");
+          await setEnhancedConversionFromForm({
+            email: values.email,
+            firstName: values.first_name,
+            lastName: values.last_name,
+            phone: values.phone,
+            postalCode: values.postal_code,
+          });
+          await trackKitchenFunnelLead("c", transactionId);
+          trackMetaLead({ content_name: "Funnel C", content_category: "Traumküche" });
+        } catch (trackingError) {
+          console.error("Funnel C tracking failed", trackingError);
+        }
+      }
 
       planner.markSubmitted();
       clearPlannerStorage();
       navigate(`/projekt/${res.project_token}?neu=1`, { replace: true });
     } catch (err) {
+      trackFunnelSubmitError("c", err instanceof Error ? err.name : "unknown");
       setSubmitError(errorMessage(err));
       resetTurnstile();
     } finally {

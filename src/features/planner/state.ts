@@ -162,11 +162,16 @@ export function clearPlannerStorage() {
 }
 
 export function usePlanner() {
-  const [state, dispatch] = useReducer(reducer, undefined, () => ({ ...initialState(), ...(readStorage() ?? {}) }));
+  // Eine abgeschickte Planung wird nicht fortgesetzt: die nächste startet frisch.
+  const [state, dispatch] = useReducer(reducer, undefined, () => {
+    const stored = readStorage();
+    return stored?.submitted ? initialState() : { ...initialState(), ...(stored ?? {}) };
+  });
   const hydratedToken = useRef<string | null>(null);
 
   useEffect(() => {
-    writeStorage(state);
+    if (state.submitted) clearPlannerStorage();
+    else writeStorage(state);
   }, [state]);
 
   useEffect(() => {

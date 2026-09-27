@@ -1,9 +1,8 @@
 import { callFunction } from "@/features/marketplace/api-client";
-import { notifyKitchenFunnelLead } from "@/lib/funnelLeadNotify";
 import { generateTransactionId, setEnhancedConversionFromForm, trackKitchenFunnelLead } from "@/lib/gadsConversionService";
 import { trackMetaLead } from "@/lib/metaPixelService";
 import { getEntryPath, getStoredUtm } from "@/lib/utm";
-import { FORM_OPTIONS, type FunnelAAnswers } from "./catalog";
+import type { FunnelAAnswers } from "./catalog";
 import type { ValidContact } from "./validation";
 
 export interface FunnelASubmitPayload {
@@ -12,6 +11,10 @@ export interface FunnelASubmitPayload {
   turnstileToken: string | null;
   /** Honeypot: bleibt bei Menschen leer. */
   website: string;
+  /** Gleich bei Wiederholungen, damit der Server Doppel-Anfragen erkennt. */
+  submissionId: string;
+  /** Nur mit Marketing-Einwilligung gesetzt. */
+  clickIds: Record<string, string> | null;
 }
 
 export interface FunnelASubmitResult {
@@ -22,7 +25,7 @@ export interface FunnelASubmitResult {
   estimate?: { min: number; max: number; mid: number };
 }
 
-export function buildSubmitBody({ answers, contact, turnstileToken, website }: FunnelASubmitPayload) {
+export function buildSubmitBody({ answers, contact, turnstileToken, website, submissionId, clickIds }: FunnelASubmitPayload) {
   return {
     action: "submit",
     answers,
@@ -40,6 +43,8 @@ export function buildSubmitBody({ answers, contact, turnstileToken, website }: F
     },
     turnstile_token: turnstileToken,
     website,
+    submission_id: submissionId,
+    click_ids: clickIds,
     utm: getStoredUtm(),
     landing_page: getEntryPath() ?? window.location.pathname,
   };
@@ -53,16 +58,6 @@ export function submitFunnelA(payload: FunnelASubmitPayload): Promise<FunnelASub
 export async function trackFunnelALead(contact: ValidContact, answers: FunnelAAnswers): Promise<void> {
   try {
     const transactionId = generateTransactionId("funnel_a");
-    notifyKitchenFunnelLead({
-      funnel: "a",
-      firstName: contact.first_name,
-      lastName: contact.last_name,
-      email: contact.email,
-      phone: contact.phone,
-      postalCode: answers.postal_code,
-      kitchenForm: FORM_OPTIONS.find((o) => o.id === answers.kitchen_form)?.label ?? null,
-      transactionId,
-    });
     await setEnhancedConversionFromForm({
       email: contact.email,
       firstName: contact.first_name,

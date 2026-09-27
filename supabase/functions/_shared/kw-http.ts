@@ -97,11 +97,17 @@ export function timingSafeEqual(a: string, b: string): boolean {
   return diff === 0;
 }
 
+/**
+ * Rate-Limit über planner_rate_limit_increment. Fällt der Zähler aus, lässt
+ * die Standardeinstellung die Anfrage durch (keine verlorenen Leads);
+ * failClosed lehnt stattdessen ab – für Aktionen, die Geld kosten (KI-Bilder).
+ */
 export async function enforceRateLimit(
   sb: SupabaseClient,
   key: string,
   windowSeconds: number,
   limit: number,
+  opts: { failClosed?: boolean } = {},
 ): Promise<void> {
   const { data, error } = await sb.rpc("planner_rate_limit_increment", {
     p_key: key,
@@ -110,6 +116,9 @@ export async function enforceRateLimit(
   });
   if (error) {
     console.warn("[kw] rate-limit rpc failed", error.message);
+    if (opts.failClosed) {
+      throw new HttpError(503, "Der Dienst ist gerade ausgelastet. Bitte versuchen Sie es in ein paar Minuten erneut.", "rate_limit_unavailable");
+    }
     return;
   }
   const row = Array.isArray(data) ? data[0] : data;

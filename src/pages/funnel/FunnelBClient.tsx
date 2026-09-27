@@ -2,10 +2,14 @@ import { cloneElement, isValidElement, useState, useMemo, useCallback, useEffect
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { clsx } from "clsx";
 import { toast } from "sonner";
-import { supabase } from "@/integrations/supabase/client";
+import { submitFunnelB } from "@/features/funnel-b/api";
+import { ApiError, errorMessage } from "@/features/marketplace/api-client";
+import { useTurnstile } from "@/hooks/useTurnstile";
 import { useSupportPhone } from "@/hooks/useSupportPhone";
+import { getConsentedClickIds } from "@/lib/clickIdService";
+import { trackFunnelStep, trackFunnelSubmitError } from "@/lib/funnelAnalytics";
+import { clearSubmissionId, submissionIdFor } from "@/lib/submissionId";
 import { getEntryPath, getStoredUtm } from "@/lib/utm";
-import { notifyKitchenFunnelLead } from "@/lib/funnelLeadNotify";
 import {
   generateTransactionId,
   setEnhancedConversionFromForm,
@@ -208,6 +212,8 @@ export default function FunnelBClient() {
   }));
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
+  const [honeypot, setHoneypot] = useState("");
+  const { turnstileToken, resetTurnstile, turnstileCallbackRef } = useTurnstile();
   const errorRef = useRef<HTMLParagraphElement>(null);
 
   // Schritt steht in der URL, damit Zurück-Geste und Neuladen im Funnel bleiben.
@@ -232,6 +238,10 @@ export default function FunnelBClient() {
   useEffect(() => {
     if (step !== requestedStep) goToStep(step, true);
   }, [step, requestedStep, goToStep]);
+
+  useEffect(() => {
+    trackFunnelStep("b", STEPS[step].label, step, TOTAL);
+  }, [step]);
 
   const shownStep = useRef(step);
   useEffect(() => {
@@ -285,126 +295,18 @@ export default function FunnelBClient() {
     setSubmitting(true);
     setSubmitError(null);
     try {
-      const utm = getStoredUtm();
-
-      const priceCents = data.existingOfferPriceEur
-        ? Math.round(Number(data.existingOfferPriceEur) * 100)
-        : null;
-
-      // Wenn User eingeloggt ist, Lead mit Account verknuepfen -> Dashboard.
-      const { data: authData } = await supabase.auth.getUser();
-      const userId = authData?.user?.id ?? null;
-
-      const { data: inserted, error: insertError } = await supabase
-        .from("leads")
-        .insert({
-          funnel_type: "b",
-          user_id: userId,
-          postal_code: data.postalCode,
-          city: data.city || null,
-          first_name: data.firstName || null,
-          last_name: data.lastName || null,
-          email: data.email || null,
-          phone: data.phone || null,
-          kitchen_form: null,
-          kitchen_style: null,
-          purchase_reason: null,
-          housing_type: null,
-          budget_midpoint: priceCents !== null ? Math.round(priceCents / 100) : null,
-          timeframe_months:
-            TIMEFRAMES.find((t) => t.slug === data.timeframe)?.months ?? null,
-          delivery_mode: data.deliveryMode || null,
-          payment_financing: data.paymentFinancing || null,
-          payment_financing_apr: data.paymentFinancingApr
-            ? Number(data.paymentFinancingApr)
-            : null,
-          payment_financing_months: data.paymentFinancingMonths
-            ? Number(data.paymentFinancingMonths)
-            : null,
-          payment_down_payment_percent: data.paymentDownPaymentPercent
-            ? Number(data.paymentDownPaymentPercent)
-            : null,
-          has_existing_offer: true,
-          existing_offer_studio: data.existingOfferStudio || null,
-          existing_offer_price_cents: priceCents,
-          waste_separation_system:
-            data.wasteSeparationSystem === "yes"
-              ? true
-              : data.wasteSeparationSystem === "no"
-                ? false
-                : null,
-          special_wishes: data.extras,
-          consent_call: data.consentCall,
-          consent_marketing: data.consentMarketing,
-          funnel_answers: {
-            brand: data.brand,
-            brandCustom: data.brandCustom,
-            frontName: data.frontName,
-            frontMaterialName: data.frontMaterialName,
-            handleType: data.handleType,
-            worktopMaterial: data.worktopMaterial,
-            worktopDesign: data.worktopDesign,
-            worktopDesignCustom: data.worktopDesignCustom,
-            appliances: data.appliances,
-            sinkBrand: data.sinkBrand,
-            sinkMaterial: data.sinkMaterial,
-            sinkDesignation: data.sinkDesignation,
-            extrasNotes: data.extrasNotes,
-            salutation: data.salutation,
-            offerDeliveryMethod: data.offerDeliveryMethod,
-            timeframeSlug: data.timeframe,
-          },
-          utm_source: utm.utm_source ?? null,
-          utm_medium: utm.utm_medium ?? null,
-          utm_campaign: utm.utm_campaign ?? null,
-          utm_term: utm.utm_term ?? null,
-          utm_content: utm.utm_content ?? null,
-          user_agent:
-            typeof navigator !== "undefined" ? navigator.userAgent : null,
-          landing_page:
-            getEntryPath() ?? (typeof window !== "undefined" ? window.location.pathname : null),
-        })
-        .select("id")
-        .single();
-
-      if (insertError) throw insertError;
-      const leadId = inserted.id;
-
-      let failedUploads = 0;
-      for (const { category, file } of data.uploads) {
-        const ext = file.name.split(".").pop() ?? "bin";
-        const safe = file.name
-          .replace(/\.[^.]+$/, "")
-          .replace(/[^a-zA-Z0-9_-]/g, "_")
-          .slice(0, 60);
-        const path = `${leadId}/${category}-${crypto.randomUUID()}-${safe}.${ext}`;
-
-        const { error: uploadError } = await supabase.storage
-          .from("lead-files")
-          .upload(path, file, {
-            contentType: file.type || "application/octet-stream",
-            cacheControl: "31536000, immutable",
-            upsert: false,
-          });
-        if (uploadError) {
-          console.error("Upload failed", uploadError);
-          failedUploads += 1;
-          continue;
-        }
-
-        const { error: fileRowError } = await supabase.from("lead_files").insert({
-          lead_id: leadId,
-          file_url: path,
-          file_name: file.name,
-          file_type: file.type || "application/octet-stream",
-          file_size_bytes: file.size,
-          category,
-        });
-        if (fileRowError) {
-          console.error("lead_files insert failed", fileRowError);
-          failedUploads += 1;
-        }
-      }
+      const { uploads, ...fields } = data;
+      const { failedUploads } = await submitFunnelB({
+        data: fields,
+        uploads: uploads.map(({ category, file }) => ({ category, file })),
+        turnstileToken,
+        website: honeypot,
+        submissionId: submissionIdFor("b"),
+        clickIds: getConsentedClickIds(),
+        utm: getStoredUtm(),
+        landingPage: getEntryPath() ?? (typeof window !== "undefined" ? window.location.pathname : null),
+      });
+      clearSubmissionId("b");
 
       try {
         sessionStorage.removeItem(STORAGE_KEY);
@@ -416,15 +318,6 @@ export default function FunnelBClient() {
       // sonst sendet der Nutzer nach einer Fehlermeldung ein zweites Mal ab.
       try {
         const transactionId = generateTransactionId("funnel_b");
-        notifyKitchenFunnelLead({
-          funnel: "b",
-          firstName: data.firstName,
-          lastName: data.lastName,
-          email: data.email,
-          phone: data.phone,
-          postalCode: data.postalCode,
-          transactionId,
-        });
         await setEnhancedConversionFromForm({
           email: data.email,
           firstName: data.firstName,
@@ -450,12 +343,17 @@ export default function FunnelBClient() {
       navigate("/funnel/danke?funnel=b", { replace: true });
     } catch (e) {
       console.error("Funnel B submit error", e);
+      trackFunnelSubmitError("b", e instanceof ApiError ? e.code ?? `http_${e.status}` : "network");
+      resetTurnstile();
+      // Prüffehler des Servers (4xx) sind verständlich formuliert; alles andere nicht.
       setSubmitError(
-        `Ihre Anfrage konnte gerade nicht gesendet werden. Bitte prüfen Sie Ihre Internetverbindung und versuchen Sie es noch einmal. Klappt es weiterhin nicht, rufen Sie uns an: ${phone.display}.`,
+        e instanceof ApiError && e.status !== undefined && e.status >= 400 && e.status < 500
+          ? errorMessage(e)
+          : `Ihre Anfrage konnte gerade nicht gesendet werden. Bitte prüfen Sie Ihre Internetverbindung und versuchen Sie es noch einmal. Klappt es weiterhin nicht, rufen Sie uns an: ${phone.display}.`,
       );
       setSubmitting(false);
     }
-  }, [step, data, navigate, goToStep, phone.display]);
+  }, [step, data, navigate, goToStep, phone.display, turnstileToken, honeypot, resetTurnstile]);
 
   const handleBack = useCallback(() => goToStep(Math.max(0, step - 1)), [goToStep, step]);
 
@@ -518,7 +416,15 @@ export default function FunnelBClient() {
       {step === 5 && <Step5 data={data} update={update} />}
       {step === 6 && <Step6 data={data} update={update} />}
       {step === 7 && <Step7 data={data} update={update} />}
-      {step === 8 && <Step8 data={data} update={update} />}
+      {step === 8 && (
+        <Step8
+          data={data}
+          update={update}
+          honeypot={honeypot}
+          onHoneypot={setHoneypot}
+          turnstileRef={turnstileCallbackRef}
+        />
+      )}
 
       {submitError && (
         <p ref={errorRef} role="alert" className="mt-4 rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-700">
@@ -1171,7 +1077,17 @@ function Step7({ data, update }: StepProps) {
   );
 }
 
-function Step8({ data, update }: StepProps) {
+function Step8({
+  data,
+  update,
+  honeypot,
+  onHoneypot,
+  turnstileRef,
+}: StepProps & {
+  honeypot: string;
+  onHoneypot: (value: string) => void;
+  turnstileRef: (node: HTMLDivElement | null) => void;
+}) {
   return (
     <div className="space-y-6">
       <div className="grid gap-4 md:grid-cols-2">
@@ -1294,6 +1210,20 @@ function Step8({ data, update }: StepProps) {
           .
         </p>
       </div>
+
+      <div className="sr-only" aria-hidden="true">
+        <label htmlFor="funnel-b-website">Website</label>
+        <input
+          id="funnel-b-website"
+          type="text"
+          name="website"
+          tabIndex={-1}
+          autoComplete="off"
+          value={honeypot}
+          onChange={(e) => onHoneypot(e.target.value)}
+        />
+      </div>
+      <div ref={turnstileRef} />
     </div>
   );
 }

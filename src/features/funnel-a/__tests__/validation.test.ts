@@ -1,6 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { callFunction } from "@/features/marketplace/api-client";
-import { notifyKitchenFunnelLead } from "@/lib/funnelLeadNotify";
 import { setEnhancedConversionFromForm, trackKitchenFunnelLead } from "@/lib/gadsConversionService";
 import { trackMetaLead } from "@/lib/metaPixelService";
 import { buildSubmitBody, submitFunnelA, trackFunnelALead, type FunnelASubmitPayload } from "../api";
@@ -15,7 +14,6 @@ import {
 } from "../validation";
 
 vi.mock("@/features/marketplace/api-client", () => ({ callFunction: vi.fn() }));
-vi.mock("@/lib/funnelLeadNotify", () => ({ notifyKitchenFunnelLead: vi.fn() }));
 vi.mock("@/lib/gadsConversionService", () => ({
   generateTransactionId: vi.fn(() => "funnel_a_tx"),
   setEnhancedConversionFromForm: vi.fn(),
@@ -157,7 +155,14 @@ describe("Absenden an kw-lead", () => {
     contact_by_phone: true,
     marketing: false,
   };
-  const payload: FunnelASubmitPayload = { answers, contact: valid, turnstileToken: "cf-token", website: "" };
+  const payload: FunnelASubmitPayload = {
+    answers,
+    contact: valid,
+    turnstileToken: "cf-token",
+    website: "",
+    submissionId: "4f0c2c55-8a8e-4a55-9a1c-3f1d8a0c9e21",
+    clickIds: { gclid: "EAIaIQobChMI-test-gclid-0123456789" },
+  };
 
   beforeEach(() => {
     window.history.replaceState(null, "", "/funnel/a/kontakt");
@@ -180,6 +185,8 @@ describe("Absenden an kw-lead", () => {
       consents: { share_with_studios: true, contact_by_phone: true, marketing: false },
       turnstile_token: "cf-token",
       website: "",
+      submission_id: "4f0c2c55-8a8e-4a55-9a1c-3f1d8a0c9e21",
+      click_ids: { gclid: "EAIaIQobChMI-test-gclid-0123456789" },
       utm: { utm_source: "google", utm_campaign: "kueche" },
       landing_page: "/funnel/a/kontakt",
     });
@@ -213,11 +220,8 @@ describe("Absenden an kw-lead", () => {
     expect(callFunction).toHaveBeenCalledWith("kw-lead", buildSubmitBody(payload));
   });
 
-  it("meldet den Lead an Lead-Benachrichtigung, Ads und Meta", async () => {
+  it("meldet den Lead an Ads und Meta", async () => {
     await trackFunnelALead({ ...valid, phone: null, contact_by_phone: false }, answers);
-    expect(notifyKitchenFunnelLead).toHaveBeenCalledWith(
-      expect.objectContaining({ funnel: "a", kitchenForm: "L-Küche", postalCode: "30159", transactionId: "funnel_a_tx" }),
-    );
     expect(setEnhancedConversionFromForm).toHaveBeenCalledWith({
       email: "maria@beispiel.de",
       firstName: "Maria",

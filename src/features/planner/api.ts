@@ -52,11 +52,15 @@ export interface SubmitPayload {
   turnstile_token: string | null;
   website?: string;
   landing_page?: string;
+  /** Nur mit Marketing-Einwilligung gesetzt. */
+  click_ids?: Record<string, string> | null;
 }
 
 export interface SubmitResult {
   ok: true;
   lead_id: string;
+  /** Die Planung war schon abgeschickt: nicht erneut als Conversion zählen. */
+  already_submitted?: boolean;
   tender_status: string | null;
   project_token: string;
   project_url: string;

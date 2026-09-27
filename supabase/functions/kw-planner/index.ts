@@ -33,6 +33,7 @@ import {
   validIp,
 } from "../_shared/kw-http.ts";
 import { verifyTurnstileToken } from "../_shared/turnstile.ts";
+import { insertLeadWithConsents, sanitizeClickIds } from "../_shared/lead-intake.ts";
 import {
   APPLIANCES,
   APPLIANCE_LEVELS,
@@ -64,6 +65,10 @@ const BUCKET = "planner-media";
 const MAX_PHOTOS = 3;
 const MAX_UPLOAD_BYTES = 15 * 1024 * 1024;
 const MAX_RENDERS_PER_SESSION = 16;
+/** Obergrenze aller KI-Bilder pro 24 h (Kostenschutz), per Secret KW_DAILY_RENDER_CAP änderbar. */
+const DAILY_RENDER_CAP = Number(Deno.env.get("KW_DAILY_RENDER_CAP") ?? "300");
+/** So lange gilt eine laufende Visualisierung als „läuft noch“ und wird wiederverwendet. */
+const PENDING_REUSE_MS = 3 * 60 * 1000;
 const RENDER_TIMEOUT_MS = 5 * 60 * 1000;
 const SIGNED_URL_TTL = 60 * 60;
 const CONSENT_TEXT_VERSION = "kw-projekt-2026-09";
@@ -248,7 +253,7 @@ async function actionUploadUrl(req: Request, sb: SupabaseClient, body: Record<st
   if (!Number.isFinite(size) || size <= 0 || size > MAX_UPLOAD_BYTES) {
     throw new HttpError(413, "Das Foto ist zu groß (max. 15 MB).", "too_large");
   }
-  await enforceRateLimit(sb, `kw:upload:${clientIp(req)}`, 3600, 30);
+  await enforceRateLimit(sb, `kw:upload:${clientIp(req)}`, 3600, 30, { failClosed: true });
   const path = `${session.id}/photos/${crypto.randomUUID()}.${ext}`;
   const { data, error } = await sb.storage.from(BUCKET).createSignedUploadUrl(path);
   if (error || !data) throw error ?? new Error("upload url failed");
@@ -284,10 +289,25 @@ async function actionRemovePhoto(req: Request, sb: SupabaseClient, body: Record<
 
 async function actionGenerate(req: Request, sb: SupabaseClient, body: Record<string, unknown>) {
   const session = await ensureSession(sb, req, body.session_token, body.utm);
+  const ip = clientIp(req);
+  // Jedes Bild kostet Geld: fällt der Zähler aus, wird abgelehnt statt durchgelassen.
   if (session.lead_id) {
-    await enforceRateLimit(sb, `kw:gen-after-submit:${session.id}`, 86400, 6);
+    await enforceRateLimit(sb, `kw:gen-after-submit:${session.id}`, 86400, 6, { failClosed: true });
   }
-  await enforceRateLimit(sb, `kw:gen:${clientIp(req)}`, 3600, 12);
+  await enforceRateLimit(sb, `kw:gen:${ip}`, 3600, 12, { failClosed: true });
+  await enforceRateLimit(sb, `kw:gen-day:${ip}`, 86400, 30, { failClosed: true });
+
+  const { count: rendersToday, error: capErr } = await sb
+    .from("planner_renders")
+    .select("id", { count: "exact", head: true })
+    .gte("created_at", new Date(Date.now() - 86_400_000).toISOString());
+  if (capErr || (rendersToday ?? 0) >= DAILY_RENDER_CAP) {
+    throw new HttpError(
+      429,
+      "Die Visualisierung ist heute stark gefragt. Bitte versuchen Sie es später noch einmal – Ihre Planung und die Preisschätzung bleiben erhalten.",
+      "daily_render_cap",
+    );
+  }
 
   const { count } = await sb
     .from("planner_renders")
@@ -308,6 +328,27 @@ async function actionGenerate(req: Request, sb: SupabaseClient, body: Record<str
   const variantLabel = cleanText(body.variant_label, 80);
 
   const estimate = await persistPlanning(sb, session.id, config, room, postalCode);
+
+  // Doppelstart (Auto-Start plus Klick, zwei Tabs): die laufende Visualisierung weiterverwenden.
+  const { data: running } = await sb
+    .from("planner_renders")
+    .select("id, version, mode")
+    .eq("session_id", session.id)
+    .eq("status", "pending")
+    .gte("created_at", new Date(Date.now() - PENDING_REUSE_MS).toISOString())
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (running) {
+    return jsonResponse(req, {
+      session_token: session.session_token,
+      render_id: running.id,
+      version: running.version,
+      mode: running.mode,
+      estimate,
+    });
+  }
+
   const mode = photoPath ? "edit" : "text";
   const { prompt } = buildRenderPrompt(config, room, { mode, variantHint });
 
@@ -489,7 +530,7 @@ async function actionSubmit(req: Request, sb: SupabaseClient, body: Record<strin
     return jsonResponse(req, { ok: true, project_url: `${BRAND.baseUrl}/` });
   }
   const ip = clientIp(req);
-  const turnstile = await verifyTurnstileToken(body.turnstile_token as string | undefined, ip);
+  const turnstile = await verifyTurnstileToken(body.turnstile_token as string | undefined, ip, { requireToken: true });
   if (!turnstile.valid) throw new HttpError(403, "Die Sicherheitsprüfung ist fehlgeschlagen. Bitte laden Sie die Seite neu.", "turnstile");
   await enforceRateLimit(sb, `kw:submit:${ip}`, 3600, 6);
 
@@ -520,6 +561,7 @@ async function actionSubmit(req: Request, sb: SupabaseClient, body: Record<strin
 
   let leadId = session.lead_id;
   let tenderStatus: string | null = null;
+  let alreadySubmitted = !!leadId;
 
   if (!leadId) {
     const { data: tierRow } = await sb.rpc("kw_lead_tier_score", {
@@ -533,9 +575,13 @@ async function actionSubmit(req: Request, sb: SupabaseClient, body: Record<strin
     const userId = await userIdFromAuthHeader(sb, req);
     const userAgent = req.headers.get("user-agent")?.slice(0, 500) ?? null;
 
-    const { data: lead, error: leadErr } = await sb
-      .from("leads")
-      .insert({
+    // Eine Planung ergibt genau einen Lead: session.id dient als submission_id,
+    // parallele Absendeversuche landen beim selben Lead.
+    const inserted = await insertLeadWithConsents(
+      sb,
+      {
+        submission_id: session.id,
+        ...sanitizeClickIds(body.click_ids),
         user_id: userId,
         funnel_type: "traumkueche",
         funnel_variant: "C2",
@@ -569,20 +615,19 @@ async function actionSubmit(req: Request, sb: SupabaseClient, body: Record<strin
         landing_page: cleanText(body.landing_page, 300),
         ip_address: validIp(ip),
         user_agent: userAgent,
-      })
-      .select("id")
-      .single();
-    if (leadErr || !lead) throw leadErr ?? new Error("lead insert failed");
-    leadId = lead.id as string;
+      },
+      [
+        { purpose: "share_with_studios", granted: true },
+        { purpose: "contact_by_phone", granted: consents.contact_by_phone === true },
+        { purpose: "marketing", granted: consents.marketing === true },
+      ],
+      { textVersion: CONSENT_TEXT_VERSION, userId, ip: validIp(ip), userAgent },
+    );
+    leadId = inserted.leadId;
+    alreadySubmitted = inserted.duplicate;
+  }
 
-    const consentRows = [
-      { purpose: "share_with_studios", granted: true },
-      { purpose: "contact_by_phone", granted: consents.contact_by_phone === true },
-      { purpose: "marketing", granted: consents.marketing === true },
-    ].map((r) => ({ ...r, lead_id: leadId, user_id: userId, text_version: CONSENT_TEXT_VERSION, ip_address: validIp(ip), user_agent: userAgent }));
-    const { error: consentErr } = await sb.from("lead_consents").insert(consentRows);
-    if (consentErr) console.error("[kw-planner] consent insert failed", consentErr.message);
-
+  if (!alreadySubmitted) {
     let cover: { bucket: string; path: string } | null = null;
     if (session.current_render_id) {
       const { data: r } = await sb
@@ -630,6 +675,7 @@ async function actionSubmit(req: Request, sb: SupabaseClient, body: Record<strin
   return jsonResponse(req, {
     ok: true,
     lead_id: leadId,
+    already_submitted: alreadySubmitted,
     tender_status: tenderStatus,
     project_token: token,
     project_url: `${BRAND.baseUrl}/projekt/${token}`,

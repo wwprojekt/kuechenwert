@@ -19,6 +19,9 @@ import {
 import type { ValidContact } from "@/features/funnel-a/validation";
 import { ApiError, errorMessage } from "@/features/marketplace/api-client";
 import { useTurnstile } from "@/hooks/useTurnstile";
+import { getConsentedClickIds } from "@/lib/clickIdService";
+import { trackFunnelStep, trackFunnelSubmitError } from "@/lib/funnelAnalytics";
+import { clearSubmissionId, submissionIdFor } from "@/lib/submissionId";
 
 const THANK_YOU_PATH = "/funnel/danke?funnel=a";
 
@@ -38,6 +41,10 @@ export function FunnelAClient({ slug }: { slug: FunnelAStepSlug }) {
   const prevSlug = index > 0 ? FUNNEL_A_SLUGS[index - 1] : undefined;
   const nextSlug = index < FUNNEL_A_SLUGS.length - 1 ? FUNNEL_A_SLUGS[index + 1] : undefined;
   const missingSlug = firstMissingStep(answers);
+
+  useEffect(() => {
+    trackFunnelStep("a", slug, index, FUNNEL_A_SLUGS.length);
+  }, [slug, index]);
 
   const goTo = useCallback((target: FunnelAStepSlug) => navigate(stepPath(target)), [navigate]);
   const goNext = useCallback(() => {
@@ -64,8 +71,16 @@ export function FunnelAClient({ slug }: { slug: FunnelAStepSlug }) {
     setSubmitting(true);
     setSubmitError(null);
     try {
-      const result = await submitFunnelA({ answers, contact: valid, turnstileToken, website });
+      const result = await submitFunnelA({
+        answers,
+        contact: valid,
+        turnstileToken,
+        website,
+        submissionId: submissionIdFor("a"),
+        clickIds: getConsentedClickIds(),
+      });
       clear();
+      clearSubmissionId("a");
       // Ohne Token (Honeypot) gibt es keinen Lead – also auch keine Conversion.
       if (!result.project_token) {
         navigate(THANK_YOU_PATH, { replace: true });
@@ -77,10 +92,12 @@ export function FunnelAClient({ slug }: { slug: FunnelAStepSlug }) {
       // Lead angelegt, nur der Projektlink fehlt: Den verschickt der Server per E-Mail.
       if (err instanceof ApiError && err.code === "project_link") {
         clear();
+        clearSubmissionId("a");
         await trackFunnelALead(valid, answers);
         navigate(THANK_YOU_PATH, { replace: true });
         return;
       }
+      trackFunnelSubmitError("a", err instanceof ApiError ? err.code ?? `http_${err.status}` : "network");
       setSubmitError(errorMessage(err));
       resetTurnstile();
       setSubmitting(false);

@@ -20,6 +20,7 @@
  */
 
 export type ConversionLabelKey =
+  | 'KUECHEN_LEAD'
   | 'BEWERTUNG_ABGESCHLOSSEN'
   | 'KONTAKTFORMULAR_GESENDET'
   | 'WERTERMITTLUNG_LEAD'
@@ -79,32 +80,35 @@ export interface TrackingConfig {
 }
 
 /**
- * Hardcoded fallback. Mirrors the IDs/labels that have been deployed
- * to production – kept in sync with `supabase/migrations/20260417120000_*.sql`.
+ * Bewusst ohne IDs: Getrackt wird nur mit den Konten aus
+ * site_settings.tracking_config (Admin → Tracking). Ein leerer DB-Wert
+ * darf nie auf fremde Konten zurückfallen.
  */
 export const DEFAULT_TRACKING_CONFIG: TrackingConfig = {
   enabled: true,
   ga4: {
-    enabled: true,
-    measurement_id: 'G-H4BCV8DS0B',
+    enabled: false,
+    measurement_id: '',
     send_page_view: true,
   },
   google_ads: {
-    enabled: true,
-    conversion_id: 'AW-18033517246',
+    enabled: false,
+    conversion_id: '',
     allow_enhanced_conversions: true,
     labels: {
-      BEWERTUNG_ABGESCHLOSSEN: 'GAI_CI-zrI0cEL7FhpdD',
-      KONTAKTFORMULAR_GESENDET: 'pXp5CPKNkY4cEL7FhpdD',
-      WERTERMITTLUNG_LEAD: 'AHaxCPWNkY4cEL7FhpdD',
-      WERTRECHNER_LEAD: 'JBEqCPiNkY4cEL7FhpdD',
-      WIZARD_ABGESCHLOSSEN: 'JO7oCPuNkY4cEL7FhpdD',
-      TERMINBUCHUNG: '3_bOCP6NkY4cEL7FhpdD',
-      LANDING_PAGE_LEAD: 'IfQvCO-NkY4cEL7FhpdD',
-      WIZARD_GESTARTET: '-m3-CIGOkY4cEL7FhpdD',
-      WIZARD_FAHRZEUGDATEN: '5BvzCISOkY4cEL7FhpdD',
+      KUECHEN_LEAD: '',
+      BEWERTUNG_ABGESCHLOSSEN: '',
+      KONTAKTFORMULAR_GESENDET: '',
+      WERTERMITTLUNG_LEAD: '',
+      WERTRECHNER_LEAD: '',
+      WIZARD_ABGESCHLOSSEN: '',
+      TERMINBUCHUNG: '',
+      LANDING_PAGE_LEAD: '',
+      WIZARD_GESTARTET: '',
+      WIZARD_FAHRZEUGDATEN: '',
     },
     values: {
+      KUECHEN_LEAD: 9.0,
       WIZARD_ABGESCHLOSSEN: 9.0,
       TERMINBUCHUNG: 9.0,
       KONTAKTFORMULAR_GESENDET: 1.0,
@@ -123,13 +127,14 @@ export const DEFAULT_TRACKING_CONFIG: TrackingConfig = {
   },
   meta_pixel: {
     enabled: true,
-    pixel_id: '1846623132710484',
+    pixel_id: '',
   },
   microsoft_ads: {
     enabled: false,
     uet_tag_id: '',
     allow_enhanced_conversions: true,
     conversion_goals: {
+      KUECHEN_LEAD: 'kuechen_lead',
       WIZARD_ABGESCHLOSSEN: 'wizard_completed',
       KONTAKTFORMULAR_GESENDET: 'kontakt_lead',
       WERTERMITTLUNG_LEAD: 'wertermittlung_lead',
@@ -141,6 +146,7 @@ export const DEFAULT_TRACKING_CONFIG: TrackingConfig = {
       BEWERTUNG_ABGESCHLOSSEN: 'bewertung_abgeschlossen',
     },
     values: {
+      KUECHEN_LEAD: 9.0,
       WIZARD_ABGESCHLOSSEN: 9.0,
       TERMINBUCHUNG: 9.0,
       KONTAKTFORMULAR_GESENDET: 1.0,
@@ -154,8 +160,8 @@ export const DEFAULT_TRACKING_CONFIG: TrackingConfig = {
     },
   },
   server_side: {
-    gads_offline_conversion_action_id: '7576040066',
-    gads_login_customer_id: '9746508145',
+    gads_offline_conversion_action_id: '',
+    gads_login_customer_id: '',
   },
 };
 

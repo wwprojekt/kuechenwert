@@ -9,6 +9,16 @@ import { AuthProvider } from "./contexts/AuthContext";
 import { SettingsProvider } from "./contexts/SettingsContext";
 import { ErrorBoundary } from "./components/ErrorBoundary";
 import App from "./App.tsx";
+import "@fontsource/fira-sans/latin-400.css";
+import "@fontsource/fira-sans/latin-500.css";
+import "@fontsource/fira-sans/latin-600.css";
+import "@fontsource/fira-sans/latin-700.css";
+import "@fontsource/fira-sans/latin-800.css";
+import "@fontsource/fira-sans/latin-ext-400.css";
+import "@fontsource/fira-sans/latin-ext-500.css";
+import "@fontsource/fira-sans/latin-ext-600.css";
+import "@fontsource/fira-sans/latin-ext-700.css";
+import "@fontsource/fira-sans/latin-ext-800.css";
 import "./index.css";
 
 // Globale deutsche Fehlermeldungen für alle Zod-Validierungen setzen

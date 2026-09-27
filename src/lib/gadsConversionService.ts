@@ -4,8 +4,8 @@
  * Zentraler Service für alle Google Ads Conversion-Events.
  * Trackt Wizard-Schritte, Lead-Erfassungen, Formulare, Terminbuchungen und Auktionen.
  * 
- * Google Ads Konto: Caravanwert (522-100-4970)
- * Google Tag ID: AW-18033517246
+ * Konto, Conversion-ID und Labels kommen aus site_settings.tracking_config
+ * (Admin → Tracking). Küchenanfragen aller Funnels: Label-Key KUECHEN_LEAD.
  * 
  * Conversion-Strategie:
  * - PRIMÄRE Conversions: Jede Lead-Erfassung mit Kontaktdaten (für Gebotsoptimierung)
@@ -99,13 +99,14 @@ function sendConversion(label: string, value: number, transactionId?: string): P
   return new Promise<void>((resolve) => {
     // Timeout-Fallback: Nach 1s trotzdem weiter navigieren
     const timeout = setTimeout(resolve, 1000);
-    if (!isGoogleAdsEnabled()) {
+    const conversionId = getGoogleAdsId();
+    if (!isGoogleAdsEnabled() || !conversionId || !label) {
       clearTimeout(timeout);
       resolve();
       return;
     }
     const eventParams: Record<string, unknown> = {
-      send_to: `${getGoogleAdsId()}/${label}`,
+      send_to: `${conversionId}/${label}`,
       value,
       currency: 'EUR',
       transport_type: 'beacon',
@@ -253,13 +254,13 @@ export async function trackKitchenFunnelLead(
   transactionId?: string,
 ): Promise<void> {
   const txId = transactionId || generateTransactionId(`funnel_${funnel}`);
-  await sendConversionByKey("WIZARD_ABGESCHLOSSEN", "WIZARD_ABGESCHLOSSEN", txId);
+  await sendConversionByKey("KUECHEN_LEAD", "KUECHEN_LEAD", txId);
 
   safeGtag("event", "generate_lead", {
     transaction_id: txId,
     event_category: "Lead",
     event_label: `funnel_${funnel}`,
-    value: getConversionValue("WIZARD_ABGESCHLOSSEN"),
+    value: getConversionValue("KUECHEN_LEAD"),
     currency: "EUR",
     lead_source: `funnel_${funnel}`,
   });
@@ -270,7 +271,7 @@ export async function trackKitchenFunnelLead(
     form_destination: `/funnel/${funnel}`,
   });
 
-  sendBingConversion("WIZARD_ABGESCHLOSSEN", "WIZARD_ABGESCHLOSSEN", txId);
+  sendBingConversion("KUECHEN_LEAD", "KUECHEN_LEAD", txId);
 }
 
 export async function trackKontaktformularGesendet(transactionId?: string): Promise<void> {
@@ -782,6 +783,20 @@ async function _sha256(value: string): Promise<string> {
  * Code (z. B. "DE", "AT", "CH"). Akzeptiert auch deutsche Namen ("Deutschland")
  * und gibt sonst undefined zurück.
  */
+/**
+ * Telefonnummer im E.164-Format (+4917…), wie Google es für Enhanced
+ * Conversions verlangt. Nationale Nummern (0…) gelten als deutsch.
+ */
+export function toE164(raw: string, defaultCountryCode = '49'): string | null {
+  const cleaned = raw.replace(/[^\d+]/g, '');
+  let candidate: string;
+  if (cleaned.startsWith('+')) candidate = cleaned;
+  else if (cleaned.startsWith('00')) candidate = `+${cleaned.slice(2)}`;
+  else if (cleaned.startsWith('0')) candidate = `+${defaultCountryCode}${cleaned.slice(1)}`;
+  else return null;
+  return /^\+[1-9]\d{7,14}$/.test(candidate) ? candidate : null;
+}
+
 function normalizeCountryCode(country?: string): string | undefined {
   if (!country) return undefined;
   const trimmed = country.trim();
@@ -847,10 +862,9 @@ export async function setEnhancedConversionData(userData: {
     if (userData.email) {
       enhancedData.email = userData.email.trim().toLowerCase();
     }
-    if (userData.phone) {
-      // gtag.js entfernt zwar selbst Formatierungs-Zeichen, sicherheitshalber
-      // bereinigen wir Leerzeichen, Bindestriche, Klammern etc.
-      enhancedData.phone_number = userData.phone.replace(/[\s\-()]/g, '');
+    const phoneE164 = userData.phone ? toE164(userData.phone) : null;
+    if (phoneE164) {
+      enhancedData.phone_number = phoneE164;
     }
 
     // Adress-Block nur senden wenn ALLE Pflichtfelder vorhanden sind.
@@ -925,12 +939,16 @@ export async function setEnhancedConversionFromForm(formData: {
     lastName = parts.slice(1).join(' ') || '';
   }
 
+  // KüchenWert vermittelt nur in Deutschland: fünfstellige PLZ → Land DE,
+  // sonst verwirft Google den Adressblock der Enhanced Conversions.
+  const country = formData.country ?? (/^\d{5}$/.test(formData.postalCode?.trim() ?? '') ? 'DE' : undefined);
+
   await setEnhancedConversionData({
     email,
     phone,
     firstName,
     lastName,
     postalCode: formData.postalCode,
-    country: formData.country,
+    country,
   });
 }

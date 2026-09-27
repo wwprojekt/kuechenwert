@@ -68,10 +68,11 @@ interface AdminTrackingTabProps {
 }
 
 const CONVERSION_KEYS: ConversionLabelKey[] = [
+  "KUECHEN_LEAD",
+  "KONTAKTFORMULAR_GESENDET",
   "WIZARD_ABGESCHLOSSEN",
   "WERTRECHNER_LEAD",
   "WERTERMITTLUNG_LEAD",
-  "KONTAKTFORMULAR_GESENDET",
   "TERMINBUCHUNG",
   "LANDING_PAGE_LEAD",
   "WIZARD_GESTARTET",
@@ -82,11 +83,12 @@ const CONVERSION_KEYS: ConversionLabelKey[] = [
 const VALUE_KEYS: ConversionValueKey[] = [...CONVERSION_KEYS, "INSTANT_BUY"];
 
 const CONVERSION_LABELS_DE: Record<ConversionValueKey, { title: string; subtitle: string; primary: boolean }> = {
-  WIZARD_ABGESCHLOSSEN:    { title: "Wizard abgeschlossen",         subtitle: "Verkaufs-Wizard mit Kontaktdaten abgesendet",   primary: true  },
-  WERTRECHNER_LEAD:        { title: "Wertrechner Lead",             subtitle: "/wertrechner Formular abgesendet",              primary: true  },
-  WERTERMITTLUNG_LEAD:     { title: "Wertermittlung Lead",          subtitle: "/wertermittlung Formular abgesendet",           primary: true  },
+  KUECHEN_LEAD:            { title: "Küchenanfrage",                subtitle: "Funnel A, B oder C mit Kontaktdaten abgesendet", primary: true  },
   KONTAKTFORMULAR_GESENDET:{ title: "Kontaktformular gesendet",     subtitle: "/kontakt Formular abgesendet",                  primary: true  },
-  TERMINBUCHUNG:           { title: "Terminbuchung",                subtitle: "Termin in Ankaufstation gebucht",               primary: true  },
+  WIZARD_ABGESCHLOSSEN:    { title: "Wizard abgeschlossen (Altlast)", subtitle: "Wird nicht mehr ausgelöst",                  primary: false },
+  WERTRECHNER_LEAD:        { title: "Wertrechner Lead (Altlast)",   subtitle: "Wird nicht mehr ausgelöst",                     primary: false },
+  WERTERMITTLUNG_LEAD:     { title: "Wertermittlung Lead (Altlast)", subtitle: "Wird nicht mehr ausgelöst",                    primary: false },
+  TERMINBUCHUNG:           { title: "Terminbuchung (Altlast)",      subtitle: "Nur noch aus dem alten Termin-Dialog",          primary: false },
   LANDING_PAGE_LEAD:       { title: "Landing Page Funnel",          subtitle: "Sekundär – Funnel-Einstieg ohne Kontaktdaten",  primary: false },
   WIZARD_GESTARTET:        { title: "Wizard gestartet",             subtitle: "Sekundär – Schritt 1 geladen",                  primary: false },
   WIZARD_FAHRZEUGDATEN:    { title: "Wizard Fahrzeugdaten",         subtitle: "Sekundär – Schritt 2 erreicht",                 primary: false },

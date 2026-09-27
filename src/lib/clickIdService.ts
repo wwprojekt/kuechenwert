@@ -1,52 +1,43 @@
 /**
- * Google Ads Click ID Service
- * 
- * Erfasst und speichert Google Ads Click-IDs (GCLID, GBRAID, WBRAID)
- * aus URL-Parametern. Diese IDs sind essentiell für die serverseitige
- * Conversion-Attribution, da sie Google Ads ermöglichen, Conversions
- * direkt dem ursprünglichen Anzeigenklick zuzuordnen.
- * 
- * Funktionsweise:
- * 1. Beim Seitenaufruf werden URL-Parameter auf Click-IDs geprüft
- * 2. Gefundene IDs werden in localStorage gespeichert (90 Tage gültig)
- * 3. Bei Lead-Erfassung werden die IDs an den Server gesendet
- * 
- * Click-ID-Typen:
- * - GCLID: Google Click Identifier (Standard, Third-Party-Cookie-basiert)
- * - GBRAID: Google Broad Identifier (iOS App-Kampagnen, First-Party)
- * - WBRAID: Web Broad Identifier (Web-Kampagnen ohne Third-Party-Cookies)
- * 
+ * Click-ID-Service (Google Ads, Microsoft Ads, Meta)
+ *
+ * Erfasst gclid, gbraid, wbraid, msclkid und fbclid aus der Einstiegs-URL,
+ * damit eine Anfrage später der Kampagne zugeordnet werden kann.
+ *
+ * Einwilligung (TTDSG §25): Ohne Marketing-Einwilligung bleiben die IDs nur
+ * im Speicher dieses Tabs. Erst mit Einwilligung landen sie für 90 Tage im
+ * localStorage; wird sie widerrufen, werden sie dort gelöscht. An den Server
+ * gehen sie nur über getConsentedClickIds().
+ *
  * Referenz: https://support.google.com/google-ads/answer/9744275
  */
 
+import { hasMarketingConsent } from '@/components/CookieBanner';
 import { logger } from '@/lib/logger';
 
-const STORAGE_PREFIX = "caravanwert_";
+const STORAGE_PREFIX = "kuechenwert_";
+/** Ältere Einträge, die beim Lesen übernommen und entfernt werden. */
+const LEGACY_STORAGE_PREFIX = "caravanwert_";
 const CLICK_ID_EXPIRY_DAYS = 90;
 
-/**
- * Validiert eine GCLID auf grundlegende Korrektheit.
- * Ungültige GCLIDs (zu kurz, ungültige Zeichen) werden nicht gespeichert,
- * um "GCLID kann nicht geparst werden" Fehler in Google Ads zu vermeiden.
- *
- * Gültige GCLIDs:
- * - Bestehen aus alphanumerischen Zeichen, Bindestrichen und Unterstrichen
- * - Sind mindestens 30 Zeichen lang
- * - Sind maximal 200 Zeichen lang
- *
- * MSCLKID (Microsoft Click ID, Bing Ads) hat eine andere Form:
- * - Reines Hex (32 Zeichen, lowercase) ODER alphanumerisch
- * - Bing-Format: GUID-ähnlich, z.B. "a1b2c3d4e5f67890abcdef1234567890"
- */
-function isValidClickId(value: string, type: 'gclid' | 'gbraid' | 'wbraid' | 'msclkid'): boolean {
+type ClickIdKey = "gclid" | "gbraid" | "wbraid" | "msclkid" | "fbclid";
+const CLICK_ID_KEYS: readonly ClickIdKey[] = ["gclid", "gbraid", "wbraid", "msclkid", "fbclid"];
+
+/** Längen je Typ; ungültige IDs erzeugen in Google Ads „GCLID kann nicht geparst werden“. */
+const LENGTH_LIMITS: Record<ClickIdKey, [number, number]> = {
+  gclid: [30, 200],
+  gbraid: [10, 200],
+  wbraid: [10, 200],
+  msclkid: [16, 64],
+  fbclid: [20, 500],
+};
+
+function isValidClickId(value: string, type: ClickIdKey): boolean {
   if (!value || typeof value !== 'string') return false;
   const trimmed = value.trim();
-  if (type === 'gclid' && (trimmed.length < 30 || trimmed.length > 200)) return false;
-  if ((type === 'gbraid' || type === 'wbraid') && (trimmed.length < 10 || trimmed.length > 200)) return false;
-  // MSCLKID: typisch 32 Hex-Zeichen, akzeptiere defensiv 16–64 alphanumerisch
-  if (type === 'msclkid' && (trimmed.length < 16 || trimmed.length > 64)) return false;
-  if (!/^[a-zA-Z0-9_-]+$/.test(trimmed)) return false;
-  return true;
+  const [min, max] = LENGTH_LIMITS[type];
+  if (trimmed.length < min || trimmed.length > max) return false;
+  return /^[a-zA-Z0-9_-]+$/.test(trimmed);
 }
 
 interface StoredClickId {
@@ -55,116 +46,123 @@ interface StoredClickId {
   landingPage: string;
 }
 
-interface ClickIds {
+export interface ClickIds {
   gclid: string | null;
   gbraid: string | null;
   wbraid: string | null;
   msclkid: string | null;
+  fbclid: string | null;
 }
 
-/**
- * Speichert eine Click-ID mit Zeitstempel in localStorage.
- */
-function storeClickId(key: string, value: string): void {
+/** Click-IDs dieses Tabs, unabhängig von der Einwilligung. */
+const memory: Partial<Record<ClickIdKey, StoredClickId>> = {};
+
+function isExpired(data: StoredClickId): boolean {
+  return Date.now() - data.timestamp > CLICK_ID_EXPIRY_DAYS * 24 * 60 * 60 * 1000;
+}
+
+function persist(key: ClickIdKey, data: StoredClickId): void {
   try {
-    const data: StoredClickId = {
-      value,
-      timestamp: Date.now(),
-      landingPage: window.location.pathname + window.location.search,
-    };
     localStorage.setItem(`${STORAGE_PREFIX}${key}`, JSON.stringify(data));
   } catch {
     // localStorage nicht verfügbar (z.B. Private Browsing in Safari)
   }
 }
 
-/**
- * Liest eine Click-ID aus localStorage. Gibt null zurück wenn
- * die ID nicht existiert oder abgelaufen ist (> 90 Tage).
- */
-function readClickId(key: string): string | null {
+function removeStored(): void {
   try {
-    const raw = localStorage.getItem(`${STORAGE_PREFIX}${key}`);
-    if (!raw) return null;
-
-    const data: StoredClickId = JSON.parse(raw);
-    const ageMs = Date.now() - data.timestamp;
-    const maxAgeMs = CLICK_ID_EXPIRY_DAYS * 24 * 60 * 60 * 1000;
-
-    if (ageMs > maxAgeMs) {
+    for (const key of CLICK_ID_KEYS) {
       localStorage.removeItem(`${STORAGE_PREFIX}${key}`);
+      localStorage.removeItem(`${LEGACY_STORAGE_PREFIX}${key}`);
+    }
+  } catch {
+    // ignorieren
+  }
+}
+
+function storeClickId(key: ClickIdKey, value: string): void {
+  const data: StoredClickId = {
+    value,
+    timestamp: Date.now(),
+    landingPage: window.location.pathname + window.location.search,
+  };
+  memory[key] = data;
+  if (hasMarketingConsent()) persist(key, data);
+}
+
+function readStored(prefix: string, key: ClickIdKey): StoredClickId | null {
+  try {
+    const raw = localStorage.getItem(`${prefix}${key}`);
+    if (!raw) return null;
+    const data = JSON.parse(raw) as StoredClickId;
+    if (!data?.value || isExpired(data)) {
+      localStorage.removeItem(`${prefix}${key}`);
       return null;
     }
-
-    return data.value;
+    return data;
   } catch {
     return null;
   }
 }
 
+/** Liest eine Click-ID: erst aus diesem Tab, dann aus dem localStorage (nur mit Einwilligung). */
+function readClickId(key: ClickIdKey): string | null {
+  const fromMemory = memory[key];
+  if (fromMemory && !isExpired(fromMemory)) return fromMemory.value;
+  if (!hasMarketingConsent()) return null;
+
+  const stored = readStored(STORAGE_PREFIX, key);
+  if (stored) return stored.value;
+
+  const legacy = readStored(LEGACY_STORAGE_PREFIX, key);
+  if (!legacy) return null;
+  persist(key, legacy);
+  try {
+    localStorage.removeItem(`${LEGACY_STORAGE_PREFIX}${key}`);
+  } catch {
+    // ignorieren
+  }
+  return legacy.value;
+}
+
+let consentListenerAttached = false;
+
+function attachConsentListener(): void {
+  if (consentListenerAttached || typeof window === "undefined") return;
+  consentListenerAttached = true;
+  window.addEventListener('consent-updated', (event) => {
+    const consent = (event as CustomEvent<{ marketing?: boolean }>).detail;
+    if (consent?.marketing) {
+      for (const key of CLICK_ID_KEYS) {
+        const data = memory[key];
+        if (data && !isExpired(data)) persist(key, data);
+      }
+    } else {
+      removeStored();
+    }
+  });
+}
+
 /**
- * Extrahiert Click-IDs aus den aktuellen URL-Parametern und speichert
- * sie in localStorage. Sollte bei jedem Seitenaufruf aufgerufen werden.
- * 
- * Google Ads hängt automatisch einen der folgenden Parameter an die URL:
- * - ?gclid=... (Standard)
- * - ?gbraid=... (iOS ohne Third-Party-Cookies)
- * - ?wbraid=... (Web ohne Third-Party-Cookies)
+ * Extrahiert Click-IDs aus den aktuellen URL-Parametern.
+ * Wird beim App-Start aufgerufen.
  */
 export function captureClickIds(): void {
   try {
     if (typeof window === "undefined") return;
+    attachConsentListener();
 
     const params = new URLSearchParams(window.location.search);
-
-    const gclid = params.get("gclid");
-    const gbraid = params.get("gbraid");
-    const wbraid = params.get("wbraid");
-    // Microsoft / Bing Ads: msclkid wird automatisch an URLs angehängt
-    // wenn Auto-Tagging im Microsoft-Ads-Konto aktiviert ist (Standard).
-    const msclkid = params.get("msclkid");
-
-    if (gclid) {
-      if (isValidClickId(gclid, 'gclid')) {
-        storeClickId("gclid", gclid);
+    for (const key of CLICK_ID_KEYS) {
+      const value = params.get(key);
+      if (!value) continue;
+      if (isValidClickId(value, key)) {
+        storeClickId(key, value.trim());
         if (process.env.NODE_ENV === "development") {
-          logger.log("[ClickIdService] GCLID erfasst:", gclid.substring(0, 10) + "...");
+          logger.log(`[ClickIdService] ${key} erfasst:`, value.substring(0, 10) + "...");
         }
       } else {
-        logger.log("[ClickIdService] Ungültige GCLID verworfen (Länge:", gclid.length + ")");
-      }
-    }
-
-    if (gbraid) {
-      if (isValidClickId(gbraid, 'gbraid')) {
-        storeClickId("gbraid", gbraid);
-        if (process.env.NODE_ENV === "development") {
-          logger.log("[ClickIdService] GBRAID erfasst:", gbraid.substring(0, 10) + "...");
-        }
-      } else {
-        logger.log("[ClickIdService] Ungültiger GBRAID verworfen (Länge:", gbraid.length + ")");
-      }
-    }
-
-    if (wbraid) {
-      if (isValidClickId(wbraid, 'wbraid')) {
-        storeClickId("wbraid", wbraid);
-        if (process.env.NODE_ENV === "development") {
-          logger.log("[ClickIdService] WBRAID erfasst:", wbraid.substring(0, 10) + "...");
-        }
-      } else {
-        logger.log("[ClickIdService] Ungültiger WBRAID verworfen (Länge:", wbraid.length + ")");
-      }
-    }
-
-    if (msclkid) {
-      if (isValidClickId(msclkid, 'msclkid')) {
-        storeClickId("msclkid", msclkid);
-        if (process.env.NODE_ENV === "development") {
-          logger.log("[ClickIdService] MSCLKID erfasst:", msclkid.substring(0, 10) + "...");
-        }
-      } else {
-        logger.log("[ClickIdService] Ungültiger MSCLKID verworfen (Länge:", msclkid.length + ")");
+        logger.log(`[ClickIdService] Ungültige ${key} verworfen (Länge: ${value.length})`);
       }
     }
   } catch {
@@ -172,17 +170,30 @@ export function captureClickIds(): void {
   }
 }
 
-/**
- * Gibt alle gespeicherten Click-IDs zurück.
- * Wird bei der Lead-Erfassung aufgerufen um die IDs an den Server zu senden.
- */
+/** Alle bekannten Click-IDs (dieser Tab plus, mit Einwilligung, localStorage). */
 export function getStoredClickIds(): ClickIds {
   return {
     gclid: readClickId("gclid"),
     gbraid: readClickId("gbraid"),
     wbraid: readClickId("wbraid"),
     msclkid: readClickId("msclkid"),
+    fbclid: readClickId("fbclid"),
   };
+}
+
+/**
+ * Click-IDs für die Anfrage an den Server – nur mit Marketing-Einwilligung,
+ * sonst null. Leere Werte werden weggelassen.
+ */
+export function getConsentedClickIds(): Partial<Record<ClickIdKey, string>> | null {
+  if (!hasMarketingConsent()) return null;
+  const ids = getStoredClickIds();
+  const out: Partial<Record<ClickIdKey, string>> = {};
+  for (const key of CLICK_ID_KEYS) {
+    const value = ids[key];
+    if (value) out[key] = value;
+  }
+  return Object.keys(out).length ? out : null;
 }
 
 /**
@@ -223,17 +234,13 @@ export function getGA4ClientId(): string | null {
  * Lead-Erfassung an den Server gesendet werden sollte.
  * 
  * Enthält:
- * - Click-IDs (gclid, gbraid, wbraid)
+ * - Click-IDs (gclid, gbraid, wbraid, msclkid, fbclid)
  * - GA4 Client-ID
  * - User-Agent
  * - Referrer
  * - Landing Page URL
  */
-export function getTrackingData(): {
-  gclid: string | null;
-  gbraid: string | null;
-  wbraid: string | null;
-  msclkid: string | null;
+export function getTrackingData(): ClickIds & {
   ga4ClientId: string | null;
   userAgent: string;
   referrer: string;

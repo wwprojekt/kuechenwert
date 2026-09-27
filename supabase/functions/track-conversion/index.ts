@@ -10,9 +10,15 @@ const TRACK_CONVERSION_RATE_LIMIT = {
 
 // Default tracking config – used as fallback when neither the DB nor env vars
 // provide a value. Mirrors site_settings.tracking_config defaults.
-const DEFAULT_GA4_MEASUREMENT_ID = "G-H4BCV8DS0B";
-const DEFAULT_OFFLINE_LEAD_ACTION_ID = "7576040066";
-const DEFAULT_GADS_LOGIN_CUSTOMER_ID = "9746508145";
+// Bewusst leer: ohne ENV- oder DB-Wert wird nichts an Google gesendet.
+const DEFAULT_GA4_MEASUREMENT_ID = "";
+const DEFAULT_OFFLINE_LEAD_ACTION_ID = "";
+const DEFAULT_GADS_LOGIN_CUSTOMER_ID = "";
+
+// Küchenanfragen misst das Google-Tag im Browser (Consent Mode, Enhanced
+// Conversions). Ein zweiter Server-Upload würde doppelt zählen und die
+// Einwilligung des Nutzers ignorieren.
+const CLIENT_TRACKED_LEAD_TYPES = new Set(["funnel"]);
 
 interface TrackingConfigShape {
   ga4?: { measurement_id?: string };
@@ -73,9 +79,9 @@ async function loadTrackingConfig(): Promise<TrackingConfigShape> {
  * - GCLID wird an GA4 gesendet -> GA4 leitet an Google Ads weiter (über Verknüpfung)
  * 
  * Konfiguration (Resolution-Order: ENV > DB site_settings.tracking_config > Default):
- * - GA4 Measurement ID: ENV GA4_MEASUREMENT_ID > tracking_config.ga4.measurement_id > G-H4BCV8DS0B
- * - Offline Conversion Action ID: ENV GADS_OFFLINE_LEAD_ACTION_ID > tracking_config.server_side.gads_offline_conversion_action_id > 7576040066
- * - Login Customer ID (MCC): ENV GADS_LOGIN_CUSTOMER_ID > tracking_config.server_side.gads_login_customer_id > 9746508145
+ * - GA4 Measurement ID: ENV GA4_MEASUREMENT_ID > tracking_config.ga4.measurement_id (sonst kein GA4-Versand)
+ * - Offline Conversion Action ID: ENV GADS_OFFLINE_LEAD_ACTION_ID > tracking_config.server_side.gads_offline_conversion_action_id (sonst kein Upload)
+ * - Login Customer ID (MCC): ENV GADS_LOGIN_CUSTOMER_ID > tracking_config.server_side.gads_login_customer_id
  *
  * Conversion-Werte (€) werden ebenfalls aus tracking_config.google_ads.values gelesen.
  *
@@ -340,7 +346,7 @@ const handler = async (req: Request): Promise<Response> => {
     const results: Record<string, unknown> = {};
 
     // --- GA4 Measurement Protocol ---
-    if (GA4_API_SECRET) {
+    if (GA4_API_SECRET && ga4MeasurementId && !CLIENT_TRACKED_LEAD_TYPES.has(lead_type)) {
       try {
         // Enhanced Conversions: Gehashte Nutzerdaten für bessere Attribution
         const userData: Record<string, unknown> = {};
@@ -445,7 +451,10 @@ const handler = async (req: Request): Promise<Response> => {
     const GADS_OAUTH_CLIENT_ID = Deno.env.get("GADS_OAUTH_CLIENT_ID");
     const GADS_OAUTH_CLIENT_SECRET = Deno.env.get("GADS_OAUTH_CLIENT_SECRET");
 
-    if (GADS_CUSTOMER_ID && GADS_DEVELOPER_TOKEN && GADS_OAUTH_REFRESH_TOKEN && GADS_OAUTH_CLIENT_ID && GADS_OAUTH_CLIENT_SECRET) {
+    if (
+      offlineLeadActionId && !CLIENT_TRACKED_LEAD_TYPES.has(lead_type) &&
+      GADS_CUSTOMER_ID && GADS_DEVELOPER_TOKEN && GADS_OAUTH_REFRESH_TOKEN && GADS_OAUTH_CLIENT_ID && GADS_OAUTH_CLIENT_SECRET
+    ) {
       try {
         console.log("[track-conversion] Google Ads API Credentials vorhanden, sende direkte Conversion...");
 

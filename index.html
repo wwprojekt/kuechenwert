@@ -34,8 +34,6 @@
          Page-Load Daten + Photos von dort braucht. dns-prefetch löst nur
          DNS auf — preconnect macht zusätzlich TCP+TLS-Handshake (~300 ms
          gespart auf 4G, gemessen via Lighthouse 2026-04-20). -->
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link rel="preconnect" href="https://gzqayoalwtmypndrmqes.supabase.co" crossorigin />
 
     <!-- LCP-Hero-Image: liegt als gehashtes Vite-Asset unter
@@ -44,13 +42,8 @@
          per <link rel=modulepreload> + Code-Splitting selbst ein. -->
     <!-- Preconnect fuer Unsplash faellt weg, weil der Hero jetzt lokal kommt. -->
 
-    <!-- Google Fonts — loaded NON-BLOCKING via media trick.
-         Browser loads CSS with media="print" (non-render-blocking),
-         then switches to media="all" once loaded. display=swap shows
-         system font immediately, swaps to Fira Sans when ready. -->
-    <link rel="preload" href="https://fonts.googleapis.com/css2?family=Fira+Sans:wght@400;500;600;700;800&display=swap" as="style" />
-    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fira+Sans:wght@400;500;600;700;800&display=swap" media="print" onload="this.media='all'" />
-    <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fira+Sans:wght@400;500;600;700;800&display=swap" /></noscript>
+    <!-- Fira Sans kommt als eigenes Asset aus dem Bundle (@fontsource, src/main.tsx):
+         keine Anfrage an Google-Server, font-display: swap. -->
 
     <!-- Google Consent Mode v2 — minimal inline, MUST load before gtag -->
     <script>
@@ -59,13 +52,6 @@
       gtag('set','ads_data_redaction',true);gtag('set','url_passthrough',true);
       try{var c=JSON.parse(localStorage.getItem('cookie-consent')||'null');if(c&&c.marketing){gtag('set','ads_data_redaction',false);gtag('consent','update',{'analytics_storage':c.analytics?'granted':'denied','ad_storage':'granted','ad_user_data':'granted','ad_personalization':'granted','functionality_storage':'granted','personalization_storage':'granted'})}else if(c&&c.analytics){gtag('consent','update',{'analytics_storage':'granted','functionality_storage':'granted','personalization_storage':'granted'})}}catch(e){}
     </script>
-    
-    <!-- Clixtell wird in loadDeferredScripts() unten geladen, nach erstem Paint
-         und nur wenn der User Marketing/Analytics-Consent gegeben hat. Das
-         frühere unkonditionale Inline-Script lud `track.js` + `recorder.js`
-         (Session-Recorder, mehrere hundert KB JS) auf jedem Pageload, hookte
-         Maus-/Scroll-Events und crashte regelmäßig mit "Cannot read length".
-         DSGVO-konform laden wir es erst nach explizitem Consent. -->
 
     <!-- Primary Meta Tags -->
     <title>KüchenWert — Traumküche mit KI planen, Preis sehen & Studio-Angebote vergleichen</title>
@@ -137,13 +123,6 @@
   </head>
 
   <body class="notranslate">
-    <!-- Clixtell noscript-Fallback -->
-    <noscript><img src='//tracker.clixtell.com/track/t.gif' height="1" width="1" style="display:none"></noscript>
-    <!-- Meta Pixel noscript-Fallback -->
-    <noscript>
-      <img height="1" width="1" style="display:none"
-           src="https://www.facebook.com/tr?id=1846623132710484&ev=PageView&noscript=1" />
-    </noscript>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
 
@@ -153,17 +132,16 @@
          Loading them after the app improves FCP/LCP by 1-3 seconds on mobile.
          ═══════════════════════════════════════════════════════════════════ -->
     <script>
-      // Default tracking IDs (initial page load fallback). The Admin-Backend can
-      // override these at runtime via site_settings.tracking_config – the React
-      // app reads the DB row, dispatches a 'tracking-config-updated' window event
-      // and the listener below re-initialises gtag/fbq with the new IDs if they
-      // differ. Cached overrides are kept in localStorage so the *next* full
-      // page load already uses the latest IDs without waiting for the DB call.
+      // Tracking-IDs kommen ausschließlich aus site_settings.tracking_config:
+      // Die React-App lädt die Zeile und feuert 'tracking-config-updated', der
+      // Listener unten lädt gtag/fbq nach. Der localStorage-Cache sorgt dafür,
+      // dass der nächste Seitenaufruf die IDs sofort kennt. Ohne Eintrag in der
+      // DB wird bewusst nichts geladen.
       window.__TRACKING_BOOT__ = {
-        ga4: 'G-H4BCV8DS0B',
-        gads: 'AW-18033517246',
+        ga4: '',
+        gads: '',
         gtm: '',
-        fb:  '1846623132710484',
+        fb:  '',
         // Microsoft Advertising (Bing) UET — leer bis im Admin-Backend gesetzt.
         // Wenn leer wird KEIN UET-Pixel geladen (siehe loadUet()).
         uet: '',
@@ -241,7 +219,7 @@
       // Microsoft Advertising (Bing) UET — analog zu Meta Pixel.
       // - Wird nur geladen wenn `tagId` gesetzt UND Marketing-Consent gegeben.
       // - Idempotent: gleiche tagId zweimal aufrufen lädt das Pixel nicht doppelt.
-      // - DSGVO: gating durch hasMarketingConsent() (gleiche Logik wie Clixtell).
+      // - DSGVO: nur mit Marketing-Einwilligung (hasMarketingConsent()).
       function loadUet(tagId) {
         if (!tagId) return;
         if (window.__TRACKING_BOOT__.loaded.uet === tagId) return;
@@ -281,70 +259,68 @@
         } catch (e) { return false; }
       }
 
-      function loadClixtell() {
-        if (window.__CLIXTELL_LOADED__) return;
-        // Click Fraud Protection ist Marketing-Tracking → nur mit Consent.
-        // Vorher unkonditional inline geladen, was DSGVO-Probleme + ~300 KB
-        // recorder.js + häufige Konsolen-Crashes verursachte.
-        if (!hasMarketingConsent()) return;
-        window.__CLIXTELL_LOADED__ = true;
-        var s = document.createElement('script');
-        s.async = true;
-        s.src = (document.location.protocol === 'https:' ? 'https:' : 'http:') + '//scripts.clixtell.com/track.js';
-        document.head.appendChild(s);
+
+      function hasAnalyticsConsent() {
+        try {
+          var c = JSON.parse(localStorage.getItem('cookie-consent') || 'null');
+          return !!(c && c.analytics);
+        } catch (e) { return false; }
+      }
+
+      // Google-Tag und Meta-Pixel werden erst nach Einwilligung geladen
+      // (Basic Consent Mode): vorher geht keine Anfrage an Google oder Meta.
+      function applyTracking() {
+        var b = window.__TRACKING_BOOT__;
+        var marketing = hasMarketingConsent();
+        if (marketing || hasAnalyticsConsent()) {
+          var gtagLoaded = !!document.querySelector('script[data-tracking-loader="1"]');
+          if (!gtagLoaded || (b.ga4 && b.loaded.ga4 !== b.ga4)) {
+            loadGtagJs(b.ga4, b.gads, b.gtm);
+          } else {
+            configureGtag(b.ga4, b.gads, true, true);
+          }
+        }
+        if (marketing) loadFbq(b.fb);
+        loadUet(b.uet);
       }
 
       function loadDeferredScripts() {
-        var b = window.__TRACKING_BOOT__;
-        loadGtagJs(b.ga4, b.gads, b.gtm);
-        loadFbq(b.fb);
-        loadUet(b.uet);
-        loadClixtell();
+        applyTracking();
       }
 
-      // Wenn Consent erst nachträglich erteilt wird (CookieBanner Akzeptieren),
-      // Clixtell sofort nachladen — der CookieBanner dispatched dieses Event
-      // (siehe src/components/CookieBanner.tsx + CookieSettingsModal.tsx).
+      // Einwilligung im Cookie-Banner oder in den Cookie-Einstellungen
+      // (CookieBanner.tsx, CookieSettingsModal.tsx) lädt die Dienste nach.
       window.addEventListener('consent-updated', function () {
-        loadClixtell();
-        // Bing UET wird analog zu Clixtell erst nach Marketing-Consent aktiviert
-        try { loadUet(window.__TRACKING_BOOT__.uet); } catch (e) {}
+        try { applyTracking(); } catch (e) {}
       });
 
-      // React publishes the loaded tracking-config via this event. We persist
-      // it in localStorage so the next page load uses the fresh IDs immediately,
-      // and we re-init scripts on the fly if the IDs changed.
+      // Die React-App meldet die Tracking-IDs aus site_settings.tracking_config.
+      // Sie werden für den nächsten Seitenaufruf gecacht; geladen wird nur mit
+      // Einwilligung (applyTracking).
       window.addEventListener('tracking-config-updated', function (e) {
         try {
           var cfg = (e && e.detail) || null;
           if (!cfg) return;
+          // Abgeschaltete Dienste zählen wie fehlende IDs.
+          var on = cfg.enabled !== false;
           var newIds = {
-            ga4:  cfg.ga4 && cfg.ga4.measurement_id ? String(cfg.ga4.measurement_id) : '',
-            gads: cfg.google_ads && cfg.google_ads.conversion_id ? String(cfg.google_ads.conversion_id) : '',
-            gtm:  cfg.gtm && cfg.gtm.enabled && cfg.gtm.container_id ? String(cfg.gtm.container_id) : '',
-            fb:   cfg.meta_pixel && cfg.meta_pixel.pixel_id ? String(cfg.meta_pixel.pixel_id) : '',
-            uet:  cfg.microsoft_ads && cfg.microsoft_ads.enabled && cfg.microsoft_ads.uet_tag_id
+            ga4:  on && cfg.ga4 && cfg.ga4.enabled !== false && cfg.ga4.measurement_id ? String(cfg.ga4.measurement_id) : '',
+            gads: on && cfg.google_ads && cfg.google_ads.enabled !== false && cfg.google_ads.conversion_id
+                    ? String(cfg.google_ads.conversion_id) : '',
+            gtm:  on && cfg.gtm && cfg.gtm.enabled && cfg.gtm.container_id ? String(cfg.gtm.container_id) : '',
+            fb:   on && cfg.meta_pixel && cfg.meta_pixel.enabled !== false && cfg.meta_pixel.pixel_id
+                    ? String(cfg.meta_pixel.pixel_id) : '',
+            uet:  on && cfg.microsoft_ads && cfg.microsoft_ads.enabled && cfg.microsoft_ads.uet_tag_id
                     ? String(cfg.microsoft_ads.uet_tag_id) : ''
           };
           try { localStorage.setItem('tracking-config-cache', JSON.stringify(newIds)); } catch (err) {}
           var b = window.__TRACKING_BOOT__;
-          // Only re-init gtag if neither the GA4 nor the Ads ID have been
-          // configured yet for the new IDs (configureGtag is idempotent).
-          if (newIds.ga4 && newIds.ga4 !== b.loaded.ga4) {
-            b.ga4 = newIds.ga4;
-            loadGtagJs(newIds.ga4, newIds.gads || b.gads, newIds.gtm || b.gtm);
-          } else if (newIds.gads && newIds.gads !== b.loaded.gads) {
-            b.gads = newIds.gads;
-            configureGtag(b.ga4, newIds.gads, true, !!(cfg.google_ads && cfg.google_ads.allow_enhanced_conversions));
-          }
-          if (newIds.fb && newIds.fb !== b.loaded.fb) {
-            b.fb = newIds.fb;
-            loadFbq(newIds.fb);
-          }
-          if (newIds.uet && newIds.uet !== b.loaded.uet) {
-            b.uet = newIds.uet;
-            loadUet(newIds.uet);
-          }
+          b.ga4 = newIds.ga4;
+          b.gads = newIds.gads;
+          b.gtm = newIds.gtm;
+          b.fb = newIds.fb;
+          b.uet = newIds.uet;
+          applyTracking();
         } catch (err) {}
       });
 

@@ -87,7 +87,7 @@ Before every commit:
 8. **`git fetch origin main` BEFORE pushing**: detects concurrent commits from parallel agents/devs. If diverged: `git pull --rebase origin main` first.
 9. **IMMEDIATELY push to GitHub**: `git push origin main` (MANDATORY – local-only commits are NOT acceptable)
 10. If push fails: `git pull --rebase origin main && git push origin main`
-11. Verify push: `git status` must show `Your branch is up to date with 'origin/main'`. Dokploy webhook triggers auto-build/deploy within ~1 minute of the push appearing on `origin/main`.
+11. Verify push: `git status` must show `Your branch is up to date with 'origin/main'`. The push starts `.github/workflows/deploy.yml` (typecheck, tests, build, then Dokploy deploy via API); production is updated a few minutes later. Check the run with `gh run list --workflow deploy.yml` and the live build via `last-modified` of `/`.
 12. If the change applied a DB migration via MCP: confirm the corresponding `supabase/migrations/<timestamp>_<name>.sql` file exists AND is part of the commit. Migration without file = invisible to git = unreproducible.
 
 ## Good Examples (copy these patterns)

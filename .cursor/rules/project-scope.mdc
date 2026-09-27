@@ -13,7 +13,7 @@ Verbindliche Regel fuer ALLE Agents in diesem Workspace. Gilt ohne Ausnahme.
 - **Git-Remote**: `https://github.com/wwprojekt/kuechenwert.git` (origin, `main`)
 - **Stack**: Vite + React 18 SPA, Supabase (Postgres, Auth, Storage, Edge Functions), Dokploy (nginx-Container aus `Dockerfile`)
 - **Supabase-Projekt**: `gzqayoalwtmypndrmqes` (Name `KuechenWert`, eu-central-1)
-- **Deploy**: Push auf `main` → Dokploy-Webhook baut und deployt automatisch (strikt app-scoped)
+- **Deploy**: Push auf `main` → GitHub Actions (`.github/workflows/deploy.yml`) prüft und stößt per API den Dokploy-Deploy der KüchenWert-App an (strikt app-scoped)
 - **Produktions-Domains**:
   - `https://kuechenwert24.de` (primär, ASCII) — öffentliche Website, SEO-Canonical, E-Mail-Versand (`@kuechenwert24.de`), alle Links in Mails/PDFs/Sitemap.
   - `https://küchenwert.de` (Punycode `xn--kchenwert-q9a.de`) — Alias, 301-Redirect auf `kuechenwert24.de` (Cloudflare).

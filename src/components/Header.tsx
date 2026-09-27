@@ -180,7 +180,7 @@ const Header = () => {
 
       {/* Main Header */}
       <header className="sticky top-0 z-50 w-full bg-background/95 backdrop-blur-md border-b border-border/50 shadow-sm safe-top">
-        <nav className="container flex h-20 items-center justify-between gap-4" aria-label="Hauptnavigation">
+        <nav className="container flex h-20 items-center justify-between gap-2 sm:gap-4" aria-label="Hauptnavigation">
           <SiteLogo variant="icon-text" />
 
           <div className="hidden lg:flex items-center gap-5">
@@ -252,7 +252,7 @@ const Header = () => {
           </div>
 
           {/* Mobile */}
-          <div className="lg:hidden flex items-center gap-1">
+          <div className="lg:hidden flex flex-none items-center gap-1">
             {!plannerActive && (
               <Button asChild size="sm" className="h-9 gap-1.5 px-3 font-semibold">
                 <Link to="/funnel/c">

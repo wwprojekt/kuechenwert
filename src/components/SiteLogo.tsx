@@ -49,7 +49,7 @@ export function SiteLogo({
       case "icon-only":
         return "h-8 w-8";
       case "icon-text":
-        return "h-14 w-14";
+        return "h-10 w-10 sm:h-14 sm:w-14";
       case "icon-text-compact":
         return "h-10 w-10";
       case "footer":
@@ -67,11 +67,11 @@ export function SiteLogo({
           return <div className={`${sizeClass} rounded-full bg-muted animate-pulse`} />;
         case "icon-text":
           return (
-            <div className="flex items-center gap-3">
+            <div className="flex min-w-0 items-center gap-2.5 sm:gap-3">
               <div className={`${sizeClass} rounded-full bg-muted animate-pulse flex-shrink-0`} />
               <div className="flex flex-col gap-1.5 min-w-0">
-                <div className="h-7 w-40 bg-muted rounded animate-pulse" />
-                <div className="h-3 w-56 bg-muted rounded animate-pulse" />
+                <div className="h-6 w-28 bg-muted rounded animate-pulse sm:h-7 sm:w-40" />
+                <div className="hidden h-3 w-56 bg-muted rounded animate-pulse sm:block" />
               </div>
             </div>
           );
@@ -109,17 +109,17 @@ export function SiteLogo({
 
       case "icon-text":
         return (
-          <div className="flex items-center gap-3">
+          <div className="flex min-w-0 items-center gap-2.5 sm:gap-3">
             <img
               src={logoUrl}
               alt={siteName}
               className={`${getIconSizeClass()} object-contain flex-shrink-0`}
             />
             <div className="flex flex-col min-w-0">
-              <span className="text-2xl sm:text-3xl font-bold text-foreground leading-tight tracking-tight truncate">
+              <span className="text-xl sm:text-3xl font-bold text-foreground leading-tight tracking-tight truncate">
                 {siteName}
               </span>
-              <span className="text-[10px] text-muted-foreground leading-tight font-medium truncate">
+              <span className="hidden sm:block text-[10px] text-muted-foreground leading-tight font-medium truncate">
                 {siteTagline}
               </span>
             </div>
@@ -175,7 +175,7 @@ export function SiteLogo({
     return (
       <Link
         to={linkTo}
-        className={`flex items-center hover:opacity-90 transition-opacity ${className}`}
+        className={`flex min-w-0 items-center hover:opacity-90 transition-opacity ${className}`}
       >
         {renderContent()}
       </Link>
@@ -183,7 +183,7 @@ export function SiteLogo({
   }
 
   return (
-    <div className={`flex items-center ${className}`}>
+    <div className={`flex min-w-0 items-center ${className}`}>
       {renderContent()}
     </div>
   );

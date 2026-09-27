@@ -186,7 +186,11 @@ const Benefits = () => {
 
         {/* Section CTA */}
         <div className="text-center mt-12 sm:mt-16">
-          <Button asChild size="lg" className="gradient-hero hover:gradient-hero-hover">
+          <Button
+            asChild
+            size="lg"
+            className="gradient-hero hover:gradient-hero-hover h-auto min-h-11 max-w-full whitespace-normal px-6 py-2.5 sm:px-8"
+          >
             <Link to="/funnel/c">
               Traumküche kostenlos planen
               <ArrowRight className="ml-2 h-4 w-4" />

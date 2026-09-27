@@ -243,7 +243,7 @@ export function ContactStep({
             <div className="grid aspect-[4/3] place-items-center bg-muted text-sm text-muted-foreground">Ihre Planung</div>
           )}
           <div className="p-4">
-            <p className="text-xs font-bold uppercase tracking-wider text-primary">KI-Preisschätzung</p>
+            <p className="text-xs font-bold uppercase tracking-wider text-primary">Preisschätzung</p>
             <p className="mt-1 text-xl font-extrabold text-foreground">
               <PriceRange estimate={estimate} />
             </p>

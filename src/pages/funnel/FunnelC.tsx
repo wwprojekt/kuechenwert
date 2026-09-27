@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
 import { FunnelSeo } from "@/components/funnel/funnel-seo";
@@ -67,14 +67,37 @@ export default function FunnelC() {
 
   const index = PLANNER_STEPS.findIndex((s) => s.id === state.step);
 
+  // Der Schritt steht in der URL (?schritt=raum …): Die Zurück-Geste geht einen Schritt
+  // zurück statt den Planer zu verlassen. Navigiert wird nur über die URL.
+  const { goTo: setPlannerStep } = planner;
+  const urlStep = PLANNER_STEPS.find((s) => s.id === searchParams.get("schritt"))?.id;
+  const stepRef = useRef(state.step);
+  useEffect(() => {
+    stepRef.current = state.step;
+  }, [state.step]);
+  useEffect(() => {
+    if (searchParams.has("stil") || searchParams.has("form")) return;
+    if (!urlStep) {
+      const params = new URLSearchParams(searchParams);
+      params.set("schritt", stepRef.current);
+      setSearchParams(params, { replace: true });
+      return;
+    }
+    if (urlStep === stepRef.current) return;
+    const target = PLANNER_STEPS.findIndex((s) => s.id === urlStep);
+    setMaxVisited((m) => Math.max(m, target));
+    setPlannerStep(urlStep);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }, [urlStep, searchParams, setSearchParams, setPlannerStep]);
+
   const goTo = useCallback(
     (step: PlannerStep) => {
-      const target = PLANNER_STEPS.findIndex((s) => s.id === step);
-      setMaxVisited((m) => Math.max(m, target));
-      planner.goTo(step);
-      window.scrollTo({ top: 0, behavior: "smooth" });
+      if (step === state.step) return;
+      const params = new URLSearchParams(searchParams);
+      params.set("schritt", step);
+      setSearchParams(params);
     },
-    [planner],
+    [searchParams, setSearchParams, state.step],
   );
 
   const next = () => goTo(PLANNER_STEPS[Math.min(index + 1, PLANNER_STEPS.length - 1)]!.id);

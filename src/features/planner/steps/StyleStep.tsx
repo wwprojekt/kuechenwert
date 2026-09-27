@@ -25,7 +25,7 @@ export function StyleStep({ config, onChange }: { config: PlannerConfig; onChang
           label="Qualitätsstufe"
           value={config.quality}
           onChange={(quality) => onChange({ quality })}
-          columns="sm:grid-cols-2 lg:grid-cols-4"
+          columns="grid-cols-1 sm:grid-cols-2 lg:grid-cols-4"
           options={QUALITY_LEVELS.map((q) => ({
             id: q.id,
             label: q.label,

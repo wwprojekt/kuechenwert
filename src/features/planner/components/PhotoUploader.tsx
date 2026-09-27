@@ -131,6 +131,7 @@ export function PhotoUploader({
         ref={inputRef}
         type="file"
         accept="image/jpeg,image/png,image/webp"
+        aria-label="Foto Ihrer Küche auswählen"
         className="sr-only"
         tabIndex={-1}
         onChange={(e) => void handleFiles(e.target.files)}

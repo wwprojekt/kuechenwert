@@ -173,7 +173,7 @@ export default function ProjectPage() {
             {estimate && (
               <div className="rounded-xl border bg-card px-4 py-3">
                 <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
-                  {view.lead.funnel_type === "traumkueche" ? "KI-Preisschätzung" : "Preisschätzung"}
+                  Preisschätzung
                 </p>
                 <p className="text-lg font-extrabold tabular-nums">
                   {euro(estimate.min)} – {euro(estimate.max)}

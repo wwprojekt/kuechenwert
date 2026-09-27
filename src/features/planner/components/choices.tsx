@@ -83,12 +83,18 @@ export function ChoiceGrid<T extends string>({
                 <span className={cn("mt-0.5 flex-none", selected ? "text-primary" : "text-muted-foreground")}>{opt.icon}</span>
               )}
               <span className="min-w-0 flex-1">
-                <span className="flex items-center gap-2">
-                  <span className={cn("font-semibold leading-tight text-foreground", size === "sm" ? "text-sm" : "text-[15px]")}>
+                {/* Ohne Bild sitzt der Haken neben dem Titel: Platz freihalten, sonst verdeckt er ihn. */}
+                <span className={cn("flex flex-wrap items-center gap-x-2 gap-y-1", !(opt.image || opt.visual) && "pr-6")}>
+                  <span
+                    className={cn(
+                      "hyphens-auto break-words font-semibold leading-tight text-foreground",
+                      size === "sm" ? "text-sm" : "text-[15px]",
+                    )}
+                  >
                     {opt.label}
                   </span>
                   {opt.badge && (
-                    <span className="rounded-full bg-accent/15 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-accent-foreground dark:text-accent">
+                    <span className="rounded-full bg-accent/15 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-foreground">
                       {opt.badge}
                     </span>
                   )}

@@ -1,9 +1,9 @@
 import { ArrowLeft, ArrowRight, Check, Phone, ShieldCheck } from "lucide-react";
-import type { ReactNode } from "react";
+import { useEffect, useRef, type ReactNode } from "react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { SiteLogo } from "@/components/SiteLogo";
-import { useSettings } from "@/contexts/SettingsContext";
+import { useSupportPhone } from "@/hooks/useSupportPhone";
 import { cn } from "@/lib/utils";
 import type { KitchenEstimate } from "./core";
 import { PLANNER_STEPS, type PlannerStep } from "./state";
@@ -30,10 +30,19 @@ export function PlannerShell({
   showSummary: boolean;
   children: ReactNode;
 }) {
-  const { settings } = useSettings();
-  const phone = settings?.support_phone || "+49 511 51532476";
+  const phone = useSupportPhone();
   const index = PLANNER_STEPS.findIndex((s) => s.id === step);
   const current = PLANNER_STEPS[index];
+  const headingRef = useRef<HTMLHeadingElement>(null);
+  const shownStep = useRef(step);
+
+  // Nach einem Schrittwechsel die neue Überschrift fokussieren (Tastatur, Screenreader).
+  useEffect(() => {
+    if (shownStep.current === step) return;
+    shownStep.current = step;
+    const frame = window.requestAnimationFrame(() => headingRef.current?.focus({ preventScroll: true }));
+    return () => window.cancelAnimationFrame(frame);
+  }, [step]);
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-muted/40 via-background to-background pb-28 lg:pb-12">
@@ -44,9 +53,13 @@ export function PlannerShell({
             <span className="hidden items-center gap-1.5 text-xs text-muted-foreground md:inline-flex">
               <ShieldCheck className="h-4 w-4 text-primary" /> Kostenlos · automatisch gespeichert
             </span>
-            <a href={`tel:${phone.replace(/\s/g, "")}`} className="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-sm font-semibold text-primary hover:bg-primary/10">
-              <Phone className="h-4 w-4" />
-              <span className="hidden sm:inline">{phone}</span>
+            <a
+              href={phone.href}
+              aria-label={`Anrufen: ${phone.display}`}
+              className="inline-flex min-h-11 min-w-11 items-center justify-center gap-1.5 rounded-lg px-2.5 text-sm font-semibold text-primary hover:bg-primary/10"
+            >
+              <Phone className="h-4 w-4" aria-hidden="true" />
+              <span className="hidden sm:inline">{phone.display}</span>
             </a>
           </div>
         </div>
@@ -63,7 +76,8 @@ export function PlannerShell({
                     disabled={!reachable}
                     onClick={() => onStep(s.id)}
                     aria-current={active ? "step" : undefined}
-                    className="group w-full text-left disabled:cursor-not-allowed"
+                    aria-label={`Schritt ${i + 1}: ${s.label}${done ? " (erledigt)" : ""}`}
+                    className="group -my-2.5 w-full py-2.5 text-left disabled:cursor-not-allowed md:my-0 md:py-0"
                   >
                     <span className={cn("block h-1.5 rounded-full transition-colors", done || active ? "bg-primary" : "bg-border")} />
                     <span
@@ -88,7 +102,13 @@ export function PlannerShell({
           <p className="text-xs font-bold uppercase tracking-wider text-primary">
             Schritt {index + 1} von {PLANNER_STEPS.length}
           </p>
-          <h1 className="mt-1 text-2xl font-extrabold tracking-tight text-foreground sm:text-3xl">{current?.label}</h1>
+          <h1
+            ref={headingRef}
+            tabIndex={-1}
+            className="mt-1 text-2xl font-extrabold tracking-tight text-foreground focus:outline-none sm:text-3xl"
+          >
+            {current?.label}
+          </h1>
         </div>
 
         <div className={cn(showSummary && "grid gap-8 lg:grid-cols-[1fr_340px]")}>
@@ -130,7 +150,7 @@ export function PlannerShell({
 
       {showSummary && (
         <div className="fixed inset-x-0 bottom-0 z-40 border-t bg-background/95 px-4 py-3 backdrop-blur lg:hidden safe-bottom">
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 min-[380px]:gap-3">
             {index > 0 && (
               <Button variant="outline" size="icon" className="h-12 w-12 flex-none" onClick={onBack} aria-label="Zurück">
                 <ArrowLeft className="h-5 w-5" />
@@ -138,11 +158,11 @@ export function PlannerShell({
             )}
             <div className="min-w-0 flex-1">
               <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Geschätzt</p>
-              <p className="truncate text-base font-extrabold text-foreground">
+              <p className="truncate text-[15px] font-extrabold text-foreground min-[380px]:text-base">
                 <PriceRange estimate={estimate} />
               </p>
             </div>
-            <Button size="lg" className="h-12 flex-none px-5 font-semibold" onClick={onNext}>
+            <Button size="lg" className="h-12 flex-none px-4 font-semibold min-[380px]:px-5" onClick={onNext}>
               Weiter <ArrowRight className="ml-1.5 h-4 w-4" />
             </Button>
           </div>

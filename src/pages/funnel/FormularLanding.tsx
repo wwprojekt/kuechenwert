@@ -39,7 +39,7 @@ export default function FormularLanding() {
   return (
     <PageLayout
       title="Küchenangebote vergleichen – kostenlos & unverbindlich"
-      description="Beschreiben Sie Ihre Wunschküche in 2 Minuten: Geprüfte Küchenstudios aus Ihrer Region schicken Ihnen Angebote. Kostenlos und unverbindlich vergleichen."
+      description="Beschreiben Sie Ihre Wunschküche in ca. 3 Minuten: Geprüfte Küchenstudios aus Ihrer Region schicken Ihnen Angebote. Kostenlos und unverbindlich vergleichen."
       keywords="Küchenangebote vergleichen, Küche Angebote einholen, Küchenstudio Angebot, neue Küche Angebot, Küchenplanung kostenlos"
       canonicalPath="/formular"
     >
@@ -50,7 +50,7 @@ export default function FormularLanding() {
               Küchenangebote aus Ihrer Region – <span className="text-primary">kostenlos vergleichen</span>
             </h1>
             <p className="mx-auto mt-4 max-w-2xl text-base leading-relaxed text-muted-foreground sm:text-lg">
-              Beschreiben Sie Ihre Wunschküche in 2 Minuten. Geprüfte Küchenstudios aus Ihrer Region schicken Ihnen Angebote – Sie
+              Beschreiben Sie Ihre Wunschküche in ca. 3 Minuten. Geprüfte Küchenstudios aus Ihrer Region schicken Ihnen Angebote – Sie
               vergleichen und entscheiden.
             </p>
             <ul className="mt-5 flex flex-wrap justify-center gap-x-5 gap-y-2 text-sm text-muted-foreground">
@@ -64,7 +64,7 @@ export default function FormularLanding() {
           </div>
 
           <div ref={cardRef} className="mt-8 scroll-mt-24 rounded-2xl border bg-card p-4 shadow-lg sm:mt-10 sm:p-6 lg:p-8">
-            <p className="text-sm font-semibold text-primary">Frage 1 · insgesamt ca. 2 Minuten</p>
+            <p className="text-sm font-semibold text-primary">Frage 1 · insgesamt ca. 3 Minuten</p>
             <h2 id={QUESTION_ID} ref={questionRef} tabIndex={-1} className="mt-1 text-xl font-bold text-foreground outline-none sm:text-2xl">
               Welche Form soll Ihre Küche haben?
             </h2>
@@ -87,7 +87,7 @@ export default function FormularLanding() {
             Bereit für Ihre Küchenangebote?
           </h2>
           <p className="mx-auto mt-2 max-w-xl text-muted-foreground">
-            Wählen Sie die Form Ihrer Küche – den Rest beantworten Sie in rund 2 Minuten.
+            Wählen Sie die Form Ihrer Küche – den Rest beantworten Sie in rund 3 Minuten.
           </p>
           <Button size="lg" className="mt-6" onClick={backToForm}>
             <ArrowUp aria-hidden="true" />

@@ -39,7 +39,7 @@ export function TextField({ id, label, hint, error, required, ...inputProps }: T
         </p>
       )}
       {error && (
-        <p id={errorId} className="mt-1.5 flex items-start gap-1.5 text-sm text-destructive">
+        <p id={errorId} role="alert" className="mt-1.5 flex items-start gap-1.5 text-sm text-destructive">
           <AlertCircle className="mt-0.5 h-4 w-4 flex-none" aria-hidden="true" />
           {error}
         </p>

@@ -93,7 +93,8 @@ export default {
         ink: {
           DEFAULT: "hsl(var(--foreground))",
           muted: "hsl(var(--muted-foreground))",
-          subtle: "hsl(var(--muted-foreground) / 0.75)",
+          // Volle Deckkraft: mit 75 % fiel kleiner Hinweistext unter 4,5:1 Kontrast (WCAG AA).
+          subtle: "hsl(var(--muted-foreground))",
         },
         surface: {
           soft: "hsl(var(--muted) / 0.45)",

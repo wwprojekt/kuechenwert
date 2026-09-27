@@ -144,7 +144,7 @@ export function BudgetSliderStep({ value, onChange, min, max, step, defaultValue
               onClick={() => setAmount(amount)}
               aria-pressed={active}
               className={cn(
-                "min-h-9 rounded-full border px-3.5 py-1.5 text-xs font-semibold tabular-nums transition-colors",
+                "min-h-11 rounded-full border px-4 py-2 text-xs font-semibold tabular-nums transition-colors",
                 "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
                 active
                   ? "border-primary bg-primary text-primary-foreground shadow-sm"

@@ -4,7 +4,7 @@ const STEPS: Array<{ icon: LucideIcon; title: string; text: string }> = [
   {
     icon: ClipboardList,
     title: "Wünsche angeben",
-    text: "Form, Stil, Geräte, Budget und Zeitraum – in ca. 2 Minuten beantwortet.",
+    text: "Form, Stil, Geräte, Budget und Zeitraum – in ca. 3 Minuten beantwortet.",
   },
   {
     icon: Store,

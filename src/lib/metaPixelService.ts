@@ -66,7 +66,7 @@ function safeFbq(...args: unknown[]): void {
       logger.log('[MetaPixel] Event gesendet:', args);
     }
   } catch (error) {
-    console.warn('[MetaPixel] Fehler beim Senden des Events:', error);
+    console.error('[MetaPixel] Fehler beim Senden des Events:', error);
   }
 }
 
@@ -86,7 +86,7 @@ export function grantMetaPixelConsent(): void {
     
     logger.log('[MetaPixel] Consent erteilt, Pixel aktiviert');
   } catch (error) {
-    console.warn('[MetaPixel] Fehler bei Consent-Grant:', error);
+    console.error('[MetaPixel] Fehler bei Consent-Grant:', error);
   }
 }
 
@@ -103,7 +103,7 @@ export function revokeMetaPixelConsent(): void {
     
     logger.log('[MetaPixel] Consent widerrufen, Pixel deaktiviert');
   } catch (error) {
-    console.warn('[MetaPixel] Fehler bei Consent-Revoke:', error);
+    console.error('[MetaPixel] Fehler bei Consent-Revoke:', error);
   }
 }
 
@@ -136,7 +136,7 @@ export function initMetaPixelConsentListener(): void {
 
     logger.log('[MetaPixel] Consent-Listener initialisiert');
   } catch (error) {
-    console.warn('[MetaPixel] Fehler bei Consent-Listener-Init:', error);
+    console.error('[MetaPixel] Fehler bei Consent-Listener-Init:', error);
   }
 }
 
@@ -168,8 +168,8 @@ export function trackMetaLead(params?: {
   currency?: string;
 }): void {
   safeFbq('track', 'Lead', {
-    content_name: params?.content_name || 'Fahrzeug-Lead',
-    content_category: params?.content_category || 'Wohnmobil',
+    content_name: params?.content_name || 'Küchen-Lead',
+    content_category: params?.content_category || 'Küche',
     value: params?.value || 0,
     currency: params?.currency || 'EUR',
   });

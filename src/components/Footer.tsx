@@ -249,7 +249,7 @@ const Footer = () => {
                       </div>
                       <div className="text-sm">
                         <div className="font-medium">{phone}</div>
-                        <div className="text-xs text-slate-500">Mo-Fr 10:00-18:00</div>
+                        <div className="text-xs text-slate-400">Mo-Fr 10:00-18:00</div>
                       </div>
                     </a>
                   ); })()}
@@ -262,7 +262,7 @@ const Footer = () => {
                       </div>
                       <div className="text-sm">
                         <div className="font-medium">{email}</div>
-                        <div className="text-xs text-slate-500">24h Antwortzeit</div>
+                        <div className="text-xs text-slate-400">24h Antwortzeit</div>
                       </div>
                     </a>
                   ); })()}
@@ -274,7 +274,7 @@ const Footer = () => {
                     </div>
                     <div className="text-sm">
                       <div className="font-medium">{settings?.site_name || BRAND.name}</div>
-                      <div className="text-xs text-slate-500">
+                      <div className="text-xs text-slate-400">
                         {(settings?.company_city && !settings.company_city.toLowerCase().includes('bitte'))
                           ? `${settings.company_city}, ${settings.company_country || 'Deutschland'}`
                           : 'Deutschland'}

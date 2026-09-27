@@ -3,6 +3,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.100.1";
 import { getCorsHeaders, handleCorsPreflightRequest } from "../_shared/cors.ts";
 import { edgeLogger, logEdgeError } from "../_shared/edgeLogger.ts";
 import { checkServiceRoleOrAdmin } from "../_shared/auth.ts";
+import { BRAND } from "../_shared/brand-config.ts";
 import {
   buildEmailLayout,
   paragraph,
@@ -55,9 +56,9 @@ interface SettingsLike {
 }
 
 const fallbackSettings: SettingsLike = {
-  site_name: "KÃ¼chenWert",
-  site_description: "Deutschlands führende Wohnmobil-Handelsplattform",
-  contact_email: "info@kuechenwert24.de",
+  site_name: BRAND.name,
+  site_description: BRAND.tagline,
+  contact_email: BRAND.supportEmail,
   support_phone: "+49 511 51532476",
 };
 
@@ -176,7 +177,7 @@ const handler = async (req: Request): Promise<Response> => {
         ${paragraph(`wir möchten Sie informieren, dass Ihr Konto bei <strong>${settings.site_name}</strong> vollständig gelöscht wurde. Sämtliche personenbezogenen Daten wurden aus unseren produktiven Systemen entfernt.`)}
         ${warningBox("Eine Anmeldung mit dieser E-Mail-Adresse ist nicht mehr möglich. Sie können sich bei Bedarf jederzeit wieder neu registrieren.")}
         ${reason ? infoBox("Grund", paragraph(reason), "info") : ""}
-        ${paragraph(`Falls Sie die Löschung nicht selbst veranlasst haben oder Rückfragen zur Datenverarbeitung haben, wenden Sie sich bitte umgehend an unseren Datenschutzbeauftragten unter <a href="mailto:${settings.contact_email}" style="color:#1f8aa2;">${settings.contact_email}</a> oder telefonisch unter ${settings.support_phone}.`)}
+        ${paragraph(`Falls Sie die Löschung nicht selbst veranlasst haben oder Rückfragen zur Datenverarbeitung haben, wenden Sie sich bitte umgehend an unseren Datenschutzbeauftragten unter <a href="mailto:${settings.contact_email}" style="color:#336753;">${settings.contact_email}</a> oder telefonisch unter ${settings.support_phone}.`)}
         ${paragraph("Wir bedanken uns für die Zeit, die Sie mit uns verbracht haben, und wünschen Ihnen alles Gute.")}
       `;
 

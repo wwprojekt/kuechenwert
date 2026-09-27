@@ -18,6 +18,7 @@ interface ServiceWorkerManager {
 class ServiceWorkerManagerImpl implements ServiceWorkerManager {
   private registration: ServiceWorkerRegistration | null = null;
   private isProduction = import.meta.env.PROD;
+  private watchesControllerChange = false;
 
   /**
    * Check if service worker is supported
@@ -147,8 +148,15 @@ class ServiceWorkerManagerImpl implements ServiceWorkerManager {
       });
     });
 
-    // Listen for service worker control changes
+    // Beim Erstbesuch übernimmt der Worker per clients.claim() die Seite, ohne
+    // dass etwas veraltet ist; neu geladen wird nur beim Wechsel auf eine neue Version.
+    if (this.watchesControllerChange) return;
+    this.watchesControllerChange = true;
+    const hadController = !!navigator.serviceWorker.controller;
+    let reloading = false;
     navigator.serviceWorker.addEventListener('controllerchange', () => {
+      if (!hadController || reloading) return;
+      reloading = true;
       logger.log('Service Worker: Controller changed, reloading page');
       window.location.reload();
     });

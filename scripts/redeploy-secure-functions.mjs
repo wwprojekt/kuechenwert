@@ -7,9 +7,9 @@
  * Hintergrund: Bis zur Härtung von `_shared/auth.ts` akzeptierten diese
  * Functions ein selbst gebautes JWT mit role=service_role. Jede Function
  * bündelt ihre eigene Kopie von auth.ts, der Fix greift also erst nach
- * einem Neu-Deploy. admin-delete-user, generate-invoice-pdf,
- * send-invoice-email und send-dealer-notification sind bereits neu deployt;
- * dieses Skript zieht den Rest nach (erneutes Deployen schadet nicht).
+ * einem Neu-Deploy. Stand 27.09.2026 sind alle 42 neu deployt (38 davon per
+ * MCP-Shim auf Commit 39e2cfe, siehe AGENTS.md) und liefern 401. Das Skript
+ * bleibt für spätere Komplett-Deploys per CLI; `--probe-only` prüft nur.
  *
  * Voraussetzung: Supabase-CLI angemeldet – entweder `supabase login`
  * (öffnet den Browser) ODER Umgebungsvariable SUPABASE_ACCESS_TOKEN mit
@@ -18,11 +18,13 @@
  * Aufruf (aus dem Repo-Root):
  *   node scripts/redeploy-secure-functions.mjs           # deployen + prüfen
  *   node scripts/redeploy-secure-functions.mjs --dry-run # nur auflisten
+ *   node scripts/redeploy-secure-functions.mjs --probe-only # nur prüfen, kein Login nötig
  *
- * Geprobt wird nur direkt nach einem erfolgreichen Deploy: Eine noch nicht
- * gefixte Function würde den gefälschten Token akzeptieren und mit leerem
- * Body laufen – bei Batch-Jobs (process-scheduled-emails,
+ * Geprobt wird sonst nur direkt nach einem erfolgreichen Deploy: Eine noch
+ * nicht gefixte Function würde den gefälschten Token akzeptieren und mit
+ * leerem Body laufen – bei Batch-Jobs (process-scheduled-emails,
  * send-inactivity-email, …) hieße das einen echten Lauf samt Mails.
+ * `--probe-only` daher nur nutzen, wenn alle Functions den Fix haben.
  */
 
 import { readdirSync, readFileSync, existsSync } from "node:fs";
@@ -33,6 +35,7 @@ import { dirname, join } from "node:path";
 const PROJECT_REF = "gzqayoalwtmypndrmqes";
 const FUNCTIONS_DIR = join(dirname(fileURLToPath(import.meta.url)), "..", "supabase", "functions");
 const DRY_RUN = process.argv.includes("--dry-run");
+const PROBE_ONLY = process.argv.includes("--probe-only");
 
 /** Alle Functions, deren index.ts checkServiceRoleOrAdmin importiert. */
 function affectedFunctions() {
@@ -94,12 +97,12 @@ async function probe(name) {
 const fns = affectedFunctions();
 console.log(`\n${fns.length} Functions mit checkServiceRoleOrAdmin:\n  ${fns.join("\n  ")}\n`);
 if (DRY_RUN) process.exit(0);
-ensureAuthenticated();
+if (!PROBE_ONLY) ensureAuthenticated();
 
 const results = [];
 for (const name of fns) {
-  console.log(`\n=== deploy ${name} ===`);
-  if (!deploy(name)) {
+  console.log(`\n=== ${PROBE_ONLY ? "probe" : "deploy"} ${name} ===`);
+  if (!PROBE_ONLY && !deploy(name)) {
     // Kein Probe: die alte, angreifbare Version ist noch live und würde laufen.
     results.push({ name, deployed: "FEHLER", status: "nicht geprüft", secure: false });
     console.log("   Deploy fehlgeschlagen – nicht geprobt.");
@@ -107,7 +110,7 @@ for (const name of fns) {
   }
   const status = await probe(name);
   const secure = status === 401;
-  results.push({ name, deployed: "ok", status, secure });
+  results.push({ name, deployed: PROBE_ONLY ? "–" : "ok", status, secure });
   console.log(`   Probe (gefälschter Token): HTTP ${status} ${secure ? "OK" : "NICHT ABGESICHERT"}`);
 }
 

@@ -1,8 +1,8 @@
 name: Deploy Production (Dokploy)
 
 # Jeder Push auf main wird geprüft und danach über die Dokploy-API deployt.
+# Das Dokploy-Panel läuft hinter Cloudflare unter https://deploy.kuechenwert24.de.
 # Benötigte Repo-Secrets (Settings → Secrets and variables → Actions):
-#   DOKPLOY_URL      z. B. https://dokploy.example.de (ohne /api)
 #   DOKPLOY_API_KEY  Dokploy → Profil → API/CLI → Token
 #   DOKPLOY_APP_ID   applicationId der KüchenWert-App (nur diese App!)
 
@@ -53,12 +53,12 @@ jobs:
     steps:
       - name: Deploy anstoßen
         env:
-          DOKPLOY_URL: ${{ secrets.DOKPLOY_URL }}
+          DOKPLOY_URL: https://deploy.kuechenwert24.de
           DOKPLOY_API_KEY: ${{ secrets.DOKPLOY_API_KEY }}
           DOKPLOY_APP_ID: ${{ secrets.DOKPLOY_APP_ID }}
         run: |
-          if [ -z "$DOKPLOY_URL" ] || [ -z "$DOKPLOY_API_KEY" ] || [ -z "$DOKPLOY_APP_ID" ]; then
-            echo "::error::Repo-Secrets DOKPLOY_URL, DOKPLOY_API_KEY und DOKPLOY_APP_ID fehlen – Produktion wurde NICHT aktualisiert."
+          if [ -z "$DOKPLOY_API_KEY" ] || [ -z "$DOKPLOY_APP_ID" ]; then
+            echo "::error::Repo-Secrets DOKPLOY_API_KEY und DOKPLOY_APP_ID fehlen – Produktion wurde NICHT aktualisiert."
             exit 1
           fi
           curl --fail-with-body -sS -X POST "${DOKPLOY_URL%/}/api/application.deploy" \

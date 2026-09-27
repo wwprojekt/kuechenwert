@@ -2,16 +2,17 @@
 //
 // Ablauf: Der nginx im Frontend-Container proxied GET /sitemap.xml an diese
 // Edge Function (siehe docker/default.conf). Hier werden statische KuechenWert-
-// Routen (Homepage, Funnels, Content-Seiten, Legal-Pages) mit dynamischen
-// Quellen (Blog-Posts, aktive Auktionen) zusammengefuehrt und als
-// gueltiges sitemaps.org-XML zurueckgegeben.
+// Routen (Homepage, Funnels, Content-Seiten, Legal-Pages) mit den
+// veroeffentlichten Blog-Posts zusammengefuehrt und als gueltiges
+// sitemaps.org-XML zurueckgegeben.
 //
 // Geschichte: Diese Function stammt aus dem Caravanwert-Fork und listete dort
 // 100+ Wohnmobil-SEO-Landings und Marken-Ratgeber (Hymer, Dethleffs, Knaus,
 // …). Beim KuechenWert-Umbau wurden diese Pages aus dem Repo entfernt — die
 // URLs bleiben aber im Google-Index und liefern jetzt 404, wenn sie noch in
 // der sitemap stehen. Deshalb enthaelt die Liste unten **ausschliesslich**
-// Routen, die in src/App.tsx tatsaechlich aktiv sind.
+// Routen, die in src/App.tsx tatsaechlich aktiv sind. /kaufen und /auktion/:id
+// (Caravan-Auktionsmodell) leiten auf /formular um und gehoeren nicht hierher.
 //
 // Kuechen-Landing-Pages (z.B. /nobilia-kueche-planen, /kueche-guenstig-kaufen)
 // werden ergaenzt, sobald die TSX-Pages und ratgeberMeta-Eintraege existieren.
@@ -56,7 +57,6 @@ serve(async (req) => {
       { loc: `${baseUrl}/kuechenrechner`, lastmod: today, changefreq: 'weekly', priority: '0.9' },
 
       // Content-Seiten.
-      { loc: `${baseUrl}/kaufen`, lastmod: today, changefreq: 'weekly', priority: '0.8' },
       { loc: `${baseUrl}/haendler`, lastmod: today, changefreq: 'monthly', priority: '0.7' },
       { loc: `${baseUrl}/ratgeber`, lastmod: today, changefreq: 'weekly', priority: '0.7' },
       { loc: `${baseUrl}/blog`, lastmod: today, changefreq: 'daily', priority: '0.7' },
@@ -94,23 +94,7 @@ serve(async (req) => {
       priority: '0.6',
     }))
 
-    // Reverse-Auktionen fuer neue Kuechen. Aktuell leer, wird lebendig sobald
-    // Studios Leads gewinnen und Verkaufsangebote erstellt werden.
-    const { data: auctions } = await supabase
-      .from('auctions')
-      .select('id, updated_at')
-      .eq('status', 'active')
-      .order('created_at', { ascending: false })
-      .limit(100)
-
-    const auctionUrls: SitemapUrl[] = (auctions || []).map((auction) => ({
-      loc: `${baseUrl}/auktion/${auction.id}`,
-      lastmod: auction.updated_at || today,
-      changefreq: 'hourly',
-      priority: '0.8',
-    }))
-
-    const allUrls = [...staticUrls, ...blogUrls, ...auctionUrls]
+    const allUrls = [...staticUrls, ...blogUrls]
 
     const sitemap = `<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"

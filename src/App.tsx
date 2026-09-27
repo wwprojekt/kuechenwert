@@ -4,9 +4,9 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { ThemeProvider } from "@/components/ThemeProvider";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route, useParams, useLocation } from "react-router-dom";
+import { BrowserRouter, Routes, Route, useLocation } from "react-router-dom";
 import PageTransition from "./components/PageTransition";
-import { ErrorBoundary, AuctionErrorBoundary } from "./components/ErrorBoundary";
+import { ErrorBoundary } from "./components/ErrorBoundary";
 import { WhatsAppButton } from "./components/WhatsAppButton";
 import { RedirectKeepingQuery } from "./components/RedirectKeepingQuery";
 import CookieBanner from "./components/CookieBanner";
@@ -41,8 +41,9 @@ const Verkaufen = lazyRetry(() => import("./pages/Verkaufen"));
 // im Repo, falls Teile (Steps, Hooks) fuer Funnel-Features wiederverwendet
 // werden sollen. Kein lazy()-Import => kein Bundle-Chunk.
 const VerkaufenDanke = lazyRetry(() => import("./pages/VerkaufenDanke"));
-const Kaufen = lazyRetry(() => import("./pages/Kaufen"));
-const AuctionDetail = lazyRetry(() => import("./pages/AuctionDetail"));
+// Kaufen (Auktions-Marktplatz) und AuctionDetail stammen aus dem Caravan-
+// Auktionsmodell und zeigen Fahrzeugfelder. /kaufen und /auktion/:id leiten auf
+// /formular um; die Dateien bleiben im Repo, ohne lazy()-Import kein Chunk.
 const Ratgeber = lazyRetry(() => import("./pages/Ratgeber"));
 const UeberUns = lazyRetry(() => import("./pages/UeberUns"));
 const Kontakt = lazyRetry(() => import("./pages/Kontakt"));
@@ -136,16 +137,6 @@ function PageLoader() {
   );
 }
 
-// Wrapper that resets error boundary when auction ID changes
-function AuctionRoute() {
-  const { id } = useParams();
-  return (
-    <AuctionErrorBoundary key={id}>
-      <AuctionDetail />
-    </AuctionErrorBoundary>
-  );
-}
-
 // Component to track page views, set user properties & clear chunk reload flag
 function PageTracker() {
   usePageTracking();
@@ -235,8 +226,8 @@ const App = () => (
               <Route path="/wertermittlung" element={<Wertermittlung />} />
               <Route path="/wertrechner" element={<Wertrechner />} />
               <Route path="/kuechenrechner" element={<Kuechenrechner />} />
-              <Route path="/kaufen" element={<Kaufen />} />
-              <Route path="/auktion/:id" element={<AuctionRoute />} />
+              <Route path="/kaufen" element={<RedirectKeepingQuery to="/formular" />} />
+              <Route path="/auktion/:id" element={<RedirectKeepingQuery to="/formular" />} />
 
               {/* Funnel A/B/C - Lead-Gen, Offer-Compare, Traumkueche */}
               <Route path="/formular" element={<FormularLanding />} />

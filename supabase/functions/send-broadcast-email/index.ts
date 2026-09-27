@@ -2,12 +2,20 @@ import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.100.1';
 import { buildEmailLayout, paragraph } from '../_shared/email-builder.ts';
 import { getCorsHeaders, handleCorsPreflightRequest } from '../_shared/cors.ts';
+import { BRAND } from '../_shared/brand-config.ts';
+import { getBroadcastRecipients, isBroadcastGroup, type BroadcastGroup } from '../_shared/broadcast-recipients.ts';
 
 const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY");
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
-type BroadcastGroup = 'all' | 'customers' | 'dealers' | 'verified_dealers' | 'newsletter' | 'active_bidders' | 'custom';
+// Studios und Kunden verwalten ihre freiwilligen E-Mails unter /dashboard/settings.
+// Kein List-Unsubscribe-Post-Header: die Seite ist kein One-Click-Endpunkt (RFC 8058).
+const EMAIL_SETTINGS_URL = `${BRAND.baseUrl}/dashboard/settings`;
+
+function unsubscribeFooter(): string {
+  return paragraph(`<span style="font-size: 11px; color: #9ca3af;">Sie erhalten diese E-Mail, weil Sie bei ${BRAND.name} registriert sind. <a href="${EMAIL_SETTINGS_URL}" style="color: #336753; text-decoration: underline;">E-Mail-Einstellungen verwalten oder abmelden</a></span>`);
+}
 
 interface BroadcastRequest {
   subject: string;
@@ -17,152 +25,12 @@ interface BroadcastRequest {
   test_mode?: boolean;
   test_email?: string;
   include_unsubscribe?: boolean;
-  // Wenn true, werden zusaetzlich zum `broadcast_emails_enabled`-Opt-Out
-  // auch Nutzer mit `promotional_emails=false` ausgefiltert. Gedacht fuer
-  // Werbe-/Promo-Kampagnen (Rabatte, neue Features, Partnerangebote).
-  // Default: false (reine Informations-Broadcasts / System-Updates gehen
-  // an alle, die `broadcast_emails_enabled` nicht abgewaehlt haben).
+  // Werbe-/Promo-Kampagnen (Rabatte, Aktionen, Partnerangebote) gehen nur an
+  // Nutzer mit ausdruecklicher Einwilligung `promotional_emails = true`
+  // (§ 7 Abs. 2 UWG, gilt auch gegenueber Unternehmen). Default: false,
+  // reine Informations-Broadcasts gehen an alle, die
+  // `broadcast_emails_enabled` nicht abgewaehlt haben.
   is_promotional?: boolean;
-}
-
-async function getRecipients(
-  supabase: any,
-  group: BroadcastGroup,
-  customEmails?: string[],
-  isPromotional?: boolean,
-): Promise<{ email: string; name: string | null; id: string | null }[]> {
-  // First, get users who have unsubscribed from broadcasts
-  const { data: unsubscribed } = await supabase
-    .from('user_notification_preferences')
-    .select('user_id')
-    .eq('broadcast_emails_enabled', false);
-  const unsubscribedIds = new Set((unsubscribed || []).map((u: any) => u.user_id));
-
-  // Werbe-Kampagne: zusaetzlicher Opt-Out-Check auf promotional_emails.
-  // Gilt NICHT fuer transactional-aehnliche Broadcasts (System-Updates,
-  // Sicherheits-Hinweise), damit diese auch User erreichen, die Werbung
-  // deaktiviert haben.
-  let promoUnsubscribedIds = new Set<string>();
-  if (isPromotional) {
-    const { data: promoOptOut } = await supabase
-      .from('user_notification_preferences')
-      .select('user_id')
-      .eq('promotional_emails', false);
-    promoUnsubscribedIds = new Set((promoOptOut || []).map((u: any) => u.user_id));
-  }
-
-  let recipients: { email: string; name: string | null; id: string | null }[] = [];
-
-  switch (group) {
-    case 'all': {
-      const { data } = await supabase
-        .from('profiles')
-        .select('id, email, first_name, last_name')
-        .not('email', 'is', null);
-      recipients = (data || []).map((p: any) => ({
-        email: p.email,
-        name: [p.first_name, p.last_name].filter(Boolean).join(' ') || null,
-        id: p.id,
-      }));
-      break;
-    }
-    case 'customers': {
-      const { data } = await supabase
-        .from('profiles')
-        .select('id, email, first_name, last_name')
-        .eq('account_type', 'private')
-        .not('email', 'is', null);
-      recipients = (data || []).map((p: any) => ({
-        email: p.email,
-        name: [p.first_name, p.last_name].filter(Boolean).join(' ') || null,
-        id: p.id,
-      }));
-      break;
-    }
-    case 'dealers': {
-      const { data } = await supabase
-        .from('profiles')
-        .select('id, email, first_name, last_name, company_name')
-        .eq('account_type', 'dealer')
-        .not('email', 'is', null);
-      recipients = (data || []).map((p: any) => ({
-        email: p.email,
-        name: p.company_name || [p.first_name, p.last_name].filter(Boolean).join(' ') || null,
-        id: p.id,
-      }));
-      break;
-    }
-    case 'verified_dealers': {
-      const { data } = await supabase
-        .from('profiles')
-        .select('id, email, first_name, last_name, company_name')
-        .eq('account_type', 'dealer')
-        .eq('is_verified', true)
-        .not('email', 'is', null);
-      recipients = (data || []).map((p: any) => ({
-        email: p.email,
-        name: p.company_name || [p.first_name, p.last_name].filter(Boolean).join(' ') || null,
-        id: p.id,
-      }));
-      break;
-    }
-    case 'newsletter': {
-      const { data: prefs } = await supabase
-        .from('user_notification_preferences')
-        .select('user_id')
-        .eq('newsletter_enabled', true);
-      if (!prefs || prefs.length === 0) return [];
-      const userIds = prefs.map((p: any) => p.user_id);
-      const { data } = await supabase
-        .from('profiles')
-        .select('id, email, first_name, last_name')
-        .in('id', userIds)
-        .not('email', 'is', null);
-      recipients = (data || []).map((p: any) => ({
-        email: p.email,
-        name: [p.first_name, p.last_name].filter(Boolean).join(' ') || null,
-        id: p.id,
-      }));
-      break;
-    }
-    case 'active_bidders': {
-      const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
-      const { data: bids } = await supabase
-        .from('bids')
-        .select('bidder_id')
-        .gte('created_at', thirtyDaysAgo);
-      if (!bids || bids.length === 0) return [];
-      const uniqueIds = [...new Set(bids.map((b: any) => b.bidder_id))];
-      const { data } = await supabase
-        .from('profiles')
-        .select('id, email, first_name, last_name')
-        .in('id', uniqueIds)
-        .not('email', 'is', null);
-      recipients = (data || []).map((p: any) => ({
-        email: p.email,
-        name: [p.first_name, p.last_name].filter(Boolean).join(' ') || null,
-        id: p.id,
-      }));
-      break;
-    }
-    case 'custom': {
-      return (customEmails || []).map(email => ({ email, name: null, id: null }));
-    }
-    default:
-      return [];
-  }
-
-  // Filter out unsubscribed users (except for custom lists).
-  // Custom-Lists bypassen jeden Opt-Out, weil der Admin explizit Emails
-  // eintraegt (z. B. fuer Wiederherstellungs-Mails nach Bounce).
-  if (group !== 'custom') {
-    recipients = recipients.filter(r => !r.id || !unsubscribedIds.has(r.id));
-    if (isPromotional) {
-      recipients = recipients.filter(r => !r.id || !promoUnsubscribedIds.has(r.id));
-    }
-  }
-
-  return recipients;
 }
 
 const handler = async (req: Request): Promise<Response> => {
@@ -195,13 +63,16 @@ const handler = async (req: Request): Promise<Response> => {
     if (!subject || !body_html || !group) {
       return new Response(JSON.stringify({ error: 'Missing required fields: subject, body_html, group' }), { status: 400, headers });
     }
+    if (!isBroadcastGroup(group)) {
+      return new Response(JSON.stringify({ error: `Unknown group: ${group}` }), { status: 400, headers });
+    }
 
     // Fetch site settings
     const { data: settings } = await supabase.from('site_settings').select('*').single();
     const settingsData = settings || {
-      site_name: 'KÃ¼chenWert',
-      site_description: 'Deutschlands führende Wohnmobil-Handelsplattform',
-      contact_email: 'info@kuechenwert24.de',
+      site_name: BRAND.name,
+      site_description: BRAND.tagline,
+      contact_email: BRAND.supportEmail,
       support_phone: '+49 511 51532476',
     };
 
@@ -209,7 +80,7 @@ const handler = async (req: Request): Promise<Response> => {
     if (test_mode && test_email) {
       let emailContent = body_html;
       if (include_unsubscribe) {
-        emailContent += paragraph(`<span style="font-size: 11px; color: #9ca3af;">Sie erhalten diese E-Mail, weil Sie bei KuechenWert registriert sind. <a href="https://kuechenwert24.de/dashboard/profile" style="color: #1f8aa2; text-decoration: underline;">E-Mail-Einstellungen verwalten</a> | <a href="https://kuechenwert24.de/dashboard/profile" style="color: #1f8aa2; text-decoration: underline;">Von Rundmails abmelden</a></span>`);
+        emailContent += unsubscribeFooter();
       }
       const html = buildEmailLayout(settingsData, subject, emailContent);
 
@@ -226,8 +97,7 @@ const handler = async (req: Request): Promise<Response> => {
           html,
           reply_to: 'info@kuechenwert24.de',
           headers: {
-            'List-Unsubscribe': '<https://kuechenwert24.de/dashboard/profile>',
-            'List-Unsubscribe-Post': 'List-Unsubscribe=One-Click',
+            'List-Unsubscribe': `<${EMAIL_SETTINGS_URL}>`,
           },
         }),
       });
@@ -244,9 +114,9 @@ const handler = async (req: Request): Promise<Response> => {
       }), { status: 200, headers });
     }
 
-    // Get recipients (already filtered for unsubscribed + optional
-    // promotional-opt-out if is_promotional=true).
-    const recipients = await getRecipients(supabase, group, custom_emails, is_promotional);
+    // Get recipients (already filtered for unsubscribed; with
+    // is_promotional=true only users with promotional opt-in).
+    const recipients = await getBroadcastRecipients(supabase, group, { customEmails: custom_emails, isPromotional: is_promotional });
 
     if (recipients.length === 0) {
       return new Response(JSON.stringify({ error: 'No recipients found for this group' }), { status: 400, headers });
@@ -258,7 +128,7 @@ const handler = async (req: Request): Promise<Response> => {
     // Build email HTML with optional unsubscribe link
     let emailContent = body_html;
     if (include_unsubscribe) {
-      emailContent += paragraph(`<span style="font-size: 11px; color: #9ca3af;">Sie erhalten diese E-Mail, weil Sie bei KuechenWert registriert sind. <a href="https://kuechenwert24.de/dashboard/profile" style="color: #1f8aa2; text-decoration: underline;">E-Mail-Einstellungen verwalten</a> | <a href="https://kuechenwert24.de/dashboard/profile" style="color: #1f8aa2; text-decoration: underline;">Von Rundmails abmelden</a></span>`);
+      emailContent += unsubscribeFooter();
     }
     const html = buildEmailLayout(settingsData, subject, emailContent);
 
@@ -283,8 +153,7 @@ const handler = async (req: Request): Promise<Response> => {
 
           if (include_unsubscribe) {
             resendPayload.headers = {
-              'List-Unsubscribe': '<https://kuechenwert24.de/dashboard/profile>',
-              'List-Unsubscribe-Post': 'List-Unsubscribe=One-Click',
+              'List-Unsubscribe': `<${EMAIL_SETTINGS_URL}>`,
             };
           }
 

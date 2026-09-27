@@ -1,17 +1,13 @@
 import { NavLink } from "react-router-dom";
 import {
   LayoutDashboard,
-  Car,
-  Gavel,
   User,
   LogOut,
   Plus,
   Home,
-  Calendar,
-  Heart,
   MessageSquare,
   FileText,
-  Zap,
+  Settings,
 } from "lucide-react";
 import {
   Sidebar,
@@ -49,19 +45,11 @@ function useUserBadges() {
       const sessionValid = await ensureValidRLSSession();
       if (!sessionValid) return null;
 
-      const [
-        messagesRes,
-        appointmentsRes,
-      ] = await Promise.all([
-        // Support-Nachrichten mit Admin-Antwort (offene Konversationen)
-        supabase.from('support_messages').select('*', { count: 'exact', head: true }).eq('user_id', user.id).not('admin_response', 'is', null).or('status.eq.open,status.is.null'),
-        // Anstehende Termine
-        supabase.from('appointments').select('*', { count: 'exact', head: true }).eq('seller_id', user.id).eq('status', 'scheduled').gte('appointment_date', new Date().toISOString().split('T')[0]),
-      ]);
+      // Support-Nachrichten mit Admin-Antwort (offene Konversationen)
+      const messagesRes = await supabase.from('support_messages').select('*', { count: 'exact', head: true }).eq('user_id', user.id).not('admin_response', 'is', null).or('status.eq.open,status.is.null');
 
       return {
         messages: messagesRes.count ?? 0,
-        appointments: appointmentsRes.count ?? 0,
       };
     },
     enabled: !!user?.id,
@@ -104,15 +92,11 @@ interface MenuItem {
 
 const baseMenuItems: MenuItem[] = [
   { title: "Übersicht", url: "/dashboard", icon: LayoutDashboard, hideForRoles: [] },
-  { title: "Meine Inserate", url: "/dashboard/listings", icon: Car, hideForRoles: ['dealer'] },
-  { title: "Meine Gebote", url: "/dashboard/bids", icon: Gavel, hideForRoles: ['seller'] },
-  { title: "Meine Favoriten", url: "/dashboard/favorites", icon: Heart, hideForRoles: ['seller'] },
-  { title: "Kaufchancen", url: "/dashboard/kaufchancen", icon: Zap, hideForRoles: ['seller'] },
-  { title: "Meine Termine", url: "/dashboard/appointments", icon: Calendar, hideForRoles: ['seller'], badgeKey: "appointments" },
   { title: "Nachrichten", url: "/dashboard/messages", icon: MessageSquare, hideForRoles: [], badgeKey: "messages" },
-  { title: "Rechnungen", url: "/dashboard/invoices", icon: FileText, showForRoles: ['dealer'] },
-  { title: "Dokumente", url: "/dashboard/documents", icon: FileText, showForRoles: ['seller'] },
+  { title: "Rechnungen", url: "/dashboard/invoices", icon: FileText, hideForRoles: [], showForRoles: ['dealer'] },
+  { title: "Dokumente", url: "/dashboard/documents", icon: FileText, hideForRoles: [], showForRoles: ['seller'] },
   { title: "Profil", url: "/dashboard/profile", icon: User, hideForRoles: [] },
+  { title: "Einstellungen", url: "/dashboard/settings", icon: Settings, hideForRoles: [] },
 ];
 
 /**
@@ -142,7 +126,6 @@ export function UserSidebar() {
   
   const badgeCounts: Record<string, number> = {
     messages: badges?.messages || 0,
-    appointments: badges?.appointments || 0,
   };
 
   // Filter menu items based on user role

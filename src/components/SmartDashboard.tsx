@@ -13,7 +13,7 @@
 
 import React, { useEffect, useState, Suspense } from 'react';
 import { lazyRetry } from '@/lib/lazyRetry';
-import { useNavigate, Link, Routes, Route } from 'react-router-dom';
+import { useNavigate, Link, Routes, Route, Navigate } from 'react-router-dom';
 import { useUserRole } from '@/hooks/useUserRole';
 import { useDealerPending } from '@/hooks/useDealerPending';
 import { useAuth } from '@/contexts/AuthContext';
@@ -40,24 +40,23 @@ const DashboardOverview = lazyRetry(() => import('@/pages/dashboard/DashboardOve
  * Uses lazyRetry() to auto-reload on stale chunk errors after deployments.
  * IMPORTANT: Must be called at module level, NOT inside render functions.
  */
-const DealerAuctions = lazyRetry(() => import('@/pages/dealer/DealerAuctions'));
-const DealerInventory = lazyRetry(() => import('@/pages/dealer/DealerInventory'));
-const DealerListingCreate = lazyRetry(() => import('@/pages/dealer/DealerListingCreate'));
-const ListingEdit = lazyRetry(() => import('@/pages/dashboard/ListingEdit'));
-const ListingDetail = lazyRetry(() => import('@/pages/dashboard/ListingDetail'));
-const MyListings = lazyRetry(() => import('@/pages/dashboard/MyListings'));
-const MyBids = lazyRetry(() => import('@/pages/dashboard/MyBids'));
-const MyAppointments = lazyRetry(() => import('@/pages/dashboard/MyAppointments'));
-const MyFavorites = lazyRetry(() => import('@/pages/dashboard/MyFavorites'));
-const MyKaufchancen = lazyRetry(() => import('@/pages/dashboard/MyKaufchancen'));
 const MyMessages = lazyRetry(() => import('@/pages/dashboard/MyMessages'));
 const MyInvoices = lazyRetry(() => import('@/pages/dashboard/MyInvoices'));
-const MyContracts = lazyRetry(() => import('@/pages/dashboard/MyContracts'));
 const MyDocuments = lazyRetry(() => import('@/pages/dashboard/MyDocuments'));
 const UserProfile = lazyRetry(() => import('@/pages/dashboard/UserProfile'));
-const DealerSettings = lazyRetry(() => import('@/pages/dealer/DealerSettings'));
-const DealerClaims = lazyRetry(() => import('@/pages/dealer/DealerClaims'));
-const SearchAlerts = lazyRetry(() => import('@/components/SearchAlerts'));
+const AccountSettings = lazyRetry(() => import('@/pages/dashboard/AccountSettings'));
+
+/**
+ * Pfade aus dem früheren Caravan-Auktionsmodell (Inserate, Gebote, Kaufchancen,
+ * Übergabetermine, Kaufverträge …). Sie zeigen Fahrzeugfelder und gehören nicht
+ * zum Küchen-Marktplatz; alte Links und Bookmarks landen in der Projekt-Börse.
+ * Die Seiten liegen weiter im Code und lassen sich hier wieder einhängen.
+ */
+const LEGACY_DEALER_PATHS = [
+  'auctions', 'inventory', 'inventory/:id', 'bids', 'favorites', 'sofortkauf',
+  'kaufchancen', 'appointments', 'contracts', 'claims', 'search-alerts',
+  'listings', 'listings/new', 'listings/:id/edit', 'listings/:id',
+];
 
 /**
  * Wrap a lazy component in Suspense with a consistent loading fallback
@@ -203,7 +202,14 @@ const DealerDashboardWrapper = () => {
         
         {/* Routes that remain accessible even when locked */}
         <Route path="profile" element={<LazyPage Component={UserProfile} />} />
-        <Route path="settings" element={<LazyPage Component={DealerSettings} />} />
+        <Route
+          path="settings"
+          element={
+            <Suspense fallback={<DashboardLoadingState />}>
+              <AccountSettings audience="dealer" />
+            </Suspense>
+          }
+        />
 
         {/* All other routes: only accessible when NOT locked */}
         {!isLocked && (
@@ -213,28 +219,12 @@ const DealerDashboardWrapper = () => {
             <Route path="projekte/einstellungen" element={<LazyPage Component={DealerMarketSettings} />} />
             <Route path="projekte/:id" element={<LazyPage Component={DealerProjectDetail} />} />
 
-            {/* Ausstellungsküchen & Legacy-Auktionen */}
-            <Route path="auctions" element={<LazyPage Component={DealerAuctions} />} />
-            <Route path="inventory" element={<LazyPage Component={DealerInventory} />} />
-            <Route path="inventory/:id" element={<LazyPage Component={ListingDetail} />} />
-            
-            {/* Shared routes */}
-            <Route path="bids" element={<LazyPage Component={MyBids} />} />
-            <Route path="favorites" element={<LazyPage Component={MyFavorites} />} />
-            <Route path="sofortkauf" element={<LazyPage Component={DealerAuctions} />} />
-            <Route path="kaufchancen" element={<LazyPage Component={MyKaufchancen} />} />
-            <Route path="appointments" element={<LazyPage Component={MyAppointments} />} />
             <Route path="messages" element={<LazyPage Component={MyMessages} />} />
-            <Route path="contracts" element={<LazyPage Component={MyContracts} />} />
             <Route path="invoices" element={<LazyPage Component={MyInvoices} />} />
-            <Route path="claims" element={<LazyPage Component={DealerClaims} />} />
-            <Route path="search-alerts" element={<LazyPage Component={SearchAlerts} />} />
-            
-            {/* Listing routes */}
-            <Route path="listings" element={<LazyPage Component={MyListings} />} />
-            <Route path="listings/new" element={<LazyPage Component={DealerListingCreate} />} />
-            <Route path="listings/:id/edit" element={<LazyPage Component={ListingEdit} />} />
-            <Route path="listings/:id" element={<LazyPage Component={ListingDetail} />} />
+
+            {LEGACY_DEALER_PATHS.map((path) => (
+              <Route key={path} path={path} element={<Navigate to="/dashboard/projekte" replace />} />
+            ))}
           </>
         )}
         
@@ -257,19 +247,20 @@ const UserDashboardWrapper = () => {
         {/* Exact match for /dashboard */}
         <Route index element={<DashboardOverview />} />
         
-        {/* Seller-specific routes */}
-        <Route path="listings" element={<LazyPage Component={MyListings} />} />
-        <Route path="listings/:id/edit" element={<LazyPage Component={ListingEdit} />} />
-        <Route path="listings/:id" element={<LazyPage Component={ListingDetail} />} />
-        
-        {/* Seller-relevant routes */}
         <Route path="messages" element={<LazyPage Component={MyMessages} />} />
         <Route path="documents" element={<LazyPage Component={MyDocuments} />} />
         <Route path="profile" element={<LazyPage Component={UserProfile} />} />
+        <Route
+          path="settings"
+          element={
+            <Suspense fallback={<DashboardLoadingState />}>
+              <AccountSettings audience="consumer" />
+            </Suspense>
+          }
+        />
         
-        {/* Fallback: show overview for unknown sub-routes
-            This also catches /bids, /favorites, /kaufchancen, /appointments
-            which are dealer-only routes not relevant for sellers */}
+        {/* Fallback: Übersicht für unbekannte Pfade, auch für die früheren
+            Caravan-Pfade /listings, /bids, /favorites, /kaufchancen, /appointments */}
         <Route path="*" element={<DashboardOverview />} />
       </Routes>
     </UserLayoutContent>

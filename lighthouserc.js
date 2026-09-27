@@ -3,7 +3,7 @@ module.exports = {
     collect: {
       url: [
         'http://localhost:8080',
-        'http://localhost:8080/kaufen',
+        'http://localhost:8080/formular',
         'http://localhost:8080/verkaufen',
         'http://localhost:8080/ratgeber',
       ],

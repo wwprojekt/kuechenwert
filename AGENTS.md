@@ -161,6 +161,8 @@ Before every commit:
 - Shared template: `_shared/email-builder.ts` (KüchenWert branding, Forest Sage); invoice wording per invoice type in `_shared/invoice-labels.ts`
 - Anti-spam: Per-type dedup via `dealer_notifications` and `admin_emails` tables
 - Rate limits: Resend Free Plan ~100/day, 3000/month
+- **Consent (`user_notification_preferences`)**: Newsletter (`newsletter_enabled`) and advertising (`promotional_emails`) are opt-in, only `true` counts; NULL or a missing row means no consent (§ 7 Abs. 2 UWG, B2B included). Platform notices (`broadcast_emails_enabled`) are opt-out, only `false` excludes. Recipient selection for admin broadcasts lives only in `_shared/broadcast-recipients.ts` (used by `send-broadcast-email` and `get-recipient-count`). Frontend resolution mirrors it in `src/features/account/email-preferences.ts`; writes always send all three columns explicitly.
+- Users manage voluntary emails at `/dashboard/settings` (studios and consumers). The studio "new projects" mail is controlled only by `kw_dealer_market_profiles.notify_new_projects` on the Einzugsgebiet page.
 
 ### Commission System
 - `calculate_commission(sale_amount, dealer_id)` RPC

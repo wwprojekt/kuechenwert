@@ -20,6 +20,7 @@
     "src/pages/dealer/DealerProjects.tsx",
     "src/pages/dealer/DealerProjectDetail.tsx",
     "src/pages/dealer/DealerMarketSettings.tsx",
+    "src/pages/dashboard/AccountSettings.tsx",
     "src/pages/funnel/FunnelDanke.tsx",
     "src/pages/FAQ.tsx",
     "src/pages/Haendler.tsx",

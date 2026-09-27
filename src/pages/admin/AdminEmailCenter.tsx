@@ -1793,12 +1793,12 @@ function BroadcastTab() {
   const [showPreview, setShowPreview] = useState(false);
   const [duplicateWarning, setDuplicateWarning] = useState<string | null>(null);
 
-  const fetchRecipientCount = async (selectedGroup: string) => {
+  const fetchRecipientCount = async (selectedGroup: string, promotional: boolean = isPromotional) => {
     if (!selectedGroup) { setRecipientCount(null); return; }
     setLoadingCount(true);
     try {
       const { data, error } = await invokeWithAuth('get-recipient-count', {
-        body: { group: selectedGroup },
+        body: { group: selectedGroup, is_promotional: promotional },
       });
       if (error) throw error;
       setRecipientCount(data.count);
@@ -1918,10 +1918,9 @@ function BroadcastTab() {
                 <SelectContent>
                   <SelectItem value="all">Alle Benutzer</SelectItem>
                   <SelectItem value="customers">Nur Kunden (Privat)</SelectItem>
-                  <SelectItem value="dealers">Alle Händler</SelectItem>
-                  <SelectItem value="verified_dealers">Verifizierte Händler</SelectItem>
+                  <SelectItem value="dealers">Alle Küchenstudios</SelectItem>
+                  <SelectItem value="verified_dealers">Verifizierte Küchenstudios</SelectItem>
                   <SelectItem value="newsletter">Newsletter-Abonnenten</SelectItem>
-                  <SelectItem value="active_bidders">Aktive Bieter (letzte 30 Tage)</SelectItem>
                 </SelectContent>
               </Select>
               {loadingCount && <p className="text-sm text-muted-foreground mt-1">Lade Empfängeranzahl...</p>}
@@ -1965,19 +1964,22 @@ function BroadcastTab() {
             </Label>
           </div>
 
-          {/* Promotional flag — respects user-level promotional_emails opt-out */}
+          {/* Werbe-Kampagnen gehen nur an Nutzer mit promotional_emails-Opt-in */}
           <div className="flex items-center gap-4 p-3 bg-amber-50 dark:bg-amber-950/20 rounded-lg border border-amber-200 dark:border-amber-800">
             <Switch
               checked={isPromotional}
-              onCheckedChange={setIsPromotional}
+              onCheckedChange={(checked) => {
+                setIsPromotional(checked);
+                if (group) fetchRecipientCount(group, checked);
+              }}
               id="is-promotional"
             />
             <Label htmlFor="is-promotional" className="cursor-pointer">
               <span className="font-medium">Werbe-/Promo-Kampagne</span>
               <p className="text-xs text-muted-foreground">
-                Aktivieren für Rabatte, neue Features, Partnerangebote. Nutzer mit deaktiviertem
-                &bdquo;Werbe-E-Mails&ldquo;-Toggle werden zusätzlich ausgefiltert. System-Updates und
-                informationelle Rundmails lassen diesen Schalter aus.
+                Für Rabatte, Aktionen und Partnerangebote. Geht nur an Nutzer, die in ihren
+                Einstellungen &bdquo;Aktionen&ldquo; ausdrücklich aktiviert haben (§ 7 UWG).
+                System-Updates und informative Rundmails lassen diesen Schalter aus.
               </p>
             </Label>
           </div>
@@ -2698,8 +2700,8 @@ function StatsTab() {
 
   const getGroupLabel = (group: string) => {
     const labels: Record<string, string> = {
-      all: 'Alle Benutzer', customers: 'Kunden', dealers: 'Händler',
-      verified_dealers: 'Verifizierte Händler', newsletter: 'Newsletter', active_bidders: 'Aktive Bieter',
+      all: 'Alle Benutzer', customers: 'Kunden', dealers: 'Küchenstudios',
+      verified_dealers: 'Verifizierte Küchenstudios', newsletter: 'Newsletter', active_bidders: 'Aktive Bieter',
     };
     return labels[group] || group;
   };

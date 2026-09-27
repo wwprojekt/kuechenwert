@@ -8,9 +8,7 @@ import {
   User,
   Settings,
   Lock,
-  ClipboardList,
   HandCoins,
-  PlusCircle,
   Briefcase,
   MapPinned,
 } from "lucide-react";
@@ -99,13 +97,6 @@ const menuGroups: MenuGroup[] = [
       { title: "Projekt-Börse", url: "/dashboard/projekte", icon: Briefcase, highlight: true },
       { title: "Meine Angebote & Kunden", url: "/dashboard/projekte?tab=mine", icon: HandCoins },
       { title: "Einzugsgebiet", url: "/dashboard/projekte/einstellungen", icon: MapPinned },
-    ],
-  },
-  {
-    label: "Ausstellungsküchen",
-    items: [
-      { title: "Meine Inserate", url: "/dashboard/listings", icon: ClipboardList },
-      { title: "Küche inserieren", url: "/dashboard/listings/new", icon: PlusCircle },
     ],
   },
   {

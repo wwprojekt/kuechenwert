@@ -14,8 +14,9 @@ import { useCallback, useEffect, useRef, useState } from "react";
  * ```
  *
  * Der Site-Key kommt aus VITE_TURNSTILE_SITE_KEY (Widget für kuechenwert24.de im
- * Cloudflare-Dashboard). Ohne Key wird nichts geladen; die Edge Functions nehmen
- * Anfragen ohne Token an und schützen über Honeypot und Rate-Limit.
+ * Cloudflare-Dashboard). Ohne Key wird nichts geladen. Anfragen ohne gültiges
+ * Token nehmen die Edge Functions trotzdem an, veröffentlichen den Lead aber
+ * nicht automatisch an Studios (leads.bot_check).
  */
 
 const SITE_KEY = import.meta.env.VITE_TURNSTILE_SITE_KEY?.trim() || null;

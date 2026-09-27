@@ -57,6 +57,26 @@ const STATUS_LABELS: Record<Lead["status"], { label: string; variant: "default" 
   disputed: { label: "Reklamiert", variant: "destructive" },
 };
 
+// Spiegelt die Check-Constraint auf leads.bot_check (Turnstile beim Absenden).
+const BOT_CHECK_LABELS: Record<string, string> = {
+  passed: "Bestanden",
+  unverified: "Nicht bestanden – vor der Veröffentlichung prüfen",
+  skipped: "Nicht geprüft",
+};
+
+const CLICK_ID_SOURCES: [keyof Lead, string][] = [
+  ["gclid", "Google Ads"],
+  ["gbraid", "Google Ads"],
+  ["wbraid", "Google Ads"],
+  ["msclkid", "Microsoft Ads"],
+  ["fbclid", "Meta"],
+];
+
+function adClickSources(lead: Lead): string {
+  const sources = new Set(CLICK_ID_SOURCES.filter(([key]) => lead[key]).map(([, label]) => label));
+  return sources.size ? [...sources].join(", ") : "-";
+}
+
 function formatEuro(cents: number | null): string {
   if (cents == null) return "-";
   return new Intl.NumberFormat("de-DE", {
@@ -239,9 +259,12 @@ export default function AdminLeads() {
                       {formatDateTime(lead.created_at)}
                     </TableCell>
                     <TableCell>
-                      <Badge variant="outline">
-                        {FUNNEL_TYPE_LABELS[lead.funnel_type] ?? lead.funnel_type}
-                      </Badge>
+                      <div className="flex flex-wrap gap-1">
+                        <Badge variant="outline">
+                          {FUNNEL_TYPE_LABELS[lead.funnel_type] ?? lead.funnel_type}
+                        </Badge>
+                        {lead.bot_check === "unverified" && <Badge variant="destructive">Ungeprüft</Badge>}
+                      </div>
                     </TableCell>
                     <TableCell>
                       <Badge variant={status.variant}>{status.label}</Badge>
@@ -345,6 +368,16 @@ export default function AdminLeads() {
                       {[selected.utm_source, selected.utm_medium, selected.utm_campaign]
                         .filter(Boolean)
                         .join(" / ") || "-"}
+                    </div>
+                  </div>
+                  <div>
+                    <div className="text-xs uppercase text-muted-foreground">Werbeklick</div>
+                    <div>{adClickSources(selected)}</div>
+                  </div>
+                  <div>
+                    <div className="text-xs uppercase text-muted-foreground">Sicherheitsprüfung</div>
+                    <div className={selected.bot_check === "unverified" ? "text-destructive" : undefined}>
+                      {selected.bot_check ? (BOT_CHECK_LABELS[selected.bot_check] ?? selected.bot_check) : "-"}
                     </div>
                   </div>
                 </div>

@@ -12,7 +12,8 @@
  *   submit        Kontakt erfassen → Lead + Ausschreibung + Projektlink
  *
  * Auth: anonym über session_token (kw_ + 48 hex). Rate-Limits pro IP und
- * Session, Turnstile beim Abschluss. Alle Schreibzugriffe mit service_role.
+ * Session. Ohne gültiges Turnstile-Token beim Abschluss wird die
+ * Ausschreibung nicht automatisch veröffentlicht. Schreibzugriffe mit service_role.
  */
 
 import type { SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2.100.1";
@@ -32,7 +33,7 @@ import {
   sha256Hex,
   validIp,
 } from "../_shared/kw-http.ts";
-import { verifyTurnstileToken } from "../_shared/turnstile.ts";
+import { checkTurnstile, type BotCheck } from "../_shared/turnstile.ts";
 import { insertLeadWithConsents, sanitizeClickIds } from "../_shared/lead-intake.ts";
 import {
   APPLIANCES,
@@ -530,8 +531,6 @@ async function actionSubmit(req: Request, sb: SupabaseClient, body: Record<strin
     return jsonResponse(req, { ok: true, project_url: `${BRAND.baseUrl}/` });
   }
   const ip = clientIp(req);
-  const turnstile = await verifyTurnstileToken(body.turnstile_token as string | undefined, ip, { requireToken: true });
-  if (!turnstile.valid) throw new HttpError(403, "Die Sicherheitsprüfung ist fehlgeschlagen. Bitte laden Sie die Seite neu.", "turnstile");
   await enforceRateLimit(sb, `kw:submit:${ip}`, 3600, 6);
 
   const session = await requireSession(sb, body.session_token);
@@ -562,8 +561,10 @@ async function actionSubmit(req: Request, sb: SupabaseClient, body: Record<strin
   let leadId = session.lead_id;
   let tenderStatus: string | null = null;
   let alreadySubmitted = !!leadId;
+  let botCheck: BotCheck | null = null;
 
   if (!leadId) {
+    botCheck = await checkTurnstile(body.turnstile_token, ip);
     const { data: tierRow } = await sb.rpc("kw_lead_tier_score", {
       p_has_photo: (session.photo_paths ?? []).length > 0,
       p_has_dimensions: true,
@@ -586,6 +587,7 @@ async function actionSubmit(req: Request, sb: SupabaseClient, body: Record<strin
         funnel_type: "traumkueche",
         funnel_variant: "C2",
         status: "new",
+        bot_check: botCheck,
         tier: tier.tier,
         score: tier.score,
         postal_code: postalCode,
@@ -639,7 +641,7 @@ async function actionSubmit(req: Request, sb: SupabaseClient, body: Record<strin
     }
 
     const { data: settings } = await sb.from("kw_marketplace_settings").select("auto_publish_funnel_c").maybeSingle();
-    const publish = settings?.auto_publish_funnel_c !== false;
+    const publish = settings?.auto_publish_funnel_c !== false && botCheck !== "unverified";
     const summary = buildPublicSummary(config, room, estimate, {
       timeframeMonths: timeframe,
       housingType,

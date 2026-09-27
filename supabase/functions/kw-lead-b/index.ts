@@ -10,7 +10,8 @@
  * Entwurf an; veröffentlicht wird nach dem Experten-Check.
  *
  * Auth: anonym, optional Bearer-JWT zur Verknüpfung mit dem Konto.
- * Turnstile, Honeypot und Rate-Limit pro IP. Schreibzugriffe mit service_role.
+ * Honeypot und Rate-Limit pro IP, Turnstile-Ergebnis in leads.bot_check.
+ * Schreibzugriffe mit service_role.
  */
 
 import type { SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2.100.1";
@@ -30,7 +31,7 @@ import {
   sha256Hex,
   validIp,
 } from "../_shared/kw-http.ts";
-import { verifyTurnstileToken } from "../_shared/turnstile.ts";
+import { checkTurnstile } from "../_shared/turnstile.ts";
 import { insertLeadWithConsents, leadForSubmission, parseSubmissionId, sanitizeClickIds } from "../_shared/lead-intake.ts";
 import { regionForPostalCode } from "../_shared/plz-region.ts";
 import { DELIVERY_MODES, EXTRAS_OPTIONS, FINANCING_OPTIONS, TIMEFRAMES } from "../_shared/funnel-b-catalog.ts";
@@ -121,12 +122,6 @@ async function actionSubmit(req: Request, sb: SupabaseClient, body: Record<strin
     return jsonResponse(req, { ok: true });
   }
   const ip = clientIp(req);
-  const turnstile = await verifyTurnstileToken(
-    typeof body.turnstile_token === "string" ? body.turnstile_token : null,
-    ip,
-    { requireToken: true },
-  );
-  if (!turnstile.valid) throw new HttpError(403, "Die Sicherheitsprüfung ist fehlgeschlagen. Bitte laden Sie die Seite neu.", "turnstile");
   await enforceRateLimit(sb, `kw:lead-b:${ip}`, 3600, 6);
 
   const d = asRecord(body.data);
@@ -171,6 +166,8 @@ async function actionSubmit(req: Request, sb: SupabaseClient, body: Record<strin
       model: cleanText(a.model, 120),
     };
   });
+  // Erst nach der Validierung: ein Eingabefehler soll das Token nicht verbrauchen.
+  const botCheck = await checkTurnstile(body.turnstile_token, ip);
   const waste = slugIn(d.wasteSeparationSystem, WASTE_SEPARATION);
   const salutation = slugIn(d.salutation, SALUTATIONS);
   const priceCents = Math.round(priceEur * 100);
@@ -196,6 +193,7 @@ async function actionSubmit(req: Request, sb: SupabaseClient, body: Record<strin
       user_id: userId,
       funnel_type: "b",
       status: "new",
+      bot_check: botCheck,
       tier: tier.tier,
       score: tier.score,
       postal_code: postalCode,

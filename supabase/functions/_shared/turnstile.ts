@@ -12,6 +12,8 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.100.1';
 
 const TURNSTILE_VERIFY_URL = 'https://challenges.cloudflare.com/turnstile/v0/siteverify';
 const SECRET_CACHE_MS = 5 * 60 * 1000;
+/** Fehlercodes, die an unserer Konfiguration oder an Cloudflare liegen, nicht am Nutzer. */
+const NOT_USER_ERRORS = new Set(['missing-input-secret', 'invalid-input-secret', 'bad-request', 'internal-error']);
 
 interface TurnstileVerifyResult {
   success: boolean;
@@ -21,6 +23,8 @@ interface TurnstileVerifyResult {
   action?: string;
   cdata?: string;
 }
+
+type SiteverifyOutcome = { kind: 'passed' } | { kind: 'failed'; codes: string[] } | { kind: 'unavailable' };
 
 let cachedSecret: { value: string | null; at: number } | null = null;
 
@@ -45,37 +49,10 @@ async function turnstileSecret(): Promise<string | null> {
   return value;
 }
 
-/**
- * Verifiziert ein Cloudflare Turnstile Token.
- *
- * requireToken: Bei gesetztem Secret gilt ein fehlendes Token als ungültig
- * (Formulare mit Widget). Ohne die Option wird ein fehlendes Token toleriert.
- * Ausfälle bei Cloudflare lassen die Anfrage in beiden Fällen durch.
- */
-export async function verifyTurnstileToken(
-  token: string | null | undefined,
-  remoteIp?: string,
-  opts: { requireToken?: boolean } = {},
-): Promise<{ valid: boolean; error?: string }> {
-  const secretKey = await turnstileSecret();
-
-  if (!secretKey) {
-    console.warn('Turnstile: kein Secret konfiguriert, Prüfung übersprungen');
-    return { valid: true };
-  }
-
-  if (!token || typeof token !== 'string' || token.trim().length === 0) {
-    if (opts.requireToken) {
-      console.warn('Turnstile: Token fehlt – abgelehnt');
-      return { valid: false, error: 'Turnstile-Token fehlt' };
-    }
-    console.warn('Turnstile: Token fehlt – zugelassen');
-    return { valid: true };
-  }
-
+async function siteverify(secret: string, token: string, remoteIp?: string): Promise<SiteverifyOutcome> {
   try {
     const formData = new FormData();
-    formData.append('secret', secretKey);
+    formData.append('secret', secret);
     formData.append('response', token);
     if (remoteIp) {
       formData.append('remoteip', remoteIp);
@@ -85,31 +62,65 @@ export async function verifyTurnstileToken(
       method: 'POST',
       body: formData,
     });
-
     if (!response.ok) {
       console.error('Turnstile API error:', response.status, response.statusText);
-      return { valid: true };
+      return { kind: 'unavailable' };
     }
 
     const result: TurnstileVerifyResult = await response.json();
+    if (result.success) return { kind: 'passed' };
 
-    if (result.success) {
-      return { valid: true };
-    }
-
-    const errorCodes = result['error-codes'] || [];
-    console.warn('Turnstile: Token verification failed:', errorCodes.join(', '));
-
-    // internal-error liegt bei Cloudflare, nicht beim Nutzer
-    if (errorCodes.includes('internal-error')) {
-      return { valid: true };
-    }
-
-    return { valid: false, error: `Turnstile-Verifizierung fehlgeschlagen: ${errorCodes.join(', ')}` };
+    const codes = result['error-codes'] ?? [];
+    console.warn('Turnstile: Token verification failed:', codes.join(', '));
+    return codes.some((c) => NOT_USER_ERRORS.has(c)) ? { kind: 'unavailable' } : { kind: 'failed', codes };
   } catch (err) {
     console.error('Turnstile verification error:', err);
+    return { kind: 'unavailable' };
+  }
+}
+
+/**
+ * Verifiziert ein Cloudflare Turnstile Token. Fehlt das Token oder ist
+ * Cloudflare nicht erreichbar, wird die Anfrage zugelassen.
+ */
+export async function verifyTurnstileToken(
+  token: string | null | undefined,
+  remoteIp?: string,
+): Promise<{ valid: boolean; error?: string }> {
+  const secretKey = await turnstileSecret();
+
+  if (!secretKey) {
+    console.warn('Turnstile: kein Secret konfiguriert, Prüfung übersprungen');
     return { valid: true };
   }
+
+  if (!token || typeof token !== 'string' || token.trim().length === 0) {
+    console.warn('Turnstile: Token fehlt – zugelassen');
+    return { valid: true };
+  }
+
+  const outcome = await siteverify(secretKey, token, remoteIp);
+  if (outcome.kind === 'failed') {
+    return { valid: false, error: `Turnstile-Verifizierung fehlgeschlagen: ${outcome.codes.join(', ')}` };
+  }
+  return { valid: true };
+}
+
+export type BotCheck = 'passed' | 'unverified' | 'skipped';
+
+/**
+ * Prüfung für Lead-Formulare, lehnt nie ab: Ohne gültiges Token (fehlt,
+ * abgelaufen, schon verwendet) ist der Lead „unverified“ und wird nicht
+ * automatisch an Studios veröffentlicht. „skipped“: kein Secret oder
+ * Cloudflare nicht erreichbar.
+ */
+export async function checkTurnstile(token: unknown, remoteIp?: string): Promise<BotCheck> {
+  const secretKey = await turnstileSecret();
+  if (!secretKey) return 'skipped';
+  if (typeof token !== 'string' || token.trim().length === 0) return 'unverified';
+  const outcome = await siteverify(secretKey, token, remoteIp);
+  if (outcome.kind === 'passed') return 'passed';
+  return outcome.kind === 'failed' ? 'unverified' : 'skipped';
 }
 
 /**

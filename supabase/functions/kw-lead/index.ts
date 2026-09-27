@@ -8,7 +8,8 @@
  * kw_leads_after_insert_tender an, nicht diese Function.
  *
  * Auth: anonym, optional Bearer-JWT zur Verknüpfung mit dem Konto.
- * Turnstile + Rate-Limit pro IP. Alle Schreibzugriffe mit service_role.
+ * Rate-Limit pro IP; ohne gültiges Turnstile-Token wird der Lead nicht
+ * automatisch veröffentlicht (leads.bot_check). Schreibzugriffe mit service_role.
  * Lead und Einwilligungen entstehen gemeinsam (_shared/lead-intake.ts);
  * dieselbe submission_id liefert bei Wiederholung denselben Lead.
  */
@@ -29,7 +30,7 @@ import {
   sha256Hex,
   validIp,
 } from "../_shared/kw-http.ts";
-import { verifyTurnstileToken } from "../_shared/turnstile.ts";
+import { checkTurnstile } from "../_shared/turnstile.ts";
 import { insertLeadWithConsents, leadForSubmission, parseSubmissionId, sanitizeClickIds } from "../_shared/lead-intake.ts";
 import {
   estimateFunnelA,
@@ -92,12 +93,6 @@ async function actionSubmit(req: Request, sb: SupabaseClient, body: Record<strin
     return jsonResponse(req, { ok: true, project_url: `${BRAND.baseUrl}/` });
   }
   const ip = clientIp(req);
-  const turnstile = await verifyTurnstileToken(
-    typeof body.turnstile_token === "string" ? body.turnstile_token : null,
-    ip,
-    { requireToken: true },
-  );
-  if (!turnstile.valid) throw new HttpError(403, "Die Sicherheitsprüfung ist fehlgeschlagen. Bitte laden Sie die Seite neu.", "turnstile");
   await enforceRateLimit(sb, `kw:lead:${ip}`, 3600, 6);
 
   // Doppelklick oder Wiederholung nach Zeitüberschreitung: denselben Lead zurückgeben.
@@ -129,6 +124,9 @@ async function actionSubmit(req: Request, sb: SupabaseClient, body: Record<strin
     throw new HttpError(422, "Bitte stimmen Sie der Weitergabe an geprüfte Küchenstudios zu.", "consent");
   }
 
+  // Erst nach der Validierung: ein Eingabefehler soll das Token nicht verbrauchen.
+  const botCheck = await checkTurnstile(body.turnstile_token, ip);
+
   const { card, version: rateCardVersion } = await loadRateCard(sb);
   const estimate = estimateFunnelA(answers, { card, postalCode: answers.postal_code, rateCardVersion });
   const estimateRange = { min: estimate.min, max: estimate.max, mid: estimate.mid };
@@ -158,6 +156,7 @@ async function actionSubmit(req: Request, sb: SupabaseClient, body: Record<strin
       funnel_type: "a",
       funnel_variant: "A2",
       status: "new",
+      bot_check: botCheck,
       tier: tier.tier,
       score: tier.score,
       postal_code: answers.postal_code,

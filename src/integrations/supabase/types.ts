@@ -4023,6 +4023,7 @@ export type Database = {
       leads: {
         Row: {
           address_line: string | null
+          bot_check: string | null
           budget_midpoint: number | null
           city: string | null
           consent_call: boolean
@@ -4033,10 +4034,13 @@ export type Database = {
           email: string | null
           existing_offer_price_cents: number | null
           existing_offer_studio: string | null
+          fbclid: string | null
           first_name: string | null
           funnel_answers: Json | null
           funnel_type: Database["public"]["Enums"]["lead_funnel_type"]
           funnel_variant: string | null
+          gbraid: string | null
+          gclid: string | null
           has_existing_offer: boolean
           housing_type: string | null
           id: string
@@ -4045,6 +4049,7 @@ export type Database = {
           kitchen_style: string | null
           landing_page: string | null
           last_name: string | null
+          msclkid: string | null
           payment_down_payment_percent: number | null
           payment_financing: string | null
           payment_financing_apr: number | null
@@ -4056,6 +4061,7 @@ export type Database = {
           score: number
           special_wishes: string[] | null
           status: Database["public"]["Enums"]["lead_status"]
+          submission_id: string | null
           tier: Database["public"]["Enums"]["lead_tier"]
           timeframe_months: number | null
           updated_at: string
@@ -4067,9 +4073,11 @@ export type Database = {
           utm_source: string | null
           utm_term: string | null
           waste_separation_system: boolean | null
+          wbraid: string | null
         }
         Insert: {
           address_line?: string | null
+          bot_check?: string | null
           budget_midpoint?: number | null
           city?: string | null
           consent_call?: boolean
@@ -4080,10 +4088,13 @@ export type Database = {
           email?: string | null
           existing_offer_price_cents?: number | null
           existing_offer_studio?: string | null
+          fbclid?: string | null
           first_name?: string | null
           funnel_answers?: Json | null
           funnel_type?: Database["public"]["Enums"]["lead_funnel_type"]
           funnel_variant?: string | null
+          gbraid?: string | null
+          gclid?: string | null
           has_existing_offer?: boolean
           housing_type?: string | null
           id?: string
@@ -4092,6 +4103,7 @@ export type Database = {
           kitchen_style?: string | null
           landing_page?: string | null
           last_name?: string | null
+          msclkid?: string | null
           payment_down_payment_percent?: number | null
           payment_financing?: string | null
           payment_financing_apr?: number | null
@@ -4103,6 +4115,7 @@ export type Database = {
           score?: number
           special_wishes?: string[] | null
           status?: Database["public"]["Enums"]["lead_status"]
+          submission_id?: string | null
           tier?: Database["public"]["Enums"]["lead_tier"]
           timeframe_months?: number | null
           updated_at?: string
@@ -4114,9 +4127,11 @@ export type Database = {
           utm_source?: string | null
           utm_term?: string | null
           waste_separation_system?: boolean | null
+          wbraid?: string | null
         }
         Update: {
           address_line?: string | null
+          bot_check?: string | null
           budget_midpoint?: number | null
           city?: string | null
           consent_call?: boolean
@@ -4127,10 +4142,13 @@ export type Database = {
           email?: string | null
           existing_offer_price_cents?: number | null
           existing_offer_studio?: string | null
+          fbclid?: string | null
           first_name?: string | null
           funnel_answers?: Json | null
           funnel_type?: Database["public"]["Enums"]["lead_funnel_type"]
           funnel_variant?: string | null
+          gbraid?: string | null
+          gclid?: string | null
           has_existing_offer?: boolean
           housing_type?: string | null
           id?: string
@@ -4139,6 +4157,7 @@ export type Database = {
           kitchen_style?: string | null
           landing_page?: string | null
           last_name?: string | null
+          msclkid?: string | null
           payment_down_payment_percent?: number | null
           payment_financing?: string | null
           payment_financing_apr?: number | null
@@ -4150,6 +4169,7 @@ export type Database = {
           score?: number
           special_wishes?: string[] | null
           status?: Database["public"]["Enums"]["lead_status"]
+          submission_id?: string | null
           tier?: Database["public"]["Enums"]["lead_tier"]
           timeframe_months?: number | null
           updated_at?: string
@@ -4161,6 +4181,7 @@ export type Database = {
           utm_source?: string | null
           utm_term?: string | null
           waste_separation_system?: boolean | null
+          wbraid?: string | null
         }
         Relationships: [
           {

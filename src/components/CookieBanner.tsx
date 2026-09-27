@@ -274,22 +274,23 @@ const CookieBanner = () => {
             Home-Indicator / Android Gesture-Bar. max-h + overflow-y-auto
             sorgt dafür, dass der Banner mit ausgeklappten "Details" nicht
             mehr den halben Viewport blockiert. */}
-        <div className="container mx-auto px-4 py-5 sm:py-6 pb-[max(1.25rem,calc(1.25rem+env(safe-area-inset-bottom)))] sm:pb-[max(1.5rem,calc(1.5rem+env(safe-area-inset-bottom)))] max-h-[85dvh] overflow-y-auto overscroll-contain">
+        <div className="container mx-auto px-4 py-3 sm:py-6 pb-[max(0.75rem,calc(0.75rem+env(safe-area-inset-bottom)))] sm:pb-[max(1.5rem,calc(1.5rem+env(safe-area-inset-bottom)))] max-h-[85dvh] overflow-y-auto overscroll-contain">
           {/* Main Banner Content */}
-          <div className="flex flex-col gap-4">
+          <div className="flex flex-col gap-3 sm:gap-4">
             {/* Header */}
             <div className="flex items-start justify-between gap-4">
               <div className="flex items-start gap-3">
-                <div className="p-2 rounded-lg bg-primary/10">
+                <div className="hidden p-2 rounded-lg bg-primary/10 sm:block">
                   <Cookie className="h-5 w-5 text-primary" />
                 </div>
                 <div>
-                  <h3 className="font-semibold text-foreground text-lg">
+                  <h3 className="font-semibold text-foreground text-base sm:text-lg">
                     Datenschutz & Cookies
                   </h3>
-                  <p className="text-sm text-muted-foreground mt-1 max-w-2xl">
-                    Wir verwenden Cookies, um Ihre Erfahrung zu verbessern. Sie können selbst entscheiden, welche Cookies Sie zulassen möchten.
-                    Mehr Informationen finden Sie in unserer{' '}
+                  <p className="text-xs sm:text-sm text-muted-foreground mt-1 max-w-2xl">
+                    Notwendige Cookies sind immer aktiv. Statistik (Google Analytics) und Marketing (Google Ads, Meta)
+                    nutzen wir nur mit Ihrer Einwilligung – jederzeit widerrufbar über „Cookie-Einstellungen“ im Footer.
+                    Mehr in der{' '}
                     <a
                       href="/datenschutz"
                       className="text-primary hover:underline font-medium"
@@ -304,7 +305,7 @@ const CookieBanner = () => {
             {/* Toggle Details Button */}
             <button
               onClick={() => setShowDetails(!showDetails)}
-              className="flex items-center gap-2 text-sm text-primary hover:text-primary/80 transition-colors w-fit"
+              className="flex min-h-9 items-center gap-2 text-xs sm:text-sm text-primary hover:text-primary/80 transition-colors w-fit"
             >
               <Settings className="w-4 h-4" />
               Cookie-Einstellungen anpassen
@@ -352,7 +353,7 @@ const CookieBanner = () => {
                     <div>
                       <p className="font-medium text-sm">Statistik & Analyse</p>
                       <p className="text-xs text-muted-foreground">
-                        Hilft uns zu verstehen, wie Besucher die Website nutzen. Alle Daten sind anonymisiert.
+                        Hilft uns zu verstehen, wie Besucher die Website nutzen (Google Analytics und eigene Statistik, pseudonymisiert).
                       </p>
                     </div>
                   </div>
@@ -369,7 +370,7 @@ const CookieBanner = () => {
                     <div>
                       <p className="font-medium text-sm">Marketing</p>
                       <p className="text-xs text-muted-foreground">
-                        Wird für personalisierte Werbung und Remarketing verwendet.
+                        Misst den Erfolg unserer Anzeigen und ermöglicht Werbung auf anderen Websites (Google Ads, Meta).
                       </p>
                     </div>
                   </div>
@@ -382,25 +383,27 @@ const CookieBanner = () => {
             )}
 
             {/* Action Buttons */}
-            <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-end gap-3">
-              <Button
-                variant="ghost"
-                onClick={handleDeclineAll}
-                className="text-muted-foreground"
-              >
-                Nur Notwendige
-              </Button>
+            {/* Ablehnen und Akzeptieren gleich groß und gleich leicht erreichbar. */}
+            <div className="grid grid-cols-2 gap-2 sm:flex sm:items-center sm:justify-end sm:gap-3">
               {showDetails && (
                 <Button
                   variant="outline"
                   onClick={handleAcceptSelected}
+                  className="col-span-2 sm:col-span-1"
                 >
                   Auswahl speichern
                 </Button>
               )}
               <Button
+                variant="outline"
+                onClick={handleDeclineAll}
+                className="h-11 sm:min-w-40"
+              >
+                Nur notwendige
+              </Button>
+              <Button
                 onClick={handleAcceptAll}
-                className="gradient-hero hover:shadow-glow"
+                className="h-11 sm:min-w-40"
               >
                 Alle akzeptieren
               </Button>

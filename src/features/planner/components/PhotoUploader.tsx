@@ -127,6 +127,15 @@ export function PhotoUploader({
         </button>
       )}
 
+      <p className="text-xs leading-relaxed text-muted-foreground">
+        Für die Visualisierung geht Ihr Foto an unseren KI-Dienstleister fal.ai (USA). Bitte keine Personen
+        fotografieren. Details in der{" "}
+        <a href="/datenschutz#ki-visualisierung" className="underline underline-offset-2 hover:text-foreground">
+          Datenschutzerklärung
+        </a>
+        .
+      </p>
+
       <input
         ref={inputRef}
         type="file"

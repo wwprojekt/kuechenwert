@@ -437,8 +437,11 @@ const handler = async (req: Request): Promise<Response> => {
         results.ga4 = { error: String(ga4Error) };
       }
     } else {
-      console.warn("[track-conversion] GA4_API_SECRET not set, skipping GA4 tracking");
-      results.ga4 = { skipped: true, reason: "GA4_API_SECRET not configured" };
+      const reason = CLIENT_TRACKED_LEAD_TYPES.has(lead_type)
+        ? "Wird im Browser über das Google-Tag gemessen"
+        : "GA4 nicht konfiguriert (GA4_API_SECRET oder Measurement-ID fehlt)";
+      console.log(`[track-conversion] GA4 übersprungen: ${reason}`);
+      results.ga4 = { skipped: true, reason };
     }
 
     // --- Google Ads Offline Conversion Upload (wenn konfiguriert) ---

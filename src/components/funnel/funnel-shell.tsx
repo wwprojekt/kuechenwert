@@ -10,12 +10,10 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { useSettings } from "@/contexts/SettingsContext";
+import { useSupportPhone } from "@/hooks/useSupportPhone";
 import { cn } from "@/lib/utils";
 
-const FALLBACK_SUPPORT_PHONE = "+49 511 51532476";
-
-const FOCUS_RING =
+export const FOCUS_RING =
   "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2";
 
 interface FunnelShellProps {
@@ -41,11 +39,11 @@ function ProgressBar({ current, total }: { current: number; total: number }) {
   return (
     <div className="w-full">
       <div className="mb-2 flex items-center justify-between">
-        <span className="text-[11px] font-semibold uppercase tracking-[0.14em] text-ink-subtle">
+        <span className="text-[11px] font-semibold uppercase tracking-[0.14em] text-ink-muted">
           Ihre Küchenanfrage
         </span>
         <span className="text-xs font-medium tabular-nums text-ink-muted">
-          Schritt {current + 1} <span className="text-ink-subtle">/ {total}</span>
+          Schritt {current + 1} <span className="text-ink-muted">/ {total}</span>
         </span>
       </div>
       <div
@@ -119,6 +117,32 @@ function ExitIntentDialog({
   );
 }
 
+/** Schlanker Funnel-Header: Logo und Support-Telefon (Funnel A und B). */
+export function FunnelHeader({ onLogoClick }: { onLogoClick?: (event: MouseEvent<HTMLAnchorElement>) => void }) {
+  const phone = useSupportPhone();
+  return (
+    <header className="sticky top-0 z-30 border-b border-border bg-card/95 backdrop-blur">
+      <div className="section-container flex h-14 items-center justify-between sm:h-16">
+        <Link to="/" onClick={onLogoClick} className={cn("rounded-lg transition-opacity hover:opacity-90", FOCUS_RING)}>
+          <SiteLogo variant="icon-text-compact" asLink={false} iconSize="h-8 w-8 sm:h-9 sm:w-9" />
+        </Link>
+        <a
+          href={phone.href}
+          className={cn(
+            "inline-flex min-h-11 items-center gap-2 rounded-lg px-2.5 text-xs font-semibold text-brand-700 transition-colors hover:bg-brand-50 sm:text-sm",
+            FOCUS_RING,
+          )}
+        >
+          <Phone className="h-4 w-4" aria-hidden="true" />
+          <span className="hidden sm:inline">Fragen? </span>
+          <span className="hidden min-[380px]:inline">{phone.display}</span>
+          <span className="sr-only min-[380px]:hidden">Anrufen: {phone.display}</span>
+        </a>
+      </div>
+    </header>
+  );
+}
+
 function BackButton({ hidden, onClick, className }: { hidden: boolean; onClick: () => void; className?: string }) {
   return (
     <button
@@ -171,8 +195,6 @@ export function FunnelShell({
   showExitIntent = true,
 }: FunnelShellProps) {
   const navigate = useNavigate();
-  const { settings } = useSettings();
-  const phone = settings?.support_phone || FALLBACK_SUPPORT_PHONE;
   const [exitDialogOpen, setExitDialogOpen] = useState(false);
   const guardExit = showExitIntent && currentStep > 0;
   const isFirst = currentStep === 0;
@@ -207,25 +229,7 @@ export function FunnelShell({
 
   return (
     <div className="flex min-h-screen flex-col bg-surface-soft">
-      <header className="sticky top-0 z-30 border-b border-border bg-card/95 backdrop-blur">
-        <div className="section-container flex h-14 items-center justify-between sm:h-16">
-          <Link to="/" onClick={handleLogoClick} className={cn("rounded-lg transition-opacity hover:opacity-90", FOCUS_RING)}>
-            <SiteLogo variant="icon-text-compact" asLink={false} iconSize="h-8 w-8 sm:h-9 sm:w-9" />
-          </Link>
-          <a
-            href={`tel:${phone.replace(/\s/g, "")}`}
-            className={cn(
-              "inline-flex min-h-11 items-center gap-2 rounded-lg px-2.5 text-xs font-semibold text-brand-700 transition-colors hover:bg-brand-50 sm:text-sm",
-              FOCUS_RING,
-            )}
-          >
-            <Phone className="h-4 w-4" aria-hidden="true" />
-            <span className="hidden sm:inline">Fragen? </span>
-            <span className="hidden min-[380px]:inline">{phone}</span>
-            <span className="sr-only min-[380px]:hidden">Anrufen: {phone}</span>
-          </a>
-        </div>
-      </header>
+      <FunnelHeader onLogoClick={handleLogoClick} />
 
       <main className="flex flex-1 flex-col items-center px-4 py-6 sm:py-10 lg:py-14">
         <div className="w-full max-w-2xl">

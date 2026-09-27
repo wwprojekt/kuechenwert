@@ -1,8 +1,10 @@
-import { useState, useMemo, useCallback, useEffect, useRef } from "react";
-import { useNavigate } from "react-router-dom";
+import { cloneElement, isValidElement, useState, useMemo, useCallback, useEffect, useId, useRef } from "react";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { clsx } from "clsx";
+import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
-import { getStoredUtm } from "@/lib/utm";
+import { useSupportPhone } from "@/hooks/useSupportPhone";
+import { getEntryPath, getStoredUtm } from "@/lib/utm";
 import { notifyKitchenFunnelLead } from "@/lib/funnelLeadNotify";
 import {
   generateTransactionId,
@@ -158,6 +160,12 @@ const STEPS = [
 
 const TOTAL = STEPS.length;
 
+/** ?schritt=1…9 → Index 0…8; alles andere → erster Schritt. */
+function parseStep(raw: string | null): number {
+  const n = Number(raw);
+  return Number.isInteger(n) && n >= 1 && n <= TOTAL ? n - 1 : 0;
+}
+
 const STORAGE_KEY = "kw_funnel_b";
 const MAX_UPLOAD_BYTES = 10 * 1024 * 1024; // 10 MB
 
@@ -166,6 +174,13 @@ function serializeForStorage(data: FunnelBData): string {
   const { uploads: _u, ...rest } = data;
   void _u;
   return JSON.stringify(rest);
+}
+
+/** Schritt „Vorhandenes Angebot“ vollständig: Preis und ein Weg für das Küchenbild. */
+function isOfferReady(data: FunnelBData): boolean {
+  if (!(Number(data.existingOfferPriceEur) > 0)) return false;
+  if (data.offerDeliveryMethod === "later") return true;
+  return data.offerDeliveryMethod === "now" && data.uploads.some((u) => u.category === "kueche_bild");
 }
 
 function loadSaved(): Partial<FunnelBData> {
@@ -184,7 +199,8 @@ function loadSaved(): Partial<FunnelBData> {
 
 export default function FunnelBClient() {
   const navigate = useNavigate();
-  const [step, setStep] = useState(0);
+  const phone = useSupportPhone();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [data, setData] = useState<FunnelBData>(() => ({
     ...initialData,
     ...loadSaved(),
@@ -192,6 +208,41 @@ export default function FunnelBClient() {
   }));
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
+  const errorRef = useRef<HTMLParagraphElement>(null);
+
+  // Schritt steht in der URL, damit Zurück-Geste und Neuladen im Funnel bleiben.
+  // Kontaktdaten erst, wenn das Angebot vollständig ist (Uploads überstehen kein Neuladen).
+  const requestedStep = parseStep(searchParams.get("schritt"));
+  const step = requestedStep === TOTAL - 1 && !isOfferReady(data) ? TOTAL - 2 : requestedStep;
+  const goToStep = useCallback(
+    (next: number, replace = false) => {
+      setSearchParams(
+        (prev) => {
+          const params = new URLSearchParams(prev);
+          if (next <= 0) params.delete("schritt");
+          else params.set("schritt", String(next + 1));
+          return params;
+        },
+        { replace },
+      );
+    },
+    [setSearchParams],
+  );
+
+  useEffect(() => {
+    if (step !== requestedStep) goToStep(step, true);
+  }, [step, requestedStep, goToStep]);
+
+  const shownStep = useRef(step);
+  useEffect(() => {
+    if (shownStep.current === step) return;
+    shownStep.current = step;
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }, [step]);
+
+  useEffect(() => {
+    if (submitError) errorRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+  }, [submitError]);
 
   // auto-persist bei jeder Aenderung (File-Objekte ausgeschlossen)
   useEffect(() => {
@@ -209,18 +260,8 @@ export default function FunnelBClient() {
 
   const canProceed = useMemo(() => {
     switch (step) {
-      case 7: {
-        const priceOk = Number(data.existingOfferPriceEur) > 0;
-        if (!priceOk) return false;
-        if (data.offerDeliveryMethod === "later") return true;
-        if (data.offerDeliveryMethod === "now") {
-          const hasKuecheBild = data.uploads.some(
-            (u) => u.category === "kueche_bild",
-          );
-          return hasKuecheBild;
-        }
-        return false;
-      }
+      case 7:
+        return isOfferReady(data);
       case 8:
         return (
           /^\d{5}$/.test(data.postalCode) &&
@@ -237,8 +278,7 @@ export default function FunnelBClient() {
 
   const handleNext = useCallback(async () => {
     if (step < TOTAL - 1) {
-      setStep((s) => s + 1);
-      window.scrollTo({ top: 0, behavior: "smooth" });
+      goToStep(step + 1);
       return;
     }
 
@@ -322,7 +362,7 @@ export default function FunnelBClient() {
           user_agent:
             typeof navigator !== "undefined" ? navigator.userAgent : null,
           landing_page:
-            typeof window !== "undefined" ? window.location.pathname : null,
+            getEntryPath() ?? (typeof window !== "undefined" ? window.location.pathname : null),
         })
         .select("id")
         .single();
@@ -330,6 +370,7 @@ export default function FunnelBClient() {
       if (insertError) throw insertError;
       const leadId = inserted.id;
 
+      let failedUploads = 0;
       for (const { category, file } of data.uploads) {
         const ext = file.name.split(".").pop() ?? "bin";
         const safe = file.name
@@ -347,10 +388,11 @@ export default function FunnelBClient() {
           });
         if (uploadError) {
           console.error("Upload failed", uploadError);
+          failedUploads += 1;
           continue;
         }
 
-        await supabase.from("lead_files").insert({
+        const { error: fileRowError } = await supabase.from("lead_files").insert({
           lead_id: leadId,
           file_url: path,
           file_name: file.name,
@@ -358,53 +400,66 @@ export default function FunnelBClient() {
           file_size_bytes: file.size,
           category,
         });
+        if (fileRowError) {
+          console.error("lead_files insert failed", fileRowError);
+          failedUploads += 1;
+        }
       }
-
-      const transactionId = generateTransactionId("funnel_b");
-      notifyKitchenFunnelLead({
-        funnel: "b",
-        firstName: data.firstName,
-        lastName: data.lastName,
-        email: data.email,
-        phone: data.phone,
-        postalCode: data.postalCode,
-        transactionId,
-      });
-      await setEnhancedConversionFromForm({
-        email: data.email,
-        firstName: data.firstName,
-        lastName: data.lastName,
-        phone: data.phone,
-        postalCode: data.postalCode,
-      });
-      await trackKitchenFunnelLead("b", transactionId);
-      trackMetaLead({
-        content_name: "Funnel B",
-        content_category: "Angebot unterbieten",
-      });
 
       try {
         sessionStorage.removeItem(STORAGE_KEY);
       } catch {
         /* storage not available */
       }
-      navigate(`/funnel/danke?funnel=b&id=${leadId}`);
+
+      // Die Anfrage ist gespeichert: Tracking darf ab hier nichts mehr blockieren,
+      // sonst sendet der Nutzer nach einer Fehlermeldung ein zweites Mal ab.
+      try {
+        const transactionId = generateTransactionId("funnel_b");
+        notifyKitchenFunnelLead({
+          funnel: "b",
+          firstName: data.firstName,
+          lastName: data.lastName,
+          email: data.email,
+          phone: data.phone,
+          postalCode: data.postalCode,
+          transactionId,
+        });
+        await setEnhancedConversionFromForm({
+          email: data.email,
+          firstName: data.firstName,
+          lastName: data.lastName,
+          phone: data.phone,
+          postalCode: data.postalCode,
+        });
+        await trackKitchenFunnelLead("b", transactionId);
+        trackMetaLead({
+          content_name: "Funnel B",
+          content_category: "Angebot unterbieten",
+        });
+      } catch (trackingError) {
+        console.error("Funnel B tracking failed", trackingError);
+      }
+
+      if (failedUploads > 0) {
+        toast.warning(
+          "Ihre Anfrage ist angekommen, aber nicht alle Dateien konnten hochgeladen werden. Wir melden uns und klären, wie Sie sie uns schicken.",
+          { duration: 12000 },
+        );
+      }
+      navigate("/funnel/danke?funnel=b", { replace: true });
     } catch (e) {
       console.error("Funnel B submit error", e);
-      setSubmitError(e instanceof Error ? e.message : "Unbekannter Fehler");
+      setSubmitError(
+        `Ihre Anfrage konnte gerade nicht gesendet werden. Bitte prüfen Sie Ihre Internetverbindung und versuchen Sie es noch einmal. Klappt es weiterhin nicht, rufen Sie uns an: ${phone.display}.`,
+      );
       setSubmitting(false);
     }
-  }, [step, data, navigate]);
+  }, [step, data, navigate, goToStep, phone.display]);
 
-  const handleBack = useCallback(() => {
-    setStep((s) => Math.max(0, s - 1));
-    window.scrollTo({ top: 0, behavior: "smooth" });
-  }, []);
+  const handleBack = useCallback(() => goToStep(Math.max(0, step - 1)), [goToStep, step]);
 
-  const goNext = useCallback(() => {
-    setStep((s) => Math.min(TOTAL - 1, s + 1));
-    window.scrollTo({ top: 0, behavior: "smooth" });
-  }, []);
+  const goNext = useCallback(() => goToStep(Math.min(TOTAL - 1, step + 1)), [goToStep, step]);
 
   const sidebar = (
     <>
@@ -417,24 +472,24 @@ export default function FunnelBClient() {
       </div>
       <div className="card text-sm">
         <div className="flex items-center gap-2 text-accent-700">
-          <ShieldCheck className="h-4 w-4" />
-          <span className="font-semibold text-ink">Verbindliche Auktion</span>
+          <ShieldCheck className="h-4 w-4" aria-hidden="true" />
+          <span className="font-semibold text-ink">So geht es weiter</span>
         </div>
         <p className="mt-2 text-ink-muted">
-          Nach unserem Experten-Check stellen wir Ihre Anfrage neutralisiert für
-          72&nbsp;h ein. Verifizierte Händler unterbieten den Preis Ihres Studios –
-          Sie nehmen das beste Gebot verbindlich an.
+          Nach Ihrer Anfrage besprechen wir Ihr Angebot kurz telefonisch. Danach stellen wir es ohne
+          Ihren Namen 72&nbsp;Stunden lang geprüften Küchenstudios aus Ihrer Region vor, die es
+          unterbieten können. Ob Sie ein Angebot annehmen, entscheiden Sie frei.
         </p>
       </div>
       <div className="card text-sm">
         <div className="flex items-center gap-2 text-brand-700">
-          <Phone className="h-4 w-4" />
+          <Phone className="h-4 w-4" aria-hidden="true" />
           <span className="font-semibold text-ink">Brauchen Sie Hilfe?</span>
         </div>
         <p className="mt-2 text-ink-muted">
           Rufen Sie uns an:{" "}
-          <a href="tel:+4900000000" className="font-medium text-brand-700 hover:underline">
-            +49 (0) 000 00 00 00
+          <a href={phone.href} className="font-medium text-brand-700 hover:underline">
+            {phone.display}
           </a>
         </p>
       </div>
@@ -466,7 +521,7 @@ export default function FunnelBClient() {
       {step === 8 && <Step8 data={data} update={update} />}
 
       {submitError && (
-        <p className="mt-4 rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-700">
+        <p ref={errorRef} role="alert" className="mt-4 rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-700">
           {submitError}
         </p>
       )}
@@ -475,15 +530,15 @@ export default function FunnelBClient() {
 }
 
 const TIPS = [
-  "Je konkreter der Zeitrahmen, desto besser können Händler Liefertermin und Montage kalkulieren. Fester Liefertermin steigert oft den Rabatt.",
+  "Je konkreter der Zeitrahmen, desto besser können Küchenstudios Liefertermin und Montage kalkulieren. Ein fester Liefertermin steigert oft den Rabatt.",
   "Wenn Sie Marke oder Material nicht sicher wissen: einfach 'Sonstiger / weiß ich nicht' wählen. Unser Experte ergänzt das im Telefonat.",
   "Die Bezeichnung der Arbeitsplatte (z. B. „Calacatta Roma\") finden Sie meist auf Ihrem schriftlichen Angebot. Optional!",
   "Marke + Modell pro Gerät steigert die Vergleichbarkeit. Beispiele: „Bosch HBG675BS1\", „Miele DGC 7460\".",
   "Spülen-Material und -Marke beeinflussen den Preis stark. Mülltrennsysteme sind oft separat kalkuliert.",
   "Beleuchtung und Steckdosen-Lösungen sind häufige „versteckte\" Posten – hier verlangen Studios oft hohe Aufschläge.",
   "Anzahlung und Finanzierungsbedingungen sind verhandelbar. Geben Sie an, was Ihr Studio Ihnen angeboten hat.",
-  "Sie haben Angebot & Grundriss nicht zur Hand? Kein Problem – wir senden Ihnen nach der Anfrage einen sicheren Upload-Link per E-Mail.",
-  "Wir rufen Sie binnen 24h an – das ist Pflichtschritt vor jeder Auktion. SMS oder E-Mail-Termine sind möglich.",
+  "Sie haben Angebot & Grundriss nicht zur Hand? Kein Problem – Sie können beides nachreichen, wir besprechen das im Telefonat.",
+  "Wir rufen Sie in der Regel innerhalb von 24 Stunden an, bevor wir Ihr Angebot Küchenstudios vorstellen. Ein Wunschtermin per SMS oder E-Mail ist möglich.",
 ];
 
 /* ====================================================================== */
@@ -984,11 +1039,14 @@ function Step7({ data, update }: StepProps) {
     <div className="space-y-6">
       <Field
         label="Angebotspreis Ihres Küchenstudios *"
-        hint="Pflicht. Brutto in Euro – das werden die Händler in der Auktion unterbieten."
+        hint="Pflicht. Bruttopreis in Euro – diesen Preis sollen die Küchenstudios unterbieten."
+        controlId="funnel-b-offer-price"
       >
         <div className="relative max-w-xs">
           <input
+            id="funnel-b-offer-price"
             type="number"
+            inputMode="numeric"
             min={1}
             step={1}
             className="input-field pr-10"
@@ -1004,7 +1062,7 @@ function Step7({ data, update }: StepProps) {
 
       <Field
         label="Name des Küchenstudios"
-        hint="Optional. Hilft uns bei Quervergleichen, wird Händlern nicht gezeigt."
+        hint="Optional. Hilft uns beim Vergleich, wird den Küchenstudios nicht gezeigt."
       >
         <input
           type="text"
@@ -1017,7 +1075,7 @@ function Step7({ data, update }: StepProps) {
 
       <Field
         label="Wie möchten Sie uns das Bild Ihrer geplanten Küche zukommen lassen? *"
-        hint="Pflicht. Mindestens ein Bild der geplanten Küche. Angebot und Grundriss sind optional, helfen den Händlern aber bei einem präziseren Gegenangebot."
+        hint="Pflicht: mindestens ein Bild der geplanten Küche. Angebot und Grundriss sind optional, helfen den Küchenstudios aber bei einem genaueren Gegenangebot."
       >
         <CardGroup
           columns={2}
@@ -1030,8 +1088,8 @@ function Step7({ data, update }: StepProps) {
             },
             {
               value: "later",
-              label: "Per E-Mail nachreichen",
-              description: "Ich erhalte einen sicheren Upload-Link",
+              label: "Später nachreichen",
+              description: "Wir klären im Telefonat, wie Sie uns das Bild schicken",
               icon: <Mail className="h-5 w-5" />,
             },
           ]}
@@ -1100,12 +1158,11 @@ function Step7({ data, update }: StepProps) {
         <div className="flex items-start gap-3 rounded-lg border border-accent-200 bg-accent-50 p-4 text-sm">
           <Mail className="mt-0.5 h-5 w-5 flex-none text-accent-700" />
           <div className="text-ink-muted">
-            <div className="font-medium text-ink">Upload-Link per E-Mail</div>
+            <div className="font-medium text-ink">Bild später nachreichen</div>
             <p className="mt-1">
-              Direkt nach Abschluss dieses Formulars erhalten Sie eine E-Mail mit
-              einem sicheren Upload-Link für das Bild Ihrer geplanten Küche (Pflicht)
-              sowie optional Angebot und Grundriss. Ihre Auktion startet, sobald das
-              Bild eingegangen ist.
+              Kein Problem: Wir melden uns nach Ihrer Anfrage und sagen Ihnen, wie Sie uns das
+              Bild der geplanten Küche schicken – optional auch Angebot und Grundriss. Erst wenn
+              das Bild da ist, stellen wir Ihr Angebot Küchenstudios vor.
             </p>
           </div>
         </div>
@@ -1124,6 +1181,7 @@ function Step8({ data, update }: StepProps) {
             inputMode="numeric"
             pattern="\d{5}"
             maxLength={5}
+            autoComplete="postal-code"
             className="input-field"
             placeholder="12345"
             value={data.postalCode}
@@ -1135,6 +1193,7 @@ function Step8({ data, update }: StepProps) {
         <Field label="Stadt" hint="Optional, ergänzen wir aus PLZ.">
           <input
             type="text"
+            autoComplete="address-level2"
             className="input-field"
             value={data.city}
             onChange={(e) => update({ city: e.target.value })}
@@ -1159,6 +1218,7 @@ function Step8({ data, update }: StepProps) {
         <Field label="Vorname *">
           <input
             type="text"
+            autoComplete="given-name"
             className="input-field"
             value={data.firstName}
             onChange={(e) => update({ firstName: e.target.value })}
@@ -1167,6 +1227,7 @@ function Step8({ data, update }: StepProps) {
         <Field label="Nachname *">
           <input
             type="text"
+            autoComplete="family-name"
             className="input-field"
             value={data.lastName}
             onChange={(e) => update({ lastName: e.target.value })}
@@ -1178,6 +1239,7 @@ function Step8({ data, update }: StepProps) {
         <Field label="E-Mail *">
           <input
             type="email"
+            autoComplete="email"
             className="input-field"
             value={data.email}
             onChange={(e) => update({ email: e.target.value })}
@@ -1186,6 +1248,7 @@ function Step8({ data, update }: StepProps) {
         <Field label="Telefon *" hint="Wir rufen Sie für den Experten-Check an.">
           <input
             type="tel"
+            autoComplete="tel"
             className="input-field"
             value={data.phone}
             onChange={(e) => update({ phone: e.target.value })}
@@ -1239,20 +1302,57 @@ function Step8({ data, update }: StepProps) {
 /* SHARED FIELD HELPERS                                                     */
 /* ====================================================================== */
 
+const LABELLED_CONTROLS = new Set(["input", "select", "textarea"]);
+
+/**
+ * Beschriftetes Feld. Ein einzelnes input/select/textarea bekommt Label und Hinweis
+ * per id; steckt das Feld in einem Wrapper, verweist controlId auf das innere Feld.
+ * Alles andere (Kachelgruppen, Combobox) wird als benannte Gruppe ausgezeichnet.
+ */
 function Field({
   label,
   hint,
+  controlId,
   children,
 }: {
   label: string;
   hint?: string;
+  controlId?: string;
   children: React.ReactNode;
 }) {
+  const baseId = useId();
+  const hintId = hint ? `${baseId}-hint` : undefined;
+  const hintNode = hint && (
+    <p id={hintId} className="helper-text">
+      {hint}
+    </p>
+  );
+  const control =
+    !controlId && isValidElement<{ id?: string; "aria-describedby"?: string }>(children) &&
+    typeof children.type === "string" && LABELLED_CONTROLS.has(children.type)
+      ? children
+      : null;
+
+  if (control || controlId) {
+    const id = controlId ?? control?.props.id ?? `${baseId}-control`;
+    return (
+      <div>
+        <label htmlFor={id} className="label-field">
+          {label}
+        </label>
+        {control ? cloneElement(control, { id, "aria-describedby": hintId }) : children}
+        {hintNode}
+      </div>
+    );
+  }
+
   return (
-    <div>
-      <label className="label-field">{label}</label>
+    <div role="group" aria-labelledby={`${baseId}-label`} aria-describedby={hintId}>
+      <p id={`${baseId}-label`} className="label-field">
+        {label}
+      </p>
       {children}
-      {hint && <p className="helper-text">{hint}</p>}
+      {hintNode}
     </div>
   );
 }

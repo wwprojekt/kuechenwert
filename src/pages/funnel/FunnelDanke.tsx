@@ -30,10 +30,10 @@ const VARIANTS: Record<string, Variant> = {
   b: {
     title: "Ihr Angebot ist eingegangen!",
     subtitle:
-      "Wir prüfen Ihr Studio-Angebot und melden uns kurz telefonisch. Danach bieten geprüfte Studios 72 Stunden lang, um Ihr Angebot zu unterbieten.",
+      "Wir prüfen Ihr Studio-Angebot und melden uns kurz telefonisch. Danach haben geprüfte Studios 72 Stunden Zeit, Ihr Angebot zu unterbieten.",
     steps: [
       { title: "Experten-Check", text: "Kurzer Rückruf zu Ihrem Angebot – meist innerhalb von 24 Stunden (Mo–Fr)." },
-      { title: "72-Stunden-Auktion", text: "Geprüfte Studios bieten für dieselbe oder eine vergleichbare Küche. Neue Angebote melden wir per E-Mail." },
+      { title: "72 Stunden Angebotsphase", text: "Geprüfte Studios machen Angebote für dieselbe oder eine vergleichbare Küche. Neue Angebote melden wir per E-Mail." },
       { title: "Sie entscheiden", text: "Auf Ihrer Projektseite nehmen Sie das beste Angebot an – oder keines." },
     ],
   },

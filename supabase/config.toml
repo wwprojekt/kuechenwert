@@ -1,277 +1,198 @@
 project_id = "gzqayoalwtmypndrmqes"
 
-# --- Auction & Bidding ---
-[functions.handle-autobid]
+# Alle Functions prüfen Aufrufer selbst (Service-Role-/Admin-Prüfung über
+# _shared/auth.ts, Cron-Secret, Turnstile/Rate-Limit oder Projektlink-Token).
+# verify_jwt = false, damit Fehler mit lesbarer Meldung statt leerer
+# Gateway-401 zurückkommen (siehe AGENTS.md, Abschnitt Edge Functions).
+
+# --- Funnels, Projektseite, Marktplatz ---
+[functions.kw-lead]
 verify_jwt = false
 
-[functions.place-bid]
+[functions.kw-lead-b]
 verify_jwt = false
 
-[functions.close-auction]
+[functions.kw-planner]
 verify_jwt = false
 
-[functions.check-expired-auctions]
+[functions.kw-project]
 verify_jwt = false
 
-[functions.instant-buy]
+[functions.kw-contact]
 verify_jwt = false
 
-# --- Auction Notifications ---
-[functions.notify-auction-winner]
+[functions.kw-market-worker]
 verify_jwt = false
 
-[functions.send-auction-notification]
+[functions.kw-order-worker]
 verify_jwt = false
 
-[functions.send-auction-ending-notification]
-verify_jwt = false
-
-[functions.send-auction-summary]
-verify_jwt = false
-
-[functions.send-bid-notification]
-verify_jwt = false
-
-[functions.send-favorite-notification]
-verify_jwt = false
-
-# --- Appointment & Handover ---
-[functions.send-appointment-confirmation]
-verify_jwt = false
-
-[functions.send-appointment-reminder]
-verify_jwt = false
-
-[functions.generate-appointment-pin]
-verify_jwt = false
-
-[functions.verify-appointment-pin]
-verify_jwt = false
-
-[functions.complete-handover]
-verify_jwt = false
-
-[functions.generate-handover-pdf]
-verify_jwt = false
-
-[functions.generate-blank-handover-protocol]
-verify_jwt = false
-
-[functions.resend-blank-handover-protocol]
-verify_jwt = false
-
-# --- Dealer ---
+# --- Küchenstudios ---
 [functions.register-dealer]
 verify_jwt = false
 
 [functions.dealer-document-upload]
 verify_jwt = false
 
-[functions.send-dealer-notification]
+[functions.request-dealer-documents]
 verify_jwt = false
 
 [functions.get-dealer-auth-status]
 verify_jwt = false
 
-# --- Email & Communication ---
-[functions.send-admin-email]
-verify_jwt = false
-
-[functions.send-broadcast-email]
-verify_jwt = false
-
-[functions.send-auto-response]
-verify_jwt = false
-
-[functions.send-welcome-email]
-verify_jwt = false
-
-[functions.send-wizard-resume-email]
-verify_jwt = false
-
-[functions.send-inactivity-email]
-verify_jwt = false
-
-[functions.send-dealer-auction-digest]
-verify_jwt = false
-
-[functions.send-lead-notification]
+[functions.send-dealer-notification]
 verify_jwt = false
 
 [functions.send-registration-invite]
 verify_jwt = false
 
-[functions.send-push-notification]
-verify_jwt = false
-
-[functions.inbound-webhook]
-verify_jwt = false
-
-[functions.process-scheduled-emails]
-verify_jwt = false
-
-[functions.send-instant-buy-alert]
-verify_jwt = false
-
-# --- Payment & Invoicing ---
-[functions.send-payment-confirmation]
-verify_jwt = false
-
-[functions.send-payment-reminder]
+# --- Abrechnung ---
+[functions.generate-invoice-pdf]
 verify_jwt = false
 
 [functions.send-invoice-email]
 verify_jwt = false
 
-[functions.generate-invoice-pdf]
+[functions.record-invoice-payment]
+verify_jwt = false
+
+[functions.cancel-invoice]
 verify_jwt = false
 
 [functions.process-dunning]
 verify_jwt = false
 
-# --- AI & Generation ---
-[functions.generate-ai-description]
+[functions.send-payment-reminder]
 verify_jwt = false
 
 # --- Admin ---
 [functions.admin-create-user]
 verify_jwt = false
 
+[functions.admin-delete-user]
+verify_jwt = false
+
+[functions.admin-suspend-user]
+verify_jwt = false
+
+[functions.admin-delete-dealer-application]
+verify_jwt = false
+
+[functions.resend-confirmation-email]
+verify_jwt = false
+
+# --- E-Mail ---
+[functions.send-admin-email]
+verify_jwt = false
+
+[functions.send-broadcast-email]
+verify_jwt = false
+
 [functions.get-recipient-count]
+verify_jwt = false
+
+[functions.process-scheduled-emails]
 verify_jwt = false
 
 [functions.check-email-delivery]
 verify_jwt = false
 
-# --- Automation ---
-[functions.auto-convert-wizard]
-verify_jwt = false
-
-[functions.upload-wizard-photos]
-verify_jwt = false
-
-[functions.process-abandoned-wizards]
-verify_jwt = false
-
-# --- SEO ---
-[functions.sitemap]
-verify_jwt = false
-
-# --- Valuation & Wrong Number ---
-# --- Error Logging ---
-[functions.log-error]
-verify_jwt = false
-
-# --- Purchase Inquiry ---
-[functions.request-price-change]
-verify_jwt = false
-
-# --- Conversion Tracking ---
-[functions.track-conversion]
-verify_jwt = false
-
-# --- Kaufchance & Offers ---
-[functions.accept-kaufchance-offer]
-verify_jwt = false
-
-# --- Admin User Management ---
-[functions.admin-delete-user]
-verify_jwt = false
-
-# --- Email Backfill ---
-[functions.backfill-email-content]
-verify_jwt = false
-
-# --- Attachment Handling ---
 [functions.fetch-attachment-url]
 verify_jwt = false
 
-# --- Purchase Contracts ---
-[functions.generate-purchase-contract]
+[functions.inbound-webhook]
 verify_jwt = false
 
-# --- Vehicle Questions ---
-[functions.notify-vehicle-question]
+[functions.send-auto-response]
 verify_jwt = false
 
-# --- Dealer Document Requests ---
-[functions.request-dealer-documents]
+# --- Öffentlich / Technik ---
+[functions.sitemap]
 verify_jwt = false
 
-# --- Confirmation Email Resend ---
-[functions.resend-confirmation-email]
+[functions.track-conversion]
 verify_jwt = false
 
-# --- Disposition Follow-up Emails ---
-# --- Seller Penalty (atomic create + send) ---
-[functions.create-and-send-seller-penalty]
+[functions.log-error]
 verify_jwt = false
 
-# --- Invoice Payment (atomic record + Quittung email) ---
-[functions.record-invoice-payment]
+# --- Stillgelegt (410 Gone, _shared/gone.ts) ---
+# Caravan-Auktionen, Termine/Übergaben, Kaufverträge, Verkaufs-Wizard,
+# öffentliche Mail-Versender, alter Planer und Einmal-Werkzeuge. Können im
+# Supabase-Dashboard gelöscht werden; danach Verzeichnis und Eintrag entfernen.
+[functions.accept-kaufchance-offer]
 verify_jwt = false
 
-# --- Invoice Cancellation (atomic cancel + Storno email) ---
-[functions.cancel-invoice]
+[functions.admin-correct-sale]
 verify_jwt = false
 
-# --- Auction Cancellation as Admin (atomic cancel + expire offers + notify all parties) ---
-[functions.cancel-auction-as-admin]
-verify_jwt = false
-
-# --- Purchase Contract Cancellation (atomic cancel + reset motorhome + email both parties) ---
-[functions.cancel-purchase-contract]
-verify_jwt = false
-
-# --- Kaufchance End / Auction Restart (atomic + notify seller + bidders) ---
-[functions.end-kaufchance]
-verify_jwt = false
-
-# --- Admin Suspend/Unsuspend User (atomic + suspension email) ---
-[functions.admin-suspend-user]
-verify_jwt = false
-
-# --- Admin Delete Dealer Application (atomic + applicant email) ---
-[functions.admin-delete-dealer-application]
-verify_jwt = false
-
-# --- Admin Delete Bid (atomic via SQL RPC + bidder email) ---
 [functions.admin-delete-bid]
 verify_jwt = false
 
-# --- Kaufchance Offer Action (notify seller / bidders) ---
-[functions.notify-offer-action]
+[functions.admin-migrate-storage-object]
 verify_jwt = false
 
-# --- HEIC Photo Conversion Maintenance Tool ---
-[functions.fix-heic-photos]
-verify_jwt = false
-
-# --- Google Ads Diagnostic (admin-only conversion-action lister) ---
-[functions.gads-diagnostic]
-verify_jwt = false
-
-# --- Resend Purchase Contract (admin re-sends contract email) ---
-[functions.resend-purchase-contract]
-verify_jwt = false
-
-# --- Phase-4: One-shot opt-in mail to existing/Bestand listings ---
-[functions.send-existing-listings-opt-in]
-verify_jwt = false
-
-# --- Admin manual sale to dealer (atomic instant-buy clone with admin auth) ---
-[functions.admin-sell-to-dealer]
-verify_jwt = false
-
-# --- Admin repair sale artefacts (idempotent post-hoc fixer for half-failed sells) ---
 [functions.admin-repair-sale-artefacts]
 verify_jwt = false
 
-# --- Funnel / public helpers (custom auth or no JWT; sendBeacon cannot send Authorization) ---
-[functions.wizard-telemetry]
+[functions.admin-sell-to-dealer]
 verify_jwt = false
 
-[functions.unsubscribe-google-review]
+[functions.auto-convert-wizard]
+verify_jwt = false
+
+[functions.backfill-email-content]
+verify_jwt = false
+
+[functions.bing-ads-campaign-fix]
+verify_jwt = false
+
+[functions.cancel-auction-as-admin]
+verify_jwt = false
+
+[functions.cancel-purchase-contract]
+verify_jwt = false
+
+[functions.check-expired-auctions]
+verify_jwt = false
+
+[functions.close-auction]
+verify_jwt = false
+
+[functions.complete-handover]
+verify_jwt = false
+
+[functions.create-and-send-seller-penalty]
+verify_jwt = false
+
+[functions.end-kaufchance]
+verify_jwt = false
+
+[functions.fix-heic-photos]
+verify_jwt = false
+
+[functions.gads-diagnostic]
+verify_jwt = false
+
+[functions.generate-ai-description]
+verify_jwt = false
+
+[functions.generate-appointment-pin]
+verify_jwt = false
+
+[functions.generate-blank-handover-protocol]
+verify_jwt = false
+
+[functions.generate-handover-pdf]
+verify_jwt = false
+
+[functions.generate-purchase-contract]
+verify_jwt = false
+
+[functions.handle-autobid]
+verify_jwt = false
+
+[functions.instant-buy]
 verify_jwt = false
 
 [functions.kw-planner-generate]
@@ -280,21 +201,95 @@ verify_jwt = false
 [functions.kw-planner-submit-lead]
 verify_jwt = false
 
-# --- Marktplatz / Traumküche v2 (eigene Auth: Session-Token, Projekt-Token, Cron-Secret) ---
-[functions.kw-planner]
+[functions.notify-admin-missing-reserve]
 verify_jwt = false
 
-[functions.kw-project]
+[functions.notify-auction-winner]
 verify_jwt = false
 
-[functions.kw-lead]
+[functions.notify-offer-action]
 verify_jwt = false
 
-[functions.kw-lead-b]
+[functions.notify-vehicle-question]
 verify_jwt = false
 
-[functions.kw-market-worker]
+[functions.place-bid]
 verify_jwt = false
 
-[functions.kw-order-worker]
+[functions.process-abandoned-wizards]
+verify_jwt = false
+
+[functions.process-photo]
+verify_jwt = false
+
+[functions.request-price-change]
+verify_jwt = false
+
+[functions.resend-blank-handover-protocol]
+verify_jwt = false
+
+[functions.resend-purchase-contract]
+verify_jwt = false
+
+[functions.resize-photo-variants]
+verify_jwt = false
+
+[functions.send-appointment-confirmation]
+verify_jwt = false
+
+[functions.send-appointment-reminder]
+verify_jwt = false
+
+[functions.send-auction-ending-notification]
+verify_jwt = false
+
+[functions.send-auction-notification]
+verify_jwt = false
+
+[functions.send-auction-summary]
+verify_jwt = false
+
+[functions.send-bid-notification]
+verify_jwt = false
+
+[functions.send-dealer-auction-digest]
+verify_jwt = false
+
+[functions.send-existing-listings-opt-in]
+verify_jwt = false
+
+[functions.send-favorite-notification]
+verify_jwt = false
+
+[functions.send-inactivity-email]
+verify_jwt = false
+
+[functions.send-instant-buy-alert]
+verify_jwt = false
+
+[functions.send-lead-notification]
+verify_jwt = false
+
+[functions.send-payment-confirmation]
+verify_jwt = false
+
+[functions.send-push-notification]
+verify_jwt = false
+
+[functions.send-welcome-email]
+verify_jwt = false
+
+[functions.send-wizard-resume-email]
+verify_jwt = false
+
+[functions.unsubscribe-google-review]
+verify_jwt = false
+
+[functions.upload-wizard-photos]
+verify_jwt = false
+
+[functions.verify-appointment-pin]
+verify_jwt = false
+
+[functions.wizard-telemetry]
 verify_jwt = false

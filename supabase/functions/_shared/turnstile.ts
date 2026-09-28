@@ -80,8 +80,10 @@ async function siteverify(secret: string, token: string, remoteIp?: string): Pro
 }
 
 /**
- * Verifiziert ein Cloudflare Turnstile Token. Fehlt das Token oder ist
- * Cloudflare nicht erreichbar, wird die Anfrage zugelassen.
+ * Verifiziert ein Cloudflare Turnstile Token für Formulare, die ohne gültige
+ * Prüfung abgelehnt werden sollen. Fehlt das Token, ist die Prüfung nicht
+ * bestanden; nur wenn kein Secret konfiguriert oder Cloudflare nicht
+ * erreichbar ist, wird zugelassen.
  */
 export async function verifyTurnstileToken(
   token: string | null | undefined,
@@ -95,8 +97,7 @@ export async function verifyTurnstileToken(
   }
 
   if (!token || typeof token !== 'string' || token.trim().length === 0) {
-    console.warn('Turnstile: Token fehlt – zugelassen');
-    return { valid: true };
+    return { valid: false, error: 'Turnstile-Token fehlt' };
   }
 
   const outcome = await siteverify(secretKey, token, remoteIp);

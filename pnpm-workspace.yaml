@@ -4,5 +4,6 @@
 allowBuilds:
   esbuild: true
   "@swc/core": true
-  # Kopiert nur den Mock-Service-Worker nach public/ – im Build nicht nötig.
+  # Kommt transitiv über vitest (@vitest/mocker). Das Skript kopiert nur den
+  # Mock-Service-Worker nach public/ – nicht nötig.
   msw: false

@@ -5,7 +5,7 @@
 // BRAND-Meta (Name/Domain/URLs/Logo) kommen aus brand-config.ts,
 // damit wir bei Rebrand nur EINE Stelle anfassen muessen.
 
-import { BRAND as BRAND_META, BRAND_URLS, BRAND_LOGO_URLS } from "./brand-config.ts";
+import { BRAND as BRAND_META, BRAND_LEGAL, BRAND_URLS, BRAND_LOGO_URLS } from "./brand-config.ts";
 
 export interface Settings {
   site_name: string;
@@ -64,7 +64,7 @@ export const buildEmailLayout = (settings: Settings, title: string, content: str
   const siteName = settings.site_name || BRAND_META.name;
   const siteDesc = settings.site_description || BRAND_META.tagline;
   const contactEmail = settings.contact_email || BRAND_META.supportEmail;
-  const supportPhone = settings.support_phone || '+49 511 51532476';
+  const supportPhone = settings.support_phone || BRAND_LEGAL.phone;
   const year = new Date().getFullYear();
 
   return `
@@ -171,7 +171,12 @@ export const buildEmailLayout = (settings: Settings, title: string, content: str
                 <tr>
                   <td align="center">
                     <p style="margin: 0; font-size: 11px; color: rgba(148,163,184,0.7);">
-                      &copy; ${year} ${siteName}. Alle Rechte vorbehalten.
+                      &copy; ${year} ${siteName} &ndash; eine Marke der ${BRAND_LEGAL.company}
+                    </p>
+                    <!-- Pflichtangaben für Geschäftsbriefe (§ 35a GmbHG) -->
+                    <p style="margin: 6px 0 0; font-size: 11px; line-height: 1.5; color: rgba(148,163,184,0.7);">
+                      ${BRAND_LEGAL.company} &middot; ${BRAND_LEGAL.street}, ${BRAND_LEGAL.postalCode} ${BRAND_LEGAL.city}<br>
+                      Sitz: ${BRAND_LEGAL.city} &middot; ${BRAND_LEGAL.registerCourt}, ${BRAND_LEGAL.registerNumber} &middot; Gesch&auml;ftsf&uuml;hrung: ${BRAND_LEGAL.managingDirector}
                     </p>
                     <p style="margin: 6px 0 0; font-size: 11px; color: rgba(148,163,184,0.5);">
                       Fragen? Antworten Sie einfach auf diese E-Mail &ndash; sie erreicht unser Service-Team.

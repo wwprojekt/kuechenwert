@@ -59,8 +59,8 @@ interface SettingsLike {
 }
 
 const fallbackSettings: SettingsLike = {
-  site_name: 'KÃ¼chenWert',
-  site_description: 'Deutschlands führende Wohnmobil-Handelsplattform',
+  site_name: 'KüchenWert',
+  site_description: 'Küchenangebote vergleichen',
   contact_email: 'info@kuechenwert24.de',
   support_phone: '+49 511 51532476',
 };
@@ -216,7 +216,7 @@ Deno.serve(async (req) => {
       ? `
         ${greeting(displayName(profile))}
         ${paragraph(`wir möchten Sie darüber informieren, dass Ihr <strong>${accountLabel}</strong> bei ${settings.site_name} mit sofortiger Wirkung gesperrt wurde.`)}
-        ${warningBox('Ein Login ist aktuell nicht möglich. Bestehende laufende Auktionen, Gebote oder Verkäufe sind während der Sperrung nicht zugänglich.')}
+        ${warningBox('Ein Login ist aktuell nicht möglich. Projekte, Angebote und Aufträge sind während der Sperrung nicht zugänglich.')}
         ${reason ? infoBox('Grund der Sperrung', paragraph(reason), 'warning') : ''}
         ${paragraph(`Sollten Sie Fragen zur Sperrung haben oder eine Aufhebung beantragen wollen, kontaktieren Sie bitte unseren Support unter <a href="mailto:${settings.contact_email}" style="color:#1f8aa2;">${settings.contact_email}</a> oder telefonisch unter ${settings.support_phone}.`)}
       `

@@ -35,6 +35,25 @@ export const BRAND = {
   },
 } as const;
 
+/**
+ * Pflichtangaben der Betreiberin für Geschäftsbriefe (§ 35a GmbHG, also auch
+ * E-Mails), Rechnungen (§ 14 UStG) und Impressum. Müssen mit dem
+ * veröffentlichten Impressum (legal_pages, slug impressum) übereinstimmen.
+ * Ausgefüllte Felder in site_settings haben Vorrang (siehe issuer-profile.ts).
+ */
+export const BRAND_LEGAL = {
+  company: "WohnWert GmbH",
+  street: "Hannoversche Str. 106",
+  postalCode: "30627",
+  city: "Hannover",
+  country: "Deutschland",
+  registerCourt: "Amtsgericht Hannover",
+  registerNumber: "HRB 230114",
+  managingDirector: "Mona Kareem-Ameen",
+  vatId: "DE462042479",
+  phone: "+49 511 51532476",
+} as const;
+
 export const BRAND_URLS = {
   home: BRAND.baseUrl,
   contact: `${BRAND.baseUrl}/kontakt`,

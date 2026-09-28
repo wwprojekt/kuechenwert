@@ -23,10 +23,8 @@ export const BRAND = {
   // Anzeigename. Wird in <title>, Footer, Emails, Headern verwendet.
   name: "KüchenWert",
 
-  // Rechtlicher Firmenname (fuer Impressum / AGB-Verweise).
-  // KüchenWert ist eine Marke der WohnWert GmbH (dieselbe Firma betreibt auch
-  // CaravanWert). Adresse: Hannoversche Str. 106, 30627 Hannover,
-  // HRB 230114 Amtsgericht Hannover, Geschäftsführerin Mona Kareem-Ameen.
+  // Rechtlicher Firmenname (fuer Impressum / AGB-Verweise). KüchenWert ist
+  // eine Marke der WohnWert GmbH (dieselbe Firma betreibt auch CaravanWert).
   legalName: "WohnWert GmbH",
 
   // Produkt-Claim / Subline.
@@ -50,6 +48,24 @@ export const BRAND = {
     instagram: "https://instagram.com/kuechenwert",
     facebook: "https://facebook.com/kuechenwert",
   },
+} as const;
+
+/**
+ * Pflichtangaben der Betreiberin für Geschäftsbriefe (§ 35a GmbHG), Rechnungen
+ * (§ 14 UStG) und Impressum. Müssen mit dem veröffentlichten Impressum
+ * (legal_pages, slug impressum) übereinstimmen.
+ */
+export const BRAND_LEGAL = {
+  company: "WohnWert GmbH",
+  street: "Hannoversche Str. 106",
+  postalCode: "30627",
+  city: "Hannover",
+  country: "Deutschland",
+  registerCourt: "Amtsgericht Hannover",
+  registerNumber: "HRB 230114",
+  managingDirector: "Mona Kareem-Ameen",
+  vatId: "DE462042479",
+  phone: "+49 511 51532476",
 } as const;
 
 /**

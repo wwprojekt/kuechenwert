@@ -31,6 +31,7 @@ import {
 } from "../_shared/email-builder.ts";
 import { BRAND } from "../_shared/brand-config.ts";
 import { describeLeadSummary } from "../_shared/funnel-a-catalog.ts";
+import { ISSUER_SETTINGS_COLUMNS, issuerProfile, missingIssuerFields } from "../_shared/issuer-profile.ts";
 
 const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY") ?? "";
 const CRON_SECRET = Deno.env.get("KW_CRON_SECRET") ?? "";
@@ -75,6 +76,7 @@ class Ctx {
   constructor(
     readonly sb: SupabaseClient,
     readonly settings: Settings & { lead_forward_email?: string | null },
+    readonly autoIssueInvoices = true,
   ) {}
 
   async lead(id: string): Promise<Lead> {
@@ -427,7 +429,7 @@ async function onOfferAccepted(ctx: Ctx, p: Record<string, unknown>) {
         detailRow("PLZ / Ort", escapeHtml(`${lead.postal_code} ${lead.city ?? ""}`)),
       ].join(""), "success"),
       button("Projekt im Studio-Portal", `${BRAND.baseUrl}/dashboard/projekte/${auctionId}`),
-      paragraph("Die Vermittlungsprovision stellen wir Ihnen gemäß unseren AGB separat in Rechnung."),
+      paragraph(`Die Vermittlungsprovision stellen wir Ihnen gemäß unseren <a href="${BRAND.baseUrl}/konditionen">Konditionen für Küchenstudios</a> mit separater Rechnung in Rechnung. Kommt der Auftrag nachweislich nicht zustande, melden Sie das bitte im Studio-Portal.`),
     ].join("");
     await ctx.send({ to: dealer.email, subject: `Zuschlag erhalten: Küchenprojekt ${lead.postal_code}`, html: ctx.layout("Sie haben den Zuschlag erhalten", content), type: "project_awarded_dealer", recipientId: dealer.id });
   }
@@ -471,7 +473,7 @@ async function onOfferAccepted(ctx: Ctx, p: Record<string, unknown>) {
     ctx.send({
       to: ctx.adminAddress(),
       subject: `Zuschlag: ${dealerName(dealer)} · ${price} · PLZ ${lead.postal_code}`,
-      html: ctx.layout("Zuschlag erteilt", paragraph(`Provisions-Rechnungsentwurf wurde angelegt. Bitte prüfen und versenden.`) + button("Rechnungen", `${BRAND.baseUrl}/admin/financials`)),
+      html: ctx.layout("Zuschlag erteilt", paragraph(`Die Provisionsrechnung wurde angelegt${ctx.autoIssueInvoices ? " und wird automatisch versendet" : " und wartet als Entwurf auf Ihre Prüfung"}.`) + button("Rechnungen", `${BRAND.baseUrl}/admin/financials`)),
       type: "project_admin_new",
     }),
   );
@@ -516,6 +518,72 @@ async function onTenderEnded(ctx: Ctx, p: Record<string, unknown>) {
   }
 }
 
+async function callInternalFunction<T>(name: string, body: Record<string, unknown>): Promise<T> {
+  const resp = await fetch(`${Deno.env.get("SUPABASE_URL")}/functions/v1/${name}`, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${SERVICE_ROLE_KEY}`, apikey: SERVICE_ROLE_KEY, "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+  const text = await resp.text();
+  if (!resp.ok) throw new Error(`${name} ${resp.status}: ${text.slice(0, 300)}`);
+  return JSON.parse(text) as T;
+}
+
+/**
+ * Rechnung ausstellen: Rechnungs- und Fälligkeitsdatum auf heute setzen, PDF
+ * erzeugen und per E-Mail senden (send-invoice-email setzt status = sent).
+ * Bei Fehlern wiederholt die Outbox; bereits versendete Rechnungen bleiben
+ * unverändert. Fehlen Pflichtangaben des Ausstellers, bleibt die Rechnung
+ * Entwurf und das Admin-Postfach erhält einen Hinweis.
+ */
+async function onInvoiceIssue(ctx: Ctx, p: Record<string, unknown>) {
+  if (!ctx.autoIssueInvoices) return;
+  const invoiceId = String(p.invoice_id);
+  const { data: invoice, error } = await ctx.sb
+    .from("invoices")
+    .select("id, invoice_number, status, payment_terms_days, gross_amount")
+    .eq("id", invoiceId)
+    .maybeSingle();
+  if (error) throw error;
+  if (!invoice || invoice.status !== "draft") return;
+
+  const { data: issuerSettings, error: settingsErr } = await ctx.sb
+    .from("site_settings")
+    .select(ISSUER_SETTINGS_COLUMNS)
+    .limit(1)
+    .maybeSingle();
+  if (settingsErr) throw settingsErr;
+  const missing = missingIssuerFields(issuerProfile(issuerSettings as Record<string, unknown> | null));
+  if (missing.length > 0) {
+    const amount = Number(invoice.gross_amount).toLocaleString("de-DE", { style: "currency", currency: "EUR" });
+    await ctx.send({
+      to: ctx.adminAddress(),
+      subject: `Rechnung ${invoice.invoice_number} nicht versendet: Angaben fehlen`,
+      html: ctx.layout(
+        "Rechnung wartet als Entwurf",
+        paragraph(`Die Rechnung ${escapeHtml(invoice.invoice_number)} über ${amount} wurde nicht automatisch versendet, weil in den Rechnungseinstellungen ${escapeHtml(missing.join(" und "))} fehlt.`) +
+          paragraph("Bitte die Angaben unter Einstellungen → Rechnungen ergänzen und die Rechnung danach unter Finanzen versenden.") +
+          button("Einstellungen öffnen", `${BRAND.baseUrl}/admin/settings`),
+      ),
+      type: "invoice_issue_blocked",
+    });
+    return;
+  }
+
+  const invoiceDate = new Intl.DateTimeFormat("sv-SE", { timeZone: "Europe/Berlin" }).format(new Date());
+  const due = new Date(`${invoiceDate}T00:00:00Z`);
+  due.setUTCDate(due.getUTCDate() + (invoice.payment_terms_days ?? 14));
+  const { error: dateErr } = await ctx.sb
+    .from("invoices")
+    .update({ invoice_date: invoiceDate, due_date: due.toISOString().slice(0, 10) })
+    .eq("id", invoiceId)
+    .eq("status", "draft");
+  if (dateErr) throw dateErr;
+
+  const pdf = await callInternalFunction<{ pdfBase64?: string }>("generate-invoice-pdf", { invoiceId });
+  await callInternalFunction("send-invoice-email", { invoiceId, pdfBase64: pdf.pdfBase64 });
+}
+
 async function onProjectCancelled(ctx: Ctx, p: Record<string, unknown>) {
   const auctionId = String(p.auction_id);
   const { data: bidders } = await ctx.sb.from("lead_bids").select("dealer_id").eq("auction_id", auctionId);
@@ -533,6 +601,7 @@ const HANDLERS: Record<string, (ctx: Ctx, payload: Record<string, unknown>) => P
   offer_accepted: onOfferAccepted,
   tender_ended: onTenderEnded,
   project_cancelled: onProjectCancelled,
+  invoice_issue: onInvoiceIssue,
 };
 
 function authorized(req: Request): boolean {
@@ -553,13 +622,18 @@ Deno.serve(async (req) => {
     .select("site_name, site_description, contact_email, support_phone, lead_forward_email")
     .limit(1)
     .maybeSingle();
-  const ctx = new Ctx(sb, {
-    site_name: settings?.site_name ?? BRAND.name,
-    site_description: settings?.site_description ?? BRAND.tagline,
-    contact_email: settings?.contact_email ?? BRAND.supportEmail,
-    support_phone: settings?.support_phone ?? "",
-    lead_forward_email: settings?.lead_forward_email ?? null,
-  });
+  const { data: market } = await sb.from("kw_marketplace_settings").select("auto_issue_invoices").limit(1).maybeSingle();
+  const ctx = new Ctx(
+    sb,
+    {
+      site_name: settings?.site_name ?? BRAND.name,
+      site_description: settings?.site_description ?? BRAND.tagline,
+      contact_email: settings?.contact_email ?? BRAND.supportEmail,
+      support_phone: settings?.support_phone ?? "",
+      lead_forward_email: settings?.lead_forward_email ?? null,
+    },
+    market?.auto_issue_invoices !== false,
+  );
 
   const results: Array<{ id: number; type: string; ok: boolean; error?: string }> = [];
   while (Date.now() - started < TIME_BUDGET_MS) {

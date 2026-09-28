@@ -5,6 +5,7 @@ import { jsPDF } from 'https://esm.sh/jspdf@2.5.2';
 import { checkServiceRoleOrAdmin } from '../_shared/auth.ts';
 import { BRAND as BRAND_META } from '../_shared/brand-config.ts';
 import { describeInvoice } from '../_shared/invoice-labels.ts';
+import { formatIban, issuerProfile } from '../_shared/issuer-profile.ts';
 
 interface InvoicePdfRequest { invoiceId: string; }
 
@@ -33,6 +34,14 @@ function fmtCur(a: number|string): string {
 function fmtDate(d: string): string {
   return new Date(d).toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' });
 }
+/** Base64 in Blöcken: String.fromCharCode(...bytes) sprengt bei größeren PDFs den Stack. */
+function toBase64(bytes: Uint8Array): string {
+  let binary = '';
+  for (let i = 0; i < bytes.length; i += 0x8000) {
+    binary += String.fromCharCode(...bytes.subarray(i, i + 0x8000));
+  }
+  return btoa(binary);
+}
 
 const COUNTRY_NAMES: Record<string,string> = {
   AT:'Österreich',NL:'Niederlande',BE:'Belgien',FR:'Frankreich',IT:'Italien',
@@ -50,35 +59,27 @@ Deno.serve(async (req) => {
   const authResult = await checkServiceRoleOrAdmin(req, getCorsHeaders(req));
   if (!authResult.authorized) return authResult.response;
 
+  const json = (body: unknown, status = 200) =>
+    new Response(JSON.stringify(body), { status, headers: { ...getCorsHeaders(req), 'Content-Type': 'application/json' } });
+
   try {
     const supabase = createClient(SB_URL, SB_KEY);
-    const { invoiceId }: InvoicePdfRequest = await req.json();
-    if (!invoiceId) throw new Error('Invoice ID is required');
+    const { invoiceId }: InvoicePdfRequest = await req.json().catch(() => ({ invoiceId: '' }));
+    if (!invoiceId) return json({ error: 'Rechnungs-ID fehlt.' }, 400);
 
     const { data: invoice, error: invoiceError } = await supabase
       .from('invoices')
       .select(`*, dealer:profiles(salutation, first_name, last_name, company_name, email, company_street, company_city, company_zip, company_country, address_street, address_city, address_zip, address_country, customer_number, vat_id), auction:auctions(kitchen:kitchens(manufacturer, model)), lead:leads(postal_code, city), items:invoice_items(*)`)
-      .eq('id', invoiceId).single();
-    if (invoiceError || !invoice) throw new Error(`Invoice not found: ${invoiceError?.message}`);
+      .eq('id', invoiceId).maybeSingle();
+    if (invoiceError) throw invoiceError;
+    if (!invoice) return json({ error: 'Rechnung nicht gefunden.' }, 404);
 
     const { data: settings } = await supabase.from('site_settings').select('*').limit(1).maybeSingle();
 
+    const issuer = issuerProfile(settings);
     const siteName = settings?.site_name || BRAND_META.name;
     const siteDesc = settings?.site_description || BRAND_META.tagline;
-    const addr = settings?.address || 'Hannoversche Straße 106';
-    const cityS = settings?.city || 'Hannover';
-    const zipS = settings?.zip_code || '30627';
-    const countryS = settings?.country || 'Deutschland';
-    const contactEmail = settings?.contact_email || BRAND_META.supportEmail;
-    const phoneS = settings?.support_phone || '0511 / 51532476';
     const website = BRAND_META.domain;
-    const bankIban = settings?.bank_iban || '';
-    const bankBic = settings?.bank_bic || '';
-    const bankName = settings?.bank_name || '';
-    const ustId = settings?.ust_id || '';
-    const taxNumber = settings?.tax_number || '';
-    const md = settings?.managing_director || '';
-    const hrb = settings?.hrb_number || '';
 
     const labels = describeInvoice(invoice);
     const isPenalty = labels.isPenalty;
@@ -89,7 +90,7 @@ Deno.serve(async (req) => {
     // a complete recipient block (important for printing & postal mailing).
     const dlrName = isPenalty
       ? (personalName || invoice.dealer?.company_name || 'Verkäufer')
-      : (invoice.dealer?.company_name || personalName || 'Händler');
+      : (invoice.dealer?.company_name || personalName || 'Küchenstudio');
     const dlrEmail = invoice.dealer?.email || '';
     const dlrStreet = isPenalty
       ? (invoice.dealer?.address_street || invoice.dealer?.company_street || '')
@@ -132,14 +133,15 @@ Deno.serve(async (req) => {
     doc.text(siteName,ml,12);
     doc.setFontSize(7); doc.setFont('helvetica','normal'); doc.text(siteDesc,ml,18);
     doc.setFontSize(8);
-    doc.text(addr,pw-mr,9,{align:'right'});
-    doc.text(`${zipS} ${cityS}`,pw-mr,13.5,{align:'right'});
-    doc.text(countryS,pw-mr,18,{align:'right'});
+    doc.text(issuer.company,pw-mr,7.5,{align:'right'});
+    doc.text(issuer.street,pw-mr,11.5,{align:'right'});
+    doc.text(`${issuer.postalCode} ${issuer.city}`,pw-mr,15.5,{align:'right'});
+    doc.text(issuer.country,pw-mr,19.5,{align:'right'});
     y=30;
 
-    // Sender line
+    // Absenderzeile (Fensterumschlag): vollständiger Name des leistenden Unternehmers
     doc.setTextColor(TEXT_LIGHT.r,TEXT_LIGHT.g,TEXT_LIGHT.b); doc.setFontSize(6);
-    doc.text(`${siteName} • ${addr} • ${zipS} ${cityS}`,ml,y);
+    doc.text(`${issuer.company} • ${issuer.street} • ${issuer.postalCode} ${issuer.city}`,ml,y);
     doc.setDrawColor(229,231,235); doc.line(ml,y+1,ml+90,y+1);
     y+=5;
 
@@ -175,6 +177,8 @@ Deno.serve(async (req) => {
     };
     metaLine('Rechnungsnr.:',invoice.invoice_number);
     metaLine('Rechnungsdatum:',invDate);
+    // § 14 Abs. 4 Nr. 6 UStG: Zeitpunkt der Leistung (Kontaktfreischaltung bzw. Zuschlag)
+    metaLine('Leistungsdatum:',fmtDate(invoice.service_date || invoice.created_at));
     metaLine('Fälligkeitsdatum:',dueDateStr);
     metaLine('Zahlungsziel:',`${payDays} Tage`);
     if(custNum) metaLine('Kundennr.:',custNum);
@@ -271,11 +275,10 @@ Deno.serve(async (req) => {
     // Payment box. Height is computed from the actual rows we render so the
     // amber background never clips when one of IBAN/BIC/Bank is missing or
     // when extra rows (Empfänger) push the content down.
-    const accountHolder = settings?.bank_account_holder || 'WohnWert GmbH';
-    const payRows: Array<[string,string]> = [['Empfänger:', accountHolder]];
-    if(bankIban) payRows.push(['IBAN:', bankIban]);
-    if(bankBic) payRows.push(['BIC:', bankBic]);
-    if(bankName) payRows.push(['Bank:', bankName]);
+    const payRows: Array<[string,string]> = [['Empfänger:', issuer.accountHolder]];
+    if(issuer.iban) payRows.push(['IBAN:', formatIban(issuer.iban)]);
+    if(issuer.bic) payRows.push(['BIC:', issuer.bic]);
+    if(issuer.bankName) payRows.push(['Bank:', issuer.bankName]);
     payRows.push(['Verwendungszweck:', invoice.invoice_number]);
     const pbH = 12 + payRows.length * 4.5 + 2;
     doc.setFillColor(AMBER_BG.r,AMBER_BG.g,AMBER_BG.b);
@@ -311,38 +314,43 @@ Deno.serve(async (req) => {
     const fy=283;
     doc.setFillColor(BRAND.r,BRAND.g,BRAND.b); doc.rect(0,fy,pw,14,'F');
     doc.setTextColor(255,255,255); doc.setFontSize(6.5); doc.setFont('helvetica','bold');
-    const fl=[`${siteName} – WohnWert GmbH`]; if(md) fl.push(`GF: ${md}`); if(hrb) fl.push(`AG Hildesheim, HRB ${hrb}`);
-    doc.text(fl.join(' • '),ml,fy+5);
+    // § 35a GmbHG: Rechtsform, Sitz, Registergericht und -nummer, Geschäftsführung
+    doc.text([issuer.company,`Sitz ${issuer.city}`,issuer.registerEntry,`Geschäftsführung: ${issuer.managingDirector}`].join(' • '),ml,fy+5);
     doc.setFont('helvetica','normal');
-    const fr=[]; if(taxNumber) fr.push(`StNr: ${taxNumber}`); if(ustId) fr.push(`USt-ID: ${ustId}`);
+    const fr=[]; if(issuer.taxNumber) fr.push(`StNr.: ${issuer.taxNumber}`); if(issuer.vatId) fr.push(`USt-IdNr.: ${issuer.vatId}`);
     if(fr.length) doc.text(fr.join(' • '),pw-mr,fy+5,{align:'right'});
     doc.setFontSize(6);
-    doc.text([contactEmail,phoneS,website].filter(Boolean).join(' • '),pw/2,fy+10,{align:'center'});
+    doc.text([`${siteName} ist eine Marke der ${issuer.company}`,issuer.email,issuer.phone,website].filter(Boolean).join(' • '),pw/2,fy+10,{align:'center'});
 
     // Upload
-    const pdfBytes = new Uint8Array(doc.output('arraybuffer'));
+    let pdfBytes = new Uint8Array(doc.output('arraybuffer'));
     // Storage key sanitisation rule MUST stay in sync with
     // `src/lib/invoiceStorage.ts:getInvoiceStoragePath()` – the frontend
     // uses the same regex to look up an existing PDF.
     const fileName = `${invoice.dealer_id}/${invoice.invoice_number.replace(/[^a-zA-Z0-9-]/g,'_')}.pdf`;
-    const { error: upErr } = await supabase.storage.from('invoices').upload(fileName,pdfBytes,{
-      contentType:'application/pdf',
-      // Per AGENTS.md: SDK auto-prepends `max-age=` so we pass `<seconds>, immutable`.
-      // Invoice PDFs are immutable-by-content (regenerating creates a new
-      // upload that replaces the file) so the longest practical TTL is fine.
-      cacheControl:'31536000, immutable',
-      upsert:true,
-    });
-    if(upErr) throw new Error(`Upload failed: ${upErr.message}`);
+    // GoBD: Eine ausgestellte Rechnung bleibt unverändert. Nur Entwürfe werden
+    // neu erzeugt; für versendete Rechnungen liefern wir das gespeicherte PDF.
+    const issued = invoice.status !== 'draft';
+    const { data: existingPdf } = issued ? await supabase.storage.from('invoices').download(fileName) : { data: null };
+    if (existingPdf) {
+      pdfBytes = new Uint8Array(await existingPdf.arrayBuffer());
+    } else {
+      const { error: upErr } = await supabase.storage.from('invoices').upload(fileName,pdfBytes,{
+        contentType:'application/pdf',
+        // Per AGENTS.md: SDK auto-prepends `max-age=` so we pass `<seconds>, immutable`.
+        cacheControl:'31536000, immutable',
+        upsert:!issued,
+      });
+      if(upErr) throw new Error(`Upload failed: ${upErr.message}`);
+    }
     const { data: signed, error: sErr } = await supabase.storage.from('invoices').createSignedUrl(fileName,365*24*60*60);
     if(sErr) throw new Error(`Signed URL failed: ${sErr.message}`);
     await supabase.from('invoices').update({pdf_url:signed.signedUrl,updated_at:new Date().toISOString()}).eq('id',invoiceId);
 
     console.log(`Invoice PDF: ${invoice.invoice_number}${isRC?' (RC)':''}`);
-    return new Response(JSON.stringify({success:true,pdfUrl:signed.signedUrl,pdfBase64:btoa(String.fromCharCode(...pdfBytes)),invoiceNumber:invoice.invoice_number}),
-      {headers:{...getCorsHeaders(req),'Content-Type':'application/json'}});
-  } catch(e: any) {
+    return json({success:true,pdfUrl:signed.signedUrl,pdfBase64:toBase64(pdfBytes),invoiceNumber:invoice.invoice_number});
+  } catch(e: unknown) {
     console.error('generate-invoice-pdf error:',e);
-    return new Response(JSON.stringify({error:e.message}),{status:500,headers:{...getCorsHeaders(req),'Content-Type':'application/json'}});
+    return json({error:'Das Rechnungs-PDF konnte nicht erstellt werden.'},500);
   }
 });

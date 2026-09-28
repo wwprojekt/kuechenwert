@@ -1,7 +1,9 @@
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.100.1';
+import { createClient, type SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2.100.1';
 import { buildEmailLayout, paragraph, infoBox, detailRow, amountDisplay, warningBox, customerBadge } from '../_shared/email-builder.ts';
 import { getCorsHeaders, handleCorsPreflightRequest } from '../_shared/cors.ts';
 import { checkServiceRoleOrAdmin } from '../_shared/auth.ts';
+import { BRAND } from '../_shared/brand-config.ts';
+import { formatIban, issuerProfile } from '../_shared/issuer-profile.ts';
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -59,8 +61,8 @@ Deno.serve(async (req) => {
       .maybeSingle();
 
     const settingsData = settings || {
-      site_name: 'KÃ¼chenWert',
-      site_description: 'Ihr Wohnmobil-Marktplatz',
+      site_name: 'KüchenWert',
+      site_description: 'Küchenangebote vergleichen',
       contact_email: 'info@kuechenwert24.de',
       support_phone: '',
     };
@@ -82,7 +84,8 @@ Deno.serve(async (req) => {
         reminders:payment_reminders(reminder_level, reminder_date)
       `)
       .in('payment_status', ['pending', 'partial'])
-      .neq('status', 'cancelled')
+      // Entwürfe wurden nie versendet und dürfen nicht gemahnt werden.
+      .not('status', 'in', '(cancelled,draft)')
       .lt('due_date', new Date().toISOString())
       .order('due_date');
 
@@ -221,13 +224,23 @@ Deno.serve(async (req) => {
         const amountPaid = Number(invoice.amount_paid || 0);
         const remainingAmount = Math.max(0, grossAmount - amountPaid);
 
+        // Restrict account based on configurable level. Only meaningful for
+        // dealer commission invoices – seller_penalty invoices are issued to
+        // private sellers who do not have a "dealer account" to restrict.
+        const isDealerInvoice =
+          invoice.invoice_type !== 'seller_penalty' &&
+          invoice.invoice_type !== 'private_penalty';
+        const restrictsAccount =
+          isDealerInvoice && restrictAtLevel > 0 && reminderLevel >= restrictAtLevel;
+
         // Create payment reminder
         const subject = getReminderSubject(reminderLevel, invoice.invoice_number);
         const messageBody = getReminderMessage(
           reminderLevel,
           invoice,
           reminderFee,
-          remainingAmount
+          remainingAmount,
+          restrictsAccount
         );
 
         const { data: reminder, error: reminderError } = await supabase
@@ -261,27 +274,17 @@ Deno.serve(async (req) => {
 
         // Send reminder email
         await sendReminderEmail(
+          supabase,
           invoice,
           reminder,
           reminderLevel,
           settingsData,
           remainingAmount,
-          amountPaid
+          amountPaid,
+          restrictsAccount
         );
 
-        // Restrict account based on configurable level. Only meaningful for
-        // dealer commission invoices – seller_penalty invoices are issued to
-        // private sellers who do not have a "dealer account" to restrict, so
-        // flipping `account_restricted` on their profile would block their
-        // ability to sell again on the platform without any policy basis.
-        const isDealerInvoice =
-          invoice.invoice_type !== 'seller_penalty' &&
-          invoice.invoice_type !== 'private_penalty';
-        if (
-          isDealerInvoice &&
-          restrictAtLevel > 0 &&
-          reminderLevel >= restrictAtLevel
-        ) {
+        if (restrictsAccount) {
           await restrictDealerAccount(supabase, invoice.dealer_id);
         }
 
@@ -365,28 +368,28 @@ Deno.serve(async (req) => {
     return subjects[level] || `Mahnung - Rechnung ${invoiceNumber}`;
   }
 
-  // Pick the proper recipient name + reference depending on invoice_type.
-  // For seller_penalty (private seller) we prefer the personal name + the
-  // word "Konto"; for commission invoices (dealer) we prefer the company
-  // name + the word "Account" (matches the existing dealer-facing wording
-  // in the rest of the platform).
+  // Pick the proper recipient name depending on invoice_type: private
+  // recipients (seller_penalty) by personal name, studios by company name.
   function getRecipientContext(invoice: any) {
     const isPenalty = invoice.invoice_type === 'seller_penalty';
     const personalName = `${invoice.dealer?.first_name || ''} ${invoice.dealer?.last_name || ''}`.trim();
     const recipientName = isPenalty
       ? (personalName || invoice.dealer?.company_name || 'Kunde')
       : (invoice.dealer?.company_name || personalName || 'Kunde');
-    const accountWord = isPenalty ? 'Konto' : 'Account';
-    return { isPenalty, recipientName, accountWord };
+    return { isPenalty, recipientName };
   }
+
+  const RESTRICTION_NOTICE =
+    'Ihr Studio-Konto ist für neue Angebote und Kontaktfreischaltungen gesperrt, bis die Zahlung eingegangen ist. Laufende Projekte bleiben erreichbar.';
 
   function getReminderMessage(
     level: number,
     invoice: any,
     fee: number,
-    remainingAmount: number
+    remainingAmount: number,
+    restrictsAccount: boolean
   ): string {
-    const { isPenalty, recipientName, accountWord } = getRecipientContext(invoice);
+    const { recipientName } = getRecipientContext(invoice);
 
     const grossAmount = Number(invoice.gross_amount || 0);
     const amountPaid = Number(invoice.amount_paid || 0);
@@ -396,36 +399,35 @@ Deno.serve(async (req) => {
       ? `Rechnung ${invoice.invoice_number} vom ${new Date(invoice.invoice_date).toLocaleDateString('de-DE')} \u00fcber \u20ac${grossAmount.toLocaleString('de-DE', { minimumFractionDigits: 2 })} (davon bereits gezahlt: \u20ac${amountPaid.toLocaleString('de-DE', { minimumFractionDigits: 2 })}, offen: \u20ac${remainingAmount.toLocaleString('de-DE', { minimumFractionDigits: 2 })}). Zahlungsziel war der ${new Date(invoice.due_date).toLocaleDateString('de-DE')}.`
       : `Rechnung ${invoice.invoice_number} vom ${new Date(invoice.invoice_date).toLocaleDateString('de-DE')} \u00fcber \u20ac${grossAmount.toLocaleString('de-DE', { minimumFractionDigits: 2 })}. Zahlungsziel war der ${new Date(invoice.due_date).toLocaleDateString('de-DE')}.`;
 
-    // Restrict warning is suppressed for seller_penalty invoices because
-    // private sellers don't have a "dealer account" we restrict – see the
-    // matching guard around `restrictDealerAccount(...)` above.
-    const restrictWarning = isPenalty
-      ? ''
-      : `\n\nIhr ${accountWord} wurde eingeschr\u00e4nkt, bis die Zahlung eingegangen ist.`;
+    const restrictWarning = restrictsAccount ? `\n\n${RESTRICTION_NOTICE}` : '';
 
     const messages: Record<number, string> = {
-      1: `Sehr geehrte/r ${recipientName},\n\n${amountLine}\n\nBitte \u00fcberweisen Sie den ${isPartial ? 'offenen Restbetrag' : 'Betrag'} zeitnah auf unser Konto.\n\nFalls Sie bereits bezahlt haben, betrachten Sie diese Nachricht als gegenstandslos.`,
+      1: `Sehr geehrte/r ${recipientName},\n\n${amountLine}\n\nBitte \u00fcberweisen Sie den ${isPartial ? 'offenen Restbetrag' : 'Betrag'} zeitnah auf unser Konto.${restrictWarning}\n\nFalls Sie bereits bezahlt haben, betrachten Sie diese Nachricht als gegenstandslos.`,
       2: `Sehr geehrte/r ${recipientName},\n\n${amountLine}\n\nDa die Zahlung trotz Erinnerung noch nicht eingegangen ist, berechnen wir eine Mahngeb\u00fchr von \u20ac${fee.toFixed(2)}.${restrictWarning}`,
-      3: `Sehr geehrte/r ${recipientName},\n\n${amountLine}\n\nDies ist unsere letzte Mahnung. Bei weiterer Nichtzahlung werden wir rechtliche Schritte einleiten.\n\nZus\u00e4tzliche Mahngeb\u00fchr: \u20ac${fee.toFixed(2)}`,
+      3: `Sehr geehrte/r ${recipientName},\n\n${amountLine}\n\nDies ist unsere letzte Mahnung. Bei weiterer Nichtzahlung werden wir rechtliche Schritte einleiten.\n\nZus\u00e4tzliche Mahngeb\u00fchr: \u20ac${fee.toFixed(2)}${restrictWarning}`,
     };
 
     return messages[level] || messages[1];
   }
 
   async function sendReminderEmail(
+    supabase: SupabaseClient,
     invoice: any,
     reminder: any,
     level: number,
     settingsData: any,
     remainingAmount: number,
     amountPaid: number,
+    restrictsAccount: boolean,
   ) {
     const resendApiKey = Deno.env.get('RESEND_API_KEY');
     if (!resendApiKey) {
       throw new Error('RESEND_API_KEY not configured');
     }
 
-    const { isPenalty, recipientName, accountWord } = getRecipientContext(invoice);
+    const { isPenalty, recipientName } = getRecipientContext(invoice);
+    const issuer = issuerProfile(settingsData);
+    const siteName = settingsData.site_name || BRAND.name;
 
     const levelTitles: Record<number, string> = {
       1: 'Zahlungserinnerung',
@@ -461,18 +463,18 @@ Deno.serve(async (req) => {
 
       ${amountDisplay('Zu zahlender Gesamtbetrag', `&euro;${reminder.total_amount.toLocaleString('de-DE', { minimumFractionDigits: 2 })}`)}
 
-      ${level >= 2 && !isPenalty ? warningBox(`Ihr ${accountWord} wurde eingeschr&auml;nkt, bis die Zahlung eingegangen ist.`) : ''}
+      ${restrictsAccount ? warningBox(RESTRICTION_NOTICE) : ''}
       ${level >= 3 ? warningBox('Dies ist unsere letzte Mahnung. Bei weiterer Nichtzahlung werden wir rechtliche Schritte einleiten.') : ''}
 
       ${infoBox('Bankverbindung', `
-        ${detailRow('IBAN', settingsData.bank_iban || 'Bitte in Einstellungen hinterlegen')}
-        ${settingsData.bank_bic ? detailRow('BIC', settingsData.bank_bic) : ''}
-        ${settingsData.bank_name ? detailRow('Bank', settingsData.bank_name) : ''}
+        ${detailRow('Empf&auml;nger', issuer.accountHolder)}
+        ${issuer.iban ? detailRow('IBAN', formatIban(issuer.iban)) : ''}
+        ${issuer.bic ? detailRow('BIC', issuer.bic) : ''}
+        ${issuer.bankName ? detailRow('Bank', issuer.bankName) : ''}
         ${detailRow('Verwendungszweck', invoice.invoice_number)}
       `)}
 
       ${level === 1 ? paragraph('Falls Sie bereits bezahlt haben, betrachten Sie diese Nachricht als gegenstandslos.') : ''}
-      ${paragraph('Mit freundlichen Gr&uuml;&szlig;en<br>Ihr KuechenWert Team')}
     `;
 
     const emailHtml = buildEmailLayout(settingsData, levelTitles[level] || 'Zahlungserinnerung', content);
@@ -484,7 +486,7 @@ Deno.serve(async (req) => {
         Authorization: `Bearer ${resendApiKey}`,
       },
       body: JSON.stringify({
-        from: `${settingsData.site_name || 'KuechenWert'} <info@kuechenwert24.de>`,
+        from: `${siteName} <${BRAND.supportEmail}>`,
         to: [invoice.dealer.email],
         subject: reminder.subject,
         html: emailHtml,
@@ -501,8 +503,8 @@ Deno.serve(async (req) => {
     // Log in admin_emails for System tab
     try {
       await supabase.from('admin_emails').insert({
-        sender_email: 'info@kuechenwert24.de',
-        sender_name: settingsData.site_name,
+        sender_email: BRAND.supportEmail,
+        sender_name: siteName,
         recipient_email: invoice.dealer.email,
         recipient_name: recipientName || null,
         subject: reminder.subject,

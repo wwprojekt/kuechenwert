@@ -4,23 +4,38 @@ import { getCorsHeaders, handleCorsPreflightRequest } from '../_shared/cors.ts';
 import { checkServiceRoleOrAdmin } from '../_shared/auth.ts';
 import { BRAND } from '../_shared/brand-config.ts';
 import { describeInvoice } from '../_shared/invoice-labels.ts';
+import { formatIban, issuerProfile, missingIssuerFields } from '../_shared/issuer-profile.ts';
 
 /**
  * Edge Function: send-invoice-email
- * 
- * Sends a professional invoice email to the dealer with:
- * - Invoice details (number, amount, due date)
- * - Payment information (bank details from site_settings)
- * - PDF attachment (downloaded from storage and attached as base64)
- * 
- * Called by: admin invoice sending (marketplace invoices for contact
- * purchases and commissions), close-auction, instant-buy
- * Auth: service_role or admin
+ *
+ * Versendet eine Rechnung (Kontaktfreischaltung, Provision) mit PDF-Anhang an
+ * das Küchenstudio. Der erste Versand stellt die Rechnung aus
+ * (draft → sent); erneutes Senden verschickt nur eine Kopie und lässt Status
+ * und Zahlungsstand unverändert.
+ *
+ * Aufrufer: kw-market-worker (invoice_issue), Admin-Finanzen
+ * Auth: service_role oder Admin
  */
 
 interface InvoiceEmailRequest {
   invoiceId: string;
   pdfBase64?: string; // Optional: PDF as base64 from generate-invoice-pdf
+}
+
+class HttpError extends Error {
+  constructor(readonly status: number, message: string, readonly code: string) {
+    super(message);
+  }
+}
+
+/** Base64 in Blöcken: String.fromCharCode(...bytes) sprengt bei größeren PDFs den Stack. */
+function toBase64(bytes: Uint8Array): string {
+  let binary = '';
+  for (let i = 0; i < bytes.length; i += 0x8000) {
+    binary += String.fromCharCode(...bytes.subarray(i, i + 0x8000));
+  }
+  return btoa(binary);
 }
 
 Deno.serve(async (req) => {
@@ -41,10 +56,10 @@ Deno.serve(async (req) => {
     // ─── Initialize Supabase admin client ────────────────────────
     const supabaseAdmin = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
-    const { invoiceId, pdfBase64: providedPdfBase64 }: InvoiceEmailRequest = await req.json();
+    const { invoiceId, pdfBase64: providedPdfBase64 }: InvoiceEmailRequest = await req.json().catch(() => ({ invoiceId: '' }));
 
     if (!invoiceId) {
-      throw new Error('Invoice ID is required');
+      throw new HttpError(400, 'Rechnungs-ID fehlt.', 'invoice_id');
     }
 
     // ─── Fetch invoice with all related data ───────────────────────
@@ -60,14 +75,17 @@ Deno.serve(async (req) => {
         items:invoice_items(description)
       `)
       .eq('id', invoiceId)
-      .single();
+      .maybeSingle();
 
-    if (invoiceError || !invoice) {
-      throw new Error(`Invoice not found: ${invoiceError?.message || 'Unknown'}`);
+    if (invoiceError) throw invoiceError;
+    if (!invoice) {
+      throw new HttpError(404, 'Rechnung nicht gefunden.', 'not_found');
     }
-
+    if (invoice.status === 'cancelled') {
+      throw new HttpError(409, 'Stornierte Rechnungen werden nicht versendet.', 'cancelled');
+    }
     if (!invoice.dealer?.email) {
-      throw new Error('Dealer email not found');
+      throw new HttpError(422, 'Für dieses Küchenstudio ist keine E-Mail-Adresse hinterlegt.', 'recipient_email');
     }
 
     // ─── Get site settings ─────────────────────────────────────────
@@ -77,9 +95,17 @@ Deno.serve(async (req) => {
       .limit(1)
       .maybeSingle();
 
+    const issuer = issuerProfile(settings);
+    const missing = missingIssuerFields(issuer);
+    if (missing.length > 0) {
+      throw new HttpError(
+        422,
+        `Rechnung nicht versendet: In Admin → Einstellungen → Rechnungen fehlt ${missing.join(' und ')}.`,
+        'issuer_incomplete',
+      );
+    }
+
     const siteName = settings?.site_name || BRAND.name;
-    const bankIban = settings?.bank_iban || '';
-    const bankBic = settings?.bank_bic || '';
 
     const settingsData = {
       site_name: siteName,
@@ -130,8 +156,10 @@ Deno.serve(async (req) => {
       ${amountDisplay('Rechnungsbetrag', `&euro;${grossFormatted}`)}
 
       ${infoBox('Zahlungsinformationen', `
-        ${bankIban ? detailRow('IBAN', bankIban) : ''}
-        ${bankBic ? detailRow('BIC', bankBic) : ''}
+        ${detailRow('Empf&auml;nger', issuer.accountHolder)}
+        ${detailRow('IBAN', formatIban(issuer.iban))}
+        ${issuer.bic ? detailRow('BIC', issuer.bic) : ''}
+        ${issuer.bankName ? detailRow('Bank', issuer.bankName) : ''}
         ${detailRow('Verwendungszweck', invoice.invoice_number)}
       `)}
 
@@ -146,42 +174,22 @@ Deno.serve(async (req) => {
       : `Rechnung ${invoice.invoice_number} - ${siteName}`;
     const emailHtml = buildEmailLayout(settingsData, emailTitle, content);
 
-    // ─── Download PDF for attachment (if available) ────────────────
-    let attachments: any[] | undefined = undefined;
-
-    // Priority 1: Use provided pdfBase64 from generate-invoice-pdf
-    if (providedPdfBase64) {
-      console.log('Using provided pdfBase64 for attachment');
-      attachments = [{
-        filename: `Rechnung_${invoice.invoice_number}.pdf`,
-        content: providedPdfBase64,
-        type: 'application/pdf',
-      }];
+    // ─── PDF-Anhang: Die Rechnung ist das PDF, ohne Anhang kein Versand ──
+    let pdfBase64 = providedPdfBase64;
+    if (!pdfBase64) {
+      // Pfadregel identisch zu generate-invoice-pdf und src/lib/invoiceStorage.ts
+      const storagePath = `${invoice.dealer_id}/${invoice.invoice_number.replace(/[^a-zA-Z0-9-]/g, '_')}.pdf`;
+      const { data: stored } = await supabaseAdmin.storage.from('invoices').download(storagePath);
+      if (stored) pdfBase64 = toBase64(new Uint8Array(await stored.arrayBuffer()));
     }
-    // Priority 2: Download PDF from storage URL
-    else if (invoice.pdf_url) {
-      try {
-        const pdfResponse = await fetch(invoice.pdf_url);
-        if (pdfResponse.ok) {
-          const pdfArrayBuffer = await pdfResponse.arrayBuffer();
-          const pdfBase64 = btoa(
-            String.fromCharCode(...new Uint8Array(pdfArrayBuffer))
-          );
-          
-          const fileExtension = invoice.pdf_url.includes('.pdf') ? 'pdf' : 'html';
-          const mimeType = fileExtension === 'pdf' ? 'application/pdf' : 'text/html';
-          
-          attachments = [{
-            filename: `Rechnung_${invoice.invoice_number}.${fileExtension}`,
-            content: pdfBase64,
-            type: mimeType,
-          }];
-        }
-      } catch (attachError) {
-        console.error('Error downloading PDF for attachment:', attachError);
-        // Continue without attachment - the download link is still in the email
-      }
+    if (!pdfBase64) {
+      throw new HttpError(409, 'Das Rechnungs-PDF fehlt. Bitte das PDF erzeugen und erneut senden.', 'pdf_missing');
     }
+    const attachments = [{
+      filename: `Rechnung_${invoice.invoice_number}.pdf`,
+      content: pdfBase64,
+      type: 'application/pdf',
+    }];
 
     // ─── Send email via Resend ─────────────────────────────────────
     const resendApiKey = Deno.env.get('RESEND_API_KEY');
@@ -237,18 +245,18 @@ Deno.serve(async (req) => {
       console.error('Failed to log email in admin_emails:', logErr);
     }
 
-    // ─── Update invoice: mark as sent ──────────────────────────────
-    const { error: updateError } = await supabaseAdmin
-      .from('invoices')
-      .update({ 
-        sent_at: new Date().toISOString(),
-        status: 'sent',
-        updated_at: new Date().toISOString(),
-      })
-      .eq('id', invoiceId);
+    // ─── Erster Versand stellt die Rechnung aus; Kopien ändern nichts ──
+    if (invoice.status === 'draft') {
+      const now = new Date().toISOString();
+      const { error: updateError } = await supabaseAdmin
+        .from('invoices')
+        .update({ sent_at: now, status: 'sent', updated_at: now })
+        .eq('id', invoiceId)
+        .eq('status', 'draft');
 
-    if (updateError) {
-      console.error('Error updating invoice sent_at:', updateError);
+      if (updateError) {
+        console.error('Error updating invoice sent_at:', updateError);
+      }
     }
 
     console.log(`Invoice email sent successfully: ${invoice.invoice_number} → ${invoice.dealer.email}`);
@@ -264,12 +272,16 @@ Deno.serve(async (req) => {
       { headers: { ...getCorsHeaders(req), 'Content-Type': 'application/json' } }
     );
 
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Error in send-invoice-email:', error);
+    const known = error instanceof HttpError;
     return new Response(
-      JSON.stringify({ error: error.message }),
+      JSON.stringify({
+        error: known ? error.message : 'Die Rechnung konnte nicht versendet werden.',
+        code: known ? error.code : 'send_failed',
+      }),
       {
-        status: 400,
+        status: known ? error.status : 500,
         headers: { ...getCorsHeaders(req), 'Content-Type': 'application/json' },
       }
     );

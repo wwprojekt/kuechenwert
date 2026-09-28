@@ -30,7 +30,7 @@ type ErrorCategory =
 
 interface SupabaseLike {
   from: (table: string) => {
-    insert: (rows: Record<string, unknown>) => Promise<{ error: unknown }>;
+    insert: (rows: Record<string, unknown>) => PromiseLike<{ error: unknown }>;
   };
 }
 

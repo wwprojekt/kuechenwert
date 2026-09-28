@@ -2,6 +2,7 @@ import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.100.1';
 import { buildEmailLayout, paragraph, greeting, button, infoBox, detailRow, amountDisplay, customerBadge } from '../_shared/email-builder.ts';
 import { checkServiceRoleOrAdmin } from '../_shared/auth.ts';
+import { describeInvoice } from '../_shared/invoice-labels.ts';
 
 const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY");
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
@@ -57,13 +58,12 @@ const handler = async (req: Request): Promise<Response> => {
     const { data: invoices, error: fetchError } = await supabase
       .from('invoices')
       .select(`
-        id, invoice_number, gross_amount, due_date, dealer_id, invoice_type, payment_reminder_sent,
-        auctions:auction_id (
-          kitchens:kitchen_id (manufacturer, model, year)
-        )
+        id, invoice_number, gross_amount, due_date, dealer_id, invoice_type, penalty_reason, payment_reminder_sent,
+        lead:leads(postal_code, city)
       `)
       .in('payment_status', ['pending', 'partial'])
-      .neq('status', 'cancelled')
+      // Entwürfe wurden nie versendet und dürfen nicht angemahnt werden.
+      .not('status', 'in', '(cancelled,draft)')
       .lte('due_date', threeDaysAgo.toISOString().split('T')[0])
       .neq('payment_reminder_sent', true);
 
@@ -80,8 +80,8 @@ const handler = async (req: Request): Promise<Response> => {
     // Fetch site settings
     const { data: settings } = await supabase.from('site_settings').select('*').single();
     const settingsData = settings || {
-      site_name: 'KÃ¼chenWert',
-      site_description: 'Deutschlands führende Wohnmobil-Handelsplattform',
+      site_name: 'KüchenWert',
+      site_description: 'Küchenangebote vergleichen',
       contact_email: 'info@kuechenwert24.de',
       support_phone: '+49 511 51532476',
     };
@@ -115,11 +115,10 @@ const handler = async (req: Request): Promise<Response> => {
         // Subject line and headline differ slightly: a private seller hasn't
         // bought anything from us, so calling it a "Rechnung" with vehicle
         // context is misleading.
-        const refLabel = isPenalty ? 'Vertragsstrafe' : 'Fahrzeug';
-        const kitchen = isPenalty ? null : (invoice.auctions as any)?.kitchens;
-        const refValue = isPenalty
-          ? 'Vertragsstrafe gem&auml;&szlig; AGB'
-          : (kitchen ? `${kitchen.manufacturer} ${kitchen.model} (${kitchen.year})` : 'Vermittlungsprovision');
+        const lead = Array.isArray(invoice.lead) ? invoice.lead[0] : invoice.lead;
+        const labels = describeInvoice({ ...invoice, lead });
+        const refLabel = labels.referenceTitle;
+        const refValue = `${labels.serviceLabel}: ${labels.referenceValue}`;
 
         const dueDate = new Date(invoice.due_date).toLocaleDateString('de-DE', {
           year: 'numeric', month: 'long', day: 'numeric',

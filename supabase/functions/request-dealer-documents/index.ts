@@ -50,8 +50,8 @@ const handler = async (req: Request): Promise<Response> => {
       .single();
 
     const settingsData = settings || {
-      site_name: 'KÃ¼chenWert',
-      site_description: 'Deutschlands führende Wohnmobil-Handelsplattform',
+      site_name: 'KüchenWert',
+      site_description: 'Küchenangebote vergleichen',
       contact_email: 'info@kuechenwert24.de',
       support_phone: '+49 511 51532476',
     };
@@ -176,7 +176,7 @@ const handler = async (req: Request): Promise<Response> => {
 
   } catch (error) {
     console.error('Error in request-dealer-documents:', error);
-    return new Response(JSON.stringify({ error: error.message }), {
+    return new Response(JSON.stringify({ error: 'Die Dokument-Anforderung konnte nicht gesendet werden.' }), {
       status: 500,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });

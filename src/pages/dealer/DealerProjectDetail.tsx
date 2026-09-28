@@ -24,6 +24,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { useAuth } from "@/contexts/AuthContext";
 import { errorMessage } from "@/features/marketplace/api-client";
 import { buildBriefing, buildFloorPlanDxf, downloadFile } from "@/features/marketplace/briefing-export";
+import { ContactComplaintCard } from "@/features/marketplace/components/ContactComplaintCard";
 import { DealerOrderPanel } from "@/features/marketplace/components/DealerOrderPanel";
 import { projectTitle, projectValue, timeLeft } from "@/features/marketplace/components/DealerProjectCard";
 import { ProjectAnswers } from "@/features/marketplace/components/ProjectAnswers";
@@ -395,6 +396,8 @@ export default function DealerProjectDetail() {
             </div>
           )}
 
+          {d.contact_unlocked && !d.awarded_to_me && <ContactComplaintCard auctionId={d.auction_id} />}
+
           {d.status === "active" ? (
             <div className="rounded-2xl border bg-card p-5">
               <h2 className="mb-4 font-bold">{d.my_offer?.status === "active" ? "Ihr Angebot" : "Angebot abgeben"}</h2>
@@ -426,8 +429,9 @@ export default function DealerProjectDetail() {
           <AlertDialogHeader>
             <AlertDialogTitle>Kontakt kostenpflichtig freischalten?</AlertDialogTitle>
             <AlertDialogDescription>
-              Sie erhalten sofort Name, Telefon und E-Mail des Kunden. Wir stellen {euro((d.contact_price_cents ?? 0) / 100)} zzgl. MwSt. in Rechnung. Der Kunde wird
-              informiert, dass Ihr Studio sich meldet.
+              Sie erhalten sofort Name und E-Mail-Adresse des Kunden, die Telefonnummer, sofern der Kunde Anrufe von Studios erlaubt hat. Wir stellen{" "}
+              {euro((d.contact_price_cents ?? 0) / 100)} zzgl. MwSt. in Rechnung. Der Kunde wird informiert, dass Ihr Studio sich meldet. Fehlerhafte Kontakte können
+              Sie innerhalb von 14 Tagen reklamieren.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

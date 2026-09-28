@@ -586,10 +586,99 @@ async function onInvoiceIssue(ctx: Ctx, p: Record<string, unknown>) {
 
 async function onProjectCancelled(ctx: Ctx, p: Record<string, unknown>) {
   const auctionId = String(p.auction_id);
+  const message = p.by === "admin" ? `${BRAND.name} hat die Ausschreibung beendet.` : "Der Kunde hat das Projekt beendet.";
   const { data: bidders } = await ctx.sb.from("lead_bids").select("dealer_id").eq("auction_id", auctionId);
   for (const b of bidders ?? []) {
-    await ctx.notifyDealer(b.dealer_id, "project_cancelled", "Projekt beendet", "Der Kunde hat das Projekt beendet.", auctionId);
+    await ctx.notifyDealer(b.dealer_id, "project_cancelled", "Projekt beendet", message, auctionId);
   }
+}
+
+const COMPLAINT_REASONS: Record<string, string> = {
+  nicht_erreichbar: "Kunde nicht erreichbar",
+  falsche_kontaktdaten: "Kontaktdaten falsch",
+  kein_kuechenprojekt: "Kein echtes Küchenprojekt",
+  doppelt: "Kontakt doppelt gekauft",
+  sonstiges: "Sonstiges",
+};
+
+type Complaint = {
+  id: string;
+  auction_id: string;
+  lead_id: string;
+  dealer_id: string;
+  reason: string;
+  note: string | null;
+  status: "offen" | "anerkannt" | "abgelehnt";
+  decision_note: string | null;
+};
+
+async function loadComplaint(ctx: Ctx, id: string): Promise<Complaint> {
+  const { data, error } = await ctx.sb
+    .from("kw_contact_complaints")
+    .select("id, auction_id, lead_id, dealer_id, reason, note, status, decision_note")
+    .eq("id", id)
+    .single();
+  if (error) throw error;
+  return data as Complaint;
+}
+
+async function onComplaintFiled(ctx: Ctx, p: Record<string, unknown>) {
+  const complaint = await loadComplaint(ctx, String(p.complaint_id));
+  const dealer = await ctx.dealer(complaint.dealer_id);
+  const lead = await ctx.lead(complaint.lead_id);
+  const details =
+    detailRow("Grund", escapeHtml(COMPLAINT_REASONS[complaint.reason] ?? complaint.reason)) +
+    (complaint.note ? detailRow("Beschreibung", escapeHtml(complaint.note)) : "");
+  await ctx.send({
+    to: ctx.adminAddress(),
+    subject: `Reklamation: ${dealerName(dealer)} · PLZ ${lead.postal_code}`,
+    html: ctx.layout(
+      "Neue Reklamation",
+      paragraph(`${escapeHtml(dealerName(dealer))} reklamiert den gekauften Kontakt zum Küchenprojekt in PLZ ${escapeHtml(lead.postal_code)}.`) +
+        infoBox("Reklamation", details, "warning") +
+        paragraph("Bitte innerhalb von 5 Werktagen im Admin unter Anfragen → Ausschreibung entscheiden. Bei Anerkennung wird die Rechnung storniert.") +
+        button("Anfragen öffnen", `${BRAND.baseUrl}/admin/leads`),
+    ),
+    type: "complaint_admin",
+  });
+  await ctx.bestEffort("complaint dealer notification", () =>
+    ctx.notifyDealer(dealer.id, "complaint_filed", "Reklamation eingegangen", "Wir prüfen Ihre Reklamation und melden uns innerhalb von 5 Werktagen.", complaint.auction_id),
+  );
+}
+
+async function onComplaintDecided(ctx: Ctx, p: Record<string, unknown>) {
+  const complaint = await loadComplaint(ctx, String(p.complaint_id));
+  if (complaint.status === "offen") return;
+  const dealer = await ctx.dealer(complaint.dealer_id);
+  const accepted = complaint.status === "anerkannt";
+  if (dealer.email) {
+    const content = [
+      greeting(dealerName(dealer)),
+      paragraph(
+        accepted
+          ? "wir haben Ihre Reklamation geprüft und erkennen sie an. Die Rechnung für diese Kontaktfreischaltung wird storniert; bereits gezahlte Beträge erstatten wir Ihnen."
+          : "wir haben Ihre Reklamation geprüft, können sie aber leider nicht anerkennen.",
+      ),
+      complaint.decision_note ? infoBox(accepted ? "Hinweis" : "Begründung", paragraph(escapeHtml(complaint.decision_note))) : "",
+      button("Projekt im Studio-Portal", `${BRAND.baseUrl}/dashboard/projekte/${complaint.auction_id}`),
+    ].join("");
+    await ctx.send({
+      to: dealer.email,
+      subject: accepted ? "Reklamation anerkannt" : "Ihre Reklamation wurde geprüft",
+      html: ctx.layout(accepted ? "Reklamation anerkannt" : "Ihre Reklamation", content),
+      type: "complaint_decided",
+      recipientId: dealer.id,
+    });
+  }
+  await ctx.bestEffort("complaint decision notification", () =>
+    ctx.notifyDealer(
+      dealer.id,
+      "complaint_decided",
+      accepted ? "Reklamation anerkannt" : "Reklamation abgelehnt",
+      accepted ? "Die Rechnung für den Kontakt wird storniert." : "Die Begründung finden Sie in der E-Mail.",
+      complaint.auction_id,
+    ),
+  );
 }
 
 const HANDLERS: Record<string, (ctx: Ctx, payload: Record<string, unknown>) => Promise<void>> = {
@@ -602,6 +691,8 @@ const HANDLERS: Record<string, (ctx: Ctx, payload: Record<string, unknown>) => P
   tender_ended: onTenderEnded,
   project_cancelled: onProjectCancelled,
   invoice_issue: onInvoiceIssue,
+  complaint_filed: onComplaintFiled,
+  complaint_decided: onComplaintDecided,
 };
 
 function authorized(req: Request): boolean {

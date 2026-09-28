@@ -1,6 +1,7 @@
 import { supabase } from "@/integrations/supabase/client";
-import { ensureValidRLSSession } from "@/lib/sessionGuard";
+import { ensureValidRLSSession, invokeWithAuth } from "@/lib/sessionGuard";
 import { ApiError } from "./api-client";
+import type { ComplaintReason } from "./dealer-api";
 
 export type AdminTenderStatus = "draft" | "active" | "completed" | "awarded" | "expired" | "cancelled";
 
@@ -121,4 +122,66 @@ export async function publishTenderAsAdmin(auctionId: string): Promise<void> {
   await requireSession();
   const { error } = await supabase.rpc("kw_admin_publish_tender", { p_auction_id: auctionId });
   if (error) fail(error);
+}
+
+export type TenderAction = "extend" | "end_now" | "cancel";
+
+export async function runTenderAction(auctionId: string, action: TenderAction, opts: { hours?: number; reason?: string } = {}): Promise<void> {
+  await requireSession();
+  const { error } = await supabase.rpc("kw_admin_tender_action", {
+    p_auction_id: auctionId,
+    p_action: action,
+    p_hours: opts.hours,
+    p_reason: opts.reason,
+  });
+  if (error) fail(error);
+}
+
+export interface AdminComplaint {
+  id: string;
+  dealer_id: string;
+  dealer_name: string;
+  reason: ComplaintReason;
+  note: string | null;
+  status: "offen" | "anerkannt" | "abgelehnt";
+  decision_note: string | null;
+  created_at: string;
+  decided_at: string | null;
+  invoice_id: string | null;
+  invoice_number: string | null;
+  invoice_status: string | null;
+  invoice_payment_status: string | null;
+}
+
+export async function fetchTenderComplaints(auctionId: string): Promise<AdminComplaint[]> {
+  await requireSession();
+  const { data, error } = await supabase.rpc("kw_admin_tender_complaints", { p_auction_id: auctionId });
+  if (error) fail(error);
+  return (data ?? []) as AdminComplaint[];
+}
+
+export interface ComplaintDecision {
+  invoice_id: string | null;
+  invoice_cancellable: boolean;
+  invoice_paid: boolean;
+}
+
+export async function decideComplaint(complaintId: string, accept: boolean, note: string | null): Promise<ComplaintDecision> {
+  await requireSession();
+  const { data, error } = await supabase.rpc("kw_admin_decide_complaint", {
+    p_complaint_id: complaintId,
+    p_accept: accept,
+    p_note: note ?? undefined,
+  });
+  if (error) fail(error);
+  return data as unknown as ComplaintDecision;
+}
+
+/** Storniert die Rechnung einer anerkannten Reklamation (Storno-Mail nur bei bereits versendeter Rechnung). */
+export async function cancelComplaintInvoice(invoiceId: string): Promise<void> {
+  const { data, error } = await invokeWithAuth("cancel-invoice", {
+    body: { invoiceId, reason: "Reklamation des Kontakts anerkannt", sendEmail: true },
+  });
+  const message = (data as { error?: string } | null)?.error;
+  if (error || message) throw new ApiError(message ?? "Die Rechnung konnte nicht storniert werden.", 409);
 }

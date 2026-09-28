@@ -8,9 +8,11 @@ import { errorMessage } from "@/features/marketplace/api-client";
 import { DealerProjectCard } from "@/features/marketplace/components/DealerProjectCard";
 import { fetchDealerProjects, fetchMarketProfile, signPlannerMedia, type DealerScope } from "@/features/marketplace/dealer-api";
 
+// Beide Börsen-Tabs zeigen nur Projekte im eigenen Einzugsgebiet (serverseitig
+// erzwungen); "Passend für mich" filtert zusätzlich nach dem Mindestauftragswert.
 const TABS: Array<{ id: DealerScope; label: string; empty: string }> = [
-  { id: "open", label: "In meiner Region", empty: "Aktuell gibt es keine offenen Projekte in Ihrem Einzugsgebiet." },
-  { id: "all", label: "Alle offenen Projekte", empty: "Aktuell sind keine Projekte ausgeschrieben." },
+  { id: "open", label: "Passend für mich", empty: "Aktuell gibt es in Ihrem Einzugsgebiet keine offenen Projekte ab Ihrem Mindestauftragswert." },
+  { id: "all", label: "Alle in meiner Region", empty: "Aktuell sind in Ihrem Einzugsgebiet keine Projekte ausgeschrieben." },
   { id: "mine", label: "Meine Angebote & Kunden", empty: "Sie haben noch kein Angebot abgegeben und keinen Kontakt freigeschaltet." },
 ];
 

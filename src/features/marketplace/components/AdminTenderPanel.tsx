@@ -6,6 +6,8 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { errorMessage } from "../api-client";
+import { AdminComplaintsSection } from "./AdminComplaintsSection";
+import { AdminTenderActions } from "./AdminTenderActions";
 import {
   TENDER_STATUS_LABELS,
   fetchAdminTender,
@@ -147,9 +149,12 @@ export function AdminTenderPanel({ leadId, funnelType }: { leadId: string; funne
                 </Button>
               </div>
             )}
+            <AdminTenderActions tender={t} onChanged={refresh} />
           </div>
         )}
       </section>
+
+      {t && <AdminComplaintsSection auctionId={t.id} />}
 
       <section className="rounded-lg border p-4">
         <h3 className="mb-3 text-sm font-semibold">Hochgeladene Dateien</h3>

@@ -100,6 +100,7 @@ const FINDINGS: Array<{ key: string; text: (n: number) => string; link: string }
   { key: "http_failed", text: (n) => `${n} zeitgesteuerte Function-Aufrufe endeten in den letzten 2 Stunden mit Fehler oder Zeitüberschreitung.`, link: "/admin/cron-health" },
   { key: "leads_waiting", text: (n) => `${n} Küchenanfragen warten seit über 24 Stunden auf Bearbeitung.`, link: "/admin/leads" },
   { key: "invoices_blocked", text: (n) => `${n} Rechnungen hängen seit über einem Tag als Entwurf (z. B. fehlende Bankverbindung in den Einstellungen).`, link: "/admin/financials" },
+  { key: "complaints_open", text: (n) => `${n} Reklamationen von Küchenstudios sind seit über 5 Tagen offen.`, link: "/admin/leads" },
   { key: "errors_critical", text: (n) => `${n} kritische Fehler in der letzten Stunde.`, link: "/admin/error-logs" },
 ];
 

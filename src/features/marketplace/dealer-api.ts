@@ -188,6 +188,50 @@ export async function signPlannerMedia(paths: string[]): Promise<Record<string, 
   return out;
 }
 
+export type ComplaintReason = "nicht_erreichbar" | "falsche_kontaktdaten" | "kein_kuechenprojekt" | "doppelt" | "sonstiges";
+
+export const COMPLAINT_REASON_LABELS: Record<ComplaintReason, string> = {
+  nicht_erreichbar: "Kunde trotz mehrerer Versuche nicht erreichbar",
+  falsche_kontaktdaten: "Telefonnummer oder E-Mail-Adresse falsch",
+  kein_kuechenprojekt: "Kein echtes Küchenprojekt",
+  doppelt: "Kontakt doppelt gekauft",
+  sonstiges: "Sonstiges",
+};
+
+export interface ComplaintStatus {
+  purchased_at: string;
+  deadline: string;
+  can_file: boolean;
+  complaint: null | {
+    id: string;
+    reason: ComplaintReason;
+    note: string | null;
+    status: "offen" | "anerkannt" | "abgelehnt";
+    decision_note: string | null;
+    created_at: string;
+    decided_at: string | null;
+  };
+}
+
+/** Reklamationsstand zur eigenen Kontaktfreischaltung; `null`, wenn kein Kontakt gekauft wurde. */
+export async function fetchComplaintStatus(auctionId: string): Promise<ComplaintStatus | null> {
+  await guard();
+  const { data, error } = await supabase.rpc("kw_dealer_complaint_status", { p_auction_id: auctionId });
+  if (error) throw toApiError(error);
+  return (data ?? null) as unknown as ComplaintStatus | null;
+}
+
+export async function fileComplaint(auctionId: string, reason: ComplaintReason, note: string | null): Promise<ComplaintStatus> {
+  await guard();
+  const { data, error } = await supabase.rpc("kw_dealer_file_complaint", {
+    p_auction_id: auctionId,
+    p_reason: reason,
+    p_note: note ?? undefined,
+  });
+  if (error) throw toApiError(error);
+  return data as unknown as ComplaintStatus;
+}
+
 export async function fetchMarketProfile(dealerId: string): Promise<MarketProfile | null> {
   await guard();
   const { data, error } = await supabase.from("kw_dealer_market_profiles").select("*").eq("dealer_id", dealerId).maybeSingle();

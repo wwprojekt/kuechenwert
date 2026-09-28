@@ -1393,6 +1393,7 @@ export type Database = {
       contact_messages: {
         Row: {
           admin_response: string | null
+          bot_check: string | null
           created_at: string | null
           deleted_at: string | null
           email: string
@@ -1404,10 +1405,12 @@ export type Database = {
           responded_by: string | null
           status: string
           subject: string
+          submission_id: string | null
           updated_at: string | null
         }
         Insert: {
           admin_response?: string | null
+          bot_check?: string | null
           created_at?: string | null
           deleted_at?: string | null
           email: string
@@ -1419,10 +1422,12 @@ export type Database = {
           responded_by?: string | null
           status?: string
           subject: string
+          submission_id?: string | null
           updated_at?: string | null
         }
         Update: {
           admin_response?: string | null
+          bot_check?: string | null
           created_at?: string | null
           deleted_at?: string | null
           email?: string
@@ -1434,6 +1439,7 @@ export type Database = {
           responded_by?: string | null
           status?: string
           subject?: string
+          submission_id?: string | null
           updated_at?: string | null
         }
         Relationships: []
@@ -2516,6 +2522,7 @@ export type Database = {
           reverse_charge: boolean
           sent_at: string | null
           sepa_mandate_reference: string | null
+          service_date: string | null
           status: string
           tax_amount: number
           tax_rate: number
@@ -2551,6 +2558,7 @@ export type Database = {
           reverse_charge?: boolean
           sent_at?: string | null
           sepa_mandate_reference?: string | null
+          service_date?: string | null
           status?: string
           tax_amount: number
           tax_rate?: number
@@ -2586,6 +2594,7 @@ export type Database = {
           reverse_charge?: boolean
           sent_at?: string | null
           sepa_mandate_reference?: string | null
+          service_date?: string | null
           status?: string
           tax_amount?: number
           tax_rate?: number
@@ -3180,6 +3189,97 @@ export type Database = {
           },
         ]
       }
+      kw_contact_complaints: {
+        Row: {
+          auction_id: string | null
+          created_at: string
+          dealer_id: string
+          decided_at: string | null
+          decided_by: string | null
+          decision_note: string | null
+          id: string
+          invoice_id: string | null
+          lead_id: string
+          match_id: string
+          note: string | null
+          reason: string
+          status: string
+        }
+        Insert: {
+          auction_id?: string | null
+          created_at?: string
+          dealer_id: string
+          decided_at?: string | null
+          decided_by?: string | null
+          decision_note?: string | null
+          id?: string
+          invoice_id?: string | null
+          lead_id: string
+          match_id: string
+          note?: string | null
+          reason: string
+          status?: string
+        }
+        Update: {
+          auction_id?: string | null
+          created_at?: string
+          dealer_id?: string
+          decided_at?: string | null
+          decided_by?: string | null
+          decision_note?: string | null
+          id?: string
+          invoice_id?: string | null
+          lead_id?: string
+          match_id?: string
+          note?: string | null
+          reason?: string
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "kw_contact_complaints_auction_id_fkey"
+            columns: ["auction_id"]
+            isOneToOne: false
+            referencedRelation: "lead_auctions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "kw_contact_complaints_dealer_id_fkey"
+            columns: ["dealer_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "kw_contact_complaints_decided_by_fkey"
+            columns: ["decided_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "kw_contact_complaints_invoice_id_fkey"
+            columns: ["invoice_id"]
+            isOneToOne: false
+            referencedRelation: "invoices"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "kw_contact_complaints_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "kw_contact_complaints_match_id_fkey"
+            columns: ["match_id"]
+            isOneToOne: true
+            referencedRelation: "lead_match_candidates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       kw_dealer_market_profiles: {
         Row: {
           dealer_id: string
@@ -3220,6 +3320,7 @@ export type Database = {
       }
       kw_marketplace_settings: {
         Row: {
+          auto_issue_invoices: boolean
           auto_publish_funnel_a: boolean
           auto_publish_funnel_c: boolean
           bid_visibility: string
@@ -3234,6 +3335,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          auto_issue_invoices?: boolean
           auto_publish_funnel_a?: boolean
           auto_publish_funnel_c?: boolean
           bid_visibility?: string
@@ -3248,6 +3350,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          auto_issue_invoices?: boolean
           auto_publish_funnel_a?: boolean
           auto_publish_funnel_c?: boolean
           bid_visibility?: string
@@ -3263,10 +3366,162 @@ export type Database = {
         }
         Relationships: []
       }
+      kw_order_events: {
+        Row: {
+          actor: string
+          actor_id: string | null
+          created_at: string
+          event: string
+          event_at: string | null
+          id: number
+          note: string | null
+          order_id: string
+          value_eur: number | null
+        }
+        Insert: {
+          actor: string
+          actor_id?: string | null
+          created_at?: string
+          event: string
+          event_at?: string | null
+          id?: never
+          note?: string | null
+          order_id: string
+          value_eur?: number | null
+        }
+        Update: {
+          actor?: string
+          actor_id?: string | null
+          created_at?: string
+          event?: string
+          event_at?: string | null
+          id?: never
+          note?: string | null
+          order_id?: string
+          value_eur?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "kw_order_events_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "kw_orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      kw_orders: {
+        Row: {
+          auction_id: string
+          bid_id: string
+          cancel_note: string | null
+          cancel_reason: string | null
+          cancelled_at: string | null
+          completed_at: string | null
+          completion_check_sent_at: string | null
+          consumer_confirmed_at: string | null
+          contacted_at: string | null
+          contract_signed_at: string | null
+          contract_value_eur: number | null
+          created_at: string
+          dealer_id: string
+          escalated_at: string | null
+          id: string
+          installation_at: string | null
+          lead_id: string
+          measurement_at: string | null
+          offer_price_eur: number
+          problem_reported_at: string | null
+          reminder_sent_at: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          auction_id: string
+          bid_id: string
+          cancel_note?: string | null
+          cancel_reason?: string | null
+          cancelled_at?: string | null
+          completed_at?: string | null
+          completion_check_sent_at?: string | null
+          consumer_confirmed_at?: string | null
+          contacted_at?: string | null
+          contract_signed_at?: string | null
+          contract_value_eur?: number | null
+          created_at?: string
+          dealer_id: string
+          escalated_at?: string | null
+          id?: string
+          installation_at?: string | null
+          lead_id: string
+          measurement_at?: string | null
+          offer_price_eur: number
+          problem_reported_at?: string | null
+          reminder_sent_at?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          auction_id?: string
+          bid_id?: string
+          cancel_note?: string | null
+          cancel_reason?: string | null
+          cancelled_at?: string | null
+          completed_at?: string | null
+          completion_check_sent_at?: string | null
+          consumer_confirmed_at?: string | null
+          contacted_at?: string | null
+          contract_signed_at?: string | null
+          contract_value_eur?: number | null
+          created_at?: string
+          dealer_id?: string
+          escalated_at?: string | null
+          id?: string
+          installation_at?: string | null
+          lead_id?: string
+          measurement_at?: string | null
+          offer_price_eur?: number
+          problem_reported_at?: string | null
+          reminder_sent_at?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "kw_orders_auction_id_fkey"
+            columns: ["auction_id"]
+            isOneToOne: true
+            referencedRelation: "lead_auctions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "kw_orders_bid_id_fkey"
+            columns: ["bid_id"]
+            isOneToOne: false
+            referencedRelation: "lead_bids"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "kw_orders_dealer_id_fkey"
+            columns: ["dealer_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "kw_orders_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       kw_outbox: {
         Row: {
           attempts: number
           available_at: string
+          channel: string
           created_at: string
           event_type: string
           id: number
@@ -3277,6 +3532,7 @@ export type Database = {
         Insert: {
           attempts?: number
           available_at?: string
+          channel?: string
           created_at?: string
           event_type: string
           id?: never
@@ -3287,6 +3543,7 @@ export type Database = {
         Update: {
           attempts?: number
           available_at?: string
+          channel?: string
           created_at?: string
           event_type?: string
           id?: never
@@ -3317,6 +3574,7 @@ export type Database = {
       lead_access_tokens: {
         Row: {
           created_at: string
+          expires_at: string
           id: string
           last_used_at: string | null
           lead_id: string
@@ -3325,6 +3583,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          expires_at?: string
           id?: string
           last_used_at?: string | null
           lead_id: string
@@ -3333,6 +3592,7 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          expires_at?: string
           id?: string
           last_used_at?: string | null
           lead_id?: string
@@ -3984,6 +4244,35 @@ export type Database = {
           },
         ]
       }
+      lead_upload_tokens: {
+        Row: {
+          created_at: string
+          expires_at: string
+          lead_id: string
+          token_hash: string
+        }
+        Insert: {
+          created_at?: string
+          expires_at: string
+          lead_id: string
+          token_hash: string
+        }
+        Update: {
+          created_at?: string
+          expires_at?: string
+          lead_id?: string
+          token_hash?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lead_upload_tokens_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       lead_views: {
         Row: {
           dealer_id: string
@@ -4023,6 +4312,7 @@ export type Database = {
       leads: {
         Row: {
           address_line: string | null
+          anonymized_at: string | null
           bot_check: string | null
           budget_midpoint: number | null
           city: string | null
@@ -4077,6 +4367,7 @@ export type Database = {
         }
         Insert: {
           address_line?: string | null
+          anonymized_at?: string | null
           bot_check?: string | null
           budget_midpoint?: number | null
           city?: string | null
@@ -4131,6 +4422,7 @@ export type Database = {
         }
         Update: {
           address_line?: string | null
+          anonymized_at?: string | null
           bot_check?: string | null
           budget_midpoint?: number | null
           city?: string | null
@@ -5696,6 +5988,33 @@ export type Database = {
         }
         Relationships: []
       }
+      user_consent_events: {
+        Row: {
+          created_at: string
+          granted: boolean
+          id: number
+          purpose: string
+          source: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          granted: boolean
+          id?: never
+          purpose: string
+          source: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          granted?: boolean
+          id?: never
+          purpose?: string
+          source?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       user_favorites: {
         Row: {
           alert_enabled: boolean | null
@@ -6600,14 +6919,53 @@ export type Database = {
         Returns: boolean
       }
       hash_review_ip: { Args: { p_ip: string }; Returns: string }
+      kw_admin_decide_complaint: {
+        Args: { p_accept: boolean; p_complaint_id: string; p_note?: string }
+        Returns: Json
+      }
       kw_admin_open_tender: {
         Args: { p_lead_id: string; p_notify_customer?: boolean }
         Returns: string
       }
       kw_admin_publish_tender: { Args: { p_auction_id: string }; Returns: Json }
+      kw_admin_tender_action: {
+        Args: {
+          p_action: string
+          p_auction_id: string
+          p_hours?: number
+          p_reason?: string
+        }
+        Returns: Json
+      }
+      kw_admin_tender_complaints: {
+        Args: { p_auction_id: string }
+        Returns: {
+          created_at: string
+          dealer_id: string
+          dealer_name: string
+          decided_at: string
+          decision_note: string
+          id: string
+          invoice_id: string
+          invoice_number: string
+          invoice_payment_status: string
+          invoice_status: string
+          note: string
+          reason: string
+          status: string
+        }[]
+      }
+      kw_anonymize_lead: {
+        Args: { p_lead_id: string; p_source: string }
+        Returns: Json
+      }
       kw_can_view_planner_media: {
         Args: { p_object_name: string }
         Returns: boolean
+      }
+      kw_clip_json: {
+        Args: { p_fallback: Json; p_max_bytes: number; p_value: Json }
+        Returns: Json
       }
       kw_create_market_invoice: {
         Args: {
@@ -6619,6 +6977,30 @@ export type Database = {
           p_type: string
         }
         Returns: string
+      }
+      kw_dealer_complaint_status: {
+        Args: { p_auction_id: string }
+        Returns: Json
+      }
+      kw_dealer_file_complaint: {
+        Args: { p_auction_id: string; p_note?: string; p_reason: string }
+        Returns: Json
+      }
+      kw_dealer_in_area: {
+        Args: { p_postal_code: string; p_uid: string }
+        Returns: boolean
+      }
+      kw_dealer_order: { Args: { p_auction_id: string }; Returns: Json }
+      kw_dealer_order_update: {
+        Args: {
+          p_at?: string
+          p_auction_id: string
+          p_note?: string
+          p_reason?: string
+          p_step: string
+          p_value_eur?: number
+        }
+        Returns: Json
       }
       kw_dealer_origin: {
         Args: { p_uid: string }
@@ -6635,18 +7017,6 @@ export type Database = {
           p_message?: string
           p_price_eur: number
           p_valid_until?: string
-        }
-        Returns: Json
-      }
-      kw_dealer_order: { Args: { p_auction_id: string }; Returns: Json }
-      kw_dealer_order_update: {
-        Args: {
-          p_at?: string
-          p_auction_id: string
-          p_note?: string
-          p_reason?: string
-          p_step: string
-          p_value_eur?: number
         }
         Returns: Json
       }
@@ -6686,12 +7056,26 @@ export type Database = {
         Args: { p_auction_id: string }
         Returns: Json
       }
+      kw_delete_planner_sessions: { Args: { p_ids: string[] }; Returns: number }
+      kw_email_unsubscribe: {
+        Args: { p_scope: string; p_user_id: string }
+        Returns: Json
+      }
       kw_enqueue: {
         Args: { p_delay?: string; p_event_type: string; p_payload: Json }
         Returns: undefined
       }
+      kw_enqueue_order: {
+        Args: { p_delay?: string; p_event_type: string; p_payload: Json }
+        Returns: undefined
+      }
+      kw_health_snapshot: { Args: never; Returns: Json }
+      kw_insert_lead_with_consents: {
+        Args: { p_consents: Json; p_lead: Json }
+        Returns: string
+      }
       kw_is_active_dealer: { Args: { p_uid: string }; Returns: boolean }
-      kw_lead_accepts_uploads: { Args: { p_lead_id: string }; Returns: boolean }
+      kw_is_dealer_account: { Args: { p_uid: string }; Returns: boolean }
       kw_lead_estimate_eur: {
         Args: {
           p_key: string
@@ -6702,6 +7086,14 @@ export type Database = {
       kw_lead_public_summary: {
         Args: { p_lead: Database["public"]["Tables"]["leads"]["Row"] }
         Returns: Json
+      }
+      kw_lead_share_consent: { Args: { p_lead_id: string }; Returns: boolean }
+      kw_lead_storage_paths: {
+        Args: { p_lead_id: string }
+        Returns: {
+          bucket: string
+          path: string
+        }[]
       }
       kw_lead_tier_score: {
         Args: {
@@ -6729,11 +7121,42 @@ export type Database = {
         }
         Returns: string
       }
+      kw_order_can_confirm: {
+        Args: { p_confirmed_at: string; p_created_at: string; p_status: string }
+        Returns: boolean
+      }
+      kw_order_json: {
+        Args: { p_audience: string; p_order_id: string }
+        Returns: Json
+      }
+      kw_order_outbox_claim: {
+        Args: { p_limit?: number }
+        Returns: {
+          attempts: number
+          available_at: string
+          channel: string
+          created_at: string
+          event_type: string
+          id: number
+          last_error: string | null
+          payload: Json
+          processed_at: string | null
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "kw_outbox"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
+      kw_order_status_rank: { Args: { p_status: string }; Returns: number }
+      kw_order_tick: { Args: never; Returns: Json }
       kw_outbox_claim: {
         Args: { p_limit?: number }
         Returns: {
           attempts: number
           available_at: string
+          channel: string
           created_at: string
           event_type: string
           id: number
@@ -6764,15 +7187,41 @@ export type Database = {
         Args: { p_lead_id: string; p_reason?: string }
         Returns: Json
       }
+      kw_project_erase: { Args: { p_lead_id: string }; Returns: Json }
+      kw_project_export: { Args: { p_lead_id: string }; Returns: Json }
       kw_project_issue_token: {
         Args: { p_lead_id: string; p_token_hash: string }
         Returns: undefined
+      }
+      kw_project_order: { Args: { p_lead_id: string }; Returns: Json }
+      kw_project_order_confirm: { Args: { p_lead_id: string }; Returns: Json }
+      kw_project_order_report: {
+        Args: { p_lead_id: string; p_message: string }
+        Returns: Json
       }
       kw_project_resolve_token: {
         Args: { p_token_hash: string }
         Returns: string
       }
       kw_project_view: { Args: { p_lead_id: string }; Returns: Json }
+      kw_redact_project_links: { Args: { p_value: string }; Returns: string }
+      kw_retention_cleanup: { Args: never; Returns: Json }
+      kw_retention_due_leads: {
+        Args: { p_limit?: number }
+        Returns: {
+          lead_id: string
+          reason: string
+        }[]
+      }
+      kw_retention_stale_planner_files: {
+        Args: { p_limit?: number }
+        Returns: {
+          bucket: string
+          path: string
+          session_id: string
+        }[]
+      }
+      kw_studios_covering: { Args: { p_postal_code: string }; Returns: number }
       kw_tender_recipients: {
         Args: { p_auction_id: string }
         Returns: {
@@ -6783,6 +7232,7 @@ export type Database = {
           notify_email: boolean
         }[]
       }
+      kw_turnstile_secret: { Args: never; Returns: string }
       lift_dealer_restriction: {
         Args: { dealer_id_param: string }
         Returns: boolean
@@ -6797,62 +7247,39 @@ export type Database = {
         }
         Returns: undefined
       }
-      log_error:
-        | {
-            Args: {
-              p_browser?: string
-              p_component_name?: string
-              p_device_type?: string
-              p_error_category?: string
-              p_error_code: string
-              p_error_message: string
-              p_metadata?: Json
-              p_original_error?: string
-              p_page_path?: string
-              p_page_title?: string
-              p_page_url?: string
-              p_severity?: string
-              p_stack_trace?: string
-              p_user_agent?: string
-              p_user_email?: string
-              p_user_id?: string
-              p_user_role?: string
-            }
-            Returns: string
-          }
-        | {
-            Args: {
-              p_app_version?: string
-              p_breadcrumbs?: Json
-              p_browser?: string
-              p_component_name?: string
-              p_connection_type?: string
-              p_device_type?: string
-              p_environment?: string
-              p_error_category?: string
-              p_error_code: string
-              p_error_hash?: string
-              p_error_message: string
-              p_error_source?: string
-              p_http_status?: number
-              p_memory_usage?: Json
-              p_metadata?: Json
-              p_original_error?: string
-              p_page_path?: string
-              p_page_title?: string
-              p_page_url?: string
-              p_request_info?: Json
-              p_screen_resolution?: string
-              p_session_id?: string
-              p_severity?: string
-              p_stack_trace?: string
-              p_user_agent?: string
-              p_user_email?: string
-              p_user_id?: string
-              p_user_role?: string
-            }
-            Returns: string
-          }
+      log_error: {
+        Args: {
+          p_app_version?: string
+          p_breadcrumbs?: Json
+          p_browser?: string
+          p_component_name?: string
+          p_connection_type?: string
+          p_device_type?: string
+          p_environment?: string
+          p_error_category?: string
+          p_error_code: string
+          p_error_hash?: string
+          p_error_message: string
+          p_error_source?: string
+          p_http_status?: number
+          p_memory_usage?: Json
+          p_metadata?: Json
+          p_original_error?: string
+          p_page_path?: string
+          p_page_title?: string
+          p_page_url?: string
+          p_request_info?: Json
+          p_screen_resolution?: string
+          p_session_id?: string
+          p_severity?: string
+          p_stack_trace?: string
+          p_user_agent?: string
+          p_user_email?: string
+          p_user_id?: string
+          p_user_role?: string
+        }
+        Returns: string
+      }
       mark_all_notifications_read: {
         Args: { p_user_id: string }
         Returns: undefined

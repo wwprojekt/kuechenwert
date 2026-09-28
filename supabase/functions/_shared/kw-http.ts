@@ -142,6 +142,7 @@ export function normalizePhone(s: unknown): string | null {
 
 export function cleanText(s: unknown, max: number): string | null {
   if (typeof s !== "string") return null;
+  // eslint-disable-next-line no-control-regex -- Steuerzeichen aus Freitext entfernen
   const t = s.replace(/[\u0000-\u001f]/g, " ").replace(/\s+/g, " ").trim().slice(0, max);
   return t.length ? t : null;
 }

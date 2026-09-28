@@ -22,7 +22,6 @@ import {
   buildEmailLayout,
   button,
   detailRow,
-  divider,
   greeting,
   infoBox,
   list,

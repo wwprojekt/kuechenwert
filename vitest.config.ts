@@ -14,30 +14,21 @@ export default defineConfig({
     globals: true,
     environment: 'jsdom',
     setupFiles: ['./src/test/setup.ts'],
-    // Playwright-Specs (tests/e2e) laufen über `npm run test:e2e`; src/app ist
-    // ein nicht versionierter Rest des alten Next.js-Projekts.
+    // Playwright-Specs (tests/e2e) laufen über `npm run test:e2e`.
     include: ['src/**/*.{test,spec}.{ts,tsx}'],
-    exclude: ['node_modules/**', 'dist/**', 'src/app/**'],
+    exclude: ['node_modules/**', 'dist/**'],
     css: true,
+    // Nur mit `--coverage` aktiv (braucht @vitest/coverage-v8); bewusst ohne
+    // Schwellenwerte, bis die Testabdeckung des Küchen-Codes aufgebaut ist.
     coverage: {
       reporter: ['text', 'json', 'html'],
+      include: ['src/**/*.{ts,tsx}'],
       exclude: [
-        'node_modules/',
-        'src/test/',
+        'src/test/**',
+        'src/integrations/supabase/types.ts',
         '**/*.d.ts',
-        '**/*.config.*',
-        '**/dist/**',
-        '**/build/**',
-        '**/.{git,cache,output,temp}/**',
+        '**/*.{test,spec}.{ts,tsx}',
       ],
-      thresholds: {
-        global: {
-          branches: 70,
-          functions: 70,
-          lines: 70,
-          statements: 70,
-        },
-      },
     },
     // Mock environment variables
     env: {

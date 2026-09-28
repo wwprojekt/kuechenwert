@@ -33,7 +33,8 @@ const promptOf = <T extends { id: string; prompt: string }>(list: T[], id: strin
 function sanitizeFreeText(text: string | null | undefined, max = 300): string {
   if (!text) return "";
   return text
-    .replace(/[\u0000-\u001f<>{}\[\]`\\]/g, " ")
+    // eslint-disable-next-line no-control-regex -- Steuerzeichen aus Nutzereingaben entfernen, bevor sie in den Prompt gehen
+    .replace(/[\u0000-\u001f<>{}[\]`\\]/g, " ")
     .replace(/\s+/g, " ")
     .trim()
     .slice(0, max);

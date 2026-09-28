@@ -27,8 +27,16 @@ dist-ssr
 *.sw?
 /assets
 /screenshots
-/tests
 worker/__pycache__/
+
+# Playwright (npm run test:e2e)
+/test-results/
+/playwright-report/
+/blob-report/
+/playwright/.cache/
+
+# Vite dependency cache
+.vite/
 
 # Temp/debug files
 .tmp-*

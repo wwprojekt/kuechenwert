@@ -146,7 +146,7 @@ async function sha256Hash(value: string): Promise<string> {
  */
 function normalizePhone(phone: string, countryCode?: string): string {
   // Entferne Leerzeichen, Bindestriche, Klammern
-  let cleaned = phone.replace(/[\s\-\(\)\/]/g, "");
+  const cleaned = phone.replace(/[\s\-()/]/g, "");
 
   // Nummer beginnt bereits mit "+" -> internationales Format, beibehalten
   if (cleaned.startsWith("+")) {
@@ -192,7 +192,7 @@ function isValidGclid(gclid: string): boolean {
   const trimmed = gclid.trim();
   if (trimmed.length < 30 || trimmed.length > 200) return false;
   // GCLIDs bestehen aus Base64-ähnlichen Zeichen
-  if (!/^[a-zA-Z0-9_\-]+$/.test(trimmed)) return false;
+  if (!/^[a-zA-Z0-9_-]+$/.test(trimmed)) return false;
   return true;
 }
 
@@ -201,7 +201,7 @@ function isValidGclid(gclid: string): boolean {
  * Wird als Fallback verwendet, wenn kein country_code mitgesendet wird.
  */
 function detectCountryFromPhone(phone: string): string {
-  const cleaned = phone.replace(/[\s\-\(\)\/]/g, "");
+  const cleaned = phone.replace(/[\s\-()/]/g, "");
   if (cleaned.startsWith("+49") || cleaned.startsWith("0049")) return "DE";
   if (cleaned.startsWith("+43") || cleaned.startsWith("0043")) return "AT";
   if (cleaned.startsWith("+41") || cleaned.startsWith("0041")) return "CH";

@@ -91,7 +91,6 @@ Deno.serve(async (req) => {
     const dlrName = isPenalty
       ? (personalName || invoice.dealer?.company_name || 'Verkäufer')
       : (invoice.dealer?.company_name || personalName || 'Küchenstudio');
-    const dlrEmail = invoice.dealer?.email || '';
     const dlrStreet = isPenalty
       ? (invoice.dealer?.address_street || invoice.dealer?.company_street || '')
       : (invoice.dealer?.company_street || invoice.dealer?.address_street || '');

@@ -32,7 +32,7 @@ const handler = async (req: Request): Promise<Response> => {
 
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
-    const { dealer_application_id, dealer_email, dealer_name, company_name, missing_documents }: RequestBody = await req.json();
+    const { dealer_application_id, dealer_email, dealer_name, missing_documents }: RequestBody = await req.json();
 
     if (!dealer_application_id || !dealer_email) {
       return new Response(JSON.stringify({ error: 'dealer_application_id und dealer_email sind erforderlich' }), {

@@ -66,7 +66,7 @@ export interface DealerProjectDetail extends Omit<DealerProjectRow, "my_offer" |
   service_radius_km: number | null;
   bid_visibility: "lowest_price" | "sealed";
   my_offer: MyOffer | null;
-  media: Array<{ bucket: string; path: string; kind: "render" | "photo"; mode?: string }>;
+  media: DealerProjectMedia[];
   contact: null | {
     first_name: string | null;
     last_name: string | null;
@@ -77,6 +77,20 @@ export interface DealerProjectDetail extends Omit<DealerProjectRow, "my_offer" |
     address_line: string | null;
     consent_call: boolean;
   };
+}
+
+export interface DealerProjectMedia {
+  bucket: string;
+  path: string;
+  kind: "render" | "photo" | "document";
+  mode?: string;
+  /** Nur bei Unterlagen (kind = "document"). */
+  category?: string;
+  type?: string;
+  /** Dateiname erst nach Kontaktkauf oder Zuschlag; vorher null. */
+  name?: string | null;
+  /** Vom Team für Studios freigegeben. */
+  released?: boolean;
 }
 
 export interface MarketProfile {
@@ -175,11 +189,10 @@ export async function unlockContact(auctionId: string): Promise<DealerProjectDet
   return data as unknown as DealerProjectDetail;
 }
 
-/** Signierte URLs für Renders/Fotos (Storage-Policy prüft die Berechtigung). */
-export async function signPlannerMedia(paths: string[]): Promise<Record<string, string>> {
+async function signPaths(bucket: string, paths: string[]): Promise<Record<string, string>> {
   const unique = Array.from(new Set(paths.filter(Boolean)));
   if (unique.length === 0) return {};
-  const { data, error } = await supabase.storage.from("planner-media").createSignedUrls(unique, 3600);
+  const { data, error } = await supabase.storage.from(bucket).createSignedUrls(unique, 3600);
   if (error) return {};
   const out: Record<string, string> = {};
   for (const entry of data ?? []) {
@@ -187,6 +200,12 @@ export async function signPlannerMedia(paths: string[]): Promise<Record<string, 
   }
   return out;
 }
+
+/** Signierte URLs für Renders/Fotos (Storage-Policy prüft die Berechtigung). */
+export const signPlannerMedia = (paths: string[]) => signPaths("planner-media", paths);
+
+/** Signierte URLs für Unterlagen (Storage-Policy prüft Freigabe bzw. Kontaktkauf). */
+export const signLeadFiles = (paths: string[]) => signPaths("lead-files", paths);
 
 export type ComplaintReason = "nicht_erreichbar" | "falsche_kontaktdaten" | "kein_kuechenprojekt" | "doppelt" | "sonstiges";
 

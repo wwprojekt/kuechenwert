@@ -3975,6 +3975,9 @@ export type Database = {
           file_url: string
           id: string
           lead_id: string
+          shared_at: string | null
+          shared_by: string | null
+          shared_with_studios: boolean
           virus_scan_status: string | null
         }
         Insert: {
@@ -3986,6 +3989,9 @@ export type Database = {
           file_url: string
           id?: string
           lead_id: string
+          shared_at?: string | null
+          shared_by?: string | null
+          shared_with_studios?: boolean
           virus_scan_status?: string | null
         }
         Update: {
@@ -3997,6 +4003,9 @@ export type Database = {
           file_url?: string
           id?: string
           lead_id?: string
+          shared_at?: string | null
+          shared_by?: string | null
+          shared_with_studios?: boolean
           virus_scan_status?: string | null
         }
         Relationships: [
@@ -6958,6 +6967,10 @@ export type Database = {
       kw_anonymize_lead: {
         Args: { p_lead_id: string; p_source: string }
         Returns: Json
+      }
+      kw_can_view_lead_file: {
+        Args: { p_object_name: string }
+        Returns: boolean
       }
       kw_can_view_planner_media: {
         Args: { p_object_name: string }

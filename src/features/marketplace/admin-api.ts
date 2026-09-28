@@ -1,3 +1,4 @@
+import { leadFileExtension, leadFileType } from "@/features/funnel-b/files";
 import { supabase } from "@/integrations/supabase/client";
 import { ensureValidRLSSession, invokeWithAuth } from "@/lib/sessionGuard";
 import { ApiError } from "./api-client";
@@ -34,6 +35,8 @@ export interface AdminLeadFile {
   category: string | null;
   file_type: string | null;
   url: string | null;
+  /** Für Studios freigegeben (vom Team geprüft, keine Namen/Kontaktdaten sichtbar). */
+  shared_with_studios: boolean;
 }
 
 async function requireSession() {
@@ -91,7 +94,7 @@ export async function fetchLeadFiles(leadId: string): Promise<AdminLeadFile[]> {
   await requireSession();
   const { data, error } = await supabase
     .from("lead_files")
-    .select("id, file_url, file_name, file_type, category")
+    .select("id, file_url, file_name, file_type, category, shared_with_studios")
     .eq("lead_id", leadId)
     .order("created_at", { ascending: true });
   if (error) fail(error);
@@ -108,7 +111,46 @@ export async function fetchLeadFiles(leadId: string): Promise<AdminLeadFile[]> {
     category: f.category,
     file_type: f.file_type,
     url: urls.get(f.file_url) ?? null,
+    shared_with_studios: f.shared_with_studios,
   }));
+}
+
+/** Datei für Studios freigeben oder die Freigabe zurücknehmen. */
+export async function setLeadFileShared(fileId: string, shared: boolean): Promise<void> {
+  await requireSession();
+  const { error } = await supabase.from("lead_files").update({ shared_with_studios: shared }).eq("id", fileId);
+  if (error) fail(error);
+}
+
+/**
+ * Geschwärzte Fassung einer Kundendatei hochladen (gleiche Kategorie). Sie
+ * ist zunächst nicht freigegeben; das Team gibt sie nach Kontrolle frei.
+ */
+export async function uploadRedactedLeadFile(leadId: string, category: string, file: File): Promise<void> {
+  await requireSession();
+  const type = leadFileType(file);
+  const extension = leadFileExtension(type);
+  if (!extension) throw new ApiError("Bitte ein PDF oder Bild (JPG, PNG, WebP, HEIC) hochladen.", 422);
+  const path = `${leadId}/${category}-${crypto.randomUUID()}.${extension}`;
+  const { error: uploadErr } = await supabase.storage.from("lead-files").upload(path, file, {
+    contentType: type,
+    cacheControl: "31536000, immutable",
+    upsert: false,
+  });
+  if (uploadErr) throw new ApiError(uploadErr.message, 409);
+  const base = file.name.replace(/\.[^.]+$/, "");
+  const { error } = await supabase.from("lead_files").insert({
+    lead_id: leadId,
+    file_url: path,
+    file_name: `${base} (geschwärzt).${extension}`,
+    file_type: type,
+    file_size_bytes: file.size,
+    category,
+  });
+  if (error) {
+    await supabase.storage.from("lead-files").remove([path]);
+    fail(error);
+  }
 }
 
 export async function openTenderAsAdmin(leadId: string, notifyCustomer: boolean): Promise<string> {

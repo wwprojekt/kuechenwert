@@ -26,12 +26,14 @@ import { errorMessage } from "@/features/marketplace/api-client";
 import { buildBriefing, buildFloorPlanDxf, downloadFile } from "@/features/marketplace/briefing-export";
 import { ContactComplaintCard } from "@/features/marketplace/components/ContactComplaintCard";
 import { DealerOrderPanel } from "@/features/marketplace/components/DealerOrderPanel";
+import { DealerProjectDocuments } from "@/features/marketplace/components/DealerProjectDocuments";
 import { projectTitle, projectValue, timeLeft } from "@/features/marketplace/components/DealerProjectCard";
 import { ProjectAnswers } from "@/features/marketplace/components/ProjectAnswers";
 import {
   fetchDealerProject,
   fetchMarketProfile,
   placeOffer,
+  signLeadFiles,
   signPlannerMedia,
   unlockContact,
   withdrawOffer,
@@ -178,6 +180,13 @@ export default function DealerProjectDetail() {
     enabled: mediaPaths.length > 0,
     staleTime: 30 * 60_000,
   });
+  const documentPaths = (detailQuery.data?.media ?? []).filter((m) => m.bucket === "lead-files").map((m) => m.path);
+  const documentUrls = useQuery({
+    queryKey: ["dealer-project-documents", id, documentPaths.join("|")],
+    queryFn: () => signLeadFiles(documentPaths),
+    enabled: documentPaths.length > 0,
+    staleTime: 30 * 60_000,
+  });
 
   const refresh = () => {
     void qc.invalidateQueries({ queryKey: ["dealer-project", id] });
@@ -225,8 +234,10 @@ export default function DealerProjectDetail() {
   const canUnlock = !d.contact_unlocked && !d.awarded_to_me && ["active", "completed"].includes(d.status) && slotsLeft > 0 && (d.contact_price_cents ?? 0) > 0;
   const left = timeLeft(d.ends_at);
 
+  const documents = d.media.filter((m) => m.kind === "document");
+
   const exportJson = () => {
-    const briefing = buildBriefing(d, media.data ?? {});
+    const briefing = buildBriefing(d, { ...(media.data ?? {}), ...(documentUrls.data ?? {}) });
     downloadFile(`kuechenwert-projekt-${d.auction_id.slice(0, 8)}.json`, JSON.stringify(briefing, null, 2), "application/json");
   };
   const exportDxf = () => {
@@ -291,6 +302,13 @@ export default function DealerProjectDetail() {
               )}
             </div>
           )}
+
+          <DealerProjectDocuments
+            documents={documents}
+            urls={documentUrls.data ?? {}}
+            loading={documentUrls.isLoading}
+            full={d.contact_unlocked || d.awarded_to_me}
+          />
 
           {labels && (
             <div className="rounded-2xl border bg-card p-5">

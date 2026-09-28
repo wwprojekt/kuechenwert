@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { ExternalLink, FileText, Loader2, Megaphone, PlusCircle } from "lucide-react";
+import { Loader2, Megaphone, PlusCircle } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
@@ -7,14 +7,9 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { errorMessage } from "../api-client";
 import { AdminComplaintsSection } from "./AdminComplaintsSection";
+import { AdminLeadFilesSection } from "./AdminLeadFilesSection";
 import { AdminTenderActions } from "./AdminTenderActions";
-import {
-  TENDER_STATUS_LABELS,
-  fetchAdminTender,
-  fetchLeadFiles,
-  openTenderAsAdmin,
-  publishTenderAsAdmin,
-} from "../admin-api";
+import { TENDER_STATUS_LABELS, fetchAdminTender, openTenderAsAdmin, publishTenderAsAdmin } from "../admin-api";
 
 const dateTime = (iso: string | null) =>
   iso ? new Date(iso).toLocaleString("de-DE", { dateStyle: "short", timeStyle: "short" }) : "–";
@@ -42,13 +37,12 @@ export function TenderStatusBadge({ status }: { status: string | undefined }) {
 /**
  * Ausschreibung eines Leads im Admin-Dialog: Status, Kennzahlen, Freigabe
  * (Funnel B startet nach dem Experten-Check als Entwurf) und die vom Kunden
- * hochgeladenen Dateien für die Prüfung.
+ * hochgeladenen Unterlagen mit Freigabe für Studios.
  */
 export function AdminTenderPanel({ leadId, funnelType }: { leadId: string; funnelType: string }) {
   const qc = useQueryClient();
   const [notify, setNotify] = useState(false);
   const tender = useQuery({ queryKey: ["admin-lead-tender", leadId], queryFn: () => fetchAdminTender(leadId) });
-  const files = useQuery({ queryKey: ["admin-lead-files", leadId], queryFn: () => fetchLeadFiles(leadId), staleTime: 30 * 60_000 });
 
   const refresh = () => {
     void qc.invalidateQueries({ queryKey: ["admin-lead-tender", leadId] });
@@ -140,7 +134,7 @@ export function AdminTenderPanel({ leadId, funnelType }: { leadId: string; funne
               <div className="flex flex-col gap-2 rounded-md bg-amber-50 p-3 text-amber-900 sm:flex-row sm:items-center sm:justify-between">
                 <p className="text-xs">
                   {funnelType === "b"
-                    ? "Nach dem Experten-Check freigeben – das Studio-Angebot sollte keine Namen oder Kontaktdaten des Studios enthalten."
+                    ? "Nach dem Experten-Check veröffentlichen. Unterlagen sehen Studios nur, wenn Sie sie unten einzeln freigeben."
                     : "Nach Prüfung freigeben, damit Studios im Umkreis Angebote abgeben können."}
                 </p>
                 <Button size="sm" onClick={() => publish.mutate(t.id)} disabled={publish.isPending} className="flex-none">
@@ -156,33 +150,7 @@ export function AdminTenderPanel({ leadId, funnelType }: { leadId: string; funne
 
       {t && <AdminComplaintsSection auctionId={t.id} />}
 
-      <section className="rounded-lg border p-4">
-        <h3 className="mb-3 text-sm font-semibold">Hochgeladene Dateien</h3>
-        {files.isLoading ? (
-          <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
-        ) : (files.data ?? []).length === 0 ? (
-          <p className="text-sm text-muted-foreground">Keine Dateien.</p>
-        ) : (
-          <ul className="space-y-2">
-            {(files.data ?? []).map((f) => (
-              <li key={f.id} className="flex items-center justify-between gap-3 text-sm">
-                <span className="flex min-w-0 items-center gap-2">
-                  <FileText className="h-4 w-4 flex-none text-muted-foreground" aria-hidden="true" />
-                  <span className="truncate">{f.file_name}</span>
-                  {f.category && <Badge variant="secondary">{f.category}</Badge>}
-                </span>
-                {f.url ? (
-                  <a href={f.url} target="_blank" rel="noopener noreferrer" className="inline-flex flex-none items-center gap-1 text-primary hover:underline">
-                    Öffnen <ExternalLink className="h-3.5 w-3.5" />
-                  </a>
-                ) : (
-                  <span className="text-xs text-muted-foreground">nicht verfügbar</span>
-                )}
-              </li>
-            ))}
-          </ul>
-        )}
-      </section>
+      <AdminLeadFilesSection leadId={leadId} />
     </div>
   );
 }

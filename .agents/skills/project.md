@@ -70,6 +70,17 @@
 - [x] P0 Umbenennung `motorhomes` → `kitchens` (26.09.2026): 28 DB-Funktionen, davon 7 Trigger, verwiesen noch auf alte Namen; u. a. brach jede Studio-Freischaltung ab (Trigger auf `user_roles`). Migration `20260926133055_kw_fix_kitchen_rename_in_functions`.
 - [x] Studio-Mails und Rechnungen (26.09.2026): `send-dealer-notification` v10 (Küchen-Marktplatz statt Wohnmobil-Auktionen), `send-invoice-email` v10 und `generate-invoice-pdf` v9 beschriften je Rechnungstyp (Kontaktfreischaltung/Provision mit Projektbezug statt „FAHRZEUGREFERENZ“), PDF in Forest Sage, lange Positionstexte umbrechen. Mail-Footer: Antworten erreichen das Service-Team.
 - [x] Sicherheit (26.09.2026): `_shared/auth.ts` akzeptierte gefälschte service_role-JWTs (Payload nur dekodiert, Functions mit `verify_jwt = false`). Methode 2 prüft jetzt beim Auth-Server. Live bestätigt und behoben für `generate-invoice-pdf`, `send-invoice-email`, `send-dealer-notification`.
+- [x] **Audit-Umsetzung (28.09.2026)**, alles deployt und live geprüft:
+  - Datenbank: Lead-Policies, offene Buckets, Legacy-RPC-Rechte, Audit-Log, Blog-Entwürfe und Caravan-Spalten gehärtet; `log_error` gegen leere und gefälschte Einträge (Migration `20260928195924`, Function `log-error` stillgelegt); Planer-Bilder nur noch signiert, Bucket `planner-renders` privat (`20260928201301`); direkter INSERT auf `contact_messages` entzogen, Kontakt nur noch über `kw-contact` (`20260928211341`); Triggerfunktion `kw_log_email_consent` ohne öffentliche Ausführungsrechte (`20260928211918`).
+  - Einwilligungen: Funnel-Defaults, Studio-Einwilligung in Funnel B, Freischaltung prüft die Einwilligung; Abmeldung per Link ohne Login (RFC 8058, `kw-unsubscribe`, `/abmelden`) mit Einwilligungsprotokoll (`20260928201711`).
+  - Projektlink: Token nicht mehr in Tracking, Error- und Mail-Logs, Ablauf und Begrenzung, `no-referrer`/`noindex`/`no-store`; Raumfotos ohne EXIF/GPS (Browser und Server); Abdeckungsprüfung per PLZ mit ehrlichen Texten.
+  - Abrechnung: automatische Ausstellung mit Pflichtangaben nach § 14 UStG (`_shared/issuer-profile.ts`, IBAN-Prüfziffer), Entwurf solange Angaben fehlen, GoBD-Schutz, PDFs write-once, Leistungsdatum, Mahnlauf-Fixes (`20260928194846`); Entwürfe in Admin-Finanzen und „Meine Rechnungen“ gekennzeichnet.
+  - Marktplatz/Admin: Reklamation gekaufter Kontakte, Admin-Aktionen an Ausschreibungen, Reklamationen im Admin (`20260928202413`, `20260928202636`), Marktplatz-Einstellungen unter `/admin/marktplatz`.
+  - Betrieb: `kw-maintenance` (Löschfristen täglich, Health-Check stündlich, entprellte Admin-Alarme, `20260928200833`); Cron-Functions prüfen `x-kw-cron-secret`.
+  - Recht: AGB für das Vermittlungsmodell, Konditionen für Studios (`/konditionen`), Datenschutz mit Löschfristen (`20260928204008`), Mail-Fußzeile nach § 35a GmbHG.
+  - Frontend: Caravan-Code entfernt (tsc projektweit fehlerfrei), ehrliche Texte ohne unbelegte Claims, Preise live aus der DB, Kontakt über `kw-contact`, `/barrierefreiheit`.
+  - SEO/Infra: Prerendering im Docker-Build, echte 404, 301 für Altlinks, CSP ohne Inline-Skripte, HSTS `includeSubDomains`, Real-IP hinter Cloudflare, Sitemap nur mit indexierbaren Seiten, Service Worker v8.
+  - CI: ESLint und alle Vitest-Tests vor jedem Deploy, Actions auf Commit-SHAs gepinnt, Dependabot; `AGENTS.md` auf KüchenWert-Stand.
 
 ### Offene Aufgaben
 - [x] Security-Sweep abgeschlossen (27.09.2026): Alle 42 Functions mit `checkServiceRoleOrAdmin` laufen mit dem gehärteten `_shared/auth.ts`; die 38 offenen per MCP-Shim auf Commit `39e2cfe` (Raw-Import aus dem öffentlichen Repo, siehe AGENTS.md). Vorher geprüft: keine davon per Cron oder DB-Trigger aufgerufen. `node scripts/redeploy-secure-functions.mjs --probe-only` bestätigt 42/42 mit 401 bei gefälschtem Token.
@@ -78,13 +89,15 @@
 - [x] DMARC (27.09.2026): TXT `_dmarc.kuechenwert24.de` = `v=DMARC1; p=none` (DKIM `resend._domainkey` und SPF auf `send.` waren schon da). Bewusst ohne `rua`: Berichte an `info@` liefen über den Inbound-Webhook und könnten Auto-Antworten auslösen.
 - [ ] DMARC-Berichte: in Cloudflare „DMARC Management“ aktivieren (eigene Report-Adresse und Auswertung), nach ein paar Wochen ohne Fremdversand auf `p=quarantine` erhöhen.
 - [x] **Turnstile aktiv (27.09.2026)**: Widget „KuechenWert Formulare“ (Managed, `kuechenwert24.de` und `www`), Site-Key als Dokploy-Build-Argument `VITE_TURNSTILE_SITE_KEY`, Secret im Supabase Vault (`cloudflare_turnstile_secret`, gelesen über `kw_turnstile_secret`). Ohne gültiges Token wird ein Lead nicht abgelehnt, sondern als `leads.bot_check = unverified` markiert und nicht automatisch an Studios veröffentlicht (Migration `20260927221032`; Admin → Leads zeigt „Ungeprüft“, Freigabe im Ausschreibungs-Panel). Live geprüft: Widget lädt, ungültiges Token ergibt `unverified` und einen Entwurf (Secret also gültig), Testdaten gelöscht.
-- [ ] `send-lead-notification` (Kontaktformular, deployte Fassung vom 21.08.) liest das Turnstile-Secret nur aus der Env-Variable und prüft deshalb nicht; mit dem nächsten Deploy nutzt sie den Vault-Eintrag.
+- [x] Entfällt (28.09.2026): Das Kontaktformular sendet über `kw-contact` (Turnstile aus dem Vault, Rate-Limit, Zod), `send-lead-notification` ist stillgelegt (410).
 - [ ] 5 Leads aus Juni/Juli 2026 stehen noch auf `new` (vor dem Marktplatz eingegangen, ohne Ausschreibung): sichten, nachfassen oder als Test markieren.
 - [ ] Nach dem Frontend-Release den Auftragsverlauf einmal Ende-zu-Ende live durchspielen (Studio meldet Etappen, Kundenseite, Mails von `kw-order-worker`).
 - [x] Caravan-Legacy reversibel ausgeblendet (27.09.2026): `/kaufen` und `/auktion/:id` leiten auf `/formular` um (auch aus Sitemap und Lighthouse entfernt), Studio-Deep-Routes (`auctions`, `inventory`, `bids`, `kaufchancen`, `appointments`, `contracts`, `claims`, `search-alerts`, `listings*`) leiten auf die Projekt-Börse um, Kunden-Menü ohne Inserate/Gebote/Favoriten/Kaufchancen/Termine. Seiten bleiben im Code (`LEGACY_DEALER_PATHS` in `SmartDashboard`). Neue Einstellungsseite `/dashboard/settings` für Studios und Kunden ersetzt `DealerSettings` samt Auktions-`NotificationPreferences` und kaputtem Dark-Mode-Schalter (ThemeProvider erzwingt Hell).
 - [x] E-Mail-Einwilligungen (27.09.2026): Werbe-Rundmails nur noch mit Opt-in, Newsletter-Default `false` (Migration `20260927152955_kw_newsletter_opt_in_default`), gemeinsame Empfängerlogik `_shared/broadcast-recipients.ts` mit Paging und Abbruch bei Lesefehlern, Admin-Empfängerzahl berücksichtigt das Werbe-Flag. Deployt: `send-broadcast-email` v11, `get-recipient-count` v9.
-- [ ] Echter One-Click-Abmeldelink für Rundmails (RFC 8058, signiertes Token + Edge Function); bisher verlinkt die Mail auf `/dashboard/settings` (Login nötig). Pflicht spätestens ab ~5.000 Mails/Tag an Gmail/Yahoo.
-- [ ] Übrige Caravan-Reste: Admin-Seiten (Auktionen, Übergaben, Kaufverträge), Legacy-Mails/PDFs (Kaufvertrag, Übergabeprotokoll, Auktions-Mails), Fehlermeldungen in DB-Funktionen („Wohnmobil nicht gefunden“), `worker/` (nicht deployt, vor Aktivierung umstellen).
+- [x] One-Click-Abmeldelink für Rundmails (28.09.2026): signiertes Token, `kw-unsubscribe`, `List-Unsubscribe`/`List-Unsubscribe-Post` pro Empfänger, Seite `/abmelden` ohne Login.
+- [x] Caravan-Reste in Frontend und Edge Functions (28.09.2026): Seiten, Komponenten, Mails/PDFs entfernt bzw. Functions stillgelegt (410), Altrouten per 301.
+- [ ] Caravan-Reste in der Datenbank: Tabellen (`auctions`, `bids`, `kitchens`, `kaufchance_invitations`, `post_auction_offers`, `appointments`, `wizard_sessions` u. a.), zugehörige Funktionen, Trigger und Buckets sowie Fehlermeldungen wie „Wohnmobil nicht gefunden“ per Migration entfernen, sobald feststeht, dass nichts mehr darauf zugreift. `worker/` (nicht deployt) löschen oder umstellen.
+- [ ] Stillgelegte Edge Functions (59, Liste „Stillgelegt“ in `supabase/config.toml`) nach einer Beobachtungszeit im Supabase-Dashboard löschen, danach Verzeichnisse und Einträge entfernen.
 - [x] **Production-Deploy freigeschaltet (27.09.2026)**: Frontend einmal manuell in Dokploy deployt (vorher lief der Build vom 10.05.2026), `sw.js` v7, `/formular` und `/projekt/:token` live geprüft. Repo-Secrets `DOKPLOY_APP_ID` und `DOKPLOY_API_KEY` (Dokploy-Key `github-actions-deploy`) gesetzt: `.github/workflows/deploy.yml` deployt jeden Push auf `main` nach Typecheck, Tests und Build. Bewusst kein Repo-Webhook, sonst baut Dokploy doppelt und ungeprüft.
 - [x] Nach dem Frontend-Release (27.09.2026): `sitemap` v15 in der Repo-Fassung deployt, `kuechenwert24.de/sitemap.xml` listet `/formular` statt `/funnel/a`. `kw-planner` bleibt v3: live und Repo verhalten sich gleich (aus `brand-config.ts` wird nur `baseUrl` genutzt, `validIp` und `loadRateCard` sind nur verschoben), Repo-Fassung mit der nächsten echten Änderung deployen.
 - [x] **Dokploy-Panel unter `https://deploy.kuechenwert24.de`** (27.09.2026): A-Record über den Cloudflare-Proxy (Server-IP bleibt verborgen), Let's-Encrypt-Zertifikat über Traefik, Login und API darüber geprüft. `deploy.yml` nutzt die HTTPS-Adresse fest; das alte Secret `DOKPLOY_URL` (IP-Adresse) liest der Workflow nicht mehr, es kann in GitHub gelöscht werden. Alter Dokploy-Key „Github“ (zuletzt benutzt am 26.04.2026) gelöscht.
@@ -110,14 +123,17 @@
 - [ ] **KüchenWert-Tracking anlegen (Betreiber)**: GA4-Property für kuechenwert24.de und Google-Ads-Conversion „Küchenanfrage“ (Lead-Formular, Zählung „Eine“, Enhanced Conversions an). IDs unter Admin → Tracking eintragen (GA4 Measurement-ID, Ads Conversion-ID, Label bei `KUECHEN_LEAD`) und GA4/Ads einschalten. Meta-Pixel `1846623132710484` auf Zugehörigkeit prüfen. Für die Auswertung in der eigenen DB: finales URL-Suffix mit UTM-Parametern in Google Ads setzen.
 - [ ] **Studios für den Test (Betreiber)**: Es sind 0 Studios registriert. Vor dem Test 2–3 Studios in der Testregion gewinnen und die Anzeigen auf diese Region begrenzen, oder Anfragen bewusst selbst vermitteln (Kunden werden sonst nie beliefert).
 - [x] **Betreiberin WohnWert GmbH (28.09.2026)**: Impressum, Datenschutz und AGB nennen jetzt wie wohnwert24.de die WohnWert GmbH (Hannoversche Str. 106, 30627 Hannover, HRB 230114 AG Hannover, GF Mona Kareem-Ameen), Impressum mit USt-ID DE462042479 und Angabe nach § 18 Abs. 2 MStV (Migration `20260928094517`). Passt zu `BRAND.legalName` im Footer.
-- [ ] **AGB neu fassen (vor dem Anzeigenstart, anwaltlich prüfen)**: Die AGB (Stand April 2026) beschreiben noch einen Marktplatz für den Verkauf gebrauchter Küchen (private Verkäufer, Küchen-Exposé, Zustandsangaben). Sie müssen das heutige Modell abdecken: kostenlose Anfrage für Kunden (Funnel A/B/C), Weitergabe an Studios, Studio-Konditionen, KI-Visualisierung.
-- [ ] Mail-Fußzeile (`_shared/email-builder.ts`) ohne Pflichtangaben nach § 35a GmbHG (Firma, Sitz, Registergericht, HRB, Geschäftsführung); ergänzen und die Mail-Functions neu deployen.
+- [x] **AGB neu gefasst (28.09.2026)**: Vermittlungsmodell (kostenlose Anfrage, Weitergabe an Studios, KI-Visualisierung), eigene Konditionen für Studios unter `/konditionen` (P2B-Transparenz), Migration `20260928204008`.
+- [ ] **AGB und Konditionen für Studios anwaltlich prüfen lassen** (Stand 28.09.2026), vor dem Anzeigenstart.
+- [x] Mail-Fußzeile mit Pflichtangaben nach § 35a GmbHG aus `BRAND_LEGAL` (28.09.2026), Mail-Functions neu deployt.
+- [ ] **IBAN hinterlegen (Betreiber)**: Admin → Einstellungen → Tab „Rechnung“. Ohne gültige IBAN bleiben Rechnungen Entwürfe (Admin-Mail „invoice_issue_blocked“), Zahlungserinnerung und Mahnlauf greifen erst nach der Ausstellung.
+- [ ] Lead-Weiterleitungsadresse (`site_settings.lead_forward_email`, Admin → E-Mail-Center) zeigt auf ein privates iCloud-Postfach; auf eine Geschäftsadresse unter `kuechenwert24.de` umstellen.
 - [ ] Datenschutzerklärung anwaltlich prüfen lassen; Auftragsverarbeitung und Drittlandübermittlung bei Resend und fal.ai klären und in Abschnitt 4/5 ergänzen.
 - [ ] Click-Wrap-, Einwilligungs- und Transparenztexte in Funnel A (`kw-anfrage-2026-09`) anwaltlich prüfen lassen.
 - [x] Funnel A/B/C: send-lead-notification type=funnel + track-conversion (Click-IDs) (21.08.2026)
 - [x] sessionGuard: ensureValidRLSSession auf Seller/Dealer-Reads (MyBids, DealerInventory, DealerClaims, MyKuechenJourney, NotificationPreferences, DealerDashboard, ListingEdit) (21.08.2026)
 - [x] Query-Keys: ConvertToKitchenDialog + Admin-Delete invalidieren myListings/myLeads/admin-leads (21.08.2026)
-- [ ] Google-Review-Send-Pipeline wiederherstellen (Function fehlt) oder Cron dauerhaft tot lassen
+- [x] Entfällt (28.09.2026): Google-Review-Pipeline war ein Caravan-Feature, kein Cron mehr vorhanden.
 - [x] Admin Kitchen/Auction/Appointment Copy: Form statt km/Aufbauart (21.08.2026)
 - [ ] Stille Admin-Aktionen ohne Empfänger-Mail (Audit 17.04.2026):
   - [x] HIGH: `purchase_contracts cancel` (`AdminContracts`) → atomic via Edge Function `cancel-purchase-contract` (Käufer + Verkäufer Mail, Motorhome-Reset, Audit, Error-Logs) [17.04.2026]
@@ -128,21 +144,18 @@
   - [x] HIGH: `deleteDealerApplication` → atomic via Edge Function `admin-delete-dealer-application` (Mail an Bewerber inkl. optionalem Grund VOR Löschung, Audit, Error-Logs) [17.04.2026]
   - [x] HIGH: User/Dealer-Suspend (`AdminUsers`/`AdminDealers`/`AdminDealerDetail`/`UserEditDialog`) → atomic via Edge Function `admin-suspend-user` (Sperr-/Entsperr-Mail mit optionalem Grund, Audit, Error-Logs) [17.04.2026]
   - [x] HIGH: `admin-delete-user` – Lösch-Mail VOR Account-Löschung mit optionalem Grund, Audit, Error-Logs [17.04.2026]
-  - MEDIUM: Claim-Status-Wechsel, Appointment-Status-Wechsel, Doc-Verify, Review-Moderation, Rollen-Wechsel, Auction-Activate, Kaufchance-Min-Preis/Verlängerung
+  - MEDIUM: Doc-Verify, Rollen-Wechsel (Claims, Termine, Reviews, Auktionen und Kaufchance entfallen mit dem Caravan-Code, 28.09.2026)
   - LOW: Blog-Publish, Commission-Tier-Änderung
-- [ ] Bug 2: motorhomes RLS – sensible Spalten (reserve_price, contract_url, VIN, Kennzeichen) mit Column-Level Grants / View schützen (40+ Dateien betroffen, phased approach)
-- [ ] Bug 4 (DB): EXCLUSION-Constraint auf appointments(station_id, appointment_date) für echte TOCTOU-Absicherung
+- [x] Entfällt (28.09.2026): Bug 2 (motorhomes-RLS) und Bug 4 (appointments-Constraint) betreffen Caravan-Tabellen, die das Frontend nicht mehr nutzt.
 - [ ] Bug 7: RESEND_API_KEY in Supabase Edge Function Secrets prüfen/erneuern
-- [ ] Blog-System: Tabelle + Seiten existieren, 0 Artikel (Content fehlt)
-- [ ] Migration Edge Functions deaktivieren (harmlos, niedrige Priorität)
-- [ ] Baujahr-Ranges per Model implementieren
-- [ ] Fuzzy-Search für Tippfehler (z.B. "Exzellent" → "Excellent")
+- [ ] Blog und Ratgeber: Seiten existieren, 0 Artikel; beide Übersichten stehen auf `noindex`, bis Inhalte da sind (dann in Sitemap und Prerender-Liste aufnehmen).
+- [x] Migrations-Edge-Functions stillgelegt bzw. entfernt (28.09.2026)
+- [x] Entfällt (28.09.2026): Baujahr-Ranges und Fuzzy-Search gehörten zu den Caravan-Fahrzeugdaten.
 - [ ] GA4_API_SECRET erstellen (Google Analytics Admin → Data Streams)
 - [ ] Google Ads: LANDING_PAGE_LEAD von Primary auf Secondary umstellen
-- [ ] Veraltete Unit-Tests (Caravan-Rename nicht nachgezogen): useWizardForm, security, validation, useUserRole, AuthContext – 13 Fehler, vor 25.09.2026 entstanden
-- [ ] Restliche ~250 Typfehler in Caravan-Altmodulen (Listings, AuctionDetail, Admin-Seiten) – `npm run typecheck:all`
+- [x] Veraltete Unit-Tests entfernt bzw. repariert (28.09.2026): 18 Testdateien, 176 Tests grün; die CI führt alle Tests und ESLint aus.
+- [x] Typfehler beseitigt (28.09.2026): Caravan-Altmodule entfernt, `tsc -p tsconfig.app.json` fehlerfrei, strikter Check deckt Admin, Dashboard, Sidebars und zentrale Libs ab.
 - [x] Turnstile eingerichtet (27.09.2026), siehe Eintrag „Turnstile aktiv“ oben.
 - [ ] Supabase Auth: Leaked-Password-Protection aktivieren (Dashboard)
-- [ ] Alte Edge Functions `kw-planner-generate` / `kw-planner-submit-lead` löschen, sobald der neue Konfigurator live verifiziert ist
-- [ ] `send-lead-notification`: deployte Fassung (21.08., gebündelt) mit Repo abgleichen, bevor sie neu deployt wird
+- [x] `kw-planner-generate` / `kw-planner-submit-lead` und `send-lead-notification` stillgelegt (410, 28.09.2026); endgültiges Löschen siehe Eintrag zu stillgelegten Functions.
 - [ ] Planungssoftware: CARAT-Projektimport bzw. CARAT planner als Plattform-Lizenz mit CARAT klären; „DataX“ existiert nicht, Alternativen (K:PLAN, IDM/DCC, Winner Flex) in docs/planning-software-integration.md

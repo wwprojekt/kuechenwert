@@ -15,7 +15,7 @@ Verbindliche Konvention für KüchenWert. Der Agent handelt **autonom und proakt
 - Commit-Messages auf Deutsch, Conventional-Commits (`feat:`, `fix:`, `refactor:`, `docs:`, `chore:` …), prägnant, mit Kurzbegründung.
 - **Nicht mehrere Mini-Commits** — logisch zusammengehörende Änderungen in einem Commit bündeln.
 - PowerShell hat kein `&&` und kein Heredoc → Befehle einzeln ausführen, Commit-Message über `git commit -F .tmp_commit_msg.txt` (Temp-File danach löschen).
-- Push auf `main` startet `.github/workflows/deploy.yml`: Prüfung (Frozen-Install, `npm run typecheck`, Feature-Tests, Build), danach Dokploy-Deploy per API → Production (`https://kuechenwert24.de`). Braucht die Repo-Secrets `DOKPLOY_API_KEY` und `DOKPLOY_APP_ID` (Panel: `https://deploy.kuechenwert24.de`); fehlen sie, endet der Deploy-Job rot und Production bleibt unverändert. Dokploy-API-Keys immer ohne Drosselung anlegen (`rateLimitEnabled: false`): Der better-auth-Standard erlaubt 10 Aufrufe und setzt den Zähler erst nach 24 h ohne Aufruf zurück, danach antwortet die API mit 401.
+- Push auf `main` startet `.github/workflows/deploy.yml`: Prüfung (Frozen-Install, `npm run typecheck`, `npx eslint src`, alle Vitest-Tests, Build), danach Dokploy-Deploy per API → Production (`https://kuechenwert24.de`). Braucht die Repo-Secrets `DOKPLOY_API_KEY` und `DOKPLOY_APP_ID` (Panel: `https://deploy.kuechenwert24.de`); fehlen sie, endet der Deploy-Job rot und Production bleibt unverändert. Dokploy-API-Keys immer ohne Drosselung anlegen (`rateLimitEnabled: false`): Der better-auth-Standard erlaubt 10 Aufrufe und setzt den Zähler erst nach 24 h ohne Aufruf zurück, danach antwortet die API mit 401.
 - Nach dem Deploy prüfen, ob der neue Build wirklich live ist (z. B. `CACHE_VERSION` in `/sw.js` oder `last-modified` von `/`), statt es anzunehmen.
 - pnpm-Version ist über `packageManager` gepinnt; Build-Skripte neuer Abhängigkeiten in `pnpm-workspace.yaml` (`allowBuilds`) freigeben, sonst scheitert der Install.
 
@@ -36,5 +36,5 @@ Der Agent ist für **alle** Supabase-Änderungen verantwortlich: Migrations, Edg
 ## Safety
 
 - Niemals `SUPABASE_SERVICE_ROLE_KEY`, API-Keys oder Secrets ins Repo committen (`.env*` ist gitignored).
-- Vor jedem Push: `npm run typecheck` (strikter Check für den Marktplatz-/Planer-Code) und `npm run build` müssen grün sein. Build-Failure = Fix erst, dann Push.
+- Vor jedem Push: `npm run typecheck` (strikter Ratchet-Check), `npx eslint src` (keine Fehler), `npx vitest run` und `npm run build` müssen grün sein, dieselben Schritte prüft die CI. Build-Failure = Fix erst, dann Push.
 - Nach jedem Push: kurz Deploy-Status erwähnen (Commit + erwartete Go-Live-Zeit).

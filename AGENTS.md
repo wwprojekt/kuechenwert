@@ -6,6 +6,7 @@
 - Supabase project ID: `gzqayoalwtmypndrmqes`
 - Stack: React 18 + TypeScript + Vite 5 + Tailwind + shadcn/ui + Supabase
 - **Primary product:** Funnels A/B/C + Küchenrechner + dealer marketplace. Do NOT implement new Wohnmobil/Caravan features. User-facing copy must say Küche, never Fahrzeug/Wohnmobil.
+- Caravan frontend code and Edge Functions were removed or tombstoned on 2026-09-28. The caravan tables (`auctions`, `bids`, `kitchens`, `kaufchance_invitations`, `post_auction_offers`, `appointments`, `wizard_sessions`, …) still exist in the DB as unused legacy — do not build on them.
 
 ## Do
 - Use React functional components with hooks
@@ -65,7 +66,15 @@ npm run build        # Production build via Vite → dist/
 npm run test:run     # Vitest single run
 npm run test:e2e     # Playwright E2E tests
 npm run lint         # ESLint full project
+npm run typecheck    # Strict ratchet check (tsconfig.strict.json), CI gate
+
+# Prerender public routes into dist/<route>/index.html (after build, needs Chrome/Chromium via PRERENDER_CHROME)
+PRERENDER=1 node scripts/prerender.mjs
+# App under the production CSP in headless Chrome
+node scripts/check-csp.mjs [--tracking]
 ```
+
+The deploy workflow runs `npm run typecheck`, `npx eslint src` (errors only), `npx vitest run` (all tests) and the build before every Dokploy deploy.
 
 Note: Always lint, test, and typecheck updated files. Use project-wide build only before commit or when explicitly requested.
 
@@ -77,8 +86,8 @@ Note: Always lint, test, and typecheck updated files. Use project-wide build onl
 
 ## Commit Checklist
 Before every commit:
-1. `npx tsc --noEmit` – all green (no TypeScript errors)
-2. `npx eslint --fix` on changed files – all green
+1. `npm run typecheck` and `npx tsc --noEmit -p tsconfig.app.json` – all green (the root `tsconfig.json` only holds references, plain `npx tsc --noEmit` checks nothing)
+2. `npx eslint --fix` on changed files – no errors
 3. `npm run build` – successful production build
 4. Diff is small and focused on one feature/fix
 5. Update the TODO list in `project.md` (mark completed tasks)
@@ -87,15 +96,15 @@ Before every commit:
 8. **`git fetch origin main` BEFORE pushing**: detects concurrent commits from parallel agents/devs. If diverged: `git pull --rebase origin main` first.
 9. **IMMEDIATELY push to GitHub**: `git push origin main` (MANDATORY – local-only commits are NOT acceptable)
 10. If push fails: `git pull --rebase origin main && git push origin main`
-11. Verify push: `git status` must show `Your branch is up to date with 'origin/main'`. The push starts `.github/workflows/deploy.yml` (typecheck, tests, build, then Dokploy deploy via API); production is updated a few minutes later. Check the run with `gh run list --workflow deploy.yml` and the live build via `last-modified` of `/`.
+11. Verify push: `git status` must show `Your branch is up to date with 'origin/main'`. The push starts `.github/workflows/deploy.yml` (typecheck, lint, tests, build, then Dokploy deploy via API); production is updated a few minutes later. Check the run with `gh run list --workflow deploy.yml` and the live build via `last-modified` of `/`.
 12. If the change applied a DB migration via MCP: confirm the corresponding `supabase/migrations/<timestamp>_<name>.sql` file exists AND is part of the commit. Migration without file = invisible to git = unreproducible.
 
 ## Good Examples (copy these patterns)
-- **Functional component with hooks**: `src/pages/AuctionDetail.tsx`
-- **Form with Zod validation**: `src/components/wizard/steps/VehicleInfoStep.tsx`
-- **Edge Function with error handling**: `supabase/functions/place-bid/index.ts`
+- **Functional component with hooks**: `src/features/account/EmailPreferencesCard.tsx`
+- **Form with Zod validation**: `src/features/marketplace/components/ContactComplaintCard.tsx`
+- **Edge Function with error handling**: `supabase/functions/kw-contact/index.ts` (Zod, Turnstile, rate limit, specific HTTP codes)
 - **Authenticated API call**: `src/lib/sessionGuard.ts` (`invokeWithAuth`)
-- **Realtime subscription**: `src/hooks/useAuctionRealtime.ts`
+- **Realtime subscription**: `src/components/NotificationCenter.tsx` (filtered by `user_id`)
 
 ## Bad Examples (avoid these patterns)
 - **Class-based components**: None currently, but do not introduce them
@@ -109,21 +118,23 @@ Before every commit:
 
 ## Key Architecture Patterns
 
-### Wizard (Verkaufs-Wizard)
-- 8-step sales wizard at `/verkaufen/wizard` (VerkaufenWizard.tsx)
-- Steps: VehicleType → VehicleInfo → Details → Equipment → QuickContact → Photos → SaleChannel → AccountLocation
-- Session persistence via `useWizardSession.ts` (anonymous_id-based for non-auth users)
-- Form state in `useWizardForm.ts` with Zod validation per step
-- Vehicle data (manufacturers/models) in `src/lib/vehicle-data.ts`
-- **Step numbering mismatch**: Schema names (step1Schema–step8Schema) don't match step numbers in validateStep
-- **Step 3 is fully optional** (no validation): Smart defaults pre-fill Diesel + Schaltung + Keine Mängel
+### Funnels & Leads
+- Funnel A `/formular` (question flow, submit via `kw-lead`), Funnel B `/funnel/b` (`kw-lead-b`, uploads via signed URLs from `lead_upload_tokens`), Funnel C `/funnel/c` (planner with room photo, AI render and price engine via `kw-planner`). All submits: Honeypot, Turnstile, rate limit, `submission_id` against duplicates, lead + `lead_consents` in one transaction. Without a valid Turnstile token a lead is stored as `bot_check = unverified` and not published automatically.
+- Consumers reach their project via `/projekt/:token` (`kw-project`): token never in tracking, error or mail logs; the route is served with `no-referrer`, `noindex`, `no-store`.
+- Direct INSERTs on `leads`, `lead_files`, `lead_consents` and `contact_messages` are revoked for `anon`; writes only go through the Edge Functions (service role). The contact form uses `kw-contact`.
+- Room photos are stripped of EXIF/GPS on the client and on the server. Planner renders are private and only delivered as signed URLs.
 
-### Auction System
-- Atomic bidding via `place_bid_atomic` RPC (pg_advisory_xact_lock)
-- Auto-Bid: `handle_autobid_atomic` with advisory lock
-- Soft-Close: Last 1 minute → +1 minute extension
-- 3 outcomes: SOLD / KAUFCHANCE / ENDED
-- Optimistic Update + Realtime Dedup pattern for live bid display
+### Marketplace, Orders & Billing
+- Leads become tenders (Ausschreibungen); studios submit offers, buy contacts and win projects through `kw_*` RPCs. Coverage is checked per PLZ radius (`kw_dealer_market_profiles`).
+- Side effects run through the outbox `kw_outbox`: channel `market` → `kw-market-worker`, channel `order` → `kw-order-worker` (both every minute via cron). Timers: `kw-marketplace-tick` (5 min), `kw-order-tick` (hourly).
+- Studio prices are data: `lead_pricing_rules` (contact unlock) and `lead_commission_tiers` (commission on the final order value); active rows are publicly readable and shown live on `/preise` and `/konditionen`.
+- Invoices are issued automatically via the outbox event `invoice_issue`. Issuer data comes from `site_settings` + `BRAND_LEGAL` (`_shared/issuer-profile.ts`, § 14 UStG). If the IBAN (mod-97 check) or VAT ID/tax number is missing, the invoice stays a draft and the admin gets an `invoice_issue_blocked` mail; payments and reminders only apply to issued invoices. Issued invoices are protected by GoBD immutability triggers; PDFs are write-once in storage (`<dealer_id>/<invoice_number>.pdf`).
+- Complaints about bought contacts: studios file them in the project detail, admins decide in the admin tender panel (events `complaint_filed` / `complaint_decided`).
+
+### Operations
+- `kw-maintenance`: retention cleanup daily (02:15 UTC) and health check hourly; alerts to the admin are deduplicated for 12 h.
+- Cron jobs call Edge Functions with the header `x-kw-cron-secret` (vault secret `kw_cron_secret`, env `KW_CRON_SECRET`); functions check it with `checkCronOrServiceRoleOrAdmin` from `_shared/auth.ts` (constant-time compare).
+- Broadcast mails carry per-recipient `List-Unsubscribe` + `List-Unsubscribe-Post` headers (RFC 8058); `kw-unsubscribe` verifies the signed token (`_shared/unsubscribe-token.ts`), `/abmelden` works without login, every change is written to the consent log.
 
 ### Session & Auth
 - `ensureValidRLSSession()` in `sessionGuard.ts`: Checks JWT `exp` field, proactive refresh
@@ -135,12 +146,7 @@ Before every commit:
 | Table | SELECT RLS | Impact when expired |
 |-------|-----------|---------------------|
 | `user_roles` | `auth.uid() = user_id` | **CRITICAL: isDealer=false** |
-| `kaufchance_invitations` | `bidder_id = auth.uid()` | Kaufchancen invisible |
-| `post_auction_offers` | `buyer_id = auth.uid()` | Offers invisible |
 | `profiles` | `auth.uid() = id` | Own profile missing |
-| `bids` | `USING(true)` | OK (public) |
-| `auctions` | `USING(true)` | OK (public) |
-| `motorhomes` | `USING(true)` | OK (public) |
 
 ### Defense-in-Depth Session Protection
 1. Supabase auto-refresh (client built-in)
@@ -164,10 +170,10 @@ Before every commit:
 - **Consent (`user_notification_preferences`)**: Newsletter (`newsletter_enabled`) and advertising (`promotional_emails`) are opt-in, only `true` counts; NULL or a missing row means no consent (§ 7 Abs. 2 UWG, B2B included). Platform notices (`broadcast_emails_enabled`) are opt-out, only `false` excludes. Recipient selection for admin broadcasts lives only in `_shared/broadcast-recipients.ts` (used by `send-broadcast-email` and `get-recipient-count`). Frontend resolution mirrors it in `src/features/account/email-preferences.ts`; writes always send all three columns explicitly.
 - Users manage voluntary emails at `/dashboard/settings` (studios and consumers). The studio "new projects" mail is controlled only by `kw_dealer_market_profiles.notify_new_projects` on the Einzugsgebiet page.
 
-### Commission System
-- `calculate_commission(sale_amount, dealer_id)` RPC
-- Tier-based with volume discounts
+### Invoices & Tax
+- Studio fees: contact unlock (`lead_pricing_rules`) and commission tiers (`lead_commission_tiers`), see "Marketplace, Orders & Billing"
 - 19% MwSt for DE, 0% reverse charge for EU
+- The caravan RPC `calculate_commission(sale_amount, dealer_id)` is legacy and only referenced by the unused `_shared/*-sale-conversion.ts` helpers
 
 ## Critical Rules (Learned from Production Bugs)
 
@@ -175,43 +181,21 @@ Before every commit:
 - **NEVER** call React Hooks after an early return – all hooks MUST be unconditionally before any `return`
 - Hooks that need loaded data → move to Child-Component, NOT parent with fallback value
 
-### `public.auctions` Column-Level Grants (P4-Hardening)
-- Table-level `SELECT ON public.auctions` is **REVOKED** for `authenticated` and `anon`. Each public column is granted INDIVIDUALLY (Migrations `20260420260000` + `20260420290100`).
-- **6 columns are intentionally NOT granted** (owner/admin only — readable via `get_auction_owner_meta` / `get_auctions_owner_meta_bulk` RPCs):
-  - `seller_initial_reserve`, `seller_initial_instant_price`
-  - `dynamic_pricing`, `auto_relist`
-  - `marketing_phase_max_until`, `agb_version_at_start`
-- Consequence: ANY query that does `select('*')` on `public.auctions` (directly OR as Supabase relationship embed `auction:auctions(*)`) is rejected with **`42501 permission denied for table auctions`** by PostgREST. This includes `select('*', { count: 'exact', head: true })` for badge counts.
-- **Fix pattern — always use `AUCTION_PUBLIC_COLUMNS`** from `src/lib/auction-columns.ts`:
-
-  ```typescript
-  import { AUCTION_PUBLIC_COLUMNS } from "@/lib/auction-columns";
-
-  // Direct query
-  supabase.from("auctions").select(AUCTION_PUBLIC_COLUMNS)
-
-  // Relationship embed
-  supabase.from("motorhomes").select(`*, auction:auctions(${AUCTION_PUBLIC_COLUMNS})`)
-
-  // Count badge (any granted column works)
-  supabase.from("auctions").select("id", { count: "exact", head: true })
-  ```
-
-- If the page also needs owner-only fields, fetch them via the bulk RPC after the main query and merge (see `src/pages/dashboard/DashboardOverview.tsx`, `src/pages/admin/AdminAuctions.tsx` for canonical examples).
-- **Adding a new column to `public.auctions`?** Decide public-vs-owner and update BOTH the migration AND `AUCTION_PUBLIC_COLUMNS` in the same commit, otherwise pages will silently break the next time anyone touches them.
+### Column-Level Grants
+- Tables with column-level grants reject `select('*')` (directly or as relationship embed) with **`42501 permission denied`**, including `select('*', { count: 'exact', head: true })`. Select explicit columns; for counts select a single granted column (`select("id", { count: "exact", head: true })`).
+- Legacy example: `public.auctions` grants each public column individually (Migrations `20260420260000` + `20260420290100`). The frontend no longer queries it; the former helper `AUCTION_PUBLIC_COLUMNS` was removed with the caravan code.
 
 ### Edge Functions
 - `verify_jwt` matrix:
   - **`true`** for ADMIN-only functions that don't do their own auth (lets the Supabase gateway reject before code runs). Beware: gateway 401 has empty body — frontend errors will be opaque. Use only when frontend doesn't need to distinguish reasons.
-  - **`false`** + own service-role check for functions with custom auth, public flows, or webhook signature verification. Most CaravanWert functions fall here.
+  - **`false`** + own service-role check for functions with custom auth, public flows, or webhook signature verification. All KüchenWert functions currently fall here (`supabase/config.toml` is the source of truth).
 - **Never authorize on decoded JWT claims alone.** With `verify_jwt = false` the gateway does not check signatures, so a hand-made token with `role: service_role` decodes fine. `_shared/auth.ts` verifies such tokens against the Auth server (`isGenuineServiceRoleJwt`); a function only gets that fix when it is redeployed. Probe after deploy: forged token must return 401.
 - Catch-all `throw` → 500 is bad for UX. Use specific HTTP codes + readable error messages
 - `supabase_deploy_edge_function` ALWAYS requires the `files` parameter with file contents
 - **Deploying large functions via MCP without CLI login**: the repo is public, so pass a one-line `index.ts` that imports the function from `https://raw.githubusercontent.com/wwprojekt/kuechenwert/<full-commit-sha>/supabase/functions/<name>/index.ts`. Relative imports (`../_shared/*`) resolve against the same commit and are bundled at deploy time, no runtime dependency on GitHub. Pin a pushed commit SHA (never `main`), keep `verify_jwt` as in `config.toml`, and probe afterwards. Does not work for code that reads files via `import.meta.url`. A later CLI deploy replaces the shim with the local files.
-- For periodically-running functions (image processing, cleanup, digests, reminders): the function has NO own auth — instead the cron job in `cron.schedule` passes the service-role key from `vault.decrypted_secrets` in the `Authorization` header. Function reads `req.headers.get("Authorization")` and verifies it matches `Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")`.
-- **Image-Pipeline (2026-04-22 redesign)**: `process-photo` Edge Function ist seit dem Worker-`/img/?w=`-Rollout **nicht mehr im kritischen Pfad**. Cards (480 px) und Detail-Photos (1024 px) werden via Cloudflare Worker `/img/<path>?w=480&q=70` on-demand resized (Worker fetcht Supabase Image Transformation, cached 1 Jahr im CF-Edge). `card_url` / `medium_url` aus der DB werden weiterhin bevorzugt wenn vorhanden, sonst fällt der Frontend-Code (`Kaufen.tsx`, Worker `/api/auctions/*`) automatisch auf `/img/?w=` zurück → kein 5-MB-JPG-Worst-Case mehr, auch wenn `process-photo` crasht. Whitelist-Widths (siehe `ALLOWED_RESIZE_WIDTHS` im Worker und `AllowedResizeWidth` in `src/lib/imageTransform.ts`) MÜSSEN synchron bleiben — sonst fällt der Worker auf das Original zurück. Frontend-Helper: `proxiedImageUrl(url, { width, quality })` aus `@/lib/imageTransform`.
-- `process-photo` Edge Function läuft nur noch 1×/Tag (`30 3 * * *` & `35 3 * * *`) als **Backup** für pre-baked Variants. Die Function skipped Originale > 2 MB pre-flight via HEAD `Content-Length` (sonst HTTP 546 WORKER_RESOURCE_LIMIT durch jsquash WASM). Wenn sie crasht oder ausfällt: kein Drama, der Worker-Proxy fängt alles auf. Backlog-Backfill nur noch via lokales `scripts/backfill-photo-variants.mjs` (nutzt native `sharp`).
-- Storage bucket `motorhome-photos` has a **15 MB hard limit** (server-side, in `storage.buckets.file_size_limit`). Browser-side compression in `src/lib/imageCompress.ts` brings normal uploads to ~1-2 MB; the bucket limit is the safety-net against malicious uploads bypassing the browser. If a future feature needs larger files (videos, originals for print), use a SEPARATE bucket with its own limit. **Großupload-Resilienz**: Auch ein 15-MB-Original macht /kaufen NICHT langsam, weil der Worker on-demand auf 480 px (~30-80 KB WebP) resized und das Ergebnis 1 Jahr im CF-Edge cached. Pro Photo entstehen max 2 unique Worker-Cache-URLs (480 + 1024) → weit unter Supabase Pro-Quota von 100k Origin-Bilder/Monat.
+- For periodically-running functions (cleanup, digests, reminders, outbox workers): the cron job in `cron.schedule` sends `x-kw-cron-secret` (from vault `kw_cron_secret`) and the function checks it with `checkCronOrServiceRoleOrAdmin` (`_shared/auth.ts`). Admins and the genuine service role may still call these functions manually.
+- Retired functions are not deleted right away: their `index.ts` calls `serveGone("<name>")` from `_shared/gone.ts` (410 Gone) and `config.toml` lists them under "Stillgelegt". Delete them in the Supabase dashboard only after an observation period.
+- Images: the caravan photo pipeline (`process-photo`, Cloudflare Worker `/img/`) is retired and `worker/` is not deployed. `proxiedImageUrl(url, { width, quality })` from `@/lib/imageTransform` falls back to Supabase image transformation when no proxy host is configured. Upload buckets need a server-side `file_size_limit`; browser compression (`src/lib/imageCompress.ts`) is not a safety net.
 
 ### Storage Uploads
 **Every** `.from("<bucket>").upload(path, file, options)` call must set `cacheControl`. The Supabase Storage SDK auto-prepends `max-age=` to whatever string you pass:
@@ -248,92 +232,48 @@ Note: Supabase serves storage via its own Cloudflare with Bot Management (`Set-C
 ### Realtime
 - Pattern for live updates: Edge Function returns ID + data → Frontend optimistic update → Realtime dedup via ID-Set (ref) → Auto-cleanup after timeout
 - Listener-Hygiene: every `supabase.channel(...)` MUST be filtered server-side (`filter: "column=eq.value"` or `=in.(...)`). Global listeners (no filter) cause every WAL change in that table to push to every connected client → exponential cost.
-- Periodic Refetch via `setInterval` + `window.addEventListener("focus")` is preferable to Realtime for browse pages (e.g. /kaufen). Realtime is for detail pages where users expect live updates.
+- Periodic Refetch via `setInterval` + `window.addEventListener("focus")` is preferable to Realtime for browse pages (e.g. `/dashboard/projekte`). Realtime is for detail pages where users expect live updates.
 
 ## Project Structure
-- `src/App.tsx` – Main router with all routes
-- `src/pages/` – 40+ page components
-- `src/components/` – UI, Admin, Dashboard, Wizard, Skeletons
-- `src/hooks/` – 15+ custom hooks
-- `src/lib/` – 25+ utility modules (sessionGuard, vehicle-data, etc.)
-- `src/contexts/` – AuthContext, SettingsContext
-- `src/integrations/supabase/` – Client + TypeScript types
-- `supabase/functions/` – 57 Edge Functions
-- `supabase/migrations/` – 65+ migrations
-
-## Vehicle Data Stats
-- **Wohnmobil**: 100 manufacturers, 1221 models
-- **Wohnwagen**: 36 manufacturers, 201 models
-- **Basisfahrzeuge**: 33 chassis options with 171 PS values
-- PS format: Chips show `XXkW/YYYPS`
+- `src/App.tsx` – Main router with all public and admin routes; studio/consumer dashboard routes live in `src/components/SmartDashboard.tsx`
+- `src/features/` – Feature modules: `funnel-a`, `funnel-b`, `planner`, `marketplace`, `account`
+- `src/pages/` – ~70 page components (public pages, `admin/`, `dashboard/`, `dealer/`, `funnel/`)
+- `src/components/` – shadcn/ui (`ui/`), admin, dashboard, pricing and layout components
+- `src/lib/`, `src/hooks/` – utilities (sessionGuard, brand config, SEO, invoices, tracking) and hooks
+- `src/integrations/supabase/` – Client + generated TypeScript types
+- `supabase/functions/` – 36 active Edge Functions (+ tombstones, see below); shared code in `_shared/`
+- `supabase/migrations/` – versioned migrations (file name = version in `supabase_migrations.schema_migrations`)
+- `docker/`, `Dockerfile` – nginx image for Dokploy, including prerendering at build time
 
 ## Edge Functions Status
-- **61 Edge Functions** all ACTIVE
-- Shared utilities: `_shared/cors.ts`, `_shared/auth.ts`, `_shared/email-builder.ts`, `_shared/rate-limiter.ts`, `_shared/edgeLogger.ts`, `_shared/turnstile.ts`
+- **36 active**: funnels and projects (`kw-lead`, `kw-lead-b`, `kw-planner`, `kw-project`, `kw-contact`), marketplace and orders (`kw-market-worker`, `kw-order-worker`), operations (`kw-maintenance`, `process-dunning`, `send-payment-reminder`, `process-scheduled-emails`), consent (`kw-unsubscribe`), invoices (`generate-invoice-pdf`, `send-invoice-email`, `record-invoice-payment`, `cancel-invoice`), admin/account functions, `inbound-webhook` (Svix/Resend signature), `track-conversion`, `sitemap`.
+- **59 tombstoned** (410 Gone via `_shared/gone.ts`, listed under "Stillgelegt" in `config.toml`): caravan auctions, wizard, appointments, contracts, photo pipeline, one-time migration tools, `log-error`, `send-lead-notification`, old planner functions.
+- Auth patterns: admin functions `checkServiceRoleOrAdmin`, cron functions `checkCronOrServiceRoleOrAdmin`, public submits Turnstile + honeypot + rate limit, consumer links signed tokens (`kw-project`, `kw-unsubscribe`).
+- Shared utilities: `_shared/cors.ts`, `_shared/auth.ts`, `_shared/email-builder.ts`, `_shared/rate-limiter.ts`, `_shared/edgeLogger.ts`, `_shared/turnstile.ts`, `_shared/kw-http.ts`, `_shared/brand-config.ts` (`BRAND_LEGAL` for § 35a GmbHG / § 14 UStG), `_shared/issuer-profile.ts`, `_shared/unsubscribe-token.ts`, `_shared/broadcast-recipients.ts`, `_shared/gone.ts`.
 
-### Security Classification (Auth Audit 2026-04-11)
-- **ADMIN** (24): `admin-create-user`, `admin-delete-user`, `backfill-email-content`, `check-expired-auctions`, `close-auction`, `complete-handover`, `fetch-attachment-url`, `generate-invoice-pdf`, `generate-purchase-contract`, `get-dealer-auth-status`, `get-recipient-count`, `process-abandoned-wizards`, `process-dunning`, `process-scheduled-emails`, `request-dealer-documents`, `resend-confirmation-email`, `send-admin-email`, `send-appointment-confirmation`, `send-auction-ending-notification`, `send-broadcast-email`, `send-dealer-auction-digest`, `send-dealer-notification`, `send-inactivity-email`, `send-invoice-email`
-- **USER_AUTH** (6): `accept-kaufchance-offer`, `dealer-document-upload`, `generate-ai-description`, `generate-appointment-pin`, `instant-buy`, `place-bid`
-- **RATE_LIMITED** (4): `ai-valuation`, `log-error`, `send-purchase-inquiry-notification`, `track-conversion`
-- **TURNSTILE** (1): `send-lead-notification`
-- **WEBHOOK** (1): `inbound-webhook` (Svix/Resend signature)
-- **INTERNAL_ONLY** (1): `handle-autobid` (called from `place-bid`, no own auth)
-- **PUBLIC_UNPROTECTED** (24): See risk list below
-
-### Public Unprotected Functions — Risk Assessment
-| Function | Risk | Mitigations |
-|----------|------|-------------|
-| `auto-convert-wizard` | HIGH — creates users, motorhomes, auctions | Requires valid `wizard_sessions` row |
-| `generate-handover-pdf` | MEDIUM — reads appointments, writes to storage | Requires valid appointment ID |
-| `notify-auction-winner` | MEDIUM — sends emails to users | Requires valid auction ID |
-| `notify-offer-action` | MEDIUM — sends Kaufchance emails | Requires valid auction ID |
-| `send-auction-notification` | MEDIUM — broad email primitive | Anti-spam via `admin_emails` dedup |
-| `send-push-notification` | MEDIUM — sends Web Push to users | Requires valid subscription data |
-| `upload-wizard-photos` | MEDIUM — uploads to storage | Requires valid `wizard_sessions` row |
-| `send-bid-notification` | LOW — outbid/new bid emails | Requires valid bid/auction IDs |
-| `send-disposition-email` | LOW — lead follow-up emails | Anti-spam via `admin_emails` dedup |
-| `send-expert-valuation` | LOW — valuation email to leads | Requires valid lead ID |
-| `send-favorite-notification` | LOW — price change alerts | Requires valid motorhome ID |
-| `send-payment-confirmation` | LOW — confirmation email | Requires valid data in body |
-| `send-welcome-email` | LOW — welcome email | Dedup via `admin_emails` |
-| `register-dealer` | LOW — intentionally public | Creates user + pending application |
-| `send-appointment-reminder` | LOW — cron: reminder emails | Reads only upcoming appointments |
-| `send-auction-summary` | LOW — cron: seller summaries | Reads active auctions only |
-| `send-auto-response` | LOW — auto-reply from inbound | Called from `inbound-webhook` |
-| `send-payment-reminder` | LOW — cron: payment reminders | Reads overdue invoices only |
-| `send-registration-invite` | LOW — magic link invite | Requires valid wizard session |
-| `send-wizard-resume-email` | LOW — resume link email | Requires valid session ID |
-| `send-wrong-number-email` | LOW — wrong number follow-up | Requires valid lead ID |
-| `notify-vehicle-question` | LOW — admin notification | Sends only to admin email |
-| `verify-appointment-pin` | LOW — PIN verification | `pin_attempts` lockout table |
-| `sitemap` | NONE — public XML sitemap | Read-only, public data |
+## Hosting, Routing & SEO
+- nginx serves a **route allowlist** (`docker/default.conf`): unknown paths get a real 404, legacy caravan URLs a 301 (query strings such as UTM/gclid are kept). **A new public route must be added to the allowlist**, otherwise it returns 404 in production. Indexable routes also belong in `scripts/prerender.mjs` (`ROUTES`) and in the `sitemap` function.
+- Public routes are prerendered during the Docker build (`dist/<route>/index.html`, SPA shell in `dist/spa.html`). If Chromium or a route fails, the build falls back to the plain SPA.
+- Security headers live in `docker/security-headers.conf` and must be included in every nginx block with its own `add_header`. The CSP allows no inline scripts: bootstrap code lives in `public/js/consent-bootstrap.js` and `public/js/tracking-loader.js`. Check changes with `node scripts/check-csp.mjs`.
+- `/projekt` and `/abmelden` are served with `no-referrer`, `noindex` and `no-store`; `/admin` and `/dashboard` with `noindex`. The service worker (`public/sw.js`, bump `CACHE_VERSION` on SW changes) does not cache private pages.
+- nginx takes the client IP from `CF-Connecting-IP` for Cloudflare ranges (`docker/nginx.conf`); keep the ranges current.
 
 ## Dev Environment Notes
-- .env file exists with VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY
-- Build dist/ and serve with `npx serve dist -l 8012 --single` for reliable SPA routing
-- Agent-proxy paths break SPA asset loading; production Netlify works fine
+- `.env` with `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` is needed for a working local build (not present in every environment).
+- Build `dist/` and serve with `npx serve dist -l 8012 --single` for SPA routing; this does not reproduce the nginx allowlist, redirects or headers.
+- Agent-proxy paths break SPA asset loading.
 
 ## Known Remaining Items
-- Blog: Table + pages exist, 0 articles (content feature never populated)
-- Migration Edge Functions (import-table-data, import-photos, migrate-storage, backfill-email-content): One-time tools, harmless
-- Baujahr ranges per model NOT implemented
-- Search is starts-with; could benefit from fuzzy matching
-- 24 Edge Functions are PUBLIC_UNPROTECTED (see Security Classification above) — cron-style functions should ideally require a shared secret header
+- Blog and Ratgeber: pages exist, 0 articles; both overview pages are `noindex` until content exists.
+- Caravan tables, functions, triggers and buckets still exist in the DB; drop them by migration once nothing accesses them anymore.
+- 59 tombstoned Edge Functions: delete in the Supabase dashboard after an observation period, then remove the directories and `config.toml` entries.
 
-## Removed Dead Code (2026-04-11)
-- `src/lib/analytics.ts` — Duplicate of `analyticsService.ts`, never imported, `AnalyticsInitializer` was disabled
-- `src/components/wizard/ContactStep.tsx` — Legacy wizard step, replaced by `QuickContactStep` + `SaleChannelStep` + `AccountLocationStep`
-- `src/components/ProtectedRoute.tsx` + test — Only referenced in tests, never used in `App.tsx`
-- `src/pages/dealer/DealerLayout.tsx` — Replaced by `SmartDashboard`'s `DealerLayoutContent`
-- `src/components/DealerRoute.tsx` — Only imported by deleted `DealerLayout.tsx`
-
-## Wertrechner Calibration
-- Algorithm + KI dual system: KI (OpenAI) is primary (~95% of cases), algorithm is fallback
-- Fallback label: "Algorithmische Schätzung" (gray) instead of misleading "KI-Wertschätzung" (teal)
-- Confidence ranges: ±5% at ≥85%, ±10% at ≥70%, ±15% at ≥50%, ±20% at <50%
+## Removed Code (2026-09-28)
+- Caravan frontend: auctions, bidding, Kaufchance, sell wizard, stations/appointments, contracts, listings, Wertrechner reviews, dealer inventory and the matching admin pages, hooks and libs; unused shadcn components. Legacy routes redirect to `/formular`, `/kuechenrechner` or `/kuechenstudios`.
+- Edge Functions for these features were replaced by 410 tombstones.
 
 ## Google Tracking
 - Custom analytics: `analytics_sessions`, `analytics_page_views`, `analytics_events`
-- Google Ads: GCLID/GBRAID/WBRAID click-ID capture via `track-conversion` Edge Function
-- Meta Pixel: Consent-managed
+- Google tag and Meta Pixel load only after consent (`public/js/tracking-loader.js`); click IDs (gclid, gbraid, wbraid, msclkid, fbclid) are stored only with marketing consent.
+- The former CaravanWert GA4/Ads IDs were removed; KüchenWert IDs are entered under Admin → Tracking. Leads from all funnels report `KUECHEN_LEAD`.
 - **GA4_API_SECRET**: Must be created in GA4 Admin → Data Streams → Measurement Protocol API secrets

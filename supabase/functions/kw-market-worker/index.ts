@@ -680,7 +680,28 @@ async function onComplaintDecided(ctx: Ctx, p: Record<string, unknown>) {
   );
 }
 
+async function onLeadFilesAdded(ctx: Ctx, p: Record<string, unknown>) {
+  const lead = await ctx.lead(String(p.lead_id));
+  const count = Math.max(1, Number(p.count) || 1);
+  await ctx.send({
+    to: ctx.adminAddress(),
+    subject: `Unterlagen nachgereicht · PLZ ${lead.postal_code}`,
+    html: ctx.layout(
+      "Unterlagen nachgereicht",
+      paragraph(
+        `Zur Anfrage aus PLZ ${escapeHtml(lead.postal_code)} ${count === 1 ? "wurde eine Datei" : `wurden ${count} Dateien`} über den Projektlink hochgeladen.`,
+      ) +
+        paragraph(
+          "Bitte im Admin unter Anfragen → Ausschreibung prüfen. Für Küchenstudios freigeben, sobald keine Namen oder Kontaktdaten mehr zu sehen sind – bei Bedarf als geschwärzte Fassung.",
+        ) +
+        button("Anfragen öffnen", `${BRAND.baseUrl}/admin/leads`),
+    ),
+    type: "lead_files_admin",
+  });
+}
+
 const HANDLERS: Record<string, (ctx: Ctx, payload: Record<string, unknown>) => Promise<void>> = {
+  lead_files_added: onLeadFilesAdded,
   project_created: onProjectCreated,
   project_link: onProjectLink,
   tender_published: onTenderPublished,

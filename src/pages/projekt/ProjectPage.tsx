@@ -18,6 +18,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { ApiError, errorMessage } from "@/features/marketplace/api-client";
 import { OfferCard } from "@/features/marketplace/components/OfferCard";
 import { PhoneCaptureCard } from "@/features/marketplace/components/PhoneCaptureCard";
+import { ProjectFilesCard } from "@/features/marketplace/components/ProjectFilesCard";
 import { ProjectAnswers } from "@/features/marketplace/components/ProjectAnswers";
 import { ProjectOrderCard } from "@/features/marketplace/components/ProjectOrderCard";
 import { ProjectDataCard } from "@/features/marketplace/components/ProjectDataCard";
@@ -204,6 +205,13 @@ export function ProjectView({ token }: { token: string }) {
   const phoneCard = (asksForPhone || phoneSaved) && (
     <PhoneCaptureCard token={token} onSaved={() => setPhoneSaved(true)} className={isNew ? "mb-8" : undefined} />
   );
+  const files = view.files ?? [];
+  const canUploadFiles = view.can_upload_files === true;
+  // Solange noch nichts hochgeladen ist, steht die Karte oben: Nachreichen ist dann der nächste Schritt.
+  const filesFirst = canUploadFiles && files.length === 0;
+  const filesCard = (canUploadFiles || files.length > 0) && (
+    <ProjectFilesCard token={token} files={files} canUpload={canUploadFiles} />
+  );
 
   return (
     <PageLayout title="Ihr Küchenprojekt" description="Ihre Küchenplanung und die Angebote der Studios" canonicalPath="/projekt" noIndex>
@@ -252,6 +260,7 @@ export function ProjectView({ token }: { token: string }) {
         <div className="grid gap-8 lg:grid-cols-[1.35fr_1fr]">
           <div className="space-y-5">
             {view.order && <ProjectOrderCard token={token} order={view.order} studioName={awarded?.dealer.company_name ?? "Ihr Küchenstudio"} />}
+            {filesFirst && filesCard}
 
             <div className="flex items-end justify-between gap-3">
               <h2 className="text-2xl font-bold">
@@ -282,6 +291,7 @@ export function ProjectView({ token }: { token: string }) {
 
           <aside className="space-y-5">
             {!isNew && phoneCard}
+            {!filesFirst && filesCard}
             {latestRender?.url && (
               <div className="overflow-hidden rounded-2xl border bg-card">
                 {photo?.url && latestRender.mode === "edit" ? (

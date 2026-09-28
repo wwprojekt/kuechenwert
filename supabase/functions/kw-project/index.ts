@@ -10,6 +10,8 @@
  *   order-problem  Problem zum Auftrag melden (message)
  *   export-data    Alle gespeicherten Daten als JSON (Art. 15/20 DSGVO)
  *   delete-data    Projekt beenden und personenbezogene Daten löschen (email zur Bestätigung)
+ *   upload-files   Unterlagen nachreichen (Funnel B): Dateien ankündigen → signierte Upload-URLs
+ *   attach-files   Nach dem Upload eintragen (upload_token, files); meldet dem Team per Outbox
  *   resend         Projektlink(s) per E-Mail neu zusenden (email) – ohne Token
  *
  * Der Token wird nie gespeichert, nur sein SHA-256-Hash (lead_access_tokens).
@@ -30,9 +32,11 @@ import {
   sha256Hex,
   validIp,
 } from "../_shared/kw-http.ts";
+import { MAX_FILES_PER_LEAD, attachUploadedFiles, issueUploads, parseAnnouncedFiles } from "../_shared/lead-files.ts";
 
 const SIGNED_URL_TTL = 60 * 60;
 const CONSENT_TEXT_VERSION = "kw-telefon-2026-09-28";
+const CLOSED_TENDER_STATUSES = new Set(["awarded", "cancelled", "expired"]);
 
 async function resolveLead(sb: SupabaseClient, req: Request, token: unknown): Promise<string> {
   if (typeof token !== "string" || !/^[A-Za-z0-9_-]{32,64}$/.test(token)) {
@@ -83,7 +87,47 @@ async function projectView(sb: SupabaseClient, leadId: string) {
   }
   const { data: order, error: orderErr } = await sb.rpc("kw_project_order", { p_lead_id: leadId });
   if (orderErr) throw orderErr;
-  return { ...view, renders, photos, order: order ?? null };
+  const upload = await uploadState(sb, leadId);
+  return { ...view, renders, photos, order: order ?? null, files: upload.files, can_upload_files: upload.allowed };
+}
+
+/** Unterlagen des Leads und ob der Kunde noch welche nachreichen darf (nur Funnel B, Projekt offen). */
+async function uploadState(sb: SupabaseClient, leadId: string) {
+  const [{ data: lead, error: leadErr }, { data: tender, error: tenderErr }, { data: files, error: filesErr }] = await Promise.all([
+    sb.from("leads").select("funnel_type").eq("id", leadId).maybeSingle(),
+    sb.from("lead_auctions").select("status").eq("lead_id", leadId).order("created_at", { ascending: false }).limit(1).maybeSingle(),
+    sb.from("lead_files").select("file_name, category, created_at").eq("lead_id", leadId).order("created_at", { ascending: true }),
+  ]);
+  if (leadErr) throw leadErr;
+  if (tenderErr) throw tenderErr;
+  if (filesErr) throw filesErr;
+  const list = (files ?? []).map((f) => ({ name: f.file_name as string, category: f.category as string, created_at: f.created_at as string }));
+  const allowed = lead?.funnel_type === "b" && !CLOSED_TENDER_STATUSES.has((tender?.status as string | undefined) ?? "") && list.length < MAX_FILES_PER_LEAD;
+  return { files: list, allowed };
+}
+
+async function actionUploadFiles(req: Request, sb: SupabaseClient, leadId: string, body: Record<string, unknown>) {
+  await enforceRateLimit(sb, `kw:project-files:${leadId}`, 3600, 20);
+  const files = parseAnnouncedFiles(body.files);
+  if (files.length === 0) throw new HttpError(422, "Bitte mindestens eine Datei auswählen.", "files");
+  const state = await uploadState(sb, leadId);
+  if (!state.allowed) {
+    throw new HttpError(409, "Für dieses Projekt können keine Unterlagen mehr hochgeladen werden.", "files_not_allowed");
+  }
+  if (state.files.length + files.length > MAX_FILES_PER_LEAD) {
+    throw new HttpError(422, `Pro Projekt sind höchstens ${MAX_FILES_PER_LEAD} Dateien möglich.`, "files");
+  }
+  return jsonResponse(req, await issueUploads(sb, leadId, files));
+}
+
+async function actionAttachFiles(req: Request, sb: SupabaseClient, leadId: string, body: Record<string, unknown>) {
+  await enforceRateLimit(sb, `kw:project-attach:${clientIp(req)}`, 3600, 30);
+  const { attached, missing } = await attachUploadedFiles(sb, body.upload_token, body.files, leadId);
+  if (attached > 0) {
+    const { error } = await sb.rpc("kw_enqueue", { p_event_type: "lead_files_added", p_payload: { lead_id: leadId, count: attached } });
+    if (error) console.error("[kw-project] lead_files_added enqueue failed", error.message);
+  }
+  return jsonResponse(req, { ok: true, attached, missing });
 }
 
 async function actionResend(req: Request, sb: SupabaseClient, body: Record<string, unknown>) {
@@ -213,6 +257,10 @@ serve(async (req) => {
       return actionExportData(req, sb, leadId);
     case "delete-data":
       return actionDeleteData(req, sb, leadId, body);
+    case "upload-files":
+      return actionUploadFiles(req, sb, leadId, body);
+    case "attach-files":
+      return actionAttachFiles(req, sb, leadId, body);
     default:
       throw new HttpError(400, "Unbekannte Aktion.", "unknown_action");
   }

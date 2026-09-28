@@ -1,3 +1,5 @@
+import type { PendingLeadFile } from "@/features/funnel-b/files";
+import { announceFiles, uploadToTargets, type UploadTarget } from "@/features/funnel-b/upload";
 import { callFunction } from "./api-client";
 import type { Order } from "./order";
 
@@ -114,6 +116,16 @@ export interface ProjectView {
   photos: Array<{ path: string; url: string | null }>;
   /** Auftragsverlauf nach dem Zuschlag; fehlt bei älteren Function-Versionen. */
   order?: Order | null;
+  /** Hochgeladene Unterlagen (nur Name und Kategorie). */
+  files?: ProjectFile[];
+  /** Unterlagen dürfen nachgereicht werden (Funnel B, Projekt offen). */
+  can_upload_files?: boolean;
+}
+
+export interface ProjectFile {
+  name: string;
+  category: string;
+  created_at: string;
 }
 
 const FN = "kw-project";
@@ -133,3 +145,32 @@ export const exportProjectData = (token: string) => callFunction<Record<string, 
 /** Projekt beenden und personenbezogene Daten löschen; `email` bestätigt die Anfrage. */
 export const deleteProjectData = (token: string, email: string) =>
   callFunction<{ ok: true }>(FN, { action: "delete-data", token, email });
+
+/**
+ * Unterlagen über den Projektlink nachreichen: ankündigen, direkt in den
+ * Bucket hochladen, danach eintragen lassen. Liefert die Zahl der
+ * eingetragenen Dateien.
+ */
+export async function uploadProjectFiles(
+  token: string,
+  files: PendingLeadFile[],
+  onProgress?: (done: number, total: number) => void,
+): Promise<{ attached: number; failed: number }> {
+  const issued = await callFunction<{ upload_token?: string; uploads?: UploadTarget[] }>(FN, {
+    action: "upload-files",
+    token,
+    files: announceFiles(files),
+  });
+  const targets = issued.uploads ?? [];
+  if (!targets.length || !issued.upload_token) return { attached: 0, failed: files.length };
+  const uploaded = await uploadToTargets(files, targets, onProgress);
+  if (uploaded.length === 0) return { attached: 0, failed: files.length };
+  const result = await callFunction<{ attached: number }>(FN, {
+    action: "attach-files",
+    token,
+    upload_token: issued.upload_token,
+    files: uploaded,
+  });
+  const attached = result.attached ?? 0;
+  return { attached, failed: Math.max(0, files.length - attached) };
+}

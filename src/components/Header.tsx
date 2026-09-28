@@ -84,7 +84,6 @@ const DEALER_ACCOUNT: AccountLink[] = [
 const CONSUMER_ACCOUNT: AccountLink[] = [
   { to: "/dashboard", label: "Meine Projekte", icon: FolderOpen },
   { to: "/dashboard/messages", label: "Nachrichten", icon: MessageSquare },
-  { to: "/dashboard/documents", label: "Dokumente", icon: FileText },
   { to: "/dashboard/profile", label: "Profil", icon: User },
   { to: "/dashboard/settings", label: "Einstellungen", icon: Settings },
 ];

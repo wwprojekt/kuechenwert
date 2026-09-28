@@ -184,11 +184,9 @@ const ResetPassword = () => {
                   abgelaufen. Bitte fordern Sie einen neuen Link an.
                 </p>
                 <div className="pt-4">
-                  <Link to="/forgot-password">
-                    <Button className="w-full">
-                      Neuen Link anfordern
-                    </Button>
-                  </Link>
+                  <Button asChild className="w-full">
+                    <Link to="/forgot-password">Neuen Link anfordern</Link>
+                  </Button>
                 </div>
               </div>
             ) : isSuccess ? (
@@ -202,11 +200,9 @@ const ResetPassword = () => {
                   Kürze zur Anmeldung weitergeleitet.
                 </p>
                 <div className="pt-4">
-                  <Link to="/login">
-                    <Button className="w-full">
-                      Jetzt anmelden
-                    </Button>
-                  </Link>
+                  <Button asChild className="w-full">
+                    <Link to="/login">Jetzt anmelden</Link>
+                  </Button>
                 </div>
               </div>
             ) : (

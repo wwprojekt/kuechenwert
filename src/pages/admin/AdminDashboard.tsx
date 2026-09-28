@@ -226,11 +226,11 @@ export default function AdminDashboard() {
                     <PhoneCall className="w-4 h-4 text-orange-600" />
                     Dringende Anfragen
                   </CardTitle>
-                  <Link to="/admin/leads">
-                    <Button variant="ghost" size="sm" className="text-xs h-7">
+                  <Button asChild variant="ghost" size="sm" className="text-xs h-7">
+                    <Link to="/admin/leads">
                       Alle <ArrowRight className="w-3 h-3 ml-1" />
-                    </Button>
-                  </Link>
+                    </Link>
+                  </Button>
                 </div>
               </CardHeader>
               <CardContent className="pt-0">

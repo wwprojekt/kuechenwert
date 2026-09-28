@@ -27,7 +27,7 @@ const OfferRequestCard = () => (
   <div className="rounded-2xl border bg-background p-6 md:p-8 shadow-lg">
     <h3 className="text-xl font-bold mb-2">Küchenangebote vergleichen</h3>
     <p className="text-muted-foreground mb-6 leading-relaxed">
-      Beschreiben Sie in 2 Minuten Ihre Wunschküche. Passende Küchenstudios aus Ihrer Region schicken Ihnen Angebote.
+      Beschreiben Sie in ca. 3 Minuten Ihre Wunschküche. Passende Küchenstudios aus Ihrer Region können Ihnen Angebote machen.
     </p>
     <ul className="space-y-3 mb-6">
       {OFFER_BENEFITS.map((benefit) => (
@@ -230,7 +230,7 @@ const RatgeberTemplate = ({ config }: RatgeberTemplateProps) => {
                 <Clock className="h-7 w-7 text-primary" />
               </div>
               <div>
-                <p className="font-semibold">In 2 Minuten</p>
+                <p className="font-semibold">In ca. 3 Minuten</p>
                 <p className="text-sm text-muted-foreground">Projekt beschreiben</p>
               </div>
             </div>

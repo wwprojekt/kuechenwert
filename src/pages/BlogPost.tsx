@@ -67,9 +67,9 @@ const BlogPost = () => {
         <main className="flex-1 py-20">
           <div className="container text-center">
             <h1 className="text-xl sm:text-2xl md:text-3xl font-bold mb-4">Blogpost nicht gefunden</h1>
-            <Link to="/blog">
-              <Button>Zurück zum Blog</Button>
-            </Link>
+            <Button asChild>
+              <Link to="/blog">Zurück zum Blog</Link>
+            </Button>
           </div>
         </main>
         <Footer />
@@ -182,13 +182,11 @@ const BlogPost = () => {
               Planen Sie gerade eine neue Küche?
             </h2>
             <p className="text-primary-foreground/90 mb-8">
-              Starten Sie mit einer kostenlosen Anfrage — geprüfte Studios senden Ihnen in 48 h individuelle Angebote.
+              Starten Sie mit einer kostenlosen Anfrage – geprüfte Küchenstudios aus Ihrer Region können 7 Tage lang Angebote abgeben.
             </p>
-            <Link to="/formular">
-              <Button size="lg" variant="secondary">
-                Kostenlose Angebote einholen
-              </Button>
-            </Link>
+            <Button asChild size="lg" variant="secondary">
+              <Link to="/formular">Kostenlose Angebote einholen</Link>
+            </Button>
           </div>
         </div>
       </section>

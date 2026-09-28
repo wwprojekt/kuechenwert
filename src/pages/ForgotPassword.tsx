@@ -119,12 +119,12 @@ const ForgotPassword = () => {
                   Bitte überprüfen Sie auch Ihren Spam-Ordner.
                 </p>
                 <div className="pt-4">
-                  <Link to="/login">
-                    <Button variant="outline" className="w-full">
+                  <Button asChild variant="outline" className="w-full">
+                    <Link to="/login">
                       <ArrowLeft className="w-4 h-4 mr-2" />
                       Zurück zur Anmeldung
-                    </Button>
-                  </Link>
+                    </Link>
+                  </Button>
                 </div>
               </div>
             ) : (

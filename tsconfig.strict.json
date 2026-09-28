@@ -82,6 +82,7 @@
     "src/pages/dashboard/DashboardOverview.tsx",
     "src/pages/dashboard/UserProfile.tsx",
     "src/lib/dealerApplications.ts",
+    "src/lib/funnelAnalytics.ts",
     "src/lib/gadsConversionService.ts",
     "src/lib/germanErrors.ts",
     "src/lib/invoiceGenerator.ts",
@@ -99,6 +100,8 @@
     "supabase/functions/_shared/kitchen-catalog.ts",
     "supabase/functions/_shared/kitchen-pricing.ts",
     "supabase/functions/_shared/kitchen-prompt.ts",
+    "supabase/functions/_shared/fal-models.ts",
+    "supabase/functions/_shared/price-calibration.ts",
     "supabase/functions/_shared/funnel-a-catalog.ts",
     "supabase/functions/_shared/funnel-b-catalog.ts"
   ]

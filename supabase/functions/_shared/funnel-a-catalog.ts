@@ -24,7 +24,7 @@ import {
   type StyleId,
   type WorktopId,
 } from "./kitchen-catalog.ts";
-import { estimateKitchenPrice, type KitchenEstimate, type RateCard } from "./kitchen-pricing.ts";
+import { estimateKitchenPrice, type EstimateOptions, type KitchenEstimate } from "./kitchen-pricing.ts";
 import {
   APPLIANCE_BRANDS,
   APPLIANCE_CATEGORIES,
@@ -418,10 +418,14 @@ export function funnelAPlannerInput(a: FunnelAAnswers): { config: PlannerConfig;
 
 export function estimateFunnelA(
   a: FunnelAAnswers,
-  options: { card?: RateCard; postalCode?: string | null; rateCardVersion?: number | null } = {},
+  options: Omit<EstimateOptions, "source"> = {},
 ): KitchenEstimate {
   const { config, room } = funnelAPlannerInput(a);
-  return estimateKitchenPrice(config, room, { ...options, postalCode: options.postalCode ?? (a.postal_code || null) });
+  return estimateKitchenPrice(config, room, {
+    ...options,
+    source: "a",
+    postalCode: options.postalCode ?? (a.postal_code || null),
+  });
 }
 
 /** Was in leads.funnel_answers landet (Spalten wie kitchen_form separat). */

@@ -21,6 +21,32 @@ export function trackFunnelStep(funnel: FunnelId, step: string, index: number, t
   });
 }
 
+/** Ergebnis einer KI-Visualisierung im Planer (Funnel C): Qualität und Ausfälle sichtbar machen. */
+export function trackPlannerRender(result: {
+  status: "success" | "failed";
+  mode: "edit" | "text";
+  variant: boolean;
+  seconds: number | null;
+}): void {
+  analyticsService.trackEvent("planner_render", {
+    category: "funnel_c",
+    action: result.status,
+    label: result.variant ? "variante" : result.mode === "edit" ? "foto" : "ohne_foto",
+    value: result.seconds ?? undefined,
+    properties: { funnel: "c", ...result },
+  });
+}
+
+/** Bewertung einer Visualisierung (Daumen hoch/runter). */
+export function trackPlannerFeedback(value: 1 | -1 | null, variant: boolean): void {
+  analyticsService.trackEvent("planner_feedback", {
+    category: "funnel_c",
+    action: value === 1 ? "like" : value === -1 ? "dislike" : "reset",
+    label: variant ? "variante" : "visualisierung",
+    properties: { funnel: "c", value, variant },
+  });
+}
+
 /** Fehlgeschlagenes Absenden, damit technische Abbrüche in der Auswertung sichtbar sind. */
 export function trackFunnelSubmitError(funnel: FunnelId, reason: string): void {
   analyticsService.trackEvent("funnel_submit_error", {

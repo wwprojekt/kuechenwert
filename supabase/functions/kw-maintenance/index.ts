@@ -4,18 +4,28 @@
  *
  *   { "task": "retention" }  täglich: Löschfristen. Leads werden erst nach dem
  *     Entfernen ihrer Dateien (Storage-API) anonymisiert, verwaiste
- *     Planer-Sitzungen samt Bildern gelöscht, Betriebsdaten bereinigt
- *     (Fristen siehe Migration kw_maintenance_jobs).
+ *     Planer-Sitzungen samt Bildern gelöscht, abgelaufene KI-Trainingskopien
+ *     entfernt, Betriebsdaten bereinigt (Fristen siehe Migration
+ *     kw_maintenance_jobs).
  *   { "task": "health" }     stündlich: Outbox, Cron, HTTP-Aufrufe, offene
- *     Anfragen, blockierte Rechnungen, kritische Fehler. Hinweis-Mail an das
- *     Admin-Postfach, je Befund höchstens alle 12 Stunden.
+ *     Anfragen, blockierte Rechnungen, kritische Fehler, KI-Tageslimit und
+ *     fehlschlagende Visualisierungen. Hinweis-Mail an das Admin-Postfach, je
+ *     Befund höchstens alle 12 Stunden.
+ *   { "task": "price-calibration" } täglich 03:40 und aus dem Admin: gleicht
+ *     die Preis-Engine mit den Studio-Angeboten ab (kitchen_price_calibration).
  */
 import type { SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2.100.1";
+import { expireTrainingSamples } from "../_shared/ai-training.ts";
 import { checkCronOrServiceRoleOrAdmin } from "../_shared/auth.ts";
 import { BRAND } from "../_shared/brand-config.ts";
 import { logEdgeError } from "../_shared/edgeLogger.ts";
 import { buildEmailLayout, button, list, paragraph } from "../_shared/email-builder.ts";
+import { estimateFunnelA, sanitizeFunnelAAnswers } from "../_shared/funnel-a-catalog.ts";
+import { sanitizeConfig, sanitizeRoom } from "../_shared/kitchen-catalog.ts";
+import { estimateKitchenPrice } from "../_shared/kitchen-pricing.ts";
 import { HttpError, escapeHtml, jsonResponse, readJson, serve, serviceClient } from "../_shared/kw-http.ts";
+import { computeCalibration, type CalibrationObservation } from "../_shared/price-calibration.ts";
+import { loadRateCard } from "../_shared/rate-card.ts";
 
 const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY") ?? "";
 const ALERT_WINDOW_SECONDS = 12 * 60 * 60;
@@ -75,6 +85,13 @@ async function runRetention(sb: SupabaseClient) {
     }
   }
 
+  let trainingSamplesExpired = 0;
+  try {
+    trainingSamplesExpired = await expireTrainingSamples(sb);
+  } catch (err) {
+    failures.push(`KI-Trainingskopien: ${err instanceof Error ? err.message : String(err)}`);
+  }
+
   const { data: cleanup, error: cleanupError } = await sb.rpc("kw_retention_cleanup");
   if (cleanupError) throw cleanupError;
 
@@ -88,7 +105,72 @@ async function runRetention(sb: SupabaseClient) {
     });
   }
 
-  return { task: "retention", leadsAnonymized, plannerSessionsDeleted, filesRemoved, cleanup, failures: failures.length };
+  return {
+    task: "retention",
+    leadsAnonymized,
+    plannerSessionsDeleted,
+    trainingSamplesExpired,
+    filesRemoved,
+    cleanup,
+    failures: failures.length,
+  };
+}
+
+type ObservationRow = {
+  funnel: string;
+  postal_code: string | null;
+  funnel_answers: Record<string, unknown> | null;
+  kitchen_form: string | null;
+  kitchen_style: string | null;
+  planner_config: Record<string, unknown> | null;
+  planner_room: Record<string, unknown> | null;
+  observed_eur: number | string;
+};
+
+/**
+ * Rechnet jede Ausschreibung mit der aktuellen Engine und Rate-Card neu (ohne
+ * bisherigen Abgleich) und vergleicht mit dem Median der Angebote. So wirken
+ * Änderungen an Rate-Card oder Engine sofort, ohne doppelt zu korrigieren.
+ */
+async function runPriceCalibration(sb: SupabaseClient) {
+  const { card } = await loadRateCard(sb);
+  const { data, error } = await sb.rpc("kw_price_observations", { p_limit: 2000 });
+  if (error) throw error;
+  const observations: CalibrationObservation[] = [];
+  for (const row of (data ?? []) as ObservationRow[]) {
+    const observed = Number(row.observed_eur);
+    if (!Number.isFinite(observed) || observed <= 0) continue;
+    if (row.funnel === "traumkueche" && row.planner_config) {
+      const config = sanitizeConfig(row.planner_config);
+      const estimate = estimateKitchenPrice(config, sanitizeRoom(row.planner_room), { card, postalCode: row.postal_code });
+      observations.push({ ratio: observed / estimate.mid, source: "c", quality: config.quality, postalCode: row.postal_code });
+    } else if (row.funnel === "a") {
+      const answers = sanitizeFunnelAAnswers({
+        ...(row.funnel_answers ?? {}),
+        kitchen_form: row.kitchen_form,
+        kitchen_style: row.kitchen_style,
+        postal_code: row.postal_code,
+      });
+      const estimate = estimateFunnelA(answers, { card });
+      observations.push({ ratio: observed / estimate.mid, source: "a", quality: null, postalCode: row.postal_code });
+    }
+  }
+
+  const rows = computeCalibration(observations);
+  const updatedAt = new Date().toISOString();
+  const { error: upsertError } = await sb.from("kitchen_price_calibration").upsert(
+    rows.map((r) => ({
+      segment: r.segment,
+      factor: r.factor,
+      sample_count: r.sampleCount,
+      observed_ratio: r.observedRatio,
+      updated_at: updatedAt,
+    })),
+    { onConflict: "segment" },
+  );
+  if (upsertError) throw upsertError;
+  const global = rows.find((r) => r.segment === "global");
+  return { task: "price-calibration", observations: observations.length, globalFactor: global?.factor ?? 1 };
 }
 
 type Snapshot = Record<string, number>;
@@ -102,6 +184,8 @@ const FINDINGS: Array<{ key: string; text: (n: number) => string; link: string }
   { key: "invoices_blocked", text: (n) => `${n} Rechnungen hängen seit über einem Tag als Entwurf (z. B. fehlende Bankverbindung in den Einstellungen).`, link: "/admin/financials" },
   { key: "complaints_open", text: (n) => `${n} Reklamationen von Küchenstudios sind seit über 5 Tagen offen.`, link: "/admin/leads" },
   { key: "errors_critical", text: (n) => `${n} kritische Fehler in der letzten Stunde.`, link: "/admin/error-logs" },
+  { key: "render_cap_near", text: (n) => `${n} KI-Visualisierungen in 24 Stunden – über 80 % des Tageslimits. Danach sehen Besucher keine Visualisierung mehr; Limit unter „KI & Preis-Engine“ prüfen.`, link: "/admin/ki" },
+  { key: "renders_failing", text: (n) => `${n} KI-Visualisierungen sind in den letzten 2 Stunden fehlgeschlagen (fal.ai-Guthaben, API-Schlüssel und Modellstatus prüfen).`, link: "/admin/ki" },
 ];
 
 async function firstAlertInWindow(sb: SupabaseClient, key: string): Promise<boolean> {
@@ -187,5 +271,6 @@ serve(async (req) => {
   const sb = serviceClient();
   if (task === "retention") return jsonResponse(req, await runRetention(sb));
   if (task === "health") return jsonResponse(req, await runHealth(sb));
+  if (task === "price-calibration") return jsonResponse(req, await runPriceCalibration(sb));
   throw new HttpError(400, "Unbekannte Aufgabe.", "unknown_task");
 });

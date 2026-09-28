@@ -21,6 +21,7 @@ import { PhoneCaptureCard } from "@/features/marketplace/components/PhoneCapture
 import { ProjectFilesCard } from "@/features/marketplace/components/ProjectFilesCard";
 import { ProjectAnswers } from "@/features/marketplace/components/ProjectAnswers";
 import { ProjectOrderCard } from "@/features/marketplace/components/ProjectOrderCard";
+import { ProjectAiConsentCard } from "@/features/marketplace/components/ProjectAiConsentCard";
 import { ProjectDataCard } from "@/features/marketplace/components/ProjectDataCard";
 import { acceptOffer, cancelProject, getProject, type ProjectOffer, type ProjectView as ProjectData } from "@/features/marketplace/project-api";
 import { clearStoredProjectToken, storeProjectToken } from "@/features/marketplace/project-token";
@@ -345,6 +346,7 @@ export function ProjectView({ token }: { token: string }) {
                 </button>
               )}
             </div>
+            {view.ai_training && <ProjectAiConsentCard token={token} granted={view.ai_training.granted} />}
             <ProjectDataCard token={token} />
             <p className="text-center text-xs text-muted-foreground">
               Fragen? <Link to="/kontakt" className="underline">Kontaktieren Sie uns</Link> – wir helfen gern.

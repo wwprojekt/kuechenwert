@@ -2763,6 +2763,30 @@ export type Database = {
         }
         Relationships: []
       }
+      kitchen_price_calibration: {
+        Row: {
+          factor: number
+          observed_ratio: number | null
+          sample_count: number
+          segment: string
+          updated_at: string
+        }
+        Insert: {
+          factor?: number
+          observed_ratio?: number | null
+          sample_count?: number
+          segment: string
+          updated_at?: string
+        }
+        Update: {
+          factor?: number
+          observed_ratio?: number | null
+          sample_count?: number
+          segment?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       kitchen_pricing_rate_cards: {
         Row: {
           created_at: string
@@ -3185,6 +3209,116 @@ export type Database = {
             columns: ["seller_id"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      kw_ai_settings: {
+        Row: {
+          challenger_edit_model: string | null
+          challenger_share: number
+          daily_render_cap: number
+          edit_model: string
+          fallback_edit_model: string | null
+          fallback_text_model: string | null
+          id: boolean
+          lora_scale: number
+          lora_url: string | null
+          text_model: string
+          updated_at: string
+          updated_by: string | null
+          variant_model: string | null
+        }
+        Insert: {
+          challenger_edit_model?: string | null
+          challenger_share?: number
+          daily_render_cap?: number
+          edit_model?: string
+          fallback_edit_model?: string | null
+          fallback_text_model?: string | null
+          id?: boolean
+          lora_scale?: number
+          lora_url?: string | null
+          text_model?: string
+          updated_at?: string
+          updated_by?: string | null
+          variant_model?: string | null
+        }
+        Update: {
+          challenger_edit_model?: string | null
+          challenger_share?: number
+          daily_render_cap?: number
+          edit_model?: string
+          fallback_edit_model?: string | null
+          fallback_text_model?: string | null
+          id?: boolean
+          lora_scale?: number
+          lora_url?: string | null
+          text_model?: string
+          updated_at?: string
+          updated_by?: string | null
+          variant_model?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "kw_ai_settings_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      kw_ai_training_samples: {
+        Row: {
+          config: Json
+          consent_text_version: string
+          created_at: string
+          expires_at: string
+          id: string
+          lead_id: string | null
+          photo_path: string
+          planner_session_id: string | null
+          render_feedback: Json
+          room: Json
+        }
+        Insert: {
+          config?: Json
+          consent_text_version: string
+          created_at?: string
+          expires_at?: string
+          id?: string
+          lead_id?: string | null
+          photo_path: string
+          planner_session_id?: string | null
+          render_feedback?: Json
+          room?: Json
+        }
+        Update: {
+          config?: Json
+          consent_text_version?: string
+          created_at?: string
+          expires_at?: string
+          id?: string
+          lead_id?: string | null
+          photo_path?: string
+          planner_session_id?: string | null
+          render_feedback?: Json
+          room?: Json
+        }
+        Relationships: [
+          {
+            foreignKeyName: "kw_ai_training_samples_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "kw_ai_training_samples_planner_session_id_fkey"
+            columns: ["planner_session_id"]
+            isOneToOne: false
+            referencedRelation: "planner_sessions"
             referencedColumns: ["id"]
           },
         ]
@@ -4786,6 +4920,8 @@ export type Database = {
       }
       planner_renders: {
         Row: {
+          attempt_started_at: string | null
+          base_render_id: string | null
           completed_at: string | null
           cost_cents: number | null
           created_at: string
@@ -4793,6 +4929,10 @@ export type Database = {
           fal_request_id: string | null
           fal_response_url: string | null
           fal_status_url: string | null
+          fallback_from: string | null
+          fallback_reason: string | null
+          feedback: number | null
+          feedback_at: string | null
           generation_ms: number | null
           id: string
           image_height: number | null
@@ -4812,6 +4952,8 @@ export type Database = {
           version: number
         }
         Insert: {
+          attempt_started_at?: string | null
+          base_render_id?: string | null
           completed_at?: string | null
           cost_cents?: number | null
           created_at?: string
@@ -4819,6 +4961,10 @@ export type Database = {
           fal_request_id?: string | null
           fal_response_url?: string | null
           fal_status_url?: string | null
+          fallback_from?: string | null
+          fallback_reason?: string | null
+          feedback?: number | null
+          feedback_at?: string | null
           generation_ms?: number | null
           id?: string
           image_height?: number | null
@@ -4838,6 +4984,8 @@ export type Database = {
           version?: number
         }
         Update: {
+          attempt_started_at?: string | null
+          base_render_id?: string | null
           completed_at?: string | null
           cost_cents?: number | null
           created_at?: string
@@ -4845,6 +4993,10 @@ export type Database = {
           fal_request_id?: string | null
           fal_response_url?: string | null
           fal_status_url?: string | null
+          fallback_from?: string | null
+          fallback_reason?: string | null
+          feedback?: number | null
+          feedback_at?: string | null
           generation_ms?: number | null
           id?: string
           image_height?: number | null
@@ -4865,6 +5017,13 @@ export type Database = {
         }
         Relationships: [
           {
+            foreignKeyName: "planner_renders_base_render_id_fkey"
+            columns: ["base_render_id"]
+            isOneToOne: false
+            referencedRelation: "planner_renders"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "planner_renders_session_id_fkey"
             columns: ["session_id"]
             isOneToOne: false
@@ -4875,6 +5034,9 @@ export type Database = {
       }
       planner_sessions: {
         Row: {
+          ai_group: string | null
+          ai_training_consent: boolean
+          ai_training_consent_at: string | null
           contact_captured_at: string | null
           created_at: string
           current_render_id: string | null
@@ -4900,6 +5062,9 @@ export type Database = {
           utm_term: string | null
         }
         Insert: {
+          ai_group?: string | null
+          ai_training_consent?: boolean
+          ai_training_consent_at?: string | null
           contact_captured_at?: string | null
           created_at?: string
           current_render_id?: string | null
@@ -4925,6 +5090,9 @@ export type Database = {
           utm_term?: string | null
         }
         Update: {
+          ai_group?: string | null
+          ai_training_consent?: boolean
+          ai_training_consent_at?: string | null
           contact_captured_at?: string | null
           created_at?: string
           current_render_id?: string | null
@@ -6928,6 +7096,7 @@ export type Database = {
         Returns: boolean
       }
       hash_review_ip: { Args: { p_ip: string }; Returns: string }
+      kw_admin_ai_stats: { Args: { p_days?: number }; Returns: Json }
       kw_admin_decide_complaint: {
         Args: { p_accept: boolean; p_complaint_id: string; p_note?: string }
         Returns: Json
@@ -7191,6 +7360,21 @@ export type Database = {
       kw_plz_distance_km: {
         Args: { p_a: string; p_b: string }
         Returns: number
+      }
+      kw_price_observations: {
+        Args: { p_limit?: number }
+        Returns: {
+          auction_id: string
+          bid_count: number
+          funnel: string
+          funnel_answers: Json
+          kitchen_form: string
+          kitchen_style: string
+          observed_eur: number
+          planner_config: Json
+          planner_room: Json
+          postal_code: string
+        }[]
       }
       kw_project_accept_offer: {
         Args: { p_bid_id: string; p_lead_id: string }

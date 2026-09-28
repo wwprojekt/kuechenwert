@@ -11,7 +11,9 @@ import {
   type PlannerConfig,
   type RoomInput,
 } from "./core";
-import { loadSession, renderStatus, type PlannerPhoto, type PlannerRender } from "./api";
+import { loadSession, renderStatus, type PlannerPhoto, type PlannerRender, type PlannerSessionRender } from "./api";
+import { usePriceModel } from "./price-model";
+import { plannerRenderKey } from "./render-key";
 
 export type PlannerStep = "raum" | "stil" | "ausstattung" | "geraete" | "visualisierung" | "kontakt";
 
@@ -161,6 +163,10 @@ export function clearPlannerStorage() {
   }
 }
 
+function fromSessionRender({ spec, ...render }: PlannerSessionRender): PlannerRender {
+  return { ...render, config_key: spec?.config ? plannerRenderKey(spec.config, spec.room, spec.photo_path) : null };
+}
+
 export function usePlanner() {
   // Eine abgeschickte Planung wird nicht fortgesetzt: die nächste startet frisch.
   const [state, dispatch] = useReducer(reducer, undefined, () => {
@@ -184,12 +190,13 @@ export function usePlanner() {
           dispatch({ type: "hydrate", state: { sessionToken: null, renders: [], photos: [], selectedPhotoPath: null } });
           return;
         }
-        const finished = session.renders.filter((r) => r.status === "success");
+        const renders = session.renders.map(fromSessionRender);
+        const finished = renders.filter((r) => r.status === "success");
         dispatch({
           type: "hydrate",
           state: {
             photos: session.photos,
-            renders: session.renders,
+            renders,
             submitted: session.submitted,
             activeRenderId: finished[finished.length - 1]?.id ?? null,
           },
@@ -201,9 +208,16 @@ export function usePlanner() {
       });
   }, [state.sessionToken]);
 
+  const { card, calibration, rateCardVersion } = usePriceModel();
   const estimate: KitchenEstimate = useMemo(
-    () => estimateKitchenPrice(state.config, state.room, { postalCode: state.postalCode || null }),
-    [state.config, state.room, state.postalCode],
+    () =>
+      estimateKitchenPrice(state.config, state.room, {
+        card,
+        calibration,
+        rateCardVersion,
+        postalCode: state.postalCode || null,
+      }),
+    [state.config, state.room, state.postalCode, card, calibration, rateCardVersion],
   );
 
   const actions = useMemo(

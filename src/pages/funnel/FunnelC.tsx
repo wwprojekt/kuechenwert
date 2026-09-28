@@ -8,11 +8,15 @@ import {
   generateRender,
   removePhoto,
   savePlanning,
+  sendRenderFeedback,
   submitProject,
   uploadPhoto,
+  type PlannerRender,
+  type RenderFeedback,
 } from "@/features/planner/api";
 import { KITCHEN_FORMS, STYLES } from "@/features/planner/core";
 import { PlannerShell } from "@/features/planner/PlannerShell";
+import { plannerRenderKey } from "@/features/planner/render-key";
 import { PLANNER_STEPS, clearPlannerStorage, usePlanner, useRenderPolling, type PlannerStep } from "@/features/planner/state";
 import { AppliancesStep } from "@/features/planner/steps/AppliancesStep";
 import { ContactStep, type ContactValues } from "@/features/planner/steps/ContactStep";
@@ -21,7 +25,7 @@ import { RoomStep } from "@/features/planner/steps/RoomStep";
 import { StyleStep } from "@/features/planner/steps/StyleStep";
 import { VisualizeStep } from "@/features/planner/steps/VisualizeStep";
 import { useTurnstile } from "@/hooks/useTurnstile";
-import { trackFunnelStep, trackFunnelSubmitError } from "@/lib/funnelAnalytics";
+import { trackFunnelStep, trackFunnelSubmitError, trackPlannerFeedback, trackPlannerRender } from "@/lib/funnelAnalytics";
 import { generateTransactionId, setEnhancedConversionFromForm, trackKitchenFunnelLead } from "@/lib/gadsConversionService";
 import { trackMetaLead } from "@/lib/metaPixelService";
 import { getConsentedClickIds } from "@/lib/clickIdService";
@@ -44,7 +48,33 @@ export default function FunnelC() {
   const [maxVisited, setMaxVisited] = useState(() => PLANNER_STEPS.findIndex((s) => s.id === state.step));
   const { waitForToken, resetTurnstile, turnstileCallbackRef } = useTurnstile();
 
-  useRenderPolling(state.sessionToken, state.renders, planner.updateRender);
+  const rendersRef = useRef(state.renders);
+  rendersRef.current = state.renders;
+  const renderStartedAt = useRef(new Map<string, number>());
+  const { updateRender } = planner;
+  const onRenderUpdate = useCallback(
+    (id: string, patch: Partial<PlannerRender>) => {
+      updateRender(id, patch);
+      const render = rendersRef.current.find((r) => r.id === id);
+      if (!render || (patch.status !== "success" && patch.status !== "failed")) return;
+      const started = renderStartedAt.current.get(id);
+      renderStartedAt.current.delete(id);
+      trackPlannerRender({
+        status: patch.status,
+        mode: render.mode,
+        variant: !!render.base_render_id,
+        seconds: started ? Math.round((Date.now() - started) / 1000) : null,
+      });
+    },
+    [updateRender],
+  );
+  useRenderPolling(state.sessionToken, state.renders, onRenderUpdate);
+
+  const successRenders = state.renders.filter((r) => r.status === "success" && r.image_url);
+  const activeRender = state.renders.find((r) => r.id === state.activeRenderId && r.image_url) ?? successRenders[successRenders.length - 1];
+  const currentKey = plannerRenderKey(state.config, state.room, state.selectedPhotoPath);
+  // Unbekannter Schlüssel (ältere Planungen): nicht als veraltet markieren.
+  const activeOutdated = !!activeRender?.config_key && activeRender.config_key !== currentKey;
 
   useEffect(() => {
     captureUtmParams();
@@ -140,6 +170,8 @@ export default function FunnelC() {
       generatingRef.current = true;
       setGenerating(true);
       setGenError(null);
+      // Varianten ändern das gewählte Bild, solange es zur aktuellen Planung passt.
+      const base = variant && activeRender && !activeOutdated ? activeRender : null;
       try {
         const res = await generateRender({
           sessionToken: state.sessionToken,
@@ -149,11 +181,13 @@ export default function FunnelC() {
           postalCode: state.postalCode || null,
           variantHint: variant?.hint ?? null,
           variantLabel: variant?.label ?? null,
+          baseRenderId: base?.id ?? null,
           utm: utm(),
         });
         planner.setSession(res.session_token);
         // Läuft die Visualisierung schon, liefert der Server dieselbe render_id zurück.
         if (!state.renders.some((r) => r.id === res.render_id)) {
+          renderStartedAt.current.set(res.render_id, Date.now());
           planner.addRender({
             id: res.render_id,
             version: res.version,
@@ -161,6 +195,9 @@ export default function FunnelC() {
             mode: res.mode,
             variant_label: variant?.label ?? null,
             image_url: null,
+            feedback: null,
+            base_render_id: res.base_render_id ?? null,
+            config_key: currentKey,
           });
         }
       } catch (err) {
@@ -170,8 +207,33 @@ export default function FunnelC() {
         setGenerating(false);
       }
     },
-    [planner, state.sessionToken, state.config, state.room, state.selectedPhotoPath, state.postalCode, state.renders],
+    [
+      planner,
+      state.sessionToken,
+      state.config,
+      state.room,
+      state.selectedPhotoPath,
+      state.postalCode,
+      state.renders,
+      activeRender,
+      activeOutdated,
+      currentKey,
+    ],
   );
+
+  const handleFeedback = async (renderId: string, value: RenderFeedback) => {
+    const render = state.renders.find((r) => r.id === renderId);
+    if (!state.sessionToken || !render) return;
+    const previous = render.feedback ?? null;
+    planner.updateRender(renderId, { feedback: value });
+    trackPlannerFeedback(value, !!render.base_render_id);
+    try {
+      await sendRenderFeedback(state.sessionToken, renderId, value);
+    } catch (err) {
+      planner.updateRender(renderId, { feedback: previous });
+      toast.error(errorMessage(err));
+    }
+  };
 
   const handleSubmit = async (values: ContactValues) => {
     setSubmitting(true);
@@ -200,7 +262,9 @@ export default function FunnelC() {
           share_with_studios: values.share_with_studios,
           contact_by_phone: values.contact_by_phone,
           marketing: values.marketing,
+          ai_training: state.photos.length > 0 && values.ai_training,
         },
+        active_render_id: activeRender?.id ?? null,
         timeframe_months: Number(values.timeframe_months) || null,
         housing_type: values.housing_type,
         turnstile_token: turnstileToken,
@@ -240,8 +304,6 @@ export default function FunnelC() {
     }
   };
 
-  const successRenders = state.renders.filter((r) => r.status === "success" && r.image_url);
-  const activeRender = state.renders.find((r) => r.id === state.activeRenderId && r.image_url) ?? successRenders[successRenders.length - 1];
   const selectedPhoto = state.photos.find((p) => p.path === state.selectedPhotoPath) ?? null;
   const nextLabel = index === 3 ? "Visualisierung erstellen" : "Weiter";
 
@@ -289,8 +351,10 @@ export default function FunnelC() {
             wishes={state.config.wishes ?? ""}
             generating={generating}
             error={genError}
+            outdated={activeOutdated}
             onGenerate={handleGenerate}
             onSelectRender={planner.setActiveRender}
+            onFeedback={handleFeedback}
             onWishes={(wishes) => planner.patchConfig({ wishes })}
             onContinue={next}
           />
@@ -300,6 +364,7 @@ export default function FunnelC() {
             estimate={estimate}
             coverUrl={activeRender?.image_url ?? null}
             defaultPostalCode={state.postalCode}
+            hasPhoto={state.photos.length > 0}
             submitting={submitting}
             error={submitError}
             onSubmit={handleSubmit}

@@ -68,6 +68,25 @@ export function clientIp(req: Request): string {
   return (req.headers.get("x-real-ip") ?? "unknown").trim();
 }
 
+/**
+ * Schlüssel für Rate-Limits: IPv4 je Adresse, IPv6 je /64-Netz. Ein Anschluss
+ * erhält mindestens ein /64 und kann darin beliebig viele Adressen nutzen.
+ */
+export function rateLimitIp(req: Request): string {
+  const ip = clientIp(req).split("%")[0]!.toLowerCase();
+  const mapped = ip.match(/^::ffff:(\d{1,3}(?:\.\d{1,3}){3})$/);
+  if (mapped) return mapped[1]!;
+  if (!ip.includes(":") || !/^[0-9a-f:]+$/.test(ip)) return ip;
+  const halves = ip.split("::");
+  if (halves.length > 2) return ip;
+  const head = halves[0] ? halves[0].split(":") : [];
+  const tail = halves.length === 2 && halves[1] ? halves[1].split(":") : [];
+  const fill = halves.length === 2 ? 8 - head.length - tail.length : 0;
+  const groups = [...head, ...Array<string>(Math.max(0, fill)).fill("0"), ...tail];
+  if (groups.length !== 8 || groups.some((g) => g.length === 0 || g.length > 4)) return ip;
+  return `${groups.slice(0, 4).map((g) => parseInt(g, 16).toString(16)).join(":")}::/64`;
+}
+
 /** Nur plausible IPv4/IPv6-Adressen, damit Inserts in inet-Spalten nicht scheitern. */
 export function validIp(ip: string): string | null {
   if (/^\d{1,3}(\.\d{1,3}){3}$/.test(ip)) return ip;

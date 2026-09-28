@@ -12,6 +12,8 @@
  *   delete-data    Projekt beenden und personenbezogene Daten löschen (email zur Bestätigung)
  *   upload-files   Unterlagen nachreichen (Funnel B): Dateien ankündigen → signierte Upload-URLs
  *   attach-files   Nach dem Upload eintragen (upload_token, files); meldet dem Team per Outbox
+ *   ai-consent     Einwilligung zur KI-Verbesserung erteilen oder widerrufen (granted);
+ *                  Widerruf löscht die Trainingskopien sofort
  *   resend         Projektlink(s) per E-Mail neu zusenden (email) – ohne Token
  *
  * Der Token wird nie gespeichert, nur sein SHA-256-Hash (lead_access_tokens).
@@ -33,9 +35,11 @@ import {
   validIp,
 } from "../_shared/kw-http.ts";
 import { MAX_FILES_PER_LEAD, attachUploadedFiles, issueUploads, parseAnnouncedFiles } from "../_shared/lead-files.ts";
+import { forgetTrainingSamples, storeTrainingSamples } from "../_shared/ai-training.ts";
 
 const SIGNED_URL_TTL = 60 * 60;
 const CONSENT_TEXT_VERSION = "kw-telefon-2026-09-28";
+const AI_CONSENT_TEXT_VERSION = "kw-ki-verbesserung-2026-09-28";
 const CLOSED_TENDER_STATUSES = new Set(["awarded", "cancelled", "expired"]);
 
 async function resolveLead(sb: SupabaseClient, req: Request, token: unknown): Promise<string> {
@@ -72,10 +76,11 @@ async function projectView(sb: SupabaseClient, leadId: string) {
   const renders = await signMedia(sb, view.renders ?? []);
 
   let photos: Array<{ path: string; url: string | null }> = [];
+  let aiTraining: { granted: boolean } | null = null;
   if (view.planner) {
     const { data: session } = await sb
       .from("planner_sessions")
-      .select("photo_paths")
+      .select("photo_paths, ai_training_consent")
       .eq("lead_id", leadId)
       .order("created_at", { ascending: false })
       .limit(1)
@@ -83,12 +88,69 @@ async function projectView(sb: SupabaseClient, leadId: string) {
     photos = (await signMedia(sb, (session?.photo_paths ?? []).map((p: string) => ({ bucket: "planner-media", path: p })))).map(
       ({ path, url }) => ({ path: path as string, url }),
     );
+    if (photos.length > 0) aiTraining = { granted: session?.ai_training_consent === true };
     delete (view.planner as Record<string, unknown>).session_token;
   }
   const { data: order, error: orderErr } = await sb.rpc("kw_project_order", { p_lead_id: leadId });
   if (orderErr) throw orderErr;
   const upload = await uploadState(sb, leadId);
-  return { ...view, renders, photos, order: order ?? null, files: upload.files, can_upload_files: upload.allowed };
+  return {
+    ...view,
+    renders,
+    photos,
+    ai_training: aiTraining,
+    order: order ?? null,
+    files: upload.files,
+    can_upload_files: upload.allowed,
+  };
+}
+
+/** Einwilligung zur KI-Verbesserung ändern; ein Widerruf löscht die Kopien, bevor er protokolliert wird. */
+async function actionAiConsent(req: Request, sb: SupabaseClient, leadId: string, body: Record<string, unknown>) {
+  await enforceRateLimit(sb, `kw:ai-consent:${leadId}`, 3600, 20);
+  const granted = body.granted === true;
+  const { data: session, error } = await sb
+    .from("planner_sessions")
+    .select("id, photo_paths, spec, room")
+    .eq("lead_id", leadId)
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (error) throw error;
+  if (!session || !(session.photo_paths ?? []).length) {
+    throw new HttpError(409, "Zu diesem Projekt gibt es keine Raumfotos.", "no_photos");
+  }
+  if (!granted) await forgetTrainingSamples(sb, leadId);
+
+  const now = new Date().toISOString();
+  const { error: sessionErr } = await sb
+    .from("planner_sessions")
+    .update({ ai_training_consent: granted, ai_training_consent_at: granted ? now : null })
+    .eq("id", session.id);
+  if (sessionErr) throw sessionErr;
+  const { data: lead } = await sb.from("leads").select("user_id").eq("id", leadId).maybeSingle();
+  const { error: consentErr } = await sb.from("lead_consents").insert({
+    lead_id: leadId,
+    user_id: lead?.user_id ?? null,
+    purpose: "ai_training",
+    granted,
+    text_version: AI_CONSENT_TEXT_VERSION,
+    ip_address: validIp(clientIp(req)),
+    user_agent: req.headers.get("user-agent")?.slice(0, 500) ?? null,
+  });
+  if (consentErr) throw consentErr;
+
+  if (granted) {
+    await storeTrainingSamples(sb, {
+      sessionId: session.id,
+      leadId,
+      photoPaths: session.photo_paths,
+      config: session.spec ?? {},
+      room: session.room ?? {},
+      consentTextVersion: AI_CONSENT_TEXT_VERSION,
+    });
+  }
+  return jsonResponse(req, await projectView(sb, leadId));
 }
 
 /** Unterlagen des Leads und ob der Kunde noch welche nachreichen darf (nur Funnel B, Projekt offen). */
@@ -202,6 +264,7 @@ async function actionDeleteData(req: Request, sb: SupabaseClient, leadId: string
 
   // Erst die Dateien, dann die Datenbank: schlägt das Löschen einer Datei fehl,
   // bleibt der Lead unverändert und der Kunde kann es erneut versuchen.
+  await forgetTrainingSamples(sb, leadId);
   const { data: files, error: filesErr } = await sb.rpc("kw_lead_storage_paths", { p_lead_id: leadId });
   if (filesErr) throw filesErr;
   const byBucket = new Map<string, string[]>();
@@ -261,6 +324,8 @@ serve(async (req) => {
       return actionUploadFiles(req, sb, leadId, body);
     case "attach-files":
       return actionAttachFiles(req, sb, leadId, body);
+    case "ai-consent":
+      return actionAiConsent(req, sb, leadId, body);
     default:
       throw new HttpError(400, "Unbekannte Aktion.", "unknown_action");
   }

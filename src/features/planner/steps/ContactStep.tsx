@@ -27,6 +27,7 @@ const schema = z.object({
   share_with_studios: z.literal(true, { errorMap: () => ({ message: "Ohne diese Einwilligung können wir keine Angebote einholen." }) }),
   contact_by_phone: z.boolean(),
   marketing: z.boolean(),
+  ai_training: z.boolean(),
   website: z.string().max(0).optional(),
 });
 
@@ -49,6 +50,7 @@ export function ContactStep({
   estimate,
   coverUrl,
   defaultPostalCode,
+  hasPhoto,
   submitting,
   error,
   onSubmit,
@@ -57,6 +59,8 @@ export function ContactStep({
   estimate: KitchenEstimate;
   coverUrl: string | null;
   defaultPostalCode: string;
+  /** Die Frage nach der KI-Verbesserung betrifft nur hochgeladene Raumfotos. */
+  hasPhoto: boolean;
   submitting: boolean;
   error: string | null;
   onSubmit: (values: ContactValues) => void;
@@ -81,6 +85,7 @@ export function ContactStep({
       share_with_studios: false as unknown as true,
       contact_by_phone: false,
       marketing: false,
+      ai_training: false,
       website: "",
     },
   });
@@ -202,6 +207,22 @@ export function ContactStep({
               </label>
             )}
           />
+          {hasPhoto && (
+            <Controller
+              control={control}
+              name="ai_training"
+              render={({ field }) => (
+                <label className="flex cursor-pointer items-start gap-3 text-sm leading-relaxed text-muted-foreground">
+                  <Checkbox checked={field.value} onCheckedChange={(v) => field.onChange(v === true)} className="mt-0.5" />
+                  <span>
+                    Meine Raumfotos und Bewertungen dürfen ohne Namen und Kontaktdaten gespeichert werden, um die KI-Visualisierung von
+                    KüchenWert zu verbessern – auch für das Training eigener Modelle. Höchstens 36 Monate, Widerruf jederzeit auf der
+                    Projektseite.
+                  </span>
+                </label>
+              )}
+            />
+          )}
         </div>
 
         <div className="hidden" aria-hidden>

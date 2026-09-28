@@ -120,6 +120,8 @@ export interface ProjectView {
   files?: ProjectFile[];
   /** Unterlagen dürfen nachgereicht werden (Funnel B, Projekt offen). */
   can_upload_files?: boolean;
+  /** Einwilligung zur KI-Verbesserung; nur bei Planungen mit Raumfoto. */
+  ai_training?: { granted: boolean } | null;
 }
 
 export interface ProjectFile {
@@ -145,6 +147,9 @@ export const exportProjectData = (token: string) => callFunction<Record<string, 
 /** Projekt beenden und personenbezogene Daten löschen; `email` bestätigt die Anfrage. */
 export const deleteProjectData = (token: string, email: string) =>
   callFunction<{ ok: true }>(FN, { action: "delete-data", token, email });
+/** KI-Verbesserung erlauben oder widerrufen; ein Widerruf löscht die Trainingskopien sofort. */
+export const setProjectAiConsent = (token: string, granted: boolean) =>
+  callFunction<ProjectView>(FN, { action: "ai-consent", token, granted });
 
 /**
  * Unterlagen über den Projektlink nachreichen: ankündigen, direkt in den

@@ -5,6 +5,8 @@
  * Architektur, Perspektive und Licht, damit das Ergebnis "genau so" im
  * eigenen Raum aussieht.
  * mode "text": ohne Foto wird ein Raum aus Form und Maßen erzeugt.
+ * Varianten (buildVariantPrompt) bearbeiten eine fertige Visualisierung und
+ * ändern nur, was gewünscht ist.
  */
 
 import {
@@ -130,4 +132,14 @@ export function buildRenderPrompt(
       .filter(Boolean)
       .join(" "),
   };
+}
+
+/** Variante einer fertigen Visualisierung: nur die gewünschte Änderung, alles andere bleibt gleich. */
+export function buildVariantPrompt(hint: string): string {
+  const change = sanitizeFreeText(hint) || "subtle refinement of materials and light";
+  return [
+    `Edit this photorealistic kitchen visualization: ${change}.`,
+    "Keep everything the request does not mention exactly as it is: room, walls, windows, doors, floor, ceiling, camera position, perspective, kitchen layout, cabinet arrangement and appliances.",
+    "Photorealistic interior photography, sharp details, correct proportions, no people, no text, no watermark.",
+  ].join(" ");
 }

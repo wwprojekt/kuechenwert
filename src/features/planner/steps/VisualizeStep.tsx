@@ -3,10 +3,11 @@ import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
-import type { PlannerRender } from "../api";
+import type { PlannerRender, RenderFeedback as Feedback } from "../api";
 import type { KitchenEstimate } from "../core";
 import { BeforeAfterSlider } from "../components/BeforeAfterSlider";
 import { PriceSummary } from "../components/PriceSummary";
+import { RenderFeedback } from "../components/RenderFeedback";
 
 const VARIANTS = [
   { label: "Wärmeres Licht", hint: "warm golden evening light, cosy atmosphere" },
@@ -52,8 +53,10 @@ export function VisualizeStep({
   wishes,
   generating,
   error,
+  outdated,
   onGenerate,
   onSelectRender,
+  onFeedback,
   onWishes,
   onContinue,
 }: {
@@ -64,8 +67,11 @@ export function VisualizeStep({
   wishes: string;
   generating: boolean;
   error: string | null;
+  /** Die gewählte Visualisierung zeigt eine ältere Auswahl als die aktuelle Planung. */
+  outdated: boolean;
   onGenerate: (variant?: { label: string; hint: string }) => void;
   onSelectRender: (id: string) => void;
+  onFeedback: (renderId: string, value: Feedback) => void;
   onWishes: (value: string) => void;
   onContinue: () => void;
 }) {
@@ -74,6 +80,7 @@ export function VisualizeStep({
   const active = renders.find((r) => r.id === activeRenderId) ?? renders[renders.length - 1] ?? null;
   const anyPending = renders.some((r) => r.status === "pending");
   const inputPhoto = beforePhotoUrl;
+  const refinesActive = active?.status === "success" && !outdated;
 
   useEffect(() => {
     if (autoStarted.current || renders.length > 0 || generating) return;
@@ -84,6 +91,14 @@ export function VisualizeStep({
   return (
     <div className="grid gap-6 lg:grid-cols-[1.45fr_1fr]">
       <div className="space-y-4">
+        {outdated && active?.status === "success" && !anyPending && (
+          <div role="status" className="flex flex-col gap-3 rounded-2xl border border-accent/40 bg-accent/10 p-4 sm:flex-row sm:items-center sm:justify-between">
+            <p className="text-sm font-medium text-foreground">Sie haben Ihre Auswahl geändert. Die Visualisierung zeigt noch die vorherige Planung.</p>
+            <Button type="button" size="sm" onClick={() => onGenerate()} disabled={generating} className="flex-none">
+              <Wand2 className="mr-2 h-4 w-4" /> Neu visualisieren
+            </Button>
+          </div>
+        )}
         <div className="relative aspect-[4/3] overflow-hidden rounded-2xl border bg-muted/40">
           {active?.status === "success" && active.image_url ? (
             active.mode === "edit" && inputPhoto ? (
@@ -114,6 +129,10 @@ export function VisualizeStep({
           )}
         </div>
 
+        {active?.status === "success" && active.image_url && (
+          <RenderFeedback value={active.feedback ?? null} onChange={(value) => onFeedback(active.id, value)} />
+        )}
+
         {renders.length > 1 && (
           <div role="radiogroup" aria-label="Visualisierungen" className="flex gap-2 overflow-x-auto pb-1">
             {renders.map((r) => (
@@ -143,6 +162,11 @@ export function VisualizeStep({
         <div className="rounded-2xl border bg-card p-4 sm:p-5">
           <p className="flex items-center gap-2 text-sm font-semibold text-foreground">
             <Sparkles className="h-4 w-4 text-accent" /> Variante ausprobieren
+          </p>
+          <p className="mt-1 text-xs text-muted-foreground">
+            {refinesActive
+              ? "Ändert nur das Gewünschte an der ausgewählten Visualisierung – der Rest bleibt, wie er ist."
+              : "Erstellt eine neue Visualisierung Ihrer aktuellen Planung mit diesem Wunsch."}
           </p>
           <div className="mt-3 flex flex-wrap gap-2">
             {VARIANTS.map((v) => (

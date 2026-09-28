@@ -7,6 +7,8 @@ export interface PlannerPhoto {
   url: string | null;
 }
 
+export type RenderFeedback = 1 | -1 | null;
+
 export interface PlannerRender {
   id: string;
   version: number;
@@ -15,6 +17,16 @@ export interface PlannerRender {
   variant_label: string | null;
   image_url: string | null;
   error?: string | null;
+  feedback?: RenderFeedback;
+  /** Variante: Visualisierung, auf der sie aufbaut. */
+  base_render_id?: string | null;
+  /** Planung (plannerRenderKey), aus der die Visualisierung entstand. */
+  config_key?: string | null;
+}
+
+/** Render, wie ihn kw-planner/session liefert (Planung statt fertigem Schlüssel). */
+export interface PlannerSessionRender extends Omit<PlannerRender, "config_key"> {
+  spec?: { config: Partial<PlannerConfig> | null; room: Partial<RoomInput> | null; photo_path: string | null } | null;
 }
 
 export interface PlannerSessionState {
@@ -24,7 +36,7 @@ export interface PlannerSessionState {
   room: Partial<RoomInput>;
   estimate: KitchenEstimate | null;
   photos: PlannerPhoto[];
-  renders: PlannerRender[];
+  renders: PlannerSessionRender[];
 }
 
 export interface GenerateResult {
@@ -32,6 +44,7 @@ export interface GenerateResult {
   render_id: string;
   version: number;
   mode: "edit" | "text";
+  base_render_id?: string | null;
   estimate: KitchenEstimate;
 }
 
@@ -46,7 +59,9 @@ export interface RenderStatus {
 export interface SubmitPayload {
   session_token: string;
   contact: { first_name: string; last_name: string; email: string; phone: string; postal_code: string; city?: string };
-  consents: { share_with_studios: boolean; contact_by_phone: boolean; marketing: boolean };
+  consents: { share_with_studios: boolean; contact_by_phone: boolean; marketing: boolean; ai_training: boolean };
+  /** Gewählte Visualisierung: Titelbild für die Studios. */
+  active_render_id: string | null;
   timeframe_months: number | null;
   housing_type: "own" | "rent" | "unknown";
   turnstile_token: string | null;
@@ -137,6 +152,8 @@ export function generateRender(input: {
   postalCode?: string | null;
   variantHint?: string | null;
   variantLabel?: string | null;
+  /** Mit variantHint: diese fertige Visualisierung gezielt ändern statt neu zu planen. */
+  baseRenderId?: string | null;
   utm?: Record<string, string>;
 }) {
   return callFunction<GenerateResult>(FN, {
@@ -148,7 +165,17 @@ export function generateRender(input: {
     postal_code: input.postalCode ?? null,
     variant_hint: input.variantHint ?? null,
     variant_label: input.variantLabel ?? null,
+    base_render_id: input.baseRenderId ?? null,
     utm: input.utm,
+  });
+}
+
+export function sendRenderFeedback(sessionToken: string, renderId: string, value: RenderFeedback) {
+  return callFunction<{ ok: true; feedback: RenderFeedback }>(FN, {
+    action: "feedback",
+    session_token: sessionToken,
+    render_id: renderId,
+    value,
   });
 }
 

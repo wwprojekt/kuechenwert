@@ -129,8 +129,8 @@ async function actionSubmit(req: Request, sb: SupabaseClient, body: Record<strin
   // Erst nach der Validierung: ein Eingabefehler soll das Token nicht verbrauchen.
   const botCheck = await checkTurnstile(body.turnstile_token, ip);
 
-  const { card, version: rateCardVersion } = await loadRateCard(sb);
-  const estimate = estimateFunnelA(answers, { card, postalCode: answers.postal_code, rateCardVersion });
+  const { card, version: rateCardVersion, calibration } = await loadRateCard(sb);
+  const estimate = estimateFunnelA(answers, { card, postalCode: answers.postal_code, rateCardVersion, calibration });
   const estimateRange = { min: estimate.min, max: estimate.max, mid: estimate.mid };
   const months = timeframeMonths(answers.timeframe);
 

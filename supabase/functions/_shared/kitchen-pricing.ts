@@ -9,7 +9,9 @@
  * realistische Marktspanne, nicht ein verbindliches Angebot.
  *
  * Alle Sätze lassen sich über eine Rate-Card (DB-Tabelle
- * kitchen_pricing_rate_cards.overrides) partiell überschreiben.
+ * kitchen_pricing_rate_cards.overrides) partiell überschreiben. Der
+ * Marktabgleich (kitchen_price_calibration) skaliert das Ergebnis mit dem,
+ * was Studios auf KüchenWert tatsächlich anbieten (price-calibration.ts).
  */
 
 import {
@@ -255,8 +257,55 @@ export interface KitchenEstimate {
   lines: EstimateLine[];
   layout: LayoutMetrics;
   regionalFactor: number;
+  /** Multiplikator aus dem Marktabgleich (1 = ohne Anpassung). */
+  calibrationFactor?: number;
   rateCardVersion?: number | null;
   assumptions: string[];
+}
+
+/** Herkunft der Schätzung: Konfigurator (c) oder Anfrageformular (a). */
+export type EstimateSource = "a" | "c";
+
+/** Marktabgleich aus kitchen_price_calibration. */
+export interface PriceCalibration {
+  /** Multiplikator je Segment (global, source:a|c, quality:<Stufe>, region:<PLZ-Ziffer>); fehlende = 1. */
+  factors: Readonly<Record<string, number>>;
+  /** Ausschreibungen mit Angeboten, auf denen der Abgleich beruht. */
+  samples: number;
+}
+
+export const CALIBRATION_LIMITS = { min: 0.7, max: 1.45 } as const;
+
+export function calibrationFromRows(
+  rows: ReadonlyArray<{ segment: string; factor: number | string; sample_count?: number | null }> | null | undefined,
+): PriceCalibration | null {
+  if (!rows?.length) return null;
+  const factors: Record<string, number> = {};
+  let samples = 0;
+  for (const row of rows) {
+    const factor = Number(row.factor);
+    if (Number.isFinite(factor) && factor > 0) factors[row.segment] = factor;
+    if (row.segment === "global") samples = Number(row.sample_count ?? 0) || 0;
+  }
+  return { factors, samples };
+}
+
+/** Gesamtfaktor des Marktabgleichs für eine Schätzung, begrenzt auf CALIBRATION_LIMITS. */
+export function calibrationFactor(
+  calibration: PriceCalibration | null | undefined,
+  segment: { source: EstimateSource; quality: QualityLevel | null; postalCode?: string | null },
+): number {
+  if (!calibration) return 1;
+  const f = (key: string) => {
+    const v = calibration.factors[key];
+    return typeof v === "number" && Number.isFinite(v) && v > 0 ? v : 1;
+  };
+  let factor = f("global") * f(`source:${segment.source}`);
+  // Im Anfrageformular wählt niemand eine Qualitätsstufe (Anker = Mittelklasse).
+  if (segment.source === "c" && segment.quality) factor *= f(`quality:${segment.quality}`);
+  const region = (segment.postalCode ?? "").trim().charAt(0);
+  if (/^\d$/.test(region)) factor *= f(`region:${region}`);
+  return Math.min(CALIBRATION_LIMITS.max, Math.max(CALIBRATION_LIMITS.min, factor));
 }
 
 const scale = (r: Range, f: number): Range => [r[0] * f, r[1] * f];
@@ -269,11 +318,15 @@ export function regionalFactor(postalCode: string | null | undefined, card: Rate
   return card.regionalFactorByFirstDigit[first] ?? 1;
 }
 
-export function estimateKitchenPrice(
-  config: PlannerConfig,
-  room: RoomInput,
-  options: { card?: RateCard; postalCode?: string | null; rateCardVersion?: number | null } = {},
-): KitchenEstimate {
+export interface EstimateOptions {
+  card?: RateCard;
+  postalCode?: string | null;
+  rateCardVersion?: number | null;
+  calibration?: PriceCalibration | null;
+  source?: EstimateSource;
+}
+
+export function estimateKitchenPrice(config: PlannerConfig, room: RoomInput, options: EstimateOptions = {}): KitchenEstimate {
   const card = options.card ?? DEFAULT_RATE_CARD;
   const layout = computeLayout(room, config.tallUnits);
   const lines: EstimateLine[] = [];
@@ -399,12 +452,17 @@ export function estimateKitchenPrice(
   }
 
   const factor = regionalFactor(options.postalCode, card);
+  const market = calibrationFactor(options.calibration, {
+    source: options.source ?? "c",
+    quality: q,
+    postalCode: options.postalCode,
+  });
   const step = Math.max(1, card.roundingStep);
   const round = (n: number) => Math.round(n / step) * step;
   const rounded = lines.map((l) => ({
     ...l,
-    min: Math.round(l.min * factor),
-    max: Math.round(l.max * factor),
+    min: Math.round(l.min * factor * market),
+    max: Math.round(l.max * factor * market),
   }));
   const min = round(rounded.reduce((s, l) => s + l.min, 0));
   const max = round(rounded.reduce((s, l) => s + l.max, 0));
@@ -416,6 +474,13 @@ export function estimateKitchenPrice(
   ];
   if (factor !== 1) {
     assumptions.push(`Regionales Preisniveau berücksichtigt (Faktor ${factor.toLocaleString("de-DE")})`);
+  }
+  if (Math.abs(market - 1) >= 0.005) {
+    const pct = Math.round((market - 1) * 100);
+    const samples = options.calibration?.samples ?? 0;
+    assumptions.push(
+      `Mit echten Studio-Angeboten auf KüchenWert abgeglichen (${samples.toLocaleString("de-DE")} Ausschreibungen, ${pct > 0 ? "+" : ""}${pct} %)`,
+    );
   }
   if (!config.services.includes("lieferung_montage")) {
     assumptions.push("Ohne Lieferung und Montage");
@@ -429,6 +494,7 @@ export function estimateKitchenPrice(
     lines: rounded,
     layout,
     regionalFactor: factor,
+    calibrationFactor: Math.round(market * 10_000) / 10_000,
     rateCardVersion: options.rateCardVersion ?? null,
     assumptions,
   };

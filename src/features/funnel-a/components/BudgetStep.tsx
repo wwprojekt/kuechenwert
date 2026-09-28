@@ -1,6 +1,7 @@
 import { Calculator } from "lucide-react";
 import { useMemo } from "react";
 import { BudgetSliderStep } from "@/components/funnel/budget-slider-step";
+import { usePriceModel } from "@/features/planner/price-model";
 import { FUNNEL_A_BUDGET, estimateFunnelA, type FunnelAAnswers } from "../catalog";
 
 const NUMBER = new Intl.NumberFormat("de-DE", { maximumFractionDigits: 0 });
@@ -12,7 +13,11 @@ interface BudgetStepProps {
 
 /** Budget-Slider mit Preisanker aus den bisherigen Antworten. */
 export function BudgetStep({ answers, onChange }: BudgetStepProps) {
-  const estimate = useMemo(() => estimateFunnelA(answers), [answers]);
+  const { card, calibration, rateCardVersion } = usePriceModel();
+  const estimate = useMemo(
+    () => estimateFunnelA(answers, { card, calibration, rateCardVersion }),
+    [answers, card, calibration, rateCardVersion],
+  );
 
   return (
     <div className="space-y-7">

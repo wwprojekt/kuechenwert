@@ -27,13 +27,25 @@ import {
   DialogDescription,
 } from "@/components/ui/dialog";
 import { Loader2, Eye, ExternalLink } from "lucide-react";
+import { Link } from "react-router-dom";
+import { KITCHEN_FORMS, STYLES, labelOf } from "@/features/planner/core";
+import { falModel } from "../../../supabase/functions/_shared/fal-models.ts";
 
 /**
  * AdminPlannerSessions — Uebersicht ueber Funnel-C (Traumkueche-AI) Sessions.
  *
  * Zeigt alle planner_sessions inkl. aktuelles Rendering + verknuepfter Lead.
  * Useful fuer: Quality-Check der AI-Bilder, Prompt-Debug, Lead-Konversion.
+ * Modelle, Kennzahlen und Preis-Lernen: /admin/ki.
  */
+
+function styleOf(spec: Record<string, unknown> | null): string {
+  return typeof spec?.style === "string" ? labelOf(STYLES, spec.style) : "—";
+}
+
+function formOf(room: Record<string, unknown> | null): string {
+  return typeof room?.form === "string" ? labelOf(KITCHEN_FORMS, room.form) : "—";
+}
 
 const SESSION_STATUS_LABEL: Record<
   string,
@@ -60,6 +72,7 @@ type SessionRow = {
   session_token: string;
   status: string;
   spec: Record<string, unknown> | null;
+  room: Record<string, unknown> | null;
   lead_id: string | null;
   current_render_id: string | null;
   price_range_min_cents: number | null;
@@ -84,11 +97,18 @@ type RenderRow = {
   /** Signierte URL (1 h); beide Planer-Buckets sind privat. */
   image_url: string | null;
   model_slug: string | null;
+  fallback_from: string | null;
+  feedback: number | null;
+  variant_label: string | null;
   generation_ms: number | null;
   cost_cents: number | null;
   error_message: string | null;
   created_at: string;
 };
+
+function modelLabel(slug: string | null): string {
+  return slug ? (falModel(slug)?.label ?? slug) : "—";
+}
 
 type LeadLite = {
   id: string;
@@ -171,7 +191,7 @@ export default function AdminPlannerSessions() {
       const rendersQuery = supabase
         .from("planner_renders")
         .select(
-          "id, session_id, version, prompt, status, image_path, storage_bucket, model_slug, generation_ms, cost_cents, error_message, created_at"
+          "id, session_id, version, prompt, status, image_path, storage_bucket, model_slug, fallback_from, feedback, variant_label, generation_ms, cost_cents, error_message, created_at"
         )
         .in("session_id", sessionIds.length ? sessionIds : ["__none__"])
         .order("version", { ascending: true });
@@ -232,8 +252,8 @@ export default function AdminPlannerSessions() {
           s.lead?.last_name,
           s.lead?.email,
           s.lead?.postal_code,
-          typeof s.spec?.kitchen_style === "string" ? (s.spec.kitchen_style as string) : "",
-          typeof s.spec?.kitchen_form === "string" ? (s.spec.kitchen_form as string) : "",
+          styleOf(s.spec),
+          formOf(s.room),
         ]
           .filter(Boolean)
           .join(" ")
@@ -266,10 +286,14 @@ export default function AdminPlannerSessions() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-3xl font-bold tracking-tight">Traumküchen-KI (Funnel&nbsp;C)</h1>
+        <h1 className="text-3xl font-bold tracking-tight">Traumküchen-Planungen (Funnel&nbsp;C)</h1>
         <p className="mt-1 text-sm text-muted-foreground">
-          Alle Planner-Sessions inkl. AI-Renderings, Prompt, Preis-Schätzung und
-          verknüpftem Lead.
+          Alle Planungen inkl. KI-Visualisierungen, Prompt, Preis-Schätzung und
+          verknüpftem Lead. Modelle, Kennzahlen und Tageslimit unter{" "}
+          <Link to="/admin/ki" className="text-primary underline-offset-2 hover:underline">
+            KI &amp; Preis-Engine
+          </Link>
+          .
         </p>
       </div>
 
@@ -370,14 +394,8 @@ export default function AdminPlannerSessions() {
                   variant: "outline" as const,
                 };
                 const thumb = s.current_render?.image_url ?? null;
-                const specStyle =
-                  typeof s.spec?.kitchen_style === "string"
-                    ? (s.spec.kitchen_style as string)
-                    : "—";
-                const specForm =
-                  typeof s.spec?.kitchen_form === "string"
-                    ? (s.spec.kitchen_form as string)
-                    : "—";
+                const specStyle = styleOf(s.spec);
+                const specForm = formOf(s.room);
                 return (
                   <TableRow
                     key={s.id}
@@ -495,8 +513,11 @@ function SessionDetail({ session }: { session: SessionWithRel }) {
             {current && (
               <div>
                 <span className="text-muted-foreground">Modell:</span>{" "}
-                {current.model_slug ?? "—"} ·{" "}
+                {modelLabel(current.model_slug)}
+                {current.fallback_from && <> (Ausweich für {modelLabel(current.fallback_from)})</>} ·{" "}
                 {current.generation_ms ? `${(current.generation_ms / 1000).toFixed(1)}s` : "—"}
+                {current.feedback === 1 && " · 👍"}
+                {current.feedback === -1 && " · 👎"}
               </div>
             )}
           </div>
@@ -515,7 +536,7 @@ function SessionDetail({ session }: { session: SessionWithRel }) {
           {current?.prompt && (
             <div>
               <div className="text-xs uppercase tracking-wide text-muted-foreground mb-1">
-                Aktueller Prompt (OpenAI-enhanced)
+                Prompt der aktuellen Visualisierung
               </div>
               <pre className="max-h-40 overflow-y-auto rounded-md bg-muted p-2 text-xs whitespace-pre-wrap break-words">
                 {current.prompt}
@@ -584,8 +605,11 @@ function SessionDetail({ session }: { session: SessionWithRel }) {
                     ) : (
                       <div className="w-full aspect-square bg-muted rounded" />
                     )}
-                    <div className="text-[10px] text-center mt-1">
-                      v{r.version}{" "}
+                    <div className="text-[10px] text-center mt-1" title={`${modelLabel(r.model_slug)}${r.variant_label ? ` · ${r.variant_label}` : ""}`}>
+                      v{r.version}
+                      {r.feedback === 1 && " 👍"}
+                      {r.feedback === -1 && " 👎"}
+                      {r.fallback_from && " ↪"}{" "}
                       {r.status !== "success" && (
                         <Badge
                           variant={r.status === "failed" ? "destructive" : "outline"}

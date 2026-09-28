@@ -18,6 +18,7 @@ import {
 } from "@/features/funnel-a/steps";
 import type { ValidContact } from "@/features/funnel-a/validation";
 import { ApiError, errorMessage } from "@/features/marketplace/api-client";
+import { storeProjectToken } from "@/features/marketplace/project-token";
 import { useTurnstile } from "@/hooks/useTurnstile";
 import { getConsentedClickIds } from "@/lib/clickIdService";
 import { trackFunnelStep, trackFunnelSubmitError } from "@/lib/funnelAnalytics";
@@ -32,7 +33,7 @@ const THANK_YOU_PATH = "/funnel/danke?funnel=a";
 export function FunnelAClient({ slug }: { slug: FunnelAStepSlug }) {
   const navigate = useNavigate();
   const { answers, contact, setAnswer, patchContact, clear } = useFunnelA();
-  const { turnstileToken, resetTurnstile, turnstileCallbackRef } = useTurnstile();
+  const { waitForToken, resetTurnstile, turnstileCallbackRef } = useTurnstile();
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
 
@@ -71,6 +72,7 @@ export function FunnelAClient({ slug }: { slug: FunnelAStepSlug }) {
     setSubmitting(true);
     setSubmitError(null);
     try {
+      const turnstileToken = await waitForToken();
       const result = await submitFunnelA({
         answers,
         contact: valid,
@@ -87,7 +89,8 @@ export function FunnelAClient({ slug }: { slug: FunnelAStepSlug }) {
         return;
       }
       await trackFunnelALead(valid, answers);
-      navigate(`/projekt/${result.project_token}?neu=1`, { replace: true });
+      storeProjectToken(result.project_token);
+      navigate("/projekt?neu=1", { replace: true });
     } catch (err) {
       // Lead angelegt, nur der Projektlink fehlt: Den verschickt der Server per E-Mail.
       if (err instanceof ApiError && err.code === "project_link") {

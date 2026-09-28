@@ -64,6 +64,12 @@ interface TurnstileState {
   turnstileError: boolean;
   /** Turnstile zurücksetzen (z.B. nach Form-Submit) */
   resetTurnstile: () => void;
+  /**
+   * Liefert das Token, sobald Turnstile es ausgestellt hat, spätestens nach
+   * `timeoutMs` (dann null). Ohne Site-Key, bei blockiertem Skript oder
+   * dauerhaftem Fehler sofort null.
+   */
+  waitForToken: (timeoutMs?: number) => Promise<string | null>;
   /** Callback-Ref für das Container-div – rendert Widget sobald div im DOM ist */
   turnstileCallbackRef: (node: HTMLDivElement | null) => void;
 }
@@ -74,6 +80,15 @@ export function useTurnstile(): TurnstileState {
   const [error, setError] = useState(false);
   const widgetIdRef = useRef<string | null>(null);
   const containerRef = useRef<HTMLDivElement | null>(null);
+  const tokenRef = useRef<string | null>(null);
+  const unavailableRef = useRef(!SITE_KEY);
+  const waitersRef = useRef<Array<(token: string | null) => void>>([]);
+
+  const settle = useCallback((value: string | null) => {
+    const waiters = waitersRef.current;
+    waitersRef.current = [];
+    waiters.forEach((resolve) => resolve(value));
+  }, []);
 
   const removeWidget = useCallback(() => {
     const id = widgetIdRef.current;
@@ -93,15 +108,19 @@ export function useTurnstile(): TurnstileState {
         widgetIdRef.current = api.render(container, {
           sitekey: SITE_KEY,
           callback: (newToken: string) => {
+            tokenRef.current = newToken;
             setToken(newToken);
             setReady(true);
             setError(false);
+            settle(newToken);
           },
           "expired-callback": () => {
+            tokenRef.current = null;
             setToken(null);
             setReady(false);
           },
           "timeout-callback": () => {
+            tokenRef.current = null;
             setToken(null);
             setReady(false);
           },
@@ -111,6 +130,8 @@ export function useTurnstile(): TurnstileState {
             setReady(true);
             if (PERMANENT_ERROR.test(String(code))) {
               console.error(`Turnstile deaktiviert: Fehler ${code} (Site-Key oder Domain in Cloudflare prüfen)`);
+              unavailableRef.current = true;
+              settle(null);
               setTimeout(removeWidget, 0);
             }
             return true;
@@ -120,17 +141,20 @@ export function useTurnstile(): TurnstileState {
         });
       } catch (err) {
         console.error("Turnstile konnte nicht gerendert werden:", err);
+        unavailableRef.current = true;
+        settle(null);
         setReady(true);
         setError(true);
       }
     },
-    [removeWidget],
+    [removeWidget, settle],
   );
 
   const turnstileCallbackRef = useCallback(
     (node: HTMLDivElement | null) => {
       if (containerRef.current && containerRef.current !== node) {
         removeWidget();
+        tokenRef.current = null;
         setToken(null);
         setReady(!SITE_KEY);
         setError(false);
@@ -140,6 +164,8 @@ export function useTurnstile(): TurnstileState {
       void loadTurnstile().then((api) => {
         if (!api) {
           // Skript blockiert (z. B. Adblocker): Formular trotzdem absendbar.
+          unavailableRef.current = true;
+          settle(null);
           setReady(true);
           setError(true);
           return;
@@ -147,12 +173,32 @@ export function useTurnstile(): TurnstileState {
         renderWidget(node, api);
       });
     },
-    [removeWidget, renderWidget],
+    [removeWidget, renderWidget, settle],
   );
 
   useEffect(() => removeWidget, [removeWidget]);
 
+  const waitForToken = useCallback(
+    (timeoutMs = 4000) => {
+      if (tokenRef.current) return Promise.resolve(tokenRef.current);
+      if (unavailableRef.current) return Promise.resolve(null);
+      return new Promise<string | null>((resolve) => {
+        const timer = setTimeout(() => {
+          waitersRef.current = waitersRef.current.filter((w) => w !== done);
+          resolve(tokenRef.current);
+        }, timeoutMs);
+        const done = (value: string | null) => {
+          clearTimeout(timer);
+          resolve(value);
+        };
+        waitersRef.current.push(done);
+      });
+    },
+    [],
+  );
+
   const resetTurnstile = useCallback(() => {
+    tokenRef.current = null;
     setToken(null);
     const id = widgetIdRef.current;
     if (!id || !window.turnstile) return;
@@ -169,6 +215,7 @@ export function useTurnstile(): TurnstileState {
     turnstileReady: ready,
     turnstileError: error,
     resetTurnstile,
+    waitForToken,
     turnstileCallbackRef,
   };
 }

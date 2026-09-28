@@ -8,6 +8,8 @@
  *   add-phone      Telefonnummer nachtragen (phone, consent_call), nur solange keine hinterlegt ist
  *   order-confirm  Montage bestätigen (nach Kaufvertrag)
  *   order-problem  Problem zum Auftrag melden (message)
+ *   export-data    Alle gespeicherten Daten als JSON (Art. 15/20 DSGVO)
+ *   delete-data    Projekt beenden und personenbezogene Daten löschen (email zur Bestätigung)
  *   resend         Projektlink(s) per E-Mail neu zusenden (email) – ohne Token
  *
  * Der Token wird nie gespeichert, nur sein SHA-256-Hash (lead_access_tokens).
@@ -30,7 +32,7 @@ import {
 } from "../_shared/kw-http.ts";
 
 const SIGNED_URL_TTL = 60 * 60;
-const CONSENT_TEXT_VERSION = "kw-anfrage-2026-09";
+const CONSENT_TEXT_VERSION = "kw-telefon-2026-09-28";
 
 async function resolveLead(sb: SupabaseClient, req: Request, token: unknown): Promise<string> {
   if (typeof token !== "string" || !/^[A-Za-z0-9_-]{32,64}$/.test(token)) {
@@ -49,9 +51,6 @@ async function signMedia<T extends MediaRef>(sb: SupabaseClient, items: T[]): Pr
   return Promise.all(
     items.map(async (item) => {
       if (!item.path) return { ...item, url: null };
-      if (item.bucket === "planner-renders") {
-        return { ...item, url: sb.storage.from("planner-renders").getPublicUrl(item.path).data.publicUrl };
-      }
       const { data } = await sb.storage.from(item.bucket).createSignedUrl(item.path, SIGNED_URL_TTL);
       return { ...item, url: data?.signedUrl ?? null };
     }),
@@ -140,6 +139,41 @@ async function actionAddPhone(req: Request, sb: SupabaseClient, leadId: string, 
   return jsonResponse(req, { ok: true });
 }
 
+async function actionExportData(req: Request, sb: SupabaseClient, leadId: string) {
+  await enforceRateLimit(sb, `kw:export:${leadId}`, 3600, 10);
+  const { data, error } = await sb.rpc("kw_project_export", { p_lead_id: leadId });
+  if (error) throw error;
+  return jsonResponse(req, data);
+}
+
+async function actionDeleteData(req: Request, sb: SupabaseClient, leadId: string, body: Record<string, unknown>) {
+  await enforceRateLimit(sb, `kw:erase:${clientIp(req)}`, 3600, 5);
+  const email = typeof body.email === "string" ? body.email.trim().toLowerCase() : "";
+  const { data: lead, error } = await sb.from("leads").select("email").eq("id", leadId).maybeSingle();
+  if (error) throw error;
+  if (!lead) throw new HttpError(404, "Projekt nicht gefunden.", "not_found");
+  if (!isEmail(email) || (lead.email ?? "").toLowerCase() !== email) {
+    throw new HttpError(422, "Die E-Mail-Adresse stimmt nicht mit Ihrer Anfrage überein.", "email");
+  }
+
+  // Erst die Dateien, dann die Datenbank: schlägt das Löschen einer Datei fehl,
+  // bleibt der Lead unverändert und der Kunde kann es erneut versuchen.
+  const { data: files, error: filesErr } = await sb.rpc("kw_lead_storage_paths", { p_lead_id: leadId });
+  if (filesErr) throw filesErr;
+  const byBucket = new Map<string, string[]>();
+  for (const f of (files ?? []) as Array<{ bucket: string; path: string }>) {
+    byBucket.set(f.bucket, [...(byBucket.get(f.bucket) ?? []), f.path]);
+  }
+  for (const [bucket, paths] of byBucket) {
+    const { error: removeErr } = await sb.storage.from(bucket).remove(paths);
+    if (removeErr) throw removeErr;
+  }
+
+  const { error: eraseErr } = await sb.rpc("kw_project_erase", { p_lead_id: leadId });
+  if (eraseErr) throw eraseErr;
+  return jsonResponse(req, { ok: true });
+}
+
 serve(async (req) => {
   const body = await readJson(req);
   const sb = serviceClient();
@@ -175,6 +209,10 @@ serve(async (req) => {
       if (error) throw error;
       return jsonResponse(req, await projectView(sb, leadId));
     }
+    case "export-data":
+      return actionExportData(req, sb, leadId);
+    case "delete-data":
+      return actionDeleteData(req, sb, leadId, body);
     default:
       throw new HttpError(400, "Unbekannte Aktion.", "unknown_action");
   }

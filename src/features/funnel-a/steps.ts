@@ -228,7 +228,7 @@ export const FUNNEL_A_STEPS: readonly FunnelAStep[] = [
     required: true,
     eyebrow: "Einbauort",
     question: "Gleich geschafft – wo soll die Küche hin?",
-    hint: "Ihre Postleitzahl nutzen wir nur, um geprüfte Küchenstudios in Ihrer Nähe zu finden.",
+    hint: "Ihre Postleitzahl nutzen wir nur, um Küchenstudios in Ihrer Nähe zu finden.",
   },
   {
     slug: "kontakt",

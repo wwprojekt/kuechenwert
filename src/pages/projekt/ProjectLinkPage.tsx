@@ -1,7 +1,16 @@
 import PageLayout from "@/components/PageLayout";
+import { getStoredProjectToken } from "@/features/marketplace/project-token";
+import { ProjectView } from "./ProjectPage";
 import { ProjectLinkRequest } from "./ProjectLinkRequest";
 
+/**
+ * /projekt: zeigt das Projekt, wenn in diesem Tab ein Projektlink geöffnet
+ * wurde (Token in sessionStorage), sonst das Formular für einen neuen Link.
+ */
 export default function ProjectLinkPage() {
+  const token = getStoredProjectToken();
+  if (token) return <ProjectView token={token} />;
+
   return (
     <PageLayout
       title="Mein Küchenprojekt"

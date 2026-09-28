@@ -74,33 +74,33 @@ export function loadSession(sessionToken: string) {
   return callFunction<{ session: PlannerSessionState | null }>(FN, { action: "session", session_token: sessionToken });
 }
 
+const PHOTO_UNREADABLE = "Dieses Foto können wir nicht verarbeiten. Bitte ein Foto im Format JPG, PNG oder WebP wählen.";
+
 /**
- * Verkleinert Fotos im Browser auf max. 2048 px (JPEG), bevor sie hochgeladen
- * werden: schneller Upload und identische Qualität für die KI.
+ * Verkleinert Fotos im Browser auf max. 2048 px und kodiert sie immer neu als
+ * JPEG: schneller Upload, gleiche Qualität für die KI und keine eingebetteten
+ * Metadaten wie GPS-Position (der Server entfernt sie zusätzlich).
  */
 export async function preparePhoto(file: File): Promise<Blob> {
   if (!/^image\/(jpeg|png|webp)$/.test(file.type)) {
     throw new ApiError("Bitte ein Foto im Format JPG, PNG oder WebP wählen.", 415);
   }
-  const bitmap = await createImageBitmap(file).catch(() => null);
-  if (!bitmap) return file;
+  const bitmap = await createImageBitmap(file, { imageOrientation: "from-image" }).catch(() => null);
+  if (!bitmap) throw new ApiError(PHOTO_UNREADABLE, 415);
   const scale = Math.min(1, MAX_UPLOAD_EDGE / Math.max(bitmap.width, bitmap.height));
-  if (scale === 1 && file.type === "image/jpeg" && file.size < 4 * 1024 * 1024) {
-    bitmap.close();
-    return file;
-  }
   const canvas = document.createElement("canvas");
   canvas.width = Math.round(bitmap.width * scale);
   canvas.height = Math.round(bitmap.height * scale);
   const ctx = canvas.getContext("2d");
   if (!ctx) {
     bitmap.close();
-    return file;
+    throw new ApiError(PHOTO_UNREADABLE, 415);
   }
   ctx.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
   bitmap.close();
   const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, "image/jpeg", 0.86));
-  return blob ?? file;
+  if (!blob) throw new ApiError(PHOTO_UNREADABLE, 415);
+  return blob;
 }
 
 export async function uploadPhoto(sessionToken: string | null, file: File, utm?: Record<string, string>) {

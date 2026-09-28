@@ -136,7 +136,8 @@ class Ctx {
       recipient_name: opts.recipientName ?? null,
       recipient_id: opts.recipientId ?? null,
       subject: opts.subject,
-      body_html: html,
+      // Projektlinks sind Zugangsschlüssel und gehören nicht ins Mail-Protokoll.
+      body_html: html.replace(/\/projekt\/[A-Za-z0-9_-]{16,}/g, "/projekt/[Zugangslink entfernt]"),
       body_text: "",
       email_type: opts.type,
       direction: "outbound",

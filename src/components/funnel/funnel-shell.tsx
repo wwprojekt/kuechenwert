@@ -266,8 +266,8 @@ export function FunnelShell({
           </section>
 
           <p className="mt-5 text-center text-[11px] leading-relaxed text-ink-subtle">
-            Ihre Angaben werden verschlüsselt übertragen. Ihre Kontaktdaten erhalten nur geprüfte Küchenstudios –
-            niemals sonstige Dritte.
+            Ihre Angaben werden verschlüsselt übertragen. Ihre Kontaktdaten erhalten nur freigeschaltete Küchenstudios –
+            niemals andere Unternehmen zu Werbezwecken.
           </p>
         </div>
       </main>

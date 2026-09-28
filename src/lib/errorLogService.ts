@@ -13,9 +13,11 @@
  */
 
 import { supabase } from '@/integrations/supabase/client';
+import type { Json } from '@/integrations/supabase/types';
 import { ensureValidRLSSession, isNetworkError } from '@/lib/sessionGuard';
 import { translateError, getPageTitle, type ErrorCategory, type ErrorSeverity } from './germanErrors';
 import { logger } from './logger';
+import { redactProjectToken } from '@/features/marketplace/project-token';
 
 // ============================================================================
 // Helpers: Browser-Translator + chunk-preload detection
@@ -206,15 +208,16 @@ export function initBreadcrumbTracking(): void {
   _breadcrumbsInitialized = true;
 
   // Navigation tracking
-  let lastUrl = window.location.href;
+  let lastUrl = redactProjectToken(window.location.href);
   const checkNavigation = () => {
-    if (window.location.href !== lastUrl) {
+    const currentUrl = redactProjectToken(window.location.href);
+    if (currentUrl !== lastUrl) {
       addBreadcrumb({
         type: 'navigation',
-        message: `Navigiert zu ${window.location.pathname}`,
-        data: { from: lastUrl, to: window.location.href },
+        message: `Navigiert zu ${redactProjectToken(window.location.pathname)}`,
+        data: { from: lastUrl, to: currentUrl },
       });
-      lastUrl = window.location.href;
+      lastUrl = currentUrl;
     }
   };
 
@@ -497,8 +500,8 @@ export async function logErrorToSupabase(entry: ErrorLogEntry): Promise<void> {
       p_error_message: entry.errorMessage,
       p_error_category: entry.errorCategory,
       p_severity: entry.severity,
-      p_page_url: window.location.href,
-      p_page_path: entry.pagePath || window.location.pathname,
+      p_page_url: redactProjectToken(window.location.href),
+      p_page_path: redactProjectToken(entry.pagePath || window.location.pathname),
       p_page_title: entry.pageTitle || getPageTitle(window.location.pathname),
       p_component_name: entry.componentName || null,
       p_user_id: user?.id || null,
@@ -506,7 +509,7 @@ export async function logErrorToSupabase(entry: ErrorLogEntry): Promise<void> {
       p_user_email: userEmail || null,
       p_stack_trace: entry.stackTrace || null,
       p_original_error: entry.originalError || null,
-      p_metadata: entry.metadata || {},
+      p_metadata: (entry.metadata || {}) as Json,
       p_user_agent: navigator.userAgent,
       p_browser: getBrowser(),
       p_device_type: getDeviceType(),
@@ -515,13 +518,13 @@ export async function logErrorToSupabase(entry: ErrorLogEntry): Promise<void> {
       p_session_id: SESSION_ID,
       p_app_version: APP_VERSION,
       p_http_status: entry.httpStatus || null,
-      p_request_info: entry.requestInfo || {},
-      p_breadcrumbs: getBreadcrumbs(),
+      p_request_info: (entry.requestInfo || {}) as Json,
+      p_breadcrumbs: getBreadcrumbs() as unknown as Json,
       p_environment: import.meta.env.PROD ? 'production' : 'development',
       p_error_source: entry.errorSource || 'caught',
       p_screen_resolution: getScreenResolution(),
       p_connection_type: getConnectionType(),
-      p_memory_usage: getMemoryUsage(),
+      p_memory_usage: getMemoryUsage() as Json,
     });
 
     if (error) {

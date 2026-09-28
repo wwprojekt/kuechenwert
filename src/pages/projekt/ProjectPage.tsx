@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { CheckCircle2, Clock, Hourglass, Inbox, Loader2, PartyPopper, XCircle } from "lucide-react";
-import { useState } from "react";
-import { Link, useParams, useSearchParams } from "react-router-dom";
+import { CheckCircle2, Clock, Hourglass, Inbox, Loader2, MapPin, PartyPopper, XCircle } from "lucide-react";
+import { useEffect, useState } from "react";
+import { Link, useLocation, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
 import PageLayout from "@/components/PageLayout";
 import {
@@ -20,7 +20,9 @@ import { OfferCard } from "@/features/marketplace/components/OfferCard";
 import { PhoneCaptureCard } from "@/features/marketplace/components/PhoneCaptureCard";
 import { ProjectAnswers } from "@/features/marketplace/components/ProjectAnswers";
 import { ProjectOrderCard } from "@/features/marketplace/components/ProjectOrderCard";
-import { acceptOffer, cancelProject, getProject, type ProjectOffer, type ProjectView } from "@/features/marketplace/project-api";
+import { ProjectDataCard } from "@/features/marketplace/components/ProjectDataCard";
+import { acceptOffer, cancelProject, getProject, type ProjectOffer, type ProjectView as ProjectData } from "@/features/marketplace/project-api";
+import { clearStoredProjectToken, storeProjectToken } from "@/features/marketplace/project-token";
 import { BeforeAfterSlider } from "@/features/planner/components/BeforeAfterSlider";
 import { ProjectLinkRequest } from "./ProjectLinkRequest";
 import { cn } from "@/lib/utils";
@@ -37,7 +39,7 @@ function remaining(iso: string | null): string | null {
   return days > 0 ? `${days} Tag${days === 1 ? "" : "e"} ${hours} Std.` : `${hours} Std.`;
 }
 
-function Timeline({ view }: { view: ProjectView }) {
+function Timeline({ view }: { view: ProjectData }) {
   const status = view.tender?.status ?? "draft";
   const steps = [
     { label: "Projekt angelegt", done: true },
@@ -59,8 +61,61 @@ function Timeline({ view }: { view: ProjectView }) {
   );
 }
 
-export default function ProjectPage() {
+function EmptyOffers({ view }: { view: ProjectData }) {
+  const status = view.tender?.status ?? "draft";
+  const noStudios = view.lead.studios_in_area === 0;
+  let icon = <Inbox className="mx-auto h-9 w-9 text-primary" />;
+  let title = "Die Studios prüfen Ihr Projekt";
+  let text = `Küchenstudios in Ihrer Region sehen Ihre Planung und geben ihre Angebote ab${
+    view.tender?.ends_at ? ` – bis zum ${date(view.tender.ends_at)}` : ""
+  }. Sie erhalten bei jedem Angebot eine E-Mail.`;
+
+  if (status === "draft") {
+    icon = <Hourglass className="mx-auto h-9 w-9 text-primary" />;
+    title = "Ihr Projekt wird gerade geprüft";
+    text = "Unser Küchen-Team sieht sich Ihre Angaben an und gibt Ihr Projekt dann für die Studios frei. Bei Rückfragen melden wir uns.";
+  } else if (status === "expired") {
+    title = "Die Angebotsphase ist ohne Angebot zu Ende gegangen";
+    text = "Das tut uns leid. Unser Team meldet sich persönlich bei Ihnen und sucht mit Ihnen nach einer Lösung – etwa mit Studios aus einem größeren Umkreis.";
+  } else if (status === "cancelled") {
+    icon = <XCircle className="mx-auto h-9 w-9 text-muted-foreground" />;
+    title = "Dieses Projekt ist beendet";
+    text = "Es können keine Angebote mehr abgegeben werden. Für eine neue Küche starten Sie gern eine neue Anfrage.";
+  } else if (noStudios && ["active", "completed"].includes(status)) {
+    icon = <MapPin className="mx-auto h-9 w-9 text-primary" />;
+    title = "In Ihrer Region nimmt noch kein Partnerstudio teil";
+    text = "Unser Studio-Netzwerk wächst gerade. Ihr Projekt bleibt online, und unser Team meldet sich persönlich bei Ihnen, um passende Studios zu finden.";
+  }
+
+  return (
+    <div className="rounded-2xl border border-dashed bg-card p-8 text-center">
+      {icon}
+      <p className="mt-3 text-lg font-semibold">{title}</p>
+      <p className="mx-auto mt-1 max-w-md text-sm text-muted-foreground">{text}</p>
+      {status === "cancelled" && (
+        <Link to="/formular" className="mt-4 inline-block text-sm font-semibold text-primary underline underline-offset-2">
+          Neue Anfrage starten
+        </Link>
+      )}
+    </div>
+  );
+}
+
+/** /projekt/:token aus einem älteren Link: Token ablegen und ohne Token in der URL weiter. */
+export default function ProjectTokenRoute() {
   const { token = "" } = useParams();
+  const location = useLocation();
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    storeProjectToken(token);
+    navigate({ pathname: "/projekt", search: location.search }, { replace: true });
+  }, [token, location.search, navigate]);
+
+  return null;
+}
+
+export function ProjectView({ token }: { token: string }) {
   const [params] = useSearchParams();
   const isNew = params.get("neu") === "1";
   const qc = useQueryClient();
@@ -77,6 +132,11 @@ export default function ProjectPage() {
     refetchOnWindowFocus: true,
     retry: (count, err) => !(err instanceof ApiError && err.status === 404) && count < 2,
   });
+
+  const invalidLink = query.error instanceof ApiError && query.error.status === 404;
+  useEffect(() => {
+    if (invalidLink) clearStoredProjectToken();
+  }, [invalidLink]);
 
   const accept = useMutation({
     mutationFn: (bidId: string) => acceptOffer(token, bidId),
@@ -153,10 +213,10 @@ export default function ProjectPage() {
             <div className="mb-8 flex gap-4 rounded-2xl border border-primary/30 bg-primary/5 p-5">
               <PartyPopper className="h-8 w-8 flex-none text-primary" />
               <div>
-                <p className="text-lg font-bold text-foreground">Geschafft – Ihr Küchenprojekt ist online!</p>
+                <p className="text-lg font-bold text-foreground">Geschafft – Ihr Küchenprojekt ist angelegt!</p>
                 <p className="mt-1 text-sm text-muted-foreground">
-                  Speichern Sie diese Seite als Lesezeichen. Den Link haben wir Ihnen zusätzlich per E-Mail geschickt. Bei jedem neuen Angebot
-                  benachrichtigen wir Sie.
+                  Den persönlichen Zugangslink zu dieser Seite haben wir Ihnen per E-Mail geschickt – bitte bewahren Sie die E-Mail auf. Bei
+                  jedem neuen Angebot benachrichtigen wir Sie.
                 </p>
               </div>
             </div>
@@ -204,27 +264,18 @@ export default function ProjectPage() {
               )}
             </div>
 
-            {offers.length === 0 && (
-              <div className="rounded-2xl border border-dashed bg-card p-8 text-center">
-                {tender?.status === "draft" ? <Hourglass className="mx-auto h-9 w-9 text-primary" /> : <Inbox className="mx-auto h-9 w-9 text-primary" />}
-                <p className="mt-3 text-lg font-semibold">
-                  {tender?.status === "draft" ? "Ihr Projekt wird gerade geprüft" : "Die Studios prüfen Ihr Projekt"}
-                </p>
-                <p className="mx-auto mt-1 max-w-md text-sm text-muted-foreground">
-                  {tender?.status === "draft"
-                    ? "Unser Küchen-Team meldet sich kurz bei Ihnen und gibt Ihr Projekt dann für die Studios frei."
-                    : `Geprüfte Küchenstudios in Ihrer Region sehen Ihre Planung und geben ihre Angebote ab${tender?.ends_at ? ` – bis zum ${date(tender.ends_at)}` : ""}. Sie erhalten bei jedem Angebot eine E-Mail.`}
-                </p>
-              </div>
-            )}
+            {offers.length === 0 && <EmptyOffers view={view} />}
 
             {offers.map((offer, i) => (
               <OfferCard key={offer.bid_id} offer={offer} rank={i + 1} referenceEur={reference} canAccept={canAccept} onAccept={setPending} />
             ))}
 
-            {canAccept && offers.length > 0 && (
+            {offers.length > 0 && (
               <p className="text-sm text-muted-foreground">
-                Sie müssen kein Angebot annehmen. Entscheiden Sie in Ruhe{tender?.decision_deadline_at ? ` – bis spätestens ${date(tender.decision_deadline_at)}` : ""}.
+                {canAccept &&
+                  `Sie müssen kein Angebot annehmen. Entscheiden Sie in Ruhe${tender?.decision_deadline_at ? ` – bis spätestens ${date(tender.decision_deadline_at)}` : ""}. `}
+                Die Angebote sind nach Preis sortiert; niemand kann eine bessere Platzierung kaufen. Das Studio, dessen Angebot Sie
+                annehmen, zahlt KüchenWert eine Vermittlungsprovision – für Sie bleibt der Service kostenlos.
               </p>
             )}
           </div>
@@ -284,6 +335,7 @@ export default function ProjectPage() {
                 </button>
               )}
             </div>
+            <ProjectDataCard token={token} />
             <p className="text-center text-xs text-muted-foreground">
               Fragen? <Link to="/kontakt" className="underline">Kontaktieren Sie uns</Link> – wir helfen gern.
             </p>
@@ -315,7 +367,7 @@ export default function ProjectPage() {
               }}
             >
               {accept.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-              Verbindlich wählen
+              Angebot annehmen
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -327,7 +379,16 @@ export default function ProjectPage() {
             <AlertDialogTitle>Projekt beenden?</AlertDialogTitle>
             <AlertDialogDescription>Die Studios werden informiert und können keine Angebote mehr abgeben. Verraten Sie uns kurz den Grund?</AlertDialogDescription>
           </AlertDialogHeader>
-          <Textarea value={cancelReason} onChange={(e) => setCancelReason(e.target.value.slice(0, 500))} rows={3} placeholder="z. B. Küche bereits gekauft, Projekt verschoben …" />
+          <label htmlFor="cancel-reason" className="sr-only">
+            Grund für das Beenden (optional)
+          </label>
+          <Textarea
+            id="cancel-reason"
+            value={cancelReason}
+            onChange={(e) => setCancelReason(e.target.value.slice(0, 500))}
+            rows={3}
+            placeholder="z. B. Küche bereits gekauft, Projekt verschoben …"
+          />
           <AlertDialogFooter>
             <AlertDialogCancel>Zurück</AlertDialogCancel>
             <AlertDialogAction

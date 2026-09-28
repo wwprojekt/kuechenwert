@@ -76,10 +76,10 @@ export function ContactStep({
       phone: "",
       postal_code: defaultPostalCode,
       city: "",
-      timeframe_months: "3",
-      housing_type: "own",
+      timeframe_months: "",
+      housing_type: "unknown",
       share_with_studios: false as unknown as true,
-      contact_by_phone: true,
+      contact_by_phone: false,
       marketing: false,
       website: "",
     },
@@ -136,6 +136,7 @@ export function ContactStep({
               {...register("timeframe_months")}
               className="flex h-11 w-full rounded-md border border-input bg-background px-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             >
+              <option value="">Keine Angabe</option>
               {TIMEFRAMES.map((t) => (
                 <option key={t.value} value={t.value}>
                   {t.label}
@@ -173,9 +174,9 @@ export function ContactStep({
               <label className="flex cursor-pointer items-start gap-3 text-sm leading-relaxed">
                 <Checkbox checked={!!field.value} onCheckedChange={(v) => field.onChange(v === true)} className="mt-0.5" />
                 <span>
-                  Ich willige ein, dass KüchenWert meine Planung ohne Kontaktdaten geprüften Küchenstudios zur Angebotserstellung zeigt und meine
-                  Kontaktdaten an das von mir gewählte Studio sowie an bis zu drei Studios zur persönlichen Beratung weitergibt. Widerruf jederzeit
-                  möglich. <span className="font-semibold">(erforderlich)</span>
+                  Ich willige ein, dass KüchenWert meine Planung ohne Kontaktdaten freigeschalteten Küchenstudios in meiner Region zur
+                  Angebotserstellung zeigt und meine Kontaktdaten an das von mir gewählte Studio sowie an bis zu drei Studios zur persönlichen
+                  Beratung weitergibt. Widerruf jederzeit möglich. <span className="font-semibold">(erforderlich)</span>
                 </span>
               </label>
             )}
@@ -227,7 +228,11 @@ export function ContactStep({
           )}
         </Button>
         <p className="flex items-center justify-center gap-1.5 text-center text-xs text-muted-foreground">
-          <Lock className="h-3.5 w-3.5" /> Mit dem Absenden akzeptieren Sie die{" "}
+          <Lock className="h-3.5 w-3.5" /> Es gelten unsere{" "}
+          <Link to="/agb" className="underline underline-offset-2">
+            AGB
+          </Link>
+          ; Hinweise zum Datenschutz in der{" "}
           <Link to="/datenschutz" className="underline underline-offset-2">
             Datenschutzerklärung
           </Link>
@@ -251,9 +256,9 @@ export function ContactStep({
         </div>
         <ol className="space-y-3 rounded-2xl border bg-card p-5 text-sm">
           {[
-            "Ihr Projekt geht anonym an geprüfte Studios in Ihrer Region.",
-            "Studios geben innerhalb von 7 Tagen verbindliche Angebote ab – und unterbieten sich gegenseitig.",
-            "Sie vergleichen auf Ihrer Projektseite und wählen Ihr Studio. Erst dann erhält es Ihre Kontaktdaten.",
+            "Ihr Projekt geht ohne Namen und Kontaktdaten an Küchenstudios in Ihrer Region.",
+            "Studios geben 7 Tage lang Angebote ab und können ihre Preise dabei nur senken.",
+            "Sie vergleichen auf Ihrer Projektseite und wählen Ihr Studio. Ihre Kontaktdaten erhalten höchstens drei Studios für Rückfragen und das Studio Ihrer Wahl.",
           ].map((text, i) => (
             <li key={text} className="flex gap-3">
               <span className="grid h-6 w-6 flex-none place-items-center rounded-full bg-primary text-xs font-bold text-primary-foreground">{i + 1}</span>
@@ -262,10 +267,10 @@ export function ContactStep({
           ))}
         </ol>
         <p className={cn("flex items-center gap-2 text-xs text-muted-foreground")}>
-          <ShieldCheck className="h-4 w-4 text-primary" /> DSGVO-konform · Server in der EU · SSL-verschlüsselt
+          <ShieldCheck className="h-4 w-4 text-primary" /> SSL-verschlüsselt · Datenbank in Frankfurt (EU)
         </p>
         <p className="flex items-center gap-2 text-xs text-muted-foreground">
-          <CheckCircle2 className="h-4 w-4 text-primary" /> Nur geprüfte Küchenstudios mit Gewerbenachweis
+          <CheckCircle2 className="h-4 w-4 text-primary" /> Nur von uns manuell freigeschaltete Küchenstudios
         </p>
       </aside>
     </form>

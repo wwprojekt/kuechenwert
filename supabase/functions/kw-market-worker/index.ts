@@ -150,7 +150,8 @@ class Ctx {
       recipient_name: opts.recipientName ?? null,
       recipient_id: opts.recipientId ?? null,
       subject: opts.subject,
-      body_html: opts.html,
+      // Projektlinks sind Zugangsschlüssel und gehören nicht ins Mail-Protokoll.
+      body_html: redactProjectLinks(opts.html),
       body_text: "",
       email_type: opts.type,
       direction: "outbound",
@@ -188,6 +189,19 @@ class Ctx {
 
 const fullName = (l: { first_name: string | null; last_name: string | null }) =>
   [l.first_name, l.last_name].filter(Boolean).join(" ").trim();
+
+function redactProjectLinks(html: string): string {
+  return html.replace(/\/projekt\/[A-Za-z0-9_-]{16,}/g, "/projekt/[Zugangslink entfernt]");
+}
+
+async function studiosCovering(ctx: Ctx, postalCode: string): Promise<number | null> {
+  const { data, error } = await ctx.sb.rpc("kw_studios_covering", { p_postal_code: postalCode });
+  if (error) {
+    console.warn("[kw-worker] coverage check failed", error.message);
+    return null;
+  }
+  return typeof data === "number" ? data : null;
+}
 
 const dealerName = (d: Dealer) => d.company_name?.trim() || fullName(d) || "Küchenstudio";
 
@@ -230,22 +244,25 @@ async function onProjectCreated(ctx: Ctx, p: Record<string, unknown>) {
     .limit(1)
     .maybeSingle();
 
+  const covering = await studiosCovering(ctx, lead.postal_code);
+
   if (lead.email) {
     const link = await ctx.projectLink(lead.id);
     const active = tender?.status === "active";
+    const intro = !active
+      ? "Vielen Dank für Ihre Anfrage. Unser Küchen-Team sieht sich Ihre Angaben an und gibt Ihr Projekt danach für die Küchenstudios frei. Bei Rückfragen melden wir uns."
+      : covering === 0
+        ? "Vielen Dank für Ihre Anfrage. Ihr Projekt ist angelegt. In Ihrer Region nimmt aktuell noch kein Partnerstudio teil – unser Team meldet sich deshalb persönlich bei Ihnen und sucht passende Studios."
+        : "Ihr Küchenprojekt ist online. Küchenstudios in Ihrer Region sehen jetzt Ihre Planung – ohne Ihre Kontaktdaten – und können Ihnen Angebote machen.";
     const content = [
       greeting(lead.first_name ?? undefined),
-      paragraph(
-        active
-          ? "Ihr Küchenprojekt ist online. Geprüfte Küchenstudios in Ihrer Region sehen jetzt Ihre Planung – ohne Ihre Kontaktdaten – und können Ihnen verbindliche Angebote machen."
-          : "Vielen Dank für Ihre Anfrage. Unser Küchen-Team prüft Ihre Angaben und meldet sich kurzfristig bei Ihnen. Danach geben geprüfte Studios ihre Angebote ab.",
-      ),
+      paragraph(intro),
       tender ? infoBox("Ihr Projekt", summaryRows(tender.public_summary ?? {}, { min: tender.estimate_min_eur, max: tender.estimate_max_eur })) : "",
       button("Mein Projekt & Angebote ansehen", link),
       list([
         "Alle Angebote sehen Sie übersichtlich auf Ihrer Projektseite – mit Preis, Lieferzeit und Leistungsumfang.",
         "Sie entscheiden frei, welches Studio den Auftrag bekommt. Kein Kaufzwang.",
-        "Ihre Kontaktdaten erhalten nur das von Ihnen gewählte Studio und höchstens drei geprüfte Studios, die Sie persönlich beraten möchten – Sie werden jeweils informiert.",
+        "Ihre Kontaktdaten erhalten nur das von Ihnen gewählte Studio und höchstens drei Studios, die Sie persönlich beraten möchten – Sie werden jeweils informiert.",
       ]),
       paragraph("Bitte bewahren Sie diese E-Mail auf – der Link ist Ihr persönlicher Zugang zum Projekt."),
     ].join("");
@@ -275,13 +292,17 @@ async function onProjectCreated(ctx: Ctx, p: Record<string, unknown>) {
           detailRow("PLZ / Ort", escapeHtml(`${lead.postal_code} ${lead.city ?? ""}`)),
           detailRow("Wert", value),
           detailRow("Ausschreibung", escapeHtml(tender?.status ?? "keine")),
+          detailRow("Studios im Umkreis", covering === null ? "unbekannt" : String(covering)),
         ].join(""),
       ),
+      covering === 0
+        ? paragraph("<strong>Kein aktives Studio deckt diese PLZ ab.</strong> Bitte den Kunden persönlich kontaktieren und Studios in der Region gewinnen oder das Projekt vermitteln.")
+        : "",
       button("Im Admin öffnen", `${BRAND.baseUrl}/admin/leads`),
     ].join("");
     await ctx.send({
       to: ctx.adminAddress(),
-      subject: `Neues Küchenprojekt · PLZ ${lead.postal_code} · ${value}`,
+      subject: `${covering === 0 ? "⚠ Keine Studios · " : ""}Neues Küchenprojekt · PLZ ${lead.postal_code} · ${value}`,
       html: ctx.layout("Neues Küchenprojekt", content),
       type: "project_admin_new",
     });

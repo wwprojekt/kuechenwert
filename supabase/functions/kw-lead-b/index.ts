@@ -35,8 +35,10 @@ import { checkTurnstile } from "../_shared/turnstile.ts";
 import { insertLeadWithConsents, leadForSubmission, parseSubmissionId, sanitizeClickIds } from "../_shared/lead-intake.ts";
 import { regionForPostalCode } from "../_shared/plz-region.ts";
 import { DELIVERY_MODES, EXTRAS_OPTIONS, FINANCING_OPTIONS, TIMEFRAMES } from "../_shared/funnel-b-catalog.ts";
+import { detectImageFormat } from "../_shared/image-detect.ts";
+import { stripImageMetadata } from "../_shared/image-meta.ts";
 
-const CONSENT_TEXT_VERSION = "kw-unterbieten-2026-09";
+const CONSENT_TEXT_VERSION = "kw-unterbieten-2026-09-28";
 const BUCKET = "lead-files";
 const MAX_FILE_BYTES = 10 * 1024 * 1024;
 const MAX_FILES = 6;
@@ -149,6 +151,13 @@ async function actionSubmit(req: Request, sb: SupabaseClient, body: Record<strin
   if (d.consentCall !== true) {
     throw new HttpError(422, "Bitte willigen Sie in den Rückruf zum Experten-Check ein.", "consent");
   }
+  // Ältere Browser-Versionen ohne die Studio-Checkbox senden consentShare nicht:
+  // Lead annehmen, aber ohne Freigabe der Kontaktdaten an Studios.
+  if (d.consentShare === false) {
+    throw new HttpError(422, "Bitte stimmen Sie der Weitergabe Ihres Projekts an Küchenstudios zu.", "consent_share");
+  }
+  const consentShare = d.consentShare === true;
+  const consentStudioCall = consentShare && d.consentStudioCall === true;
   if (priceEur === null) throw new HttpError(422, "Bitte den Angebotspreis Ihres Küchenstudios in Euro angeben.", "price");
   if (!offerDelivery) throw new HttpError(422, "Bitte wählen Sie, wie Sie uns das Bild Ihrer Küche schicken.", "offer_delivery");
   if (offerDelivery === "now" && !files.some((f) => f.category === "kueche_bild")) {
@@ -218,7 +227,7 @@ async function actionSubmit(req: Request, sb: SupabaseClient, body: Record<strin
       existing_offer_price_cents: priceCents,
       waste_separation_system: waste === "yes" ? true : waste === "no" ? false : null,
       special_wishes: extras,
-      consent_call: true,
+      consent_call: consentStudioCall,
       consent_marketing: consentMarketing,
       funnel_answers: {
         brand: cleanText(d.brand, 80),
@@ -248,16 +257,51 @@ async function actionSubmit(req: Request, sb: SupabaseClient, body: Record<strin
       user_agent: userAgent,
     },
     [
-      { purpose: "contact_by_phone", granted: true },
+      { purpose: "share_with_studios", granted: consentShare },
+      { purpose: "kuechenwert_call", granted: true },
+      { purpose: "contact_by_phone", granted: consentStudioCall },
       { purpose: "marketing", granted: consentMarketing },
     ],
     { textVersion: CONSENT_TEXT_VERSION, userId, ip: validIp(ip), userAgent },
   );
 
-  return jsonResponse(req, { ok: true, ...(await issueUploads(sb, leadId, files)) });
+  const { data: covering } = await sb.rpc("kw_studios_covering", { p_postal_code: postalCode });
+  return jsonResponse(req, {
+    ok: true,
+    studios_in_area: typeof covering === "number" ? covering : null,
+    review_required: botCheck === "unverified",
+    ...(await issueUploads(sb, leadId, files)),
+  });
 }
 
 const STORED_PATH_RE = /^[0-9a-f-]{36}\/(kueche_bild|angebot|grundriss)-[0-9a-f-]{36}\.(jpg|png|webp|heic|heif|pdf)$/;
+
+/**
+ * Prüft den Dateiinhalt (nicht die Angabe des Browsers) und entfernt aus
+ * JPG/PNG eingebettete Metadaten wie GPS-Position. Andere Inhalte als Bilder
+ * oder PDF werden gelöscht; Rückgabe false = Datei nicht übernehmen.
+ */
+async function sanitizeStoredFile(sb: SupabaseClient, path: string): Promise<boolean> {
+  const { data: blob, error } = await sb.storage.from(BUCKET).download(path);
+  if (error || !blob) return false;
+  const bytes = new Uint8Array(await blob.arrayBuffer());
+  const isPdf = bytes.length > 4 && bytes[0] === 0x25 && bytes[1] === 0x50 && bytes[2] === 0x44 && bytes[3] === 0x46;
+  const format = detectImageFormat(bytes.subarray(0, 32)).format;
+  if (!isPdf && !["jpeg", "png", "webp", "heic", "heif"].includes(format)) {
+    await sb.storage.from(BUCKET).remove([path]);
+    return false;
+  }
+  const stripped = isPdf ? null : stripImageMetadata(bytes);
+  if (stripped?.changed) {
+    const { error: upErr } = await sb.storage.from(BUCKET).upload(path, stripped.data, {
+      contentType: format === "png" ? "image/png" : "image/jpeg",
+      cacheControl: "31536000, immutable",
+      upsert: true,
+    });
+    if (upErr) throw upErr;
+  }
+  return true;
+}
 
 async function actionAttachFiles(req: Request, sb: SupabaseClient, body: Record<string, unknown>) {
   const ip = clientIp(req);
@@ -294,6 +338,10 @@ async function actionAttachFiles(req: Request, sb: SupabaseClient, body: Record<
       continue;
     }
     if (alreadyAttached.has(path)) continue;
+    if (!(await sanitizeStoredFile(sb, path))) {
+      missing.push(path);
+      continue;
+    }
     const type = typeof f.type === "string" && FILE_EXTENSIONS[f.type.toLowerCase()] ? f.type.toLowerCase() : "application/octet-stream";
     rows.push({
       lead_id: leadId,

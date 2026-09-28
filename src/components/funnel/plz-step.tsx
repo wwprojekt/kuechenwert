@@ -1,6 +1,7 @@
-import { CircleCheck, MapPin } from "lucide-react";
+import { CircleCheck, Info, MapPin } from "lucide-react";
 import type { FormEvent } from "react";
 import { regionForPostalCode } from "@/features/funnel-a/catalog";
+import { useStudioCoverage } from "@/features/funnel-a/coverage";
 import { cn } from "@/lib/utils";
 
 interface PlzStepProps {
@@ -13,6 +14,7 @@ interface PlzStepProps {
 export function PlzStep({ value, onChange, onSubmit }: PlzStepProps) {
   const isComplete = /^\d{5}$/.test(value);
   const region = isComplete ? regionForPostalCode(value) : null;
+  const studios = useStudioCoverage(region ? value : "");
 
   const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -53,11 +55,19 @@ export function PlzStep({ value, onChange, onSubmit }: PlzStepProps) {
         )}
       </div>
 
-      <p id="funnel-plz-status" role="status" aria-live="polite" className="min-h-[2.75rem]">
+      <div id="funnel-plz-status" role="status" aria-live="polite" className="min-h-[2.75rem] space-y-2">
         {region && (
           <span className="flex items-center justify-center gap-2 rounded-lg bg-brand-50 px-4 py-2.5 text-sm font-medium text-brand-800">
             <MapPin className="h-4 w-4 flex-none text-brand-600" aria-hidden="true" />
             Region {region}
+            {studios !== null && studios > 0 && ` · ${studios} ${studios === 1 ? "Küchenstudio" : "Küchenstudios"} in Ihrer Nähe`}
+          </span>
+        )}
+        {region && studios === 0 && (
+          <span className="flex items-start gap-2 rounded-lg border border-border bg-card px-4 py-2.5 text-left text-sm text-ink-muted">
+            <Info className="mt-0.5 h-4 w-4 flex-none text-brand-600" aria-hidden="true" />
+            In Ihrer Region nimmt aktuell noch kein Partnerstudio teil. Sie können trotzdem anfragen – unser Team meldet sich dann
+            persönlich und sucht passende Studios.
           </span>
         )}
         {isComplete && !region && (
@@ -65,7 +75,7 @@ export function PlzStep({ value, onChange, onSubmit }: PlzStepProps) {
             Diesen PLZ-Bereich kennen wir nicht – bitte prüfen Sie Ihre Eingabe.
           </span>
         )}
-      </p>
+      </div>
     </form>
   );
 }

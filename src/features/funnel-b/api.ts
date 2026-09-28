@@ -24,15 +24,25 @@ export interface FunnelBSubmitPayload {
 
 interface SubmitResult {
   ok: boolean;
+  studios_in_area?: number | null;
+  review_required?: boolean;
   upload_token?: string;
   uploads?: { index: number; path: string; token: string }[];
 }
 
+export interface FunnelBSubmitOutcome {
+  failedUploads: number;
+  /** Aktive Studios im Umkreis der PLZ; null, wenn der Server es nicht meldet. */
+  studiosInArea: number | null;
+  /** Ohne gültige Bot-Prüfung gibt das Team die Anfrage erst nach Sichtung frei. */
+  reviewRequired: boolean;
+}
+
 /**
  * Sendet Funnel B an kw-lead-b und lädt danach die Dateien über die
- * signierten URLs hoch. Liefert die Zahl der Dateien, die nicht ankamen.
+ * signierten URLs hoch. Liefert u. a. die Zahl der Dateien, die nicht ankamen.
  */
-export async function submitFunnelB(payload: FunnelBSubmitPayload): Promise<{ failedUploads: number }> {
+export async function submitFunnelB(payload: FunnelBSubmitPayload): Promise<FunnelBSubmitOutcome> {
   const result = await callFunction<SubmitResult>("kw-lead-b", {
     action: "submit",
     data: payload.data,
@@ -50,8 +60,10 @@ export async function submitFunnelB(payload: FunnelBSubmitPayload): Promise<{ fa
     landing_page: payload.landingPage,
   });
 
+  const studiosInArea = typeof result.studios_in_area === "number" ? result.studios_in_area : null;
+  const reviewRequired = result.review_required === true;
   const targets = result.uploads ?? [];
-  if (!targets.length || !result.upload_token) return { failedUploads: 0 };
+  if (!targets.length || !result.upload_token) return { failedUploads: 0, studiosInArea, reviewRequired };
 
   const uploaded: { path: string; category: FunnelBFileCategory; name: string; type: string; size: number }[] = [];
   for (const target of targets) {
@@ -87,5 +99,9 @@ export async function submitFunnelB(payload: FunnelBSubmitPayload): Promise<{ fa
       console.error("Funnel B attach-files failed", err);
     }
   }
-  return { failedUploads: payload.uploads.length - Math.min(attached, uploaded.length) };
+  return {
+    failedUploads: payload.uploads.length - Math.min(attached, uploaded.length),
+    studiosInArea,
+    reviewRequired,
+  };
 }

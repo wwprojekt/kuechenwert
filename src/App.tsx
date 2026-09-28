@@ -3,7 +3,8 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { ThemeProvider } from "@/components/ThemeProvider";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { QueryClientProvider } from "@tanstack/react-query";
+import { queryClient } from "./lib/queryClient";
 import { BrowserRouter, Routes, Route, useLocation } from "react-router-dom";
 import PageTransition from "./components/PageTransition";
 import { ErrorBoundary } from "./components/ErrorBoundary";
@@ -162,35 +163,6 @@ function PageTracker() {
 
   return null;
 }
-
-const queryClient = new QueryClient({
-  defaultOptions: {
-    queries: {
-      // Cache data for 5 minutes by default
-      staleTime: 5 * 60 * 1000,
-      // Keep data in cache for 10 minutes
-      gcTime: 10 * 60 * 1000,
-      // Retry failed requests 2 times
-      retry: 2,
-      // Retry with exponential backoff
-      retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
-      // Do NOT refetch every time the user alt-tabs back.
-      // Admin pages alone run ~25 queries; focus-refetch caused a visible
-      // freeze whenever an admin switched tabs. Individual hot queries can
-      // still opt-in via refetchOnWindowFocus: true on their own useQuery.
-      refetchOnWindowFocus: false,
-      // Only refetch on reconnect – not "always" (which re-runs even if
-      // the connection never actually dropped, just visibility flickered).
-      refetchOnReconnect: true,
-    },
-    mutations: {
-      // Retry mutations once
-      retry: 1,
-      // Show error for 4 seconds
-      gcTime: 4 * 1000,
-    },
-  },
-});
 
 const App = () => (
   <ErrorBoundary showDetails={!import.meta.env.PROD}>

@@ -103,7 +103,11 @@ const contactSchema = z.object({
   marketing: z.boolean(),
 });
 
-export type ContactValidation = { ok: true; value: ValidContact } | { ok: false; errors: ContactErrors };
+// Die jeweils fehlende Eigenschaft als undefined deklariert: So greift die
+// Verengung auch in der nicht-strikten App-Konfiguration (ohne strictNullChecks).
+export type ContactValidation =
+  | { ok: true; value: ValidContact; errors?: undefined }
+  | { ok: false; errors: ContactErrors; value?: undefined };
 
 export function validateContact(contact: FunnelAContact): ContactValidation {
   const result = contactSchema.safeParse(contact);

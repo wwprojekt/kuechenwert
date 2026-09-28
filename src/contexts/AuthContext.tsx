@@ -2,6 +2,7 @@ import { createContext, useContext, useEffect, useState, useCallback, useRef } f
 import type { User, Session, AuthChangeEvent } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
 import { logger } from "@/lib/logger";
+import { queryClient } from "@/lib/queryClient";
 
 interface AuthContextType {
   user: User | null;
@@ -31,7 +32,7 @@ function isLockError(error: unknown): boolean {
     message.includes('was not released within') ||
     message.includes('Acquiring an exclusive Navigator LockManager lock') ||
     message.includes('Acquiring process lock') ||
-    (error instanceof Error && 'isAcquireTimeout' in error && !!(error as any).isAcquireTimeout)
+    (error instanceof Error && 'isAcquireTimeout' in error && !!(error as { isAcquireTimeout?: boolean }).isAcquireTimeout)
   );
 }
 
@@ -48,13 +49,20 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   // benötigt wird. Das verhindert das Re-Subscribe auf onAuthStateChange bei jedem
   // Token-Refresh (was sonst einen INITIAL_SESSION → setSession-Loop verursacht).
   const sessionRef = useRef<Session | null>(null);
+  const userIdRef = useRef<string | null>(null);
 
   /**
    * Stabilisiert User-Referenz: setUser wird NUR aufgerufen wenn sich
    * die User-ID tatsächlich ändert (Login/Logout). Verhindert, dass alle
    * Hooks mit [user]-Dependency bei jedem Token-Refresh re-fetchen.
+   * Beim Abmelden oder Kontowechsel wird der Abfrage-Cache geleert.
    */
   const updateAuthState = useCallback((newSession: Session | null) => {
+    const newId = newSession?.user?.id ?? null;
+    if (userIdRef.current !== null && userIdRef.current !== newId) {
+      queryClient.clear();
+    }
+    userIdRef.current = newId;
     sessionRef.current = newSession;
     setSession(newSession);
     setUser(prev => {
@@ -110,7 +118,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         await new Promise(resolve => setTimeout(resolve, 500));
         return attemptSessionRecovery();
       }
-      console.warn("[Auth] Session-Recovery fehlgeschlagen:", e);
+      logger.warn("[Auth] Session-Recovery fehlgeschlagen:", e);
     }
 
     // Rekursiver Retry
@@ -161,7 +169,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         if (isLockError(e)) {
           logger.log("[Auth] Lock-Fehler beim initialen Session-Check (harmlos)");
         } else {
-          console.warn("[Auth] Fehler beim initialen Session-Check:", e);
+          logger.warn("[Auth] Fehler beim initialen Session-Check:", e);
         }
         setLoading(false);
       });
@@ -178,7 +186,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
             if (isLockError(e)) {
               logger.log("[Auth] Lock-Fehler bei Cross-Tab-Sync (harmlos)");
             } else {
-              console.warn("[Auth] Fehler bei Cross-Tab-Sync:", e);
+              logger.warn("[Auth] Fehler bei Cross-Tab-Sync:", e);
             }
           });
       }
@@ -256,7 +264,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     } catch (e) {
       // Lock-Fehler beim Abmelden ignorieren - der Benutzer wird trotzdem ausgeloggt
       if (!isLockError(e)) {
-        console.warn("[Auth] Fehler beim Abmelden:", e);
+        logger.warn("[Auth] Fehler beim Abmelden:", e);
       }
     }
     updateAuthState(null);

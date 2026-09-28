@@ -1,8 +1,9 @@
-import { CheckCircle2, FolderOpen, Mail, Phone } from "lucide-react";
+import { CheckCircle2, FolderOpen, Mail, MapPin, Phone } from "lucide-react";
 import { Link, useSearchParams } from "react-router-dom";
 import { FunnelSeo } from "@/components/funnel/funnel-seo";
 import { Button } from "@/components/ui/button";
 import { useSettings } from "@/contexts/SettingsContext";
+import { useSupportPhone } from "@/hooks/useSupportPhone";
 import { BRAND } from "@/lib/brand";
 
 interface Variant {
@@ -19,21 +20,20 @@ const PROJECT_LINK_STEP = {
 const VARIANTS: Record<string, Variant> = {
   a: {
     title: "Danke für Ihre Anfrage!",
-    subtitle:
-      "Ihr Projekt ist angelegt. Geprüfte Küchenstudios aus Ihrer Region können jetzt Angebote abgeben – die ersten kommen meist innerhalb von 48 Stunden.",
+    subtitle: "Ihr Projekt ist angelegt. Küchenstudios aus Ihrer Region können jetzt 7 Tage lang Angebote abgeben.",
     steps: [
       PROJECT_LINK_STEP,
-      { title: "Angebote vergleichen", text: "Studios geben 7 Tage lang Angebote ab. Alle sehen Sie übersichtlich auf Ihrer Projektseite." },
-      { title: "Studio wählen", text: "Nehmen Sie das beste Angebot an – das Studio meldet sich für Aufmaß und Detailplanung." },
+      { title: "Angebote vergleichen", text: "Alle Angebote sehen Sie übersichtlich auf Ihrer Projektseite. Über jedes neue Angebot informieren wir Sie per E-Mail." },
+      { title: "Studio wählen", text: "Nehmen Sie das passende Angebot an – das Studio meldet sich für Aufmaß und Detailplanung." },
     ],
   },
   b: {
     title: "Ihr Angebot ist eingegangen!",
     subtitle:
-      "Wir prüfen Ihr Studio-Angebot und melden uns kurz telefonisch. Danach haben geprüfte Studios 72 Stunden Zeit, Ihr Angebot zu unterbieten.",
+      "Wir prüfen Ihr Studio-Angebot und melden uns telefonisch. Danach haben Küchenstudios aus Ihrer Region 72 Stunden Zeit, Ihr Angebot zu unterbieten.",
     steps: [
-      { title: "Experten-Check", text: "Kurzer Rückruf zu Ihrem Angebot – meist innerhalb von 24 Stunden (Mo–Fr)." },
-      { title: "72 Stunden Angebotsphase", text: "Geprüfte Studios machen Angebote für dieselbe oder eine vergleichbare Küche. Neue Angebote melden wir per E-Mail." },
+      { title: "Experten-Check", text: "Kurzer Rückruf zu Ihrem Angebot, werktags." },
+      { title: "72 Stunden Angebotsphase", text: "Studios machen Angebote für dieselbe oder eine vergleichbare Küche. Neue Angebote melden wir per E-Mail." },
       { title: "Sie entscheiden", text: "Auf Ihrer Projektseite nehmen Sie das beste Angebot an – oder keines." },
     ],
   },
@@ -55,15 +55,16 @@ const FALLBACK: Variant = {
 export default function FunnelDanke() {
   const [searchParams] = useSearchParams();
   const { settings } = useSettings();
+  const phone = useSupportPhone();
   const content = VARIANTS[searchParams.get("funnel") ?? ""] ?? FALLBACK;
-  const phone = settings?.support_phone || "+49 511 51532476";
+  const noStudios = searchParams.get("studios") === "0";
   const email = settings?.contact_email || BRAND.supportEmail;
 
   return (
     <div className="min-h-screen bg-background">
       <FunnelSeo
         title="Danke für Ihre Anfrage"
-        description="Wir haben Ihre Küchenanfrage erhalten. Geprüfte Studios aus Ihrer Region geben jetzt Angebote ab."
+        description="Wir haben Ihre Küchenanfrage erhalten."
         canonicalPath="/funnel/danke"
         noIndex
       />
@@ -74,6 +75,16 @@ export default function FunnelDanke() {
 
         <h1 className="mb-4 text-center text-3xl font-bold tracking-tight sm:text-4xl">{content.title}</h1>
         <p className="mb-10 text-center text-lg leading-relaxed text-muted-foreground">{content.subtitle}</p>
+
+        {noStudios && (
+          <div className="mb-8 flex gap-3 rounded-2xl border border-primary/30 bg-primary/5 p-5 text-sm">
+            <MapPin className="mt-0.5 h-5 w-5 flex-none text-primary" aria-hidden="true" />
+            <p className="text-muted-foreground">
+              <strong className="text-foreground">In Ihrer Region nimmt aktuell noch kein Partnerstudio teil.</strong> Unser Studio-Netzwerk
+              wächst gerade. Wir melden uns persönlich bei Ihnen und suchen passende Studios für Ihr Projekt.
+            </p>
+          </div>
+        )}
 
         <div className="rounded-2xl border bg-card p-6 shadow-sm">
           <h2 className="mb-4 text-lg font-semibold">Wie geht es weiter?</h2>
@@ -104,9 +115,9 @@ export default function FunnelDanke() {
               <Mail className="h-4 w-4" aria-hidden="true" />
               {email}
             </a>
-            <a href={`tel:${phone.replace(/\s/g, "")}`} className="inline-flex items-center gap-2 text-primary hover:underline">
+            <a href={phone.href} className="inline-flex items-center gap-2 text-primary hover:underline">
               <Phone className="h-4 w-4" aria-hidden="true" />
-              {phone} (Mo–Fr 10–18 Uhr)
+              {phone.display} (Mo–Fr 10–18 Uhr)
             </a>
           </div>
         </div>

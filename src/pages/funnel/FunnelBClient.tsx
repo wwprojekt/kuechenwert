@@ -6,6 +6,7 @@ import { submitFunnelB } from "@/features/funnel-b/api";
 import { ApiError, errorMessage } from "@/features/marketplace/api-client";
 import { useTurnstile } from "@/hooks/useTurnstile";
 import { useSupportPhone } from "@/hooks/useSupportPhone";
+import { BRAND } from "@/lib/brand";
 import { getConsentedClickIds } from "@/lib/clickIdService";
 import { trackFunnelStep, trackFunnelSubmitError } from "@/lib/funnelAnalytics";
 import { clearSubmissionId, submissionIdFor } from "@/lib/submissionId";
@@ -109,7 +110,12 @@ type FunnelBData = {
   email: string;
   phone: string;
   salutation: "frau" | "herr" | "divers" | "";
+  /** Weitergabe an Studios (Pflicht, Einwilligungszweck share_with_studios). */
+  consentShare: boolean;
+  /** Rückruf durch KüchenWert zum Experten-Check (Pflicht). */
   consentCall: boolean;
+  /** Anrufe durch Studios, die den Kontakt erhalten (optional). */
+  consentStudioCall: boolean;
   consentMarketing: boolean;
 };
 
@@ -146,7 +152,9 @@ const initialData: FunnelBData = {
   email: "",
   phone: "",
   salutation: "",
+  consentShare: false,
   consentCall: false,
+  consentStudioCall: false,
   consentMarketing: false,
 };
 
@@ -213,7 +221,7 @@ export default function FunnelBClient() {
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [honeypot, setHoneypot] = useState("");
-  const { turnstileToken, resetTurnstile, turnstileCallbackRef } = useTurnstile();
+  const { waitForToken, resetTurnstile, turnstileCallbackRef } = useTurnstile();
   const errorRef = useRef<HTMLParagraphElement>(null);
 
   // Schritt steht in der URL, damit Zurück-Geste und Neuladen im Funnel bleiben.
@@ -279,6 +287,7 @@ export default function FunnelBClient() {
           data.lastName.trim().length > 1 &&
           /\S+@\S+\.\S+/.test(data.email) &&
           data.phone.trim().length >= 6 &&
+          data.consentShare &&
           data.consentCall
         );
       default:
@@ -296,7 +305,8 @@ export default function FunnelBClient() {
     setSubmitError(null);
     try {
       const { uploads, ...fields } = data;
-      const { failedUploads } = await submitFunnelB({
+      const turnstileToken = await waitForToken();
+      const { failedUploads, studiosInArea, reviewRequired } = await submitFunnelB({
         data: fields,
         uploads: uploads.map(({ category, file }) => ({ category, file })),
         turnstileToken,
@@ -340,7 +350,10 @@ export default function FunnelBClient() {
           { duration: 12000 },
         );
       }
-      navigate("/funnel/danke?funnel=b", { replace: true });
+      const thanks = new URLSearchParams({ funnel: "b" });
+      if (studiosInArea !== null) thanks.set("studios", String(studiosInArea));
+      if (reviewRequired) thanks.set("pruefung", "1");
+      navigate(`/funnel/danke?${thanks.toString()}`, { replace: true });
     } catch (e) {
       console.error("Funnel B submit error", e);
       trackFunnelSubmitError("b", e instanceof ApiError ? e.code ?? `http_${e.status}` : "network");
@@ -353,7 +366,7 @@ export default function FunnelBClient() {
       );
       setSubmitting(false);
     }
-  }, [step, data, navigate, goToStep, phone.display, turnstileToken, honeypot, resetTurnstile]);
+  }, [step, data, navigate, goToStep, phone.display, waitForToken, honeypot, resetTurnstile]);
 
   const handleBack = useCallback(() => goToStep(Math.max(0, step - 1)), [goToStep, step]);
 
@@ -375,7 +388,7 @@ export default function FunnelBClient() {
         </div>
         <p className="mt-2 text-ink-muted">
           Nach Ihrer Anfrage besprechen wir Ihr Angebot kurz telefonisch. Danach stellen wir es ohne
-          Ihren Namen 72&nbsp;Stunden lang geprüften Küchenstudios aus Ihrer Region vor, die es
+          Ihren Namen 72&nbsp;Stunden lang freigeschalteten Küchenstudios aus Ihrer Region vor, die es
           unterbieten können. Ob Sie ein Angebot annehmen, entscheiden Sie frei.
         </p>
       </div>
@@ -444,7 +457,7 @@ const TIPS = [
   "Beleuchtung und Steckdosen-Lösungen sind häufige „versteckte\" Posten – hier verlangen Studios oft hohe Aufschläge.",
   "Anzahlung und Finanzierungsbedingungen sind verhandelbar. Geben Sie an, was Ihr Studio Ihnen angeboten hat.",
   "Sie haben Angebot & Grundriss nicht zur Hand? Kein Problem – Sie können beides nachreichen, wir besprechen das im Telefonat.",
-  "Wir rufen Sie in der Regel innerhalb von 24 Stunden an, bevor wir Ihr Angebot Küchenstudios vorstellen. Ein Wunschtermin per SMS oder E-Mail ist möglich.",
+  "Wir rufen Sie werktags an, bevor wir Ihr Angebot Küchenstudios vorstellen. Passt Ihnen eine bestimmte Uhrzeit, schreiben Sie uns gern eine E-Mail.",
 ];
 
 /* ====================================================================== */
@@ -1177,13 +1190,45 @@ function Step8({
           <input
             type="checkbox"
             className="mt-0.5 h-4 w-4 flex-none accent-brand-700"
+            checked={data.consentShare}
+            onChange={(e) =>
+              update(
+                e.target.checked
+                  ? { consentShare: true }
+                  : { consentShare: false, consentStudioCall: false },
+              )
+            }
+          />
+          <span className="text-ink-muted">
+            <strong className="text-ink">Pflicht:</strong> KüchenWert darf mein Angebot ohne
+            Namen und Kontaktdaten an Küchenstudios in meiner Region weitergeben, damit sie es
+            unterbieten. Meine Kontaktdaten erhalten höchstens drei Studios für Rückfragen sowie
+            das Studio, dessen Angebot ich annehme.
+          </span>
+        </label>
+        <label className="flex items-start gap-3">
+          <input
+            type="checkbox"
+            className="mt-0.5 h-4 w-4 flex-none accent-brand-700"
             checked={data.consentCall}
             onChange={(e) => update({ consentCall: e.target.checked })}
           />
           <span className="text-ink-muted">
-            <strong className="text-ink">Pflicht:</strong> Ich willige ein, dass mich KüchenWert
-            telefonisch zur Klärung meines Angebots kontaktiert. Ich kann diese Einwilligung
-            jederzeit widerrufen.
+            <strong className="text-ink">Pflicht:</strong> KüchenWert darf mich zur Klärung meines
+            Angebots anrufen (Experten-Check).
+          </span>
+        </label>
+        <label className="flex items-start gap-3">
+          <input
+            type="checkbox"
+            className="mt-0.5 h-4 w-4 flex-none accent-brand-700"
+            checked={data.consentStudioCall}
+            disabled={!data.consentShare}
+            onChange={(e) => update({ consentStudioCall: e.target.checked })}
+          />
+          <span className="text-ink-muted">
+            Optional: Küchenstudios, die meine Kontaktdaten erhalten, dürfen mich auch
+            telefonisch kontaktieren.
           </span>
         </label>
         <label className="flex items-start gap-3">
@@ -1194,18 +1239,22 @@ function Step8({
             onChange={(e) => update({ consentMarketing: e.target.checked })}
           />
           <span className="text-ink-muted">
-            Optional: Ich möchte Tipps und Marktinformationen rund um meinen Küchenkauf per
-            E-Mail erhalten.
+            Optional: KüchenWert darf mir Tipps und Marktinformationen rund um meinen
+            Küchenkauf per E-Mail schicken.
           </span>
         </label>
         <p className="text-xs text-ink-subtle">
-          Mit Absenden bestätigen Sie unsere{" "}
-          <a href="/datenschutz" className="underline">
-            Datenschutzerklärung
-          </a>{" "}
-          und{" "}
+          Einwilligungen können Sie jederzeit widerrufen, z. B. per E-Mail an{" "}
+          <a href={`mailto:${BRAND.supportEmail}`} className="underline">
+            {BRAND.supportEmail}
+          </a>
+          . Es gelten unsere{" "}
           <a href="/agb" className="underline">
             AGB
+          </a>
+          . Wie wir Ihre Daten verarbeiten, erklärt die{" "}
+          <a href="/datenschutz" className="underline">
+            Datenschutzerklärung
           </a>
           .
         </p>

@@ -168,9 +168,9 @@ export function ContactStep({ contact, onChange, onSubmit, submitting, error, tu
 
       <div className="space-y-3 border-t border-border pt-5">
         <p className="text-xs leading-relaxed text-ink-muted">
-          Mit Klick auf „Kostenlos Angebote erhalten“ senden wir Ihre Anfrage anonymisiert an geprüfte Küchenstudios in
-          Ihrer Region. Ihre Kontaktdaten erhalten höchstens drei Studios für Rückfragen sowie das Studio, dessen Angebot
-          Sie annehmen. Es gelten unsere{" "}
+          Mit Klick auf „Kostenlos Angebote erhalten“ senden wir Ihre Anfrage ohne Namen und Kontaktdaten an freigeschaltete
+          Küchenstudios in Ihrer Region. Ihre Kontaktdaten erhalten höchstens drei Studios für Rückfragen sowie das Studio,
+          dessen Angebot Sie annehmen. Es gelten unsere{" "}
           <a href="/agb" target="_blank" rel="noopener noreferrer" className={LINK_CLASS}>
             AGB
           </a>

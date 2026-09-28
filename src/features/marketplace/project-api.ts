@@ -87,6 +87,8 @@ export interface ProjectView {
     budget_eur: number | null;
     timeframe_months: number | null;
     has_phone: boolean;
+    /** Aktive Studios, deren Einzugsgebiet die PLZ abdeckt; fehlt bei älteren Function-Versionen. */
+    studios_in_area?: number;
   };
   tender: null | {
     id: string;
@@ -126,3 +128,8 @@ export const requestProjectLink = (email: string) => callFunction<{ ok: true }>(
 export const confirmOrder = (token: string) => callFunction<ProjectView>(FN, { action: "order-confirm", token });
 export const reportOrderProblem = (token: string, message: string) =>
   callFunction<ProjectView>(FN, { action: "order-problem", token, message });
+/** Alle zum Projekt gespeicherten Daten als JSON (Art. 15/20 DSGVO). */
+export const exportProjectData = (token: string) => callFunction<Record<string, unknown>>(FN, { action: "export-data", token });
+/** Projekt beenden und personenbezogene Daten löschen; `email` bestätigt die Anfrage. */
+export const deleteProjectData = (token: string, email: string) =>
+  callFunction<{ ok: true }>(FN, { action: "delete-data", token, email });

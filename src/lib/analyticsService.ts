@@ -9,7 +9,9 @@
  */
 
 import { supabase } from '@/integrations/supabase/client';
+import type { Json } from '@/integrations/supabase/types';
 import { hasAnalyticsConsent, getConsentId, type CookieConsent } from '@/components/CookieBanner';
+import { redactProjectToken } from '@/features/marketplace/project-token';
 import { logger } from './logger';
 
 interface DeviceInfo {
@@ -234,7 +236,8 @@ class AnalyticsService {
   /**
    * Track a page view
    */
-  trackPageView(pagePath: string, pageTitle?: string): void {
+  trackPageView(rawPagePath: string, pageTitle?: string): void {
+    const pagePath = redactProjectToken(rawPagePath);
     const referrerPath = this.lastPagePath || undefined;
     const isFirstPageView = !this.lastPagePath;
     this.lastPagePath = pagePath;
@@ -287,7 +290,7 @@ class AnalyticsService {
       eventLabel: options?.label,
       eventValue: options?.value,
       properties: options?.properties,
-      pagePath: window.location.pathname,
+      pagePath: redactProjectToken(window.location.pathname),
       timestamp: new Date(),
     });
 
@@ -335,7 +338,7 @@ class AnalyticsService {
             consent_id: consentId,
             page_path: pv.pagePath,
             page_title: pv.pageTitle,
-            page_url: window.location.href,
+            page_url: redactProjectToken(window.location.href),
             referrer_path: pv.referrerPath,
             device_type: deviceInfo.type,
             created_at: pv.timestamp.toISOString(),
@@ -367,7 +370,7 @@ class AnalyticsService {
             event_action: ev.eventAction,
             event_label: ev.eventLabel,
             event_value: ev.eventValue,
-            properties: ev.properties || {},
+            properties: (ev.properties || {}) as Json,
             page_path: ev.pagePath,
             created_at: ev.timestamp.toISOString(),
           }))

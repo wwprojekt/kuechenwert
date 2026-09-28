@@ -61,6 +61,8 @@ import { loadRateCard } from "../_shared/rate-card.ts";
 import { buildRenderPrompt } from "../_shared/kitchen-prompt.ts";
 import { buildFalInput, falResultImage, falStatus, falSubmit } from "../_shared/fal-queue.ts";
 import { BRAND } from "../_shared/brand-config.ts";
+import { detectImageFormat } from "../_shared/image-detect.ts";
+import { stripImageMetadata } from "../_shared/image-meta.ts";
 
 const BUCKET = "planner-media";
 const MAX_PHOTOS = 3;
@@ -72,7 +74,7 @@ const DAILY_RENDER_CAP = Number(Deno.env.get("KW_DAILY_RENDER_CAP") ?? "300");
 const PENDING_REUSE_MS = 3 * 60 * 1000;
 const RENDER_TIMEOUT_MS = 5 * 60 * 1000;
 const SIGNED_URL_TTL = 60 * 60;
-const CONSENT_TEXT_VERSION = "kw-projekt-2026-09";
+const CONSENT_TEXT_VERSION = "kw-projekt-2026-09-28";
 const ALLOWED_IMAGE_TYPES: Record<string, string> = {
   "image/jpeg": "jpg",
   "image/png": "png",
@@ -261,6 +263,30 @@ async function actionUploadUrl(req: Request, sb: SupabaseClient, body: Record<st
   return jsonResponse(req, { session_token: session.session_token, path, token: data.token });
 }
 
+/**
+ * Raumfotos gehen an Studios und an fal.ai: EXIF/GPS und andere Metadaten
+ * entfernen, bevor das Foto an der Session hängt. Dateien, die kein
+ * JPG/PNG/WebP sind, werden gelöscht und abgelehnt.
+ */
+async function sanitizeUploadedPhoto(sb: SupabaseClient, path: string): Promise<void> {
+  const { data: blob, error } = await sb.storage.from(BUCKET).download(path);
+  if (error || !blob) throw error ?? new Error("photo download failed");
+  const bytes = new Uint8Array(await blob.arrayBuffer());
+  const format = detectImageFormat(bytes.subarray(0, 32)).format;
+  if (format !== "jpeg" && format !== "png" && format !== "webp") {
+    await sb.storage.from(BUCKET).remove([path]);
+    throw new HttpError(415, "Bitte ein Foto im Format JPG, PNG oder WebP hochladen.", "unsupported_type");
+  }
+  const stripped = stripImageMetadata(bytes);
+  if (!stripped?.changed) return;
+  const { error: upErr } = await sb.storage.from(BUCKET).upload(path, stripped.data, {
+    contentType: format === "png" ? "image/png" : "image/jpeg",
+    cacheControl: "31536000, immutable",
+    upsert: true,
+  });
+  if (upErr) throw upErr;
+}
+
 async function actionAttachPhoto(req: Request, sb: SupabaseClient, body: Record<string, unknown>) {
   const session = await requireSession(sb, body.session_token);
   const path = String(body.path ?? "");
@@ -270,6 +296,7 @@ async function actionAttachPhoto(req: Request, sb: SupabaseClient, body: Record<
   const { data: listed, error } = await sb.storage.from(BUCKET).list(`${session.id}/photos`, { search: fileName, limit: 1 });
   if (error) throw error;
   if (!listed?.some((f) => f.name === fileName)) throw new HttpError(404, "Upload nicht gefunden.", "upload_missing");
+  await sanitizeUploadedPhoto(sb, path);
   const photos = Array.from(new Set([...(session.photo_paths ?? []), path])).slice(0, MAX_PHOTOS);
   const { error: upErr } = await sb.from("planner_sessions").update({ photo_paths: photos }).eq("id", session.id);
   if (upErr) throw upErr;

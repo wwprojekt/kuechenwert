@@ -23,7 +23,7 @@ export interface FunnelBShellProps {
 const TRUST_ITEMS = [
   { icon: BadgeEuro, label: "Kostenlos & unverbindlich" },
   { icon: Clock3, label: "In ca. 5 Minuten fertig" },
-  { icon: ShieldCheck, label: "Nur geprüfte Küchenstudios" },
+  { icon: ShieldCheck, label: "Nur freigeschaltete Küchenstudios" },
 ];
 
 type StepNavProps = Pick<

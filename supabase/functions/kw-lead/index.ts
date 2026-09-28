@@ -2,7 +2,8 @@
  * kw-lead — Anfrage „Küchenangebote einholen“ (Funnel A, Version 2)
  *
  * Aktionen (POST { action, ... }):
- *   submit   Antworten + Kontakt → Lead, Einwilligungen, Projektlink
+ *   submit     Antworten + Kontakt → Lead, Einwilligungen, Projektlink
+ *   coverage   Zahl der aktiven Studios, deren Einzugsgebiet eine PLZ abdeckt
  *
  * Ausschreibung und Kunden-Mail (project_created) legt der DB-Trigger
  * kw_leads_after_insert_tender an, nicht diese Function.
@@ -21,6 +22,7 @@ import {
   clientIp,
   enforceRateLimit,
   isEmail,
+  isPostalCode,
   jsonResponse,
   normalizePhone,
   randomToken,
@@ -45,7 +47,7 @@ import {
 import { loadRateCard } from "../_shared/rate-card.ts";
 import { BRAND } from "../_shared/brand-config.ts";
 
-const CONSENT_TEXT_VERSION = "kw-anfrage-2026-09";
+const CONSENT_TEXT_VERSION = "kw-anfrage-2026-09-28";
 const SALUTATIONS = new Set(["Herr", "Frau", "Divers"]);
 
 const MISSING_ANSWER_MESSAGES: Partial<Record<keyof FunnelAAnswers, string>> = {
@@ -194,12 +196,23 @@ async function actionSubmit(req: Request, sb: SupabaseClient, body: Record<strin
   return projectLinkResponse(req, sb, leadId, estimateRange);
 }
 
+async function actionCoverage(req: Request, sb: SupabaseClient, body: Record<string, unknown>) {
+  const postalCode = typeof body.postal_code === "string" ? body.postal_code.trim() : "";
+  if (!isPostalCode(postalCode)) throw new HttpError(422, "Bitte eine gültige Postleitzahl angeben.", "postal_code");
+  await enforceRateLimit(sb, `kw:coverage:${clientIp(req)}`, 3600, 60);
+  const { data, error } = await sb.rpc("kw_studios_covering", { p_postal_code: postalCode });
+  if (error) throw error;
+  return jsonResponse(req, { studios: typeof data === "number" ? data : 0 });
+}
+
 serve(async (req) => {
   const body = await readJson(req);
   const sb = serviceClient();
   switch (body.action) {
     case "submit":
       return actionSubmit(req, sb, body);
+    case "coverage":
+      return actionCoverage(req, sb, body);
     default:
       throw new HttpError(400, "Unbekannte Aktion.", "unknown_action");
   }

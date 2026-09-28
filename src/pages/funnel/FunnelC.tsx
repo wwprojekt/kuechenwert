@@ -2,7 +2,8 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
 import { FunnelSeo } from "@/components/funnel/funnel-seo";
-import { errorMessage } from "@/features/marketplace/api-client";
+import { ApiError, errorMessage } from "@/features/marketplace/api-client";
+import { storeProjectToken } from "@/features/marketplace/project-token";
 import {
   generateRender,
   removePhoto,
@@ -41,7 +42,7 @@ export default function FunnelC() {
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [maxVisited, setMaxVisited] = useState(() => PLANNER_STEPS.findIndex((s) => s.id === state.step));
-  const { turnstileToken, resetTurnstile, turnstileCallbackRef } = useTurnstile();
+  const { waitForToken, resetTurnstile, turnstileCallbackRef } = useTurnstile();
 
   useRenderPolling(state.sessionToken, state.renders, planner.updateRender);
 
@@ -184,6 +185,7 @@ export default function FunnelC() {
         utm: utm(),
       });
       planner.setSession(saved.session_token);
+      const turnstileToken = await waitForToken();
       const res = await submitProject({
         session_token: saved.session_token,
         contact: {
@@ -227,9 +229,10 @@ export default function FunnelC() {
 
       planner.markSubmitted();
       clearPlannerStorage();
-      navigate(`/projekt/${res.project_token}?neu=1`, { replace: true });
+      storeProjectToken(res.project_token);
+      navigate("/projekt?neu=1", { replace: true });
     } catch (err) {
-      trackFunnelSubmitError("c", err instanceof Error ? err.name : "unknown");
+      trackFunnelSubmitError("c", err instanceof ApiError ? err.code ?? `http_${err.status}` : err instanceof Error ? err.name : "unknown");
       setSubmitError(errorMessage(err));
       resetTurnstile();
     } finally {

@@ -30,6 +30,9 @@ verify_jwt = false
 [functions.kw-maintenance]
 verify_jwt = false
 
+[functions.kw-unsubscribe]
+verify_jwt = false
+
 # --- Küchenstudios ---
 [functions.register-dealer]
 verify_jwt = false

@@ -4,17 +4,21 @@ import { buildEmailLayout, paragraph } from '../_shared/email-builder.ts';
 import { getCorsHeaders, handleCorsPreflightRequest } from '../_shared/cors.ts';
 import { BRAND } from '../_shared/brand-config.ts';
 import { getBroadcastRecipients, isBroadcastGroup, type BroadcastGroup } from '../_shared/broadcast-recipients.ts';
+import { createUnsubscribeToken, unsubscribeUrls, type UnsubscribeScope } from '../_shared/unsubscribe-token.ts';
 
 const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY");
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
 // Studios und Kunden verwalten ihre freiwilligen E-Mails unter /dashboard/settings.
-// Kein List-Unsubscribe-Post-Header: die Seite ist kein One-Click-Endpunkt (RFC 8058).
 const EMAIL_SETTINGS_URL = `${BRAND.baseUrl}/dashboard/settings`;
 
-function unsubscribeFooter(): string {
-  return paragraph(`<span style="font-size: 11px; color: #9ca3af;">Sie erhalten diese E-Mail, weil Sie bei ${BRAND.name} registriert sind. <a href="${EMAIL_SETTINGS_URL}" style="color: #336753; text-decoration: underline;">E-Mail-Einstellungen verwalten oder abmelden</a></span>`);
+function unsubscribeFooter(unsubscribePageUrl: string | null): string {
+  const settingsLink = `<a href="${EMAIL_SETTINGS_URL}" style="color: #336753; text-decoration: underline;">E-Mail-Einstellungen</a>`;
+  const action = unsubscribePageUrl
+    ? `<a href="${unsubscribePageUrl}" style="color: #336753; text-decoration: underline;">Mit einem Klick abmelden</a> oder ${settingsLink} verwalten.`
+    : `${settingsLink} verwalten oder abmelden.`;
+  return paragraph(`<span style="font-size: 11px; color: #9ca3af;">Sie erhalten diese E-Mail, weil Sie bei ${BRAND.name} registriert sind. ${action}</span>`);
 }
 
 interface BroadcastRequest {
@@ -58,7 +62,7 @@ const handler = async (req: Request): Promise<Response> => {
     }
 
     const body: BroadcastRequest = await req.json();
-    const { subject, body_html, group, custom_emails, test_mode, test_email, include_unsubscribe = true, is_promotional = false } = body;
+    const { subject, body_html, group, custom_emails, test_mode, test_email, is_promotional = false } = body;
 
     if (!subject || !body_html || !group) {
       return new Response(JSON.stringify({ error: 'Missing required fields: subject, body_html, group' }), { status: 400, headers });
@@ -66,6 +70,12 @@ const handler = async (req: Request): Promise<Response> => {
     if (!isBroadcastGroup(group)) {
       return new Response(JSON.stringify({ error: `Unknown group: ${group}` }), { status: 400, headers });
     }
+
+    // Werbung und Newsletter immer mit Abmeldemöglichkeit (§ 7 Abs. 3 UWG,
+    // Art. 21 Abs. 4 DSGVO); nur reine Service-Hinweise dürfen ohne.
+    const isAdvertising = is_promotional || group === 'newsletter';
+    const include_unsubscribe = isAdvertising || body.include_unsubscribe !== false;
+    const unsubscribeScope: UnsubscribeScope = isAdvertising ? 'werbung' : 'hinweise';
 
     // Fetch site settings
     const { data: settings } = await supabase.from('site_settings').select('*').single();
@@ -80,7 +90,7 @@ const handler = async (req: Request): Promise<Response> => {
     if (test_mode && test_email) {
       let emailContent = body_html;
       if (include_unsubscribe) {
-        emailContent += unsubscribeFooter();
+        emailContent += unsubscribeFooter(null);
       }
       const html = buildEmailLayout(settingsData, subject, emailContent);
 
@@ -125,13 +135,6 @@ const handler = async (req: Request): Promise<Response> => {
     // Generate broadcast_id for grouping
     const broadcastId = crypto.randomUUID();
 
-    // Build email HTML with optional unsubscribe link
-    let emailContent = body_html;
-    if (include_unsubscribe) {
-      emailContent += unsubscribeFooter();
-    }
-    const html = buildEmailLayout(settingsData, subject, emailContent);
-
     // Send in batches of 10 (Resend rate limit)
     const BATCH_SIZE = 10;
     let sent = 0;
@@ -143,18 +146,31 @@ const handler = async (req: Request): Promise<Response> => {
 
       const promises = batch.map(async (recipient) => {
         try {
+          // Pro Empfänger signierter Abmeldelink; ohne Konto (eigene Liste)
+          // bleibt nur der Weg über die Einstellungsseite.
+          const urls = include_unsubscribe && recipient.id
+            ? unsubscribeUrls(await createUnsubscribeToken(recipient.id, unsubscribeScope))
+            : null;
+          const html = buildEmailLayout(
+            settingsData,
+            subject,
+            include_unsubscribe ? body_html + unsubscribeFooter(urls?.page ?? null) : body_html,
+          );
           const resendPayload: any = {
-            from: `${settingsData.site_name} <info@kuechenwert24.de>`,
+            from: `${settingsData.site_name} <${BRAND.supportEmail}>`,
             to: [recipient.email],
             subject,
             html,
-            reply_to: 'info@kuechenwert24.de',
+            reply_to: BRAND.supportEmail,
           };
 
-          if (include_unsubscribe) {
+          if (urls) {
             resendPayload.headers = {
-              'List-Unsubscribe': `<${EMAIL_SETTINGS_URL}>`,
+              'List-Unsubscribe': `<${urls.oneClick}>, <mailto:${BRAND.supportEmail}?subject=Abmelden>`,
+              'List-Unsubscribe-Post': 'List-Unsubscribe=One-Click',
             };
+          } else if (include_unsubscribe) {
+            resendPayload.headers = { 'List-Unsubscribe': `<${EMAIL_SETTINGS_URL}>` };
           }
 
           const emailResponse = await fetch("https://api.resend.com/emails", {

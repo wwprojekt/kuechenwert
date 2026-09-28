@@ -53,10 +53,26 @@ export async function getBroadcastRecipients(
   group: BroadcastGroup,
   options: { customEmails?: string[]; isPromotional?: boolean } = {},
 ): Promise<BroadcastRecipient[]> {
-  // Eigene Listen umgehen jeden Opt-out, weil der Admin die Adressen explizit
-  // eintraegt (z. B. Wiederherstellungs-Mails nach Bounce).
+  // Eigene Listen umgehen bei Service-Hinweisen jeden Opt-out, weil der Admin
+  // die Adressen explizit eintraegt (z. B. Wiederherstellungs-Mails nach
+  // Bounce). Werbung geht auch hier nur an Konten mit Einwilligung.
   if (group === 'custom') {
-    return (options.customEmails ?? []).map((email) => ({ email, name: null, id: null }));
+    const emails = [...new Set((options.customEmails ?? []).map((e) => e.trim().toLowerCase()).filter(Boolean))];
+    if (!options.isPromotional) return emails.map((email) => ({ email, name: null, id: null }));
+    const promoOptIn = await userIdsWhere(supabase, 'promotional_emails', true);
+    const unsubscribed = await userIdsWhere(supabase, 'broadcast_emails_enabled', false);
+    const matches: any[] = [];
+    for (let i = 0; i < emails.length; i += 200) {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('id, email, first_name, last_name')
+        .in('email', emails.slice(i, i + 200));
+      if (error) throw new Error(error.message);
+      matches.push(...(data ?? []));
+    }
+    return matches
+      .filter((p) => promoOptIn.has(p.id) && !unsubscribed.has(p.id))
+      .map((p) => ({ email: p.email, name: personName(p), id: p.id }));
   }
 
   const isDealerGroup = group === 'dealers' || group === 'verified_dealers';

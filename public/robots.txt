@@ -12,8 +12,10 @@ Disallow: /login
 Disallow: /register
 Disallow: /forgot-password
 Disallow: /reset-password
-# Persoenliche Projektlinks (Token in der URL)
-Disallow: /projekt/
+# /projekt/<token> bewusst NICHT sperren: nginx liefert dort
+# X-Robots-Tag "noindex, nofollow". Eine Sperre hier verhindert, dass
+# Suchmaschinen das noindex sehen; ein oeffentlich geteilter Link koennte
+# dann als nackte URL samt Token im Index landen.
 
 # Google Ads bots (critical for Google Ads compliance)
 User-agent: AdsBot-Google

@@ -20,7 +20,7 @@ const Index = () => {
   return (
     <PageLayout
       title="Traumküche mit KI planen, Preis sehen & Studio-Angebote vergleichen"
-      description="Foto Ihres Raums hochladen, Küche konfigurieren und sofort sehen, wie sie aussieht und was sie ungefähr kostet. Geprüfte Küchenstudios bieten um Ihr Projekt – Sie wählen. Kostenlos & unverbindlich."
+      description="Foto Ihres Raums hochladen, Küche konfigurieren und sofort sehen, wie sie aussieht und was sie ungefähr kostet. Geprüfte Küchenstudios machen Ihnen Angebote – Sie wählen. Kostenlos & unverbindlich."
       keywords="Küche planen, Küchenplaner online, Küche visualisieren, KI Küchenplaner, Küche Preis berechnen, Küchenstudio Angebote vergleichen, neue Küche kaufen, Küchen Preisvergleich, Nobilia, Häcker, Nolte"
       canonicalPath="/"
       structuredData={[organizationSchema, serviceSchema]}

@@ -28,7 +28,7 @@ const FAQPage = () => {
       breadcrumbs={true}
       title="Häufig gestellte Fragen (FAQ)"
       description={`Antworten auf häufige Fragen zu ${BRAND.name}: KI-Küchenplaner, Preisschätzung, Studio-Angebote, Unterbieten, Partnerstudios und Datenschutz.`}
-      keywords="KüchenWert FAQ, KI Küchenplaner, Küche visualisieren, Küchenangebot vergleichen, Küchenstudio Angebote, Reverse-Auktion Küche"
+      keywords="KüchenWert FAQ, KI Küchenplaner, Küche visualisieren, Küchenangebot vergleichen, Küchenstudio Angebote, Küchenangebot unterbieten"
       canonicalPath="/faq"
       structuredData={faqSchema}
     >

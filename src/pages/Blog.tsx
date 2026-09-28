@@ -78,7 +78,7 @@ const BlogPage = () => {
       description="Artikel und Tipps rund um Planung, Budget, Materialien, Geräte und den Kauf einer neuen Küche."
       keywords="Küchen Blog, Küchen Planung, Küchen Budget, neue Küche kaufen Tipps, Küchenkauf Beratung"
       canonicalPath="/blog"
-      noIndex={true}
+      noIndex={!hasPosts}
       structuredData={generateBreadcrumbSchema(getBreadcrumbsFromPath("/blog"))}
     >
       {/* Hero Section */}

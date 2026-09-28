@@ -118,6 +118,14 @@ Before every commit:
 
 ## Key Architecture Patterns
 
+### Design system (contrast & consistency)
+- Colors only via tokens in `src/index.css` (warm cream + Forest Sage + anthracite). No hard-coded Tailwind palette colors for surfaces or text (the old CaravanWert cyan/sky/slate look is gone; `PageHero` and the auth pages use `from-primary/[0.08] via-background`). Dark bands (header top bar, footer) use `bg-secondary` / `bg-secondary-dark` with `text-white/70`+.
+- Contrast (WCAG 2.2 AA, measured with axe on all public pages, desktop + mobile): `text-muted-foreground` ≥ 4.8:1 even on `bg-muted`; never fade text with opacity (`/50`–`/80`). Error text `text-destructive`, status text `text-success` / `text-warning` (all AA on cream and muted). `--accent` (brass) only for tints, badges and decorative icons: as text or with white text it fails AA.
+- Form controls: borders and the off-track of switches use `--input` (≥ 3:1, WCAG 1.4.11); `--border` is only for decorative lines and cards. Unselected checkboxes/radios/indicators use `border-input`.
+- Links inside running text use `.link-inline` (underlined, WCAG 1.4.1); standalone links and navigation don't need it.
+- Shapes: buttons and form fields `rounded-xl` (Button, Input, Select, Textarea, `.btn-*`, `.input-field`), cards and dialogs `rounded-2xl`, menus/popovers `rounded-xl`, badges and chips `rounded-full`. CTAs are flat `bg-primary` (no `gradient-hero` on buttons; the gradient stays on decorative icon tiles). Funnel helpers: `.btn-primary`, `.btn-secondary`, `.btn-ghost`, `.helper-text`, `.card-clickable` (+ `.is-selected`).
+- Before shipping UI changes, check mobile overflow (390 px) – a `flex` paragraph with text and links once made the Funnel C contact step 446 px wide.
+
 ### Funnels & Leads
 - Funnel A `/formular` (question flow, submit via `kw-lead`), Funnel B `/funnel/b` (`kw-lead-b`), Funnel C `/funnel/c` (planner with room photo, AI render and price engine via `kw-planner`).
 - Funnel B starts with the existing offer: price plus documents (categories `angebot`, `grundriss` = planning, `kueche_bild` = photos; up to 10 files à 20 MB, PDF or image) or "später nachreichen". The detail steps after it are optional and can be skipped. Upload logic for both functions lives in `_shared/lead-files.ts` (announce → signed upload URLs → attach with content check and EXIF stripping); browser side in `src/features/funnel-b/`. Customers add documents later on `/projekt/:token` (`kw-project` `upload-files` / `attach-files`, max. 20 per project), which enqueues `lead_files_added` → admin mail.

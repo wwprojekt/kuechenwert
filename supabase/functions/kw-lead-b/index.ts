@@ -3,8 +3,11 @@
  *
  * Aktionen (POST { action, ... }):
  *   submit        Angebot + Kontakt → Lead und Einwilligungen. Für angekündigte
- *                 Dateien: Upload-Token plus signierte Upload-URLs (lead-files).
+ *                 Dateien (Angebot, Planung, Fotos): Upload-Token plus
+ *                 signierte Upload-URLs (lead-files, siehe _shared/lead-files.ts).
  *   attach-files  Nach dem Upload: vorhandene Dateien am Lead eintragen.
+ *
+ * Unterlagen lassen sich später über den Projektlink nachreichen (kw-project).
  *
  * Die Ausschreibung legt der DB-Trigger kw_leads_after_insert_tender als
  * Entwurf an; veröffentlicht wird nach dem Experten-Check.
@@ -24,43 +27,25 @@ import {
   isPostalCode,
   jsonResponse,
   normalizePhone,
-  randomToken,
   readJson,
   serve,
   serviceClient,
-  sha256Hex,
   validIp,
 } from "../_shared/kw-http.ts";
 import { checkTurnstile } from "../_shared/turnstile.ts";
 import { insertLeadWithConsents, leadForSubmission, parseSubmissionId, sanitizeClickIds } from "../_shared/lead-intake.ts";
 import { regionForPostalCode } from "../_shared/plz-region.ts";
 import { DELIVERY_MODES, EXTRAS_OPTIONS, FINANCING_OPTIONS, TIMEFRAMES } from "../_shared/funnel-b-catalog.ts";
-import { detectImageFormat } from "../_shared/image-detect.ts";
-import { stripImageMetadata } from "../_shared/image-meta.ts";
+import { attachUploadedFiles, issueUploads, parseAnnouncedFiles } from "../_shared/lead-files.ts";
 
-const CONSENT_TEXT_VERSION = "kw-unterbieten-2026-09-28";
-const BUCKET = "lead-files";
-const MAX_FILE_BYTES = 10 * 1024 * 1024;
-const MAX_FILES = 6;
-const UPLOAD_TOKEN_TTL_MS = 2 * 60 * 60 * 1000;
+const CONSENT_TEXT_VERSION = "kw-unterbieten-2026-09-28b";
 
-const FILE_CATEGORIES = new Set(["kueche_bild", "angebot", "grundriss"]);
-const FILE_EXTENSIONS: Record<string, string> = {
-  "image/jpeg": "jpg",
-  "image/png": "png",
-  "image/webp": "webp",
-  "image/heic": "heic",
-  "image/heif": "heif",
-  "application/pdf": "pdf",
-};
 const SALUTATIONS = new Set(["frau", "herr", "divers"]);
 const WASTE_SEPARATION = new Set(["yes", "no", "unknown"]);
 const TIMEFRAME_MONTHS = new Map<string, number | null>(TIMEFRAMES.map((t) => [t.slug, t.months]));
 const DELIVERY = new Set<string>(DELIVERY_MODES.map((d) => d.slug));
 const FINANCING = new Set<string>(FINANCING_OPTIONS.map((f) => f.slug));
 const EXTRAS = new Set<string>(EXTRAS_OPTIONS.map((e) => e.slug));
-
-type AnnouncedFile = { category: string; name: string; type: string; size: number };
 
 function asRecord(value: unknown): Record<string, unknown> {
   return value && typeof value === "object" && !Array.isArray(value) ? (value as Record<string, unknown>) : {};
@@ -82,41 +67,6 @@ async function userIdFromAuthHeader(sb: SupabaseClient, req: Request): Promise<s
   if (jwt.split(".").length !== 3) return null;
   const { data } = await sb.auth.getUser(jwt);
   return data?.user?.id ?? null;
-}
-
-function parseAnnouncedFiles(value: unknown): AnnouncedFile[] {
-  if (!Array.isArray(value)) return [];
-  if (value.length > MAX_FILES) throw new HttpError(422, `Bitte höchstens ${MAX_FILES} Dateien anhängen.`, "files");
-  return value.map((raw) => {
-    const f = asRecord(raw);
-    const category = typeof f.category === "string" ? f.category : "";
-    const type = typeof f.type === "string" ? f.type.toLowerCase() : "";
-    const size = numberIn(f.size, 1, MAX_FILE_BYTES);
-    if (!FILE_CATEGORIES.has(category)) throw new HttpError(422, "Unbekannte Dateiart.", "files");
-    if (!FILE_EXTENSIONS[type]) throw new HttpError(422, "Bitte nur Bilder (JPG, PNG, WebP, HEIC) oder PDF hochladen.", "files");
-    if (size === null) throw new HttpError(422, "Eine Datei ist größer als 10 MB.", "files");
-    return { category, type, size, name: cleanText(f.name, 120) ?? "datei" };
-  });
-}
-
-async function issueUploads(sb: SupabaseClient, leadId: string, files: AnnouncedFile[]) {
-  if (!files.length) return {};
-  const uploadToken = randomToken();
-  const { error: tokenErr } = await sb.from("lead_upload_tokens").insert({
-    token_hash: await sha256Hex(uploadToken),
-    lead_id: leadId,
-    expires_at: new Date(Date.now() + UPLOAD_TOKEN_TTL_MS).toISOString(),
-  });
-  if (tokenErr) throw tokenErr;
-
-  const uploads = [];
-  for (const [index, file] of files.entries()) {
-    const path = `${leadId}/${file.category}-${crypto.randomUUID()}.${FILE_EXTENSIONS[file.type]}`;
-    const { data, error } = await sb.storage.from(BUCKET).createSignedUploadUrl(path);
-    if (error || !data) throw error ?? new Error("signed upload url failed");
-    uploads.push({ index, path: data.path, token: data.token });
-  }
-  return { upload_token: uploadToken, uploads };
 }
 
 async function actionSubmit(req: Request, sb: SupabaseClient, body: Record<string, unknown>) {
@@ -159,9 +109,11 @@ async function actionSubmit(req: Request, sb: SupabaseClient, body: Record<strin
   const consentShare = d.consentShare === true;
   const consentStudioCall = consentShare && d.consentStudioCall === true;
   if (priceEur === null) throw new HttpError(422, "Bitte den Angebotspreis Ihres Küchenstudios in Euro angeben.", "price");
-  if (!offerDelivery) throw new HttpError(422, "Bitte wählen Sie, wie Sie uns das Bild Ihrer Küche schicken.", "offer_delivery");
-  if (offerDelivery === "now" && !files.some((f) => f.category === "kueche_bild")) {
-    throw new HttpError(422, "Bitte laden Sie ein Bild Ihrer geplanten Küche hoch.", "files");
+  if (!offerDelivery) {
+    throw new HttpError(422, "Bitte wählen Sie, ob Sie Ihre Unterlagen jetzt hochladen oder später nachreichen.", "offer_delivery");
+  }
+  if (offerDelivery === "now" && files.length === 0) {
+    throw new HttpError(422, "Bitte laden Sie Ihr Angebot, Ihre Planung oder ein Foto hoch – oder wählen Sie „Später nachreichen“.", "files");
   }
 
   const timeframe = typeof d.timeframe === "string" && TIMEFRAME_MONTHS.has(d.timeframe) ? d.timeframe : null;
@@ -186,7 +138,7 @@ async function actionSubmit(req: Request, sb: SupabaseClient, body: Record<strin
   const userAgent = req.headers.get("user-agent")?.slice(0, 500) ?? null;
 
   const { data: tierRow } = await sb.rpc("kw_lead_tier_score", {
-    p_has_photo: files.some((f) => f.category === "kueche_bild"),
+    p_has_photo: files.some((f) => f.category === "kueche_bild" || f.category === "grundriss"),
     p_has_dimensions: false,
     p_has_phone: true,
     p_timeframe_months: timeframeMonths,
@@ -274,90 +226,10 @@ async function actionSubmit(req: Request, sb: SupabaseClient, body: Record<strin
   });
 }
 
-const STORED_PATH_RE = /^[0-9a-f-]{36}\/(kueche_bild|angebot|grundriss)-[0-9a-f-]{36}\.(jpg|png|webp|heic|heif|pdf)$/;
-
-/**
- * Prüft den Dateiinhalt (nicht die Angabe des Browsers) und entfernt aus
- * JPG/PNG eingebettete Metadaten wie GPS-Position. Andere Inhalte als Bilder
- * oder PDF werden gelöscht; Rückgabe false = Datei nicht übernehmen.
- */
-async function sanitizeStoredFile(sb: SupabaseClient, path: string): Promise<boolean> {
-  const { data: blob, error } = await sb.storage.from(BUCKET).download(path);
-  if (error || !blob) return false;
-  const bytes = new Uint8Array(await blob.arrayBuffer());
-  const isPdf = bytes.length > 4 && bytes[0] === 0x25 && bytes[1] === 0x50 && bytes[2] === 0x44 && bytes[3] === 0x46;
-  const format = detectImageFormat(bytes.subarray(0, 32)).format;
-  if (!isPdf && !["jpeg", "png", "webp", "heic", "heif"].includes(format)) {
-    await sb.storage.from(BUCKET).remove([path]);
-    return false;
-  }
-  const stripped = isPdf ? null : stripImageMetadata(bytes);
-  if (stripped?.changed) {
-    const { error: upErr } = await sb.storage.from(BUCKET).upload(path, stripped.data, {
-      contentType: format === "png" ? "image/png" : "image/jpeg",
-      cacheControl: "31536000, immutable",
-      upsert: true,
-    });
-    if (upErr) throw upErr;
-  }
-  return true;
-}
-
 async function actionAttachFiles(req: Request, sb: SupabaseClient, body: Record<string, unknown>) {
-  const ip = clientIp(req);
-  await enforceRateLimit(sb, `kw:lead-b-files:${ip}`, 3600, 30);
-
-  const token = typeof body.upload_token === "string" ? body.upload_token : "";
-  if (token.length < 20) throw new HttpError(401, "Der Upload-Link ist ungültig.", "upload_token");
-  const { data: tokenRow } = await sb
-    .from("lead_upload_tokens")
-    .select("lead_id, expires_at")
-    .eq("token_hash", await sha256Hex(token))
-    .maybeSingle();
-  if (!tokenRow || new Date(tokenRow.expires_at as string).getTime() < Date.now()) {
-    throw new HttpError(401, "Der Upload-Link ist abgelaufen.", "upload_token");
-  }
-  const leadId = tokenRow.lead_id as string;
-
-  const requested = (Array.isArray(body.files) ? body.files : []).slice(0, MAX_FILES).map(asRecord);
-  const { data: objects, error: listErr } = await sb.storage.from(BUCKET).list(leadId, { limit: 100 });
-  if (listErr) throw listErr;
-  const stored = new Map((objects ?? []).map((o) => [`${leadId}/${o.name}`, o]));
-  const { data: existingRows } = await sb.from("lead_files").select("file_url").eq("lead_id", leadId);
-  const alreadyAttached = new Set((existingRows ?? []).map((r) => r.file_url as string));
-
-  const rows = [];
-  const missing: string[] = [];
-  for (const f of requested) {
-    const path = typeof f.path === "string" ? f.path : "";
-    const object = stored.get(path);
-    const size = Number((object?.metadata as Record<string, unknown> | undefined)?.size ?? f.size ?? 0);
-    const category = path.split("/")[1]?.split("-")[0] ?? "";
-    if (!path.startsWith(`${leadId}/`) || !STORED_PATH_RE.test(path) || !object || size > MAX_FILE_BYTES) {
-      missing.push(path);
-      continue;
-    }
-    if (alreadyAttached.has(path)) continue;
-    if (!(await sanitizeStoredFile(sb, path))) {
-      missing.push(path);
-      continue;
-    }
-    const type = typeof f.type === "string" && FILE_EXTENSIONS[f.type.toLowerCase()] ? f.type.toLowerCase() : "application/octet-stream";
-    rows.push({
-      lead_id: leadId,
-      file_url: path,
-      file_name: cleanText(f.name, 120) ?? "datei",
-      file_type: type,
-      file_size_bytes: size || null,
-      category,
-    });
-  }
-  if (rows.length) {
-    const { error } = await sb.from("lead_files").insert(rows);
-    if (error) throw error;
-  }
-  if (missing.length) console.warn("[kw-lead-b] Dateien fehlen oder ungültig", leadId, missing.length);
-  return jsonResponse(req, { ok: true, attached: rows.length, missing: missing.length });
+  await enforceRateLimit(sb, `kw:lead-b-files:${clientIp(req)}`, 3600, 30);
+  const { attached, missing } = await attachUploadedFiles(sb, body.upload_token, body.files);
+  return jsonResponse(req, { ok: true, attached, missing });
 }
 
 serve(async (req) => {

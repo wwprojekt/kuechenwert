@@ -12,7 +12,7 @@ export default function FunnelB() {
     <>
       <FunnelSeo
         title="Studio-Angebot unterbieten"
-        description="Laden Sie Ihr bestehendes Küchenstudio-Angebot hoch — wir holen vergleichbare Alternativen ein und helfen Ihnen, den Preis zu unterbieten."
+        description="Laden Sie Angebot und Planung Ihres Küchenstudios hoch – geprüfte Studios aus Ihrer Region können den Preis 72 Stunden lang unterbieten. Kostenlos und unverbindlich."
         canonicalPath="/funnel/b"
       />
       <FunnelBClient />

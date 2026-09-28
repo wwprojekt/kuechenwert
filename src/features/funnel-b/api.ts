@@ -1,17 +1,11 @@
 import { callFunction } from "@/features/marketplace/api-client";
-import { supabase } from "@/integrations/supabase/client";
-
-export type FunnelBFileCategory = "angebot" | "grundriss" | "kueche_bild";
-
-export interface FunnelBUpload {
-  category: FunnelBFileCategory;
-  file: File;
-}
+import type { PendingLeadFile } from "./files";
+import { announceFiles, uploadToTargets, type UploadTarget } from "./upload";
 
 export interface FunnelBSubmitPayload {
   /** Formularfelder ohne Dateien (siehe FunnelBClient). */
   data: Record<string, unknown>;
-  uploads: FunnelBUpload[];
+  uploads: PendingLeadFile[];
   turnstileToken: string | null;
   /** Honeypot: bleibt bei Menschen leer. */
   website: string;
@@ -20,6 +14,7 @@ export interface FunnelBSubmitPayload {
   clickIds: Record<string, string> | null;
   utm: Record<string, string | undefined>;
   landingPage: string | null;
+  onUploadProgress?: (done: number, total: number) => void;
 }
 
 interface SubmitResult {
@@ -27,7 +22,7 @@ interface SubmitResult {
   studios_in_area?: number | null;
   review_required?: boolean;
   upload_token?: string;
-  uploads?: { index: number; path: string; token: string }[];
+  uploads?: UploadTarget[];
 }
 
 export interface FunnelBSubmitOutcome {
@@ -46,12 +41,7 @@ export async function submitFunnelB(payload: FunnelBSubmitPayload): Promise<Funn
   const result = await callFunction<SubmitResult>("kw-lead-b", {
     action: "submit",
     data: payload.data,
-    files: payload.uploads.map(({ category, file }) => ({
-      category,
-      name: file.name,
-      type: file.type || "application/octet-stream",
-      size: file.size,
-    })),
+    files: announceFiles(payload.uploads),
     turnstile_token: payload.turnstileToken,
     website: payload.website,
     submission_id: payload.submissionId,
@@ -65,27 +55,7 @@ export async function submitFunnelB(payload: FunnelBSubmitPayload): Promise<Funn
   const targets = result.uploads ?? [];
   if (!targets.length || !result.upload_token) return { failedUploads: 0, studiosInArea, reviewRequired };
 
-  const uploaded: { path: string; category: FunnelBFileCategory; name: string; type: string; size: number }[] = [];
-  for (const target of targets) {
-    const upload = payload.uploads[target.index];
-    if (!upload) continue;
-    const { error } = await supabase.storage.from("lead-files").uploadToSignedUrl(target.path, target.token, upload.file, {
-      contentType: upload.file.type || "application/octet-stream",
-      cacheControl: "31536000, immutable",
-    });
-    if (error) {
-      console.error("Funnel B upload failed", error);
-      continue;
-    }
-    uploaded.push({
-      path: target.path,
-      category: upload.category,
-      name: upload.file.name,
-      type: upload.file.type,
-      size: upload.file.size,
-    });
-  }
-
+  const uploaded = await uploadToTargets(payload.uploads, targets, payload.onUploadProgress);
   let attached = 0;
   if (uploaded.length) {
     try {

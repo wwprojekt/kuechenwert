@@ -3,6 +3,9 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import { clsx } from "clsx";
 import { toast } from "sonner";
 import { submitFunnelB } from "@/features/funnel-b/api";
+import { LEAD_FILE_CATEGORIES, MAX_LEAD_FILES, type LeadFileCategory, type PendingLeadFile } from "@/features/funnel-b/files";
+import { LeadFileDrop } from "@/features/funnel-b/LeadFileDrop";
+import { PendingFileList } from "@/features/funnel-b/PendingFileList";
 import { ApiError, errorMessage } from "@/features/marketplace/api-client";
 import { useTurnstile } from "@/hooks/useTurnstile";
 import { useSupportPhone } from "@/hooks/useSupportPhone";
@@ -20,13 +23,11 @@ import { trackMetaLead } from "@/lib/metaPixelService";
 import {
   Plus,
   Trash2,
-  FileUp,
   ShieldCheck,
   Lightbulb,
   Phone,
   Mail,
   CloudUpload,
-  AlertCircle,
 } from "lucide-react";
 import { FunnelBShell } from "@/components/funnel/funnel-b-shell";
 import { Combobox, type ComboboxOption } from "@/components/funnel/combobox";
@@ -99,9 +100,9 @@ type FunnelBData = {
 
   existingOfferStudio: string;
   existingOfferPriceEur: string;
-  /** Wie wird das Studio-Angebot uebermittelt? "now" = Upload jetzt, "later" = Per E-Mail nachreichen */
+  /** Unterlagen: "now" = jetzt hochladen, "later" = später über den Projektlink nachreichen */
   offerDeliveryMethod: OfferDeliveryMethod;
-  uploads: { id: string; category: "angebot" | "grundriss" | "kueche_bild"; file: File }[];
+  uploads: PendingLeadFile[];
 
   postalCode: string;
   city: string;
@@ -159,6 +160,7 @@ const initialData: FunnelBData = {
 };
 
 const STEPS = [
+  { label: "Ihr Angebot", description: "Was kostet Ihr Angebot – und haben Sie Angebot oder Planung zur Hand?" },
   { label: "Ihre Situation", description: "Wann soll die Küche geliefert oder montiert werden?" },
   { label: "Korpus & Fronten", description: "Welche Marke, welches Material, welcher Grifftyp?" },
   { label: "Arbeitsplatte", description: "Material und – falls bekannt – die genaue Bezeichnung." },
@@ -166,7 +168,6 @@ const STEPS = [
   { label: "Sanitär & Müllsystem", description: "Spüle, Material, Mülltrennsystem ja/nein." },
   { label: "Ausstattung & Zubehör", description: "Steckdosen, Beleuchtung, Besteckeinsatz, Sonstiges." },
   { label: "Lieferung & Zahlung", description: "Liefermodus, Anzahlung, Finanzierungswunsch." },
-  { label: "Vorhandenes Angebot", description: "Wer hat angeboten, wieviel kostet es, optional Upload." },
   { label: "Ihre Kontaktdaten", description: "Damit wir uns für den Experten-Check melden können." },
 ];
 
@@ -179,8 +180,6 @@ function parseStep(raw: string | null): number {
 }
 
 const STORAGE_KEY = "kw_funnel_b";
-const MAX_UPLOAD_BYTES = 10 * 1024 * 1024; // 10 MB
-
 /** Persist nur JSON-serialisierbare Felder, keine File-Objekte. */
 function serializeForStorage(data: FunnelBData): string {
   const { uploads: _u, ...rest } = data;
@@ -188,11 +187,11 @@ function serializeForStorage(data: FunnelBData): string {
   return JSON.stringify(rest);
 }
 
-/** Schritt „Vorhandenes Angebot“ vollständig: Preis und ein Weg für das Küchenbild. */
+/** Schritt „Ihr Angebot“ vollständig: Preis und entweder Unterlagen oder „später nachreichen“. */
 function isOfferReady(data: FunnelBData): boolean {
   if (!(Number(data.existingOfferPriceEur) > 0)) return false;
   if (data.offerDeliveryMethod === "later") return true;
-  return data.offerDeliveryMethod === "now" && data.uploads.some((u) => u.category === "kueche_bild");
+  return data.offerDeliveryMethod === "now" && data.uploads.length > 0;
 }
 
 function loadSaved(): Partial<FunnelBData> {
@@ -220,6 +219,7 @@ export default function FunnelBClient() {
   }));
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
+  const [uploadProgress, setUploadProgress] = useState<{ done: number; total: number } | null>(null);
   const [honeypot, setHoneypot] = useState("");
   const { waitForToken, resetTurnstile, turnstileCallbackRef } = useTurnstile();
   const errorRef = useRef<HTMLParagraphElement>(null);
@@ -227,7 +227,7 @@ export default function FunnelBClient() {
   // Schritt steht in der URL, damit Zurück-Geste und Neuladen im Funnel bleiben.
   // Kontaktdaten erst, wenn das Angebot vollständig ist (Uploads überstehen kein Neuladen).
   const requestedStep = parseStep(searchParams.get("schritt"));
-  const step = requestedStep === TOTAL - 1 && !isOfferReady(data) ? TOTAL - 2 : requestedStep;
+  const step = requestedStep === TOTAL - 1 && !isOfferReady(data) ? 0 : requestedStep;
   const goToStep = useCallback(
     (next: number, replace = false) => {
       setSearchParams(
@@ -278,7 +278,7 @@ export default function FunnelBClient() {
 
   const canProceed = useMemo(() => {
     switch (step) {
-      case 7:
+      case 0:
         return isOfferReady(data);
       case 8:
         return (
@@ -306,9 +306,11 @@ export default function FunnelBClient() {
     try {
       const { uploads, ...fields } = data;
       const turnstileToken = await waitForToken();
+      setUploadProgress(uploads.length > 0 ? { done: 0, total: uploads.length } : null);
       const { failedUploads, studiosInArea, reviewRequired } = await submitFunnelB({
         data: fields,
-        uploads: uploads.map(({ category, file }) => ({ category, file })),
+        uploads,
+        onUploadProgress: (done, total) => setUploadProgress({ done, total }),
         turnstileToken,
         website: honeypot,
         submissionId: submissionIdFor("b"),
@@ -346,7 +348,7 @@ export default function FunnelBClient() {
 
       if (failedUploads > 0) {
         toast.warning(
-          "Ihre Anfrage ist angekommen, aber nicht alle Dateien konnten hochgeladen werden. Wir melden uns und klären, wie Sie sie uns schicken.",
+          "Ihre Anfrage ist angekommen, aber nicht alle Dateien konnten hochgeladen werden. Sie können sie über den Projektlink aus Ihrer E-Mail nachreichen.",
           { duration: 12000 },
         );
       }
@@ -365,6 +367,7 @@ export default function FunnelBClient() {
           : `Ihre Anfrage konnte gerade nicht gesendet werden. Bitte prüfen Sie Ihre Internetverbindung und versuchen Sie es noch einmal. Klappt es weiterhin nicht, rufen Sie uns an: ${phone.display}.`,
       );
       setSubmitting(false);
+      setUploadProgress(null);
     }
   }, [step, data, navigate, goToStep, phone.display, waitForToken, honeypot, resetTurnstile]);
 
@@ -389,7 +392,8 @@ export default function FunnelBClient() {
         <p className="mt-2 text-ink-muted">
           Nach Ihrer Anfrage besprechen wir Ihr Angebot kurz telefonisch. Danach stellen wir es ohne
           Ihren Namen 72&nbsp;Stunden lang freigeschalteten Küchenstudios aus Ihrer Region vor, die es
-          unterbieten können. Ob Sie ein Angebot annehmen, entscheiden Sie frei.
+          unterbieten können – Ihre Unterlagen nur ohne Namen und Kontaktdaten. Ob Sie ein Angebot
+          annehmen, entscheiden Sie frei.
         </p>
       </div>
       <div className="card text-sm">
@@ -421,14 +425,17 @@ export default function FunnelBClient() {
       isSubmitting={submitting}
       sidebar={sidebar}
     >
-      {step === 0 && <Step0 data={data} update={update} goNext={goNext} />}
-      {step === 1 && <Step1 data={data} update={update} />}
-      {step === 2 && <Step2 data={data} update={update} />}
-      {step === 3 && <Step3 data={data} update={update} />}
-      {step === 4 && <Step4 data={data} update={update} />}
-      {step === 5 && <Step5 data={data} update={update} />}
-      {step === 6 && <Step6 data={data} update={update} />}
-      {step === 7 && <Step7 data={data} update={update} />}
+      {step > 0 && step < TOTAL - 1 && (
+        <SkipDetails hasFiles={data.uploads.length > 0} onSkip={() => goToStep(TOTAL - 1)} />
+      )}
+      {step === 0 && <OfferStep data={data} update={update} />}
+      {step === 1 && <Step0 data={data} update={update} goNext={goNext} />}
+      {step === 2 && <Step1 data={data} update={update} />}
+      {step === 3 && <Step2 data={data} update={update} />}
+      {step === 4 && <Step3 data={data} update={update} />}
+      {step === 5 && <Step4 data={data} update={update} />}
+      {step === 6 && <Step5 data={data} update={update} />}
+      {step === 7 && <Step6 data={data} update={update} />}
       {step === 8 && (
         <Step8
           data={data}
@@ -437,6 +444,12 @@ export default function FunnelBClient() {
           onHoneypot={setHoneypot}
           turnstileRef={turnstileCallbackRef}
         />
+      )}
+
+      {submitting && uploadProgress && (
+        <p role="status" className="mt-4 text-sm text-ink-muted">
+          Unterlagen werden hochgeladen … {uploadProgress.done} von {uploadProgress.total} fertig
+        </p>
       )}
 
       {submitError && (
@@ -449,6 +462,7 @@ export default function FunnelBClient() {
 }
 
 const TIPS = [
+  "Viele Studios geben Angebot und Planung als PDF mit. Handyfotos der Seiten reichen auch – Hauptsache, Positionen, Maße und Preise sind lesbar.",
   "Je konkreter der Zeitrahmen, desto besser können Küchenstudios Liefertermin und Montage kalkulieren. Ein fester Liefertermin steigert oft den Rabatt.",
   "Wenn Sie Marke oder Material nicht sicher wissen: einfach 'Sonstiger / weiß ich nicht' wählen. Unser Experte ergänzt das im Telefonat.",
   "Die Bezeichnung der Arbeitsplatte (z. B. „Calacatta Roma\") finden Sie meist auf Ihrem schriftlichen Angebot. Optional!",
@@ -456,7 +470,6 @@ const TIPS = [
   "Spülen-Material und -Marke beeinflussen den Preis stark. Mülltrennsysteme sind oft separat kalkuliert.",
   "Beleuchtung und Steckdosen-Lösungen sind häufige „versteckte\" Posten – hier verlangen Studios oft hohe Aufschläge.",
   "Anzahlung und Finanzierungsbedingungen sind verhandelbar. Geben Sie an, was Ihr Studio Ihnen angeboten hat.",
-  "Sie haben Angebot & Grundriss nicht zur Hand? Kein Problem – Sie können beides nachreichen, wir besprechen das im Telefonat.",
   "Wir rufen Sie werktags an, bevor wir Ihr Angebot Küchenstudios vorstellen. Passt Ihnen eine bestimmte Uhrzeit, schreiben Sie uns gern eine E-Mail.",
 ];
 
@@ -936,23 +949,23 @@ function Step6({ data, update }: StepProps) {
   );
 }
 
-function Step7({ data, update }: StepProps) {
-  const addFile = (category: "angebot" | "grundriss" | "kueche_bild", file: File) => {
+function OfferStep({ data, update }: StepProps) {
+  const remaining = MAX_LEAD_FILES - data.uploads.length;
+  const addFiles = (category: LeadFileCategory, files: File[]) => {
     update({
       uploads: [
         ...data.uploads,
-        {
+        ...files.map((file) => ({
           id: `f-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
           category,
           file,
-        },
+        })),
       ],
     });
   };
   const remove = (id: string) => {
     update({ uploads: data.uploads.filter((u) => u.id !== id) });
   };
-  const formatBytes = (b: number) => `${(b / 1024 / 1024).toFixed(2)} MB`;
 
   return (
     <div className="space-y-6">
@@ -993,8 +1006,8 @@ function Step7({ data, update }: StepProps) {
       </Field>
 
       <Field
-        label="Wie möchten Sie uns das Bild Ihrer geplanten Küche zukommen lassen? *"
-        hint="Pflicht: mindestens ein Bild der geplanten Küche. Angebot und Grundriss sind optional, helfen den Küchenstudios aber bei einem genaueren Gegenangebot."
+        label="Angebot und Planung *"
+        hint="Mit Ihren Unterlagen können wir genau vergleichen – und Sie können die Detailfragen danach überspringen."
       >
         <CardGroup
           columns={2}
@@ -1002,90 +1015,70 @@ function Step7({ data, update }: StepProps) {
             {
               value: "now",
               label: "Jetzt hochladen",
-              description: "Ich habe das Bild (und evtl. Angebot / Grundriss) zur Hand",
+              description: "Angebot, Planung oder Fotos – als PDF oder Bild",
               icon: <CloudUpload className="h-5 w-5" />,
             },
             {
               value: "later",
               label: "Später nachreichen",
-              description: "Wir klären im Telefonat, wie Sie uns das Bild schicken",
+              description: "Über Ihren persönlichen Projektlink aus der E-Mail",
               icon: <Mail className="h-5 w-5" />,
             },
           ]}
           value={data.offerDeliveryMethod}
-          onChange={(v) =>
-            update({ offerDeliveryMethod: v as OfferDeliveryMethod })
-          }
+          onChange={(v) => update({ offerDeliveryMethod: v as OfferDeliveryMethod })}
         />
       </Field>
 
       {data.offerDeliveryMethod === "now" && (
         <div className="space-y-3">
-          <UploadDrop
-            label="Bild der geplanten Küche *"
-            description="Pflicht. JPG / PNG. Max. 10 MB."
-            accept="image/*"
-            onFile={(f) => addFile("kueche_bild", f)}
-            done={data.uploads.some((u) => u.category === "kueche_bild")}
-          />
-          <UploadDrop
-            label="Schriftliches Angebot hochladen"
-            description="Optional. PDF oder Bild. Max. 10 MB."
-            accept="application/pdf,image/*"
-            onFile={(f) => addFile("angebot", f)}
-            done={data.uploads.some((u) => u.category === "angebot")}
-          />
-          <UploadDrop
-            label="Grundriss hochladen"
-            description="Optional. PDF oder Bild. Max. 10 MB."
-            accept="application/pdf,image/*"
-            onFile={(f) => addFile("grundriss", f)}
-            done={data.uploads.some((u) => u.category === "grundriss")}
-          />
-
-          {data.uploads.length > 0 && (
-            <div className="rounded-lg border border-slate-200 bg-surface-soft p-4">
-              <div className="mb-2 text-xs font-semibold uppercase text-ink-subtle">
-                Hochgeladen ({data.uploads.length})
-              </div>
-              <ul className="space-y-1 text-sm">
-                {data.uploads.map((u) => (
-                  <li key={u.id} className="flex items-center justify-between gap-3">
-                    <span className="truncate">
-                      <span className="chip mr-2">{u.category}</span>
-                      {u.file.name}{" "}
-                      <span className="text-xs text-ink-subtle">
-                        ({formatBytes(u.file.size)})
-                      </span>
-                    </span>
-                    <button
-                      type="button"
-                      onClick={() => remove(u.id)}
-                      className="text-xs text-red-600 hover:underline"
-                    >
-                      Entfernen
-                    </button>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
+          {LEAD_FILE_CATEGORIES.map((option) => (
+            <LeadFileDrop
+              key={option.value}
+              option={option}
+              count={data.uploads.filter((u) => u.category === option.value).length}
+              remaining={remaining}
+              onFiles={(files) => addFiles(option.value, files)}
+            />
+          ))}
+          <PendingFileList files={data.uploads} onRemove={remove} />
+          <p className="text-xs text-ink-muted">
+            Mindestens eine Datei, höchstens {MAX_LEAD_FILES}, je bis 20 MB (PDF, JPG, PNG, HEIC). Ihre Unterlagen
+            sieht zuerst nur unser Team. Küchenstudios zeigen wir sie erst, wenn darauf keine Namen und
+            Kontaktdaten mehr zu sehen sind.
+          </p>
         </div>
       )}
 
       {data.offerDeliveryMethod === "later" && (
-        <div className="flex items-start gap-3 rounded-lg border border-accent-200 bg-accent-50 p-4 text-sm">
-          <Mail className="mt-0.5 h-5 w-5 flex-none text-accent-700" />
+        <div className="flex items-start gap-3 rounded-lg border border-brand-200 bg-brand-50 p-4 text-sm">
+          <Mail className="mt-0.5 h-5 w-5 flex-none text-brand-700" aria-hidden="true" />
           <div className="text-ink-muted">
-            <div className="font-medium text-ink">Bild später nachreichen</div>
+            <div className="font-medium text-ink">Unterlagen später nachreichen</div>
             <p className="mt-1">
-              Kein Problem: Wir melden uns nach Ihrer Anfrage und sagen Ihnen, wie Sie uns das
-              Bild der geplanten Küche schicken – optional auch Angebot und Grundriss. Erst wenn
-              das Bild da ist, stellen wir Ihr Angebot Küchenstudios vor.
+              Nach dem Absenden bekommen Sie per E-Mail Ihren persönlichen Projektlink. Dort können Sie Angebot,
+              Planung oder Fotos jederzeit hochladen – auch bequem vom Computer aus. Küchenstudios stellen wir Ihr
+              Angebot vor, nachdem wir es im Experten-Check mit Ihnen besprochen haben.
             </p>
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+/** Die Detailschritte sind freiwillig; wer alles in den Unterlagen hat, springt direkt zu den Kontaktdaten. */
+function SkipDetails({ hasFiles, onSkip }: { hasFiles: boolean; onSkip: () => void }) {
+  return (
+    <div className="mb-6 flex flex-col gap-3 rounded-lg border border-brand-200 bg-brand-50 p-4 text-sm sm:flex-row sm:items-center sm:justify-between">
+      <p className="text-ink-muted">
+        {hasFiles
+          ? "Alle weiteren Fragen sind freiwillig. Stehen die Details in Ihren Unterlagen, können Sie direkt weiter."
+          : "Alle weiteren Fragen sind freiwillig. Was Sie nicht wissen, klären wir im Experten-Check."}
+      </p>
+      <button type="button" onClick={onSkip} className="btn-ghost flex-none text-sm font-medium text-brand-800">
+        Direkt zu den Kontaktdaten
+      </button>
     </div>
   );
 }
@@ -1200,10 +1193,10 @@ function Step8({
             }
           />
           <span className="text-ink-muted">
-            <strong className="text-ink">Pflicht:</strong> KüchenWert darf mein Angebot ohne
-            Namen und Kontaktdaten an Küchenstudios in meiner Region weitergeben, damit sie es
-            unterbieten. Meine Kontaktdaten erhalten höchstens drei Studios für Rückfragen sowie
-            das Studio, dessen Angebot ich annehme.
+            <strong className="text-ink">Pflicht:</strong> KüchenWert darf mein Angebot und meine
+            Unterlagen ohne Namen und Kontaktdaten an Küchenstudios in meiner Region weitergeben,
+            damit sie es unterbieten. Meine Kontaktdaten und die vollständigen Unterlagen erhalten
+            höchstens drei Studios für Rückfragen sowie das Studio, dessen Angebot ich annehme.
           </span>
         </label>
         <label className="flex items-start gap-3">
@@ -1478,88 +1471,6 @@ function CardGroup({
           </button>
         );
       })}
-    </div>
-  );
-}
-
-function UploadDrop({
-  label,
-  description,
-  accept,
-  onFile,
-  done = false,
-}: {
-  label: string;
-  description?: string;
-  accept?: string;
-  onFile: (f: File) => void;
-  done?: boolean;
-}) {
-  const [dragOver, setDragOver] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  function acceptFile(f: File) {
-    setError(null);
-    if (f.size > MAX_UPLOAD_BYTES) {
-      setError(`Datei ist zu groß (${(f.size / 1024 / 1024).toFixed(1)} MB). Maximal 10 MB erlaubt.`);
-      return;
-    }
-    onFile(f);
-  }
-
-  return (
-    <div>
-      <label
-        onDragOver={(e) => {
-          e.preventDefault();
-          setDragOver(true);
-        }}
-        onDragLeave={() => setDragOver(false)}
-        onDrop={(e) => {
-          e.preventDefault();
-          setDragOver(false);
-          const f = e.dataTransfer.files?.[0];
-          if (f) acceptFile(f);
-        }}
-        className={clsx(
-          "flex cursor-pointer items-center gap-3 rounded-lg border-2 border-dashed p-4 transition",
-          done
-            ? "border-accent-400 bg-accent-50"
-            : dragOver
-              ? "border-brand-500 bg-brand-50"
-              : "border-slate-300 bg-surface-soft hover:border-brand-300 hover:bg-white",
-        )}
-      >
-        <FileUp
-          className={clsx(
-            "h-5 w-5 flex-none",
-            done ? "text-accent-700" : "text-brand-700",
-          )}
-        />
-        <div className="flex-1">
-          <div className="text-sm font-medium text-ink">{label}</div>
-          {description && <div className="text-xs text-ink-muted">{description}</div>}
-        </div>
-        <span className="btn-ghost text-xs">
-          {done ? "Weitere Datei" : dragOver ? "Loslassen" : "Datei wählen"}
-        </span>
-        <input
-          type="file"
-          className="sr-only"
-          accept={accept}
-          onChange={(e) => {
-            const f = e.target.files?.[0];
-            if (f) acceptFile(f);
-            e.currentTarget.value = "";
-          }}
-        />
-      </label>
-      {error && (
-        <div className="mt-1.5 flex items-center gap-1.5 text-xs text-red-700">
-          <AlertCircle className="h-3.5 w-3.5" />
-          {error}
-        </div>
-      )}
     </div>
   );
 }

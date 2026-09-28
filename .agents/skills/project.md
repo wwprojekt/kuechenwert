@@ -75,6 +75,7 @@
   - Einwilligungen: Funnel-Defaults, Studio-Einwilligung in Funnel B, Freischaltung prüft die Einwilligung; Abmeldung per Link ohne Login (RFC 8058, `kw-unsubscribe`, `/abmelden`) mit Einwilligungsprotokoll (`20260928201711`).
   - Projektlink: Token nicht mehr in Tracking, Error- und Mail-Logs, Ablauf und Begrenzung, `no-referrer`/`noindex`/`no-store`; Raumfotos ohne EXIF/GPS (Browser und Server); Abdeckungsprüfung per PLZ mit ehrlichen Texten.
   - Abrechnung: automatische Ausstellung mit Pflichtangaben nach § 14 UStG (`_shared/issuer-profile.ts`, IBAN-Prüfziffer), Entwurf solange Angaben fehlen, GoBD-Schutz, PDFs write-once, Leistungsdatum, Mahnlauf-Fixes (`20260928194846`); Entwürfe in Admin-Finanzen und „Meine Rechnungen“ gekennzeichnet.
+  - Studio-Registrierung mit Turnstile: ohne bestandene Prüfung kein Konto, keine Bestätigungsmail (schützt das Resend-Tageskontingent) und keine Auskunft, ob eine Adresse schon registriert ist.
   - Marktplatz/Admin: Reklamation gekaufter Kontakte, Admin-Aktionen an Ausschreibungen, Reklamationen im Admin (`20260928202413`, `20260928202636`), Marktplatz-Einstellungen unter `/admin/marktplatz`.
   - Betrieb: `kw-maintenance` (Löschfristen täglich, Health-Check stündlich, entprellte Admin-Alarme, `20260928200833`); Cron-Functions prüfen `x-kw-cron-secret`.
   - Recht: AGB für das Vermittlungsmodell, Konditionen für Studios (`/konditionen`), Datenschutz mit Löschfristen (`20260928204008`), Mail-Fußzeile nach § 35a GmbHG.

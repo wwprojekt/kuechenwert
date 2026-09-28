@@ -12,6 +12,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
+import { useTurnstile } from "@/hooks/useTurnstile";
 import { z } from "zod";
 import {
   Select,
@@ -103,6 +104,7 @@ const RegisterHaendler = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const { toast } = useToast();
+  const { resetTurnstile, waitForToken, turnstileCallbackRef, turnstileError } = useTurnstile();
   const [isLoading, setIsLoading] = useState(false);
   const [uploadingDocument, setUploadingDocument] = useState(false);
   const [documentFile, setDocumentFile] = useState<File | null>(null);
@@ -216,7 +218,8 @@ const RegisterHaendler = () => {
       const supabaseUrl = import.meta.env.VITE_SUPABASE_URL as string;
       const supabaseAnonKey = (import.meta.env.VITE_SUPABASE_ANON_KEY || import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY) as string;
 
-      const registerPayload = JSON.stringify({
+      const buildRegisterPayload = (turnstileToken: string | null) => JSON.stringify({
+        turnstileToken,
         email: validated.email,
         password: validated.password,
         firstName: validated.contactPersonName.split(" ")[0],
@@ -245,7 +248,8 @@ const RegisterHaendler = () => {
               'Content-Type': 'application/json',
               'apikey': supabaseAnonKey,
             },
-            body: registerPayload,
+            // Turnstile tokens are single-use, so every attempt needs a fresh one.
+            body: buildRegisterPayload(await waitForToken(4000)),
             signal,
           }
         );
@@ -267,6 +271,7 @@ const RegisterHaendler = () => {
         if (isNetworkError) {
           // Retry once for transient network failures (common on Safari)
           try {
+            resetTurnstile();
             const retryController = new AbortController();
             const retryTimeout = setTimeout(() => retryController.abort(), 30000);
             registerResponse = await doRegisterFetch(retryController.signal);
@@ -287,6 +292,14 @@ const RegisterHaendler = () => {
       }
 
       if (!registerResponse!.ok) {
+        if (registerResult.code === 'BOT_CHECK_FAILED') {
+          toast({
+            title: tr.toastRegistrationFailedTitle,
+            description: tr.errorBotCheckFailed,
+            variant: "destructive",
+          });
+          return;
+        }
         if (registerResult.code === 'USER_EXISTS') {
           throw new Error(registerResult.error || tr.errorUserCreationFailed);
         }
@@ -378,6 +391,7 @@ const RegisterHaendler = () => {
         });
       }
     } finally {
+      resetTurnstile();
       setIsLoading(false);
       setUploadingDocument(false);
     }
@@ -871,6 +885,14 @@ const RegisterHaendler = () => {
                   .
                 </p>
               </div>
+
+              <div ref={turnstileCallbackRef} />
+              {turnstileError && (
+                <Alert variant="destructive">
+                  <AlertCircle className="h-4 w-4" />
+                  <AlertDescription>{tr.errorBotCheckFailed}</AlertDescription>
+                </Alert>
+              )}
 
               {/* Submit */}
               <Button

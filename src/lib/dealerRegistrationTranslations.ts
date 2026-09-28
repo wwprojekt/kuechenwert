@@ -126,7 +126,8 @@ export type TranslationKey =
   | 'successLoginButton'
   | 'successHomeButton'
   // Error: user could not be created
-  | 'errorUserCreationFailed';
+  | 'errorUserCreationFailed'
+  | 'errorBotCheckFailed';
 
 type Translations = Record<TranslationKey, string>;
 
@@ -243,6 +244,7 @@ const de: Translations = {
   successHomeButton: 'Zurück zur Startseite',
   // Error
   errorUserCreationFailed: 'Benutzer konnte nicht erstellt werden',
+  errorBotCheckFailed: 'Die Sicherheitsprüfung ist fehlgeschlagen. Bitte laden Sie die Seite neu und versuchen Sie es erneut – ein Werbeblocker kann die Prüfung verhindern.',
 };
 
 const en: Translations = {
@@ -345,6 +347,7 @@ const en: Translations = {
   successLoginButton: 'Go to studio login',
   successHomeButton: 'Back to Homepage',
   errorUserCreationFailed: 'User could not be created',
+  errorBotCheckFailed: 'The security check failed. Please reload the page and try again – an ad blocker can prevent the check.',
 };
 
 const nl: Translations = {
@@ -447,6 +450,7 @@ const nl: Translations = {
   successLoginButton: 'Naar studio-login',
   successHomeButton: 'Terug naar startpagina',
   errorUserCreationFailed: 'Gebruiker kon niet worden aangemaakt',
+  errorBotCheckFailed: 'De beveiligingscontrole is mislukt. Laad de pagina opnieuw en probeer het nogmaals – een adblocker kan de controle verhinderen.',
 };
 
 const fr: Translations = {
@@ -549,6 +553,7 @@ const fr: Translations = {
   successLoginButton: 'Vers la connexion partenaire',
   successHomeButton: "Retour à la page d'accueil",
   errorUserCreationFailed: "L'utilisateur n'a pas pu être créé",
+  errorBotCheckFailed: "La vérification de sécurité a échoué. Veuillez recharger la page et réessayer – un bloqueur de publicités peut empêcher la vérification.",
 };
 
 const it: Translations = {
@@ -651,6 +656,7 @@ const it: Translations = {
   successLoginButton: 'Vai al login partner',
   successHomeButton: 'Torna alla pagina iniziale',
   errorUserCreationFailed: "L'utente non ha potuto essere creato",
+  errorBotCheckFailed: "Il controllo di sicurezza non è riuscito. Ricaricate la pagina e riprovate – un blocco degli annunci può impedire il controllo.",
 };
 
 const es: Translations = {
@@ -753,6 +759,7 @@ const es: Translations = {
   successLoginButton: 'Ir al inicio de sesión',
   successHomeButton: 'Volver a la página principal',
   errorUserCreationFailed: 'No se pudo crear el usuario',
+  errorBotCheckFailed: 'La comprobación de seguridad ha fallado. Vuelva a cargar la página e inténtelo de nuevo; un bloqueador de anuncios puede impedir la comprobación.',
 };
 
 const pt: Translations = {
@@ -855,6 +862,7 @@ const pt: Translations = {
   successLoginButton: 'Ir para o login',
   successHomeButton: 'Voltar à página inicial',
   errorUserCreationFailed: 'Não foi possível criar o utilizador',
+  errorBotCheckFailed: 'A verificação de segurança falhou. Recarregue a página e tente novamente – um bloqueador de anúncios pode impedir a verificação.',
 };
 
 const pl: Translations = {
@@ -957,6 +965,7 @@ const pl: Translations = {
   successLoginButton: 'Przejdź do logowania',
   successHomeButton: 'Powrót do strony głównej',
   errorUserCreationFailed: 'Nie udało się utworzyć użytkownika',
+  errorBotCheckFailed: 'Kontrola bezpieczeństwa nie powiodła się. Odśwież stronę i spróbuj ponownie – bloker reklam może uniemożliwić kontrolę.',
 };
 
 /**

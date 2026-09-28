@@ -4,6 +4,7 @@ import { getCorsHeaders, handleCorsPreflightRequest } from "../_shared/cors.ts";
 import { edgeLogger } from "../_shared/edgeLogger.ts";
 import { checkRateLimit, createRateLimitErrorResponse } from "../_shared/rate-limiter.ts";
 import { clientIp, validIp } from "../_shared/kw-http.ts";
+import { checkTurnstile } from "../_shared/turnstile.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -28,7 +29,9 @@ const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
  *
  * Security: This function is PUBLIC (no auth required) because it's the
  * registration endpoint. It uses the service_role key internally.
- * Rate limiting is handled by Supabase Edge Functions infrastructure.
+ * Abuse protection: rate limit per IP (5 per 15 minutes) and Cloudflare
+ * Turnstile. Without a passed Turnstile check no account is created and no
+ * mail is sent, which also protects the Resend daily quota.
  */
 
 interface RegisterDealerRequest {
@@ -49,6 +52,7 @@ interface RegisterDealerRequest {
   foundedYear?: string;
   vatId?: string;
   agbAccepted?: boolean;
+  turnstileToken?: string | null;
 }
 
 const handler = async (req: Request): Promise<Response> => {
@@ -98,6 +102,20 @@ const handler = async (req: Request): Promise<Response> => {
     }
     if (body.agbAccepted !== true) {
       edgeLogger.warn(`Dealer registration without explicit AGB acceptance (legacy frontend): ${body.email}`);
+    }
+
+    // Before the existing-account lookup, so bots can neither create accounts
+    // nor find out which addresses are registered.
+    const botCheck = await checkTurnstile(body.turnstileToken, validIp(clientIp(req)) ?? undefined);
+    if (botCheck === "unverified") {
+      edgeLogger.warn("Dealer registration rejected: Turnstile check not passed");
+      return new Response(
+        JSON.stringify({
+          error: "Die Sicherheitsprüfung ist fehlgeschlagen. Bitte laden Sie die Seite neu und versuchen Sie es erneut.",
+          code: "BOT_CHECK_FAILED",
+        }),
+        { status: 400, headers }
+      );
     }
 
     const email = body.email.trim().toLowerCase();

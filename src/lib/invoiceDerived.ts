@@ -55,7 +55,11 @@ export interface InvoiceLike {
  * Kanonischer Display-Status.
  *
  * Priorität (höchste zuerst):
- *   cancelled > paid > partial > overdue > open
+ *   cancelled > draft > paid > partial > overdue > open
+ *
+ * `draft`: noch nicht ausgestellt (kw_create_market_invoice legt Entwürfe an,
+ * kw-market-worker stellt sie aus). Entwürfe sind nie überfällig und nicht
+ * zahl- oder mahnbar; Studios sehen sie per RLS gar nicht.
  *
  * `partial` > `overdue`: Eine teilbezahlte überfällige Rechnung wird als
  * "Teilbezahlt" gebadget, die Überfälligkeit ist über `isOverdue`/
@@ -66,6 +70,7 @@ export interface InvoiceLike {
  */
 export type InvoiceDisplayStatus =
   | "cancelled"
+  | "draft"
   | "paid"
   | "partial"
   | "overdue"
@@ -133,19 +138,22 @@ export function deriveInvoice(
     gross > 0 ? Math.min(100, Math.max(0, (paid / gross) * 100)) : 0;
 
   const isCancelled = invoice.status === "cancelled";
+  const isDraft = !isCancelled && invoice.status === "draft";
   const isPaid = invoice.payment_status === "paid";
   const isPartial = invoice.payment_status === "partial";
   const overdueRaw = isInvoiceOverdue(invoice.due_date, now);
 
   let displayStatus: InvoiceDisplayStatus;
   if (isCancelled) displayStatus = "cancelled";
+  else if (isDraft) displayStatus = "draft";
   else if (isPaid) displayStatus = "paid";
   else if (isPartial) displayStatus = "partial";
   else if (overdueRaw) displayStatus = "overdue";
   else displayStatus = "open";
 
   const isActive = !isCancelled;
-  const isOverdue = overdueRaw && isActive && !isPaid;
+  const isIssued = isActive && !isDraft;
+  const isOverdue = overdueRaw && isIssued && !isPaid;
   const daysOverdue = isOverdue ? computeDaysOverdue(invoice.due_date, now) : 0;
 
   return {
@@ -158,9 +166,9 @@ export function deriveInvoice(
     // vollbezahlte Rechnungen aus, erlaubt aber die Erfassung eines letzten
     // Cents. `> 0.01` hätte den 1-ct-Restbetrag fälschlich gesperrt, obwohl
     // record-invoice-payment diesen problemlos akzeptiert.
-    canRecordPayment: isActive && !isPaid && remaining > 0,
+    canRecordPayment: isIssued && !isPaid && remaining > 0,
     canCancel: isActive && !isPaid,
-    canSendReminder: isActive && !isPaid,
+    canSendReminder: isIssued && !isPaid,
     canRegeneratePdf: isActive,
   };
 }

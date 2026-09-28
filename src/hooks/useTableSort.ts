@@ -10,11 +10,11 @@
  * - Benutzerdefinierte Accessor-Funktionen
  *
  * Verwendung:
- *   const { sortField, sortDirection, handleSort, sortData } = useTableSort<Auction>('end_time', 'asc');
- *   const sorted = sortData(auctions, { end_time: (a) => a.end_time });
+ *   const { sortField, sortDirection, handleSort, sortData } = useTableSort<Lead>('created_at', 'desc');
+ *   const sorted = sortData(leads, { created_at: (l) => l.created_at });
  */
 
-import { useState, useCallback, useMemo } from "react";
+import { useState, useCallback } from "react";
 
 export type SortDirection = "asc" | "desc";
 

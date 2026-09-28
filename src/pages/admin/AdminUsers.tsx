@@ -5,7 +5,7 @@ import { ExportButton } from "@/components/ExportButton";
 import { useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { invokeWithAuth, SessionExpiredError, ensureValidRLSSession } from "@/lib/sessionGuard";
+import { invokeWithAuth, ensureValidRLSSession } from "@/lib/sessionGuard";
 import { adminSuspendUser } from "@/lib/adminSuspendUser";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -63,6 +63,7 @@ import { format } from "date-fns";
 import { de } from "date-fns/locale";
 import { useToast } from "@/hooks/use-toast";
 import { UserEditDialog } from "@/components/admin/UserEditDialog";
+import { CUSTOMER_ROLES, isAppRole, roleInfo } from "@/components/admin/roleLabels";
 
 interface UserRole {
   role: string;
@@ -75,12 +76,27 @@ interface UserWithRoles {
   last_name: string | null;
   phone: string | null;
   company_name: string | null;
+  address_street: string | null;
+  address_zip: string | null;
+  address_city: string | null;
+  address_country: string | null;
+  company_street: string | null;
+  company_zip: string | null;
+  company_city: string | null;
+  company_country: string | null;
   is_suspended?: boolean;
   suspended_at?: string | null;
   suspended_reason?: string | null;
   created_at: string;
   roles: UserRole[];
 }
+
+const userSortAccessors: Record<string, (u: UserWithRoles) => unknown> = {
+  name: (u) => `${u.first_name || ''} ${u.last_name || ''}`.trim().toLowerCase(),
+  email: (u) => (u.email || '').toLowerCase(),
+  company_name: (u) => (u.company_name || '').toLowerCase(),
+  created_at: (u) => u.created_at || '',
+};
 
 export default function AdminUsers() {
   const { toast } = useToast();
@@ -95,13 +111,6 @@ export default function AdminUsers() {
 
   const { sortField, sortDirection, handleSort, sortData } = useTableSort<UserWithRoles>('created_at', 'desc');
 
-  const userSortAccessors: Record<string, (u: UserWithRoles) => unknown> = {
-    name: (u) => `${u.first_name || ''} ${u.last_name || ''}`.trim().toLowerCase(),
-    email: (u) => (u.email || '').toLowerCase(),
-    company_name: (u) => (u.company_name || '').toLowerCase(),
-    created_at: (u) => u.created_at || '',
-  };
-
   const { exportCSV, exportExcel, isExporting } = useExport({
     filename: "benutzer",
     columns: [
@@ -111,7 +120,7 @@ export default function AdminUsers() {
       { key: "email", label: "E-Mail" },
       { key: "phone", label: "Telefon" },
       { key: "company_name", label: "Firma" },
-      { key: "roles", label: "Rollen", format: (v: any) => v?.map((r: any) => r.role).join(", ") || "" },
+      { key: "roles", label: "Rolle", format: (v: UserRole[] | undefined) => v?.map((r) => roleInfo(r.role).label).join(", ") || "" },
       { key: "is_suspended", label: "Status", format: (v: boolean) => v ? "Gesperrt" : "Aktiv" },
       { key: "created_at", label: "Registriert am", format: (v: string) => v ? new Date(v).toLocaleDateString("de-DE") : "" },
     ],
@@ -210,10 +219,12 @@ export default function AdminUsers() {
         user.last_name?.toLowerCase().includes(searchLower) ||
         user.company_name?.toLowerCase().includes(searchLower);
 
-      // Role filter
       const userRoleNames = user.roles?.map((r) => r.role) || [];
       const matchesRole =
-        roleFilter === "all" || userRoleNames.includes(roleFilter);
+        roleFilter === "all" ||
+        (roleFilter === "customer"
+          ? userRoleNames.some((r) => isAppRole(r) && CUSTOMER_ROLES.includes(r))
+          : userRoleNames.includes(roleFilter));
 
       // Status filter
       const matchesStatus =
@@ -241,20 +252,11 @@ export default function AdminUsers() {
 
     return (
       <div className="flex gap-1 flex-wrap">
-        {roles.map((r, idx) => {
-          const role = r.role;
-          let variant: "default" | "secondary" | "outline" = "outline";
-
-          if (role === "admin") variant = "default";
-          if (role === "dealer") variant = "secondary";
-
+        {roles.map((r) => {
+          const info = roleInfo(r.role);
           return (
-            <Badge key={idx} variant={variant} className="text-xs">
-              {role === "admin"
-                ? "Admin"
-                : role === "dealer"
-                ? "Händler"
-                : "Verkäufer"}
+            <Badge key={r.role} variant={info.variant} className="text-xs">
+              {info.label}
             </Badge>
           );
         })}
@@ -318,8 +320,8 @@ export default function AdminUsers() {
             <SelectContent>
               <SelectItem value="all">Alle Rollen</SelectItem>
               <SelectItem value="admin">Admin</SelectItem>
-              <SelectItem value="dealer">Händler</SelectItem>
-              <SelectItem value="seller">Verkäufer</SelectItem>
+              <SelectItem value="dealer">Küchenstudio</SelectItem>
+              <SelectItem value="customer">Kunde</SelectItem>
             </SelectContent>
           </Select>
           <Select value={statusFilter} onValueChange={setStatusFilter}>
@@ -348,7 +350,7 @@ export default function AdminUsers() {
               <SortableTableHead field="name" label="Name" sortField={sortField} sortDirection={sortDirection} onSort={handleSort} />
               <SortableTableHead field="email" label="Kontakt" sortField={sortField} sortDirection={sortDirection} onSort={handleSort} />
               <SortableTableHead field="company_name" label="Firma" sortField={sortField} sortDirection={sortDirection} onSort={handleSort} />
-              <TableHead>Rollen</TableHead>
+              <TableHead>Rolle</TableHead>
               <TableHead>Status</TableHead>
               <SortableTableHead field="created_at" label="Registriert am" sortField={sortField} sortDirection={sortDirection} onSort={handleSort} />
               <TableHead className="text-right">Aktionen</TableHead>
@@ -443,7 +445,7 @@ export default function AdminUsers() {
                         </DropdownMenuItem>
                         <DropdownMenuItem onClick={() => handleEdit(user)}>
                           <Shield className="w-4 h-4 mr-2" />
-                          Rollen verwalten
+                          Rolle ändern
                         </DropdownMenuItem>
                         <DropdownMenuSeparator />
                         <DropdownMenuItem

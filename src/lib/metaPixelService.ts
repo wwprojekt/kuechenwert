@@ -1,7 +1,7 @@
 /**
  * Meta Pixel (Facebook Pixel) Tracking Service
  * 
- * Zentraler Service fuer alle Meta Pixel Events auf CaravanWert.de.
+ * Zentraler Service fuer alle Meta Pixel Events auf kuechenwert24.de.
  * DSGVO-konform: Pixel wird erst aktiviert wenn Marketing-Consent erteilt wird.
  * 
  * Meta Pixel ID: 1846623132710484
@@ -13,18 +13,12 @@
  * 
  * Standard-Events (Meta-definiert):
  * - PageView: Automatisch bei Consent-Grant + Route-Wechsel
- * - Lead: Kontaktdaten erfasst (Wizard, Kontaktformular, Wertrechner, etc.)
- * - CompleteRegistration: Haendler-Registrierung abgeschlossen
+ * - Lead: Küchenanfrage mit Kontaktdaten abgeschickt (Funnel A, B, C)
+ * - CompleteRegistration: Nutzer- oder Studio-Registrierung abgeschlossen
  * - Contact: Kontaktformular abgesendet
- * - Schedule: Termin gebucht
- * - ViewContent: Auktionsdetail / Fahrzeugseite angesehen
- * - Search: Fahrzeugsuche durchgefuehrt
- * - InitiateCheckout: Wizard gestartet (Verkaufsprozess begonnen)
- * - SubmitApplication: Haendler-Bewerbung eingereicht
+ * - SubmitApplication: Studio-Bewerbung eingereicht
  * 
  * Custom Events:
- * - WizardStep: Wizard-Fortschritt (Schritt 1-5)
- * - WertrechnerCompleted: Wertrechner-Bewertung abgeschlossen
  * - NewsletterSignup: Newsletter-Anmeldung
  * - PhoneClick: Telefonnummer angeklickt
  * - WhatsAppClick: WhatsApp-Button angeklickt
@@ -155,11 +149,7 @@ export function trackMetaPageView(): void {
 /**
  * Lead - Kontaktdaten erfasst.
  * Wird ausgeloest bei:
- * - Wizard Schritt 5 (Kontaktdaten eingegeben)
- * - Wertrechner Lead-Capture
- * - Wertermittlung Formular
- * - Landing Page Lead-Formulare
- * - Quick Auction Form (Homepage)
+ * - Abgeschickter Küchenanfrage in Funnel A, B und C
  */
 export function trackMetaLead(params?: {
   content_name?: string;
@@ -178,7 +168,7 @@ export function trackMetaLead(params?: {
 /**
  * CompleteRegistration - Registrierung abgeschlossen.
  * Wird ausgeloest bei:
- * - Haendler-Registrierung
+ * - Studio-Registrierung
  * - Nutzer-Registrierung
  */
 export function trackMetaCompleteRegistration(params?: {
@@ -203,122 +193,21 @@ export function trackMetaContact(): void {
 }
 
 /**
- * Schedule - Termin gebucht.
- * Wird ausgeloest bei:
- * - Ankaufstation-Termin gebucht
- */
-export function trackMetaSchedule(params?: {
-  content_name?: string;
-}): void {
-  safeFbq('track', 'Schedule', {
-    content_name: params?.content_name || 'Ankaufstation-Termin',
-  });
-}
-
-/**
- * ViewContent - Inhalt angesehen.
- * Wird ausgeloest bei:
- * - Auktionsdetail-Seite geoeffnet
- * - Fahrzeugseite angesehen
- */
-export function trackMetaViewContent(params?: {
-  content_name?: string;
-  content_category?: string;
-  content_ids?: string[];
-  content_type?: string;
-  value?: number;
-  currency?: string;
-}): void {
-  safeFbq('track', 'ViewContent', {
-    content_name: params?.content_name || '',
-    content_category: params?.content_category || 'Wohnmobil',
-    content_ids: params?.content_ids || [],
-    content_type: params?.content_type || 'vehicle',
-    value: params?.value || 0,
-    currency: params?.currency || 'EUR',
-  });
-}
-
-/**
- * Search - Suche durchgefuehrt.
- * Wird ausgeloest bei:
- * - Fahrzeugsuche / Filter auf /kaufen
- */
-export function trackMetaSearch(params?: {
-  search_string?: string;
-  content_category?: string;
-}): void {
-  safeFbq('track', 'Search', {
-    search_string: params?.search_string || '',
-    content_category: params?.content_category || 'Wohnmobil',
-  });
-}
-
-/**
- * InitiateCheckout - Verkaufsprozess gestartet.
- * Wird ausgeloest bei:
- * - Wizard gestartet (Schritt 1 geladen)
- */
-export function trackMetaInitiateCheckout(params?: {
-  content_name?: string;
-  content_category?: string;
-  value?: number;
-  currency?: string;
-  num_items?: number;
-}): void {
-  safeFbq('track', 'InitiateCheckout', {
-    content_name: params?.content_name || 'Verkaufs-Wizard',
-    content_category: params?.content_category || 'Wohnmobil',
-    value: params?.value || 0,
-    currency: params?.currency || 'EUR',
-    num_items: params?.num_items || 1,
-  });
-}
-
-/**
  * SubmitApplication - Bewerbung eingereicht.
  * Wird ausgeloest bei:
- * - Haendler-Bewerbung / Dealer Onboarding
+ * - Studio-Bewerbung (Registrierung als Küchenstudio)
  */
 export function trackMetaSubmitApplication(params?: {
   content_name?: string;
 }): void {
   safeFbq('track', 'SubmitApplication', {
-    content_name: params?.content_name || 'Haendler-Bewerbung',
+    content_name: params?.content_name || 'Studio-Bewerbung',
   });
 }
 
 // ============================================================
-// CUSTOM EVENTS (CaravanWert-spezifisch)
+// CUSTOM EVENTS (KüchenWert-spezifisch)
 // ============================================================
-
-/**
- * Custom Event: Wizard-Schritt erreicht.
- * Trackt den Fortschritt im Verkaufs-Wizard.
- */
-export function trackMetaWizardStep(step: number, stepName?: string): void {
-  safeFbq('trackCustom', 'WizardStep', {
-    step_number: step,
-    step_name: stepName || `Schritt ${step}`,
-  });
-}
-
-/**
- * Custom Event: Wertrechner abgeschlossen.
- * Wird ausgeloest wenn die KI-Bewertung angezeigt wird.
- */
-export function trackMetaWertrechnerCompleted(params?: {
-  vehicle_type?: string;
-  manufacturer?: string;
-  estimated_value?: number;
-}): void {
-  safeFbq('trackCustom', 'WertrechnerCompleted', {
-    vehicle_type: params?.vehicle_type || '',
-    manufacturer: params?.manufacturer || '',
-    estimated_value: params?.estimated_value || 0,
-    currency: 'EUR',
-  });
-}
 
 /**
  * Custom Event: Newsletter-Anmeldung.

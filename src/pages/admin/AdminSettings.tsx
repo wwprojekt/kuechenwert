@@ -28,8 +28,8 @@ import {
 const SETTINGS_ID = '00000000-0000-0000-0000-000000000000';
 
 /** Snapshot for dirty check (UI-only fields excluded). */
-function settingsFormSnapshot(data: Record<string, unknown>): string {
-  const { _showApiKey: _ui, ...rest } = data;
+function settingsFormSnapshot(data: object): string {
+  const { _showApiKey: _ui, ...rest } = data as Record<string, unknown>;
   return JSON.stringify(rest);
 }
 
@@ -52,13 +52,13 @@ export default function AdminSettings() {
   useEffect(() => {
     if (settings) {
       setFormData(settings);
-      setSavedSnapshot(settingsFormSnapshot(settings as Record<string, unknown>));
+      setSavedSnapshot(settingsFormSnapshot(settings));
     }
   }, [settings]);
 
   const isDirty = useMemo(() => {
     if (!savedSnapshot) return false;
-    return settingsFormSnapshot(formData as Record<string, unknown>) !== savedSnapshot;
+    return settingsFormSnapshot(formData) !== savedSnapshot;
   }, [formData, savedSnapshot]);
 
   const handleTabChange = (next: string) => {
@@ -98,6 +98,7 @@ export default function AdminSettings() {
         .upload(filePath, file, {
           upsert: true,
           contentType: file.type || `image/${fileExt}`,
+          cacheControl: "31536000, immutable",
         });
 
       if (uploadError) throw uploadError;
@@ -248,7 +249,7 @@ export default function AdminSettings() {
       </AlertDialog>
 
       <Tabs value={activeTab} onValueChange={handleTabChange} className="space-y-6">
-        <TabsList className="grid w-full grid-cols-4 md:grid-cols-8 lg:w-auto">
+        <TabsList className="grid w-full grid-cols-4 md:grid-cols-7 lg:w-auto">
           <TabsTrigger value="general" className="gap-2">
             <Globe className="w-4 h-4" />
             <span className="hidden sm:inline">Allgemein</span>
@@ -272,10 +273,6 @@ export default function AdminSettings() {
           <TabsTrigger value="tracking" className="gap-2">
             <Activity className="w-4 h-4" />
             <span className="hidden sm:inline">Tracking</span>
-          </TabsTrigger>
-          <TabsTrigger value="auction" className="gap-2">
-            <Gavel className="w-4 h-4" />
-            <span className="hidden sm:inline">Auktionen</span>
           </TabsTrigger>
           <TabsTrigger value="ai" className="gap-2">
             <Brain className="w-4 h-4" />
@@ -995,7 +992,7 @@ export default function AdminSettings() {
                       <option value={0}>Nie sperren</option>
                     </select>
                     <p className="text-xs text-muted-foreground">
-                      Ab welcher Mahnstufe der Händler keine neuen Auktionen mehr erstellen kann
+                      Ab welcher Mahnstufe ein Küchenstudio gesperrt wird und keine neuen Projekte mehr erhält
                     </p>
                   </div>
                 </div>
@@ -1116,30 +1113,6 @@ export default function AdminSettings() {
                       onCheckedChange={(checked) => updateField('notify_new_registration', checked)}
                     />
                   </div>
-                  <div className="flex items-center justify-between rounded-lg border p-4">
-                    <div className="space-y-0.5">
-                      <Label>Neue Auktion</Label>
-                      <p className="text-sm text-muted-foreground">
-                        Benachrichtigung bei neu erstellten Auktionen
-                      </p>
-                    </div>
-                    <Switch 
-                      checked={formData.notify_new_auction || false}
-                      onCheckedChange={(checked) => updateField('notify_new_auction', checked)}
-                    />
-                  </div>
-                  <div className="flex items-center justify-between rounded-lg border p-4">
-                    <div className="space-y-0.5">
-                      <Label>Gebote</Label>
-                      <p className="text-sm text-muted-foreground">
-                        Benachrichtigung bei neuen Geboten
-                      </p>
-                    </div>
-                    <Switch 
-                      checked={formData.notify_new_bid || false}
-                      onCheckedChange={(checked) => updateField('notify_new_bid', checked)}
-                    />
-                  </div>
                 </div>
               </div>
             </CardContent>
@@ -1231,118 +1204,6 @@ export default function AdminSettings() {
             value={(formData.tracking_config ?? null) as Partial<TrackingConfig> | null}
             onChange={(next) => updateField('tracking_config', next)}
           />
-        </TabsContent>
-
-        {/* Auction Settings */}
-        <TabsContent value="auction" className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Auktionseinstellungen</CardTitle>
-              <CardDescription>
-                Konfigurieren Sie Standard-Auktionsparameter
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              <div className="rounded-lg border border-amber-200 bg-amber-50/50 dark:bg-amber-950/20 dark:border-amber-800 p-4">
-                <div className="flex items-start gap-3">
-                  <Gavel className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
-                  <div className="text-sm text-amber-800 dark:text-amber-300">
-                    <p className="font-medium mb-1">Auktionsdauer: 3 Tage (zentral konfiguriert)</p>
-                    <p className="text-amber-700 dark:text-amber-400">
-                      Neue Auktionen laufen <strong>3 Tage</strong>, gefolgt von <strong>24 h Kaufchance</strong>,
-                      mit bis zu <strong>4 Runden</strong> Marketing-Phase (Soft-Cap: 16 Tage Auktion / 30 Tage Festpreis).
-                      Diese Werte sind in <code className="text-xs bg-amber-100 dark:bg-amber-900/40 px-1 py-0.5 rounded">src/lib/marketing-config.ts</code>{" "}
-                      (<code className="text-xs">MARKETING_CONFIG</code>) fest verdrahtet, weil sie an Soft-Brake, dynamische
-                      Preisreduktion, Kaufchance-Logik und die AGB §6 gekoppelt sind. Änderungen erfolgen ausschließlich
-                      per Code-Deploy, nicht über dieses Formular.
-                    </p>
-                  </div>
-                </div>
-              </div>
-              <div className="grid gap-4 md:grid-cols-2">
-                <div className="space-y-2">
-                  <Label htmlFor="soft-close-minutes">Soft-Close Verlängerung (Minuten)</Label>
-                  <Input
-                    id="soft-close-minutes"
-                    type="number"
-                    value={formData.soft_close_extension_minutes || ''}
-                    onChange={(e) => updateField('soft_close_extension_minutes', parseInt(e.target.value))}
-                    min="1"
-                    max="60"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="min-bid-increment">Min. Geboterhöhung (%)</Label>
-                  <Input
-                    id="min-bid-increment"
-                    type="number"
-                    value={formData.min_bid_increment_percent || ''}
-                    onChange={(e) => updateField('min_bid_increment_percent', parseFloat(e.target.value))}
-                    min="1"
-                    max="10"
-                  />
-                </div>
-              </div>
-              <div className="rounded-lg border border-blue-200 bg-blue-50/50 dark:bg-blue-950/20 dark:border-blue-800 p-4">
-                <div className="flex items-start gap-3">
-                  <Receipt className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
-                  <div className="text-sm text-blue-800 dark:text-blue-300">
-                    <p className="font-medium mb-1">Provisionen verwalten</p>
-                    <p className="text-blue-700 dark:text-blue-400">
-                      Die Provisionsstaffeln und Volumen-Rabatte werden unter{" "}
-                      <a href="/admin/commissions" className="font-medium underline hover:no-underline">
-                        Admin → Provisionen
-                      </a>{" "}
-                      verwaltet. Dort können Sie Staffeln (min./max. Verkaufssumme, Prozent- oder Fixbetrag)
-                      und Volumen-Rabatte pro Händler konfigurieren. Die dort gesetzten Werte werden automatisch
-                      sowohl bei Auktions-Zuschlägen als auch bei Sofortkäufen verwendet.
-                    </p>
-                  </div>
-                </div>
-              </div>
-              <div className="space-y-4 pt-4 border-t">
-                <h4 className="font-medium">Auktionsregeln</h4>
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between rounded-lg border p-4">
-                    <div className="space-y-0.5">
-                      <Label>Reservepreis erforderlich</Label>
-                      <p className="text-sm text-muted-foreground">
-                        Verkäufer müssen einen Mindestpreis festlegen
-                      </p>
-                    </div>
-                    <Switch 
-                      checked={formData.reserve_price_required || false}
-                      onCheckedChange={(checked) => updateField('reserve_price_required', checked)}
-                    />
-                  </div>
-                  <div className="flex items-center justify-between rounded-lg border p-4">
-                    <div className="space-y-0.5">
-                      <Label>Automatische Gebote erlauben</Label>
-                      <p className="text-sm text-muted-foreground">
-                        Bieter können Maximalgebote setzen
-                      </p>
-                    </div>
-                    <Switch 
-                      checked={formData.autobid_enabled || false}
-                      onCheckedChange={(checked) => updateField('autobid_enabled', checked)}
-                    />
-                  </div>
-                  <div className="flex items-center justify-between rounded-lg border p-4">
-                    <div className="space-y-0.5">
-                      <Label>Sofort-Kaufen Option</Label>
-                      <p className="text-sm text-muted-foreground">
-                        Verkäufer können Sofortkaufpreis anbieten
-                      </p>
-                    </div>
-                    <Switch 
-                      checked={formData.buy_now_enabled || false}
-                      onCheckedChange={(checked) => updateField('buy_now_enabled', checked)}
-                    />
-                  </div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
         </TabsContent>
 
         {/* KI / API Settings */}

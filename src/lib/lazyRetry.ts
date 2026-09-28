@@ -9,6 +9,7 @@
  * from serving a stale index.html that still references old chunk hashes.
  */
 import { lazy, type ComponentType } from "react";
+import { logger } from "@/lib/logger";
 
 const RELOAD_KEY = "chunk_reload_attempted";
 
@@ -23,7 +24,7 @@ async function clearServiceWorkerCaches(): Promise<void> {
     if ("caches" in window) {
       const cacheNames = await caches.keys();
       await Promise.all(cacheNames.map((name) => caches.delete(name)));
-      if (import.meta.env.DEV) console.log("[lazyRetry] Cleared all SW caches:", cacheNames);
+      logger.log("[lazyRetry] Cleared all SW caches:", cacheNames);
     }
 
     // 2. Force Service Worker to check for updates
@@ -31,18 +32,18 @@ async function clearServiceWorkerCaches(): Promise<void> {
       const registration = await navigator.serviceWorker.getRegistration();
       if (registration) {
         await registration.update();
-        if (import.meta.env.DEV) console.log("[lazyRetry] Triggered SW update check");
+        logger.log("[lazyRetry] Triggered SW update check");
 
         // If there's a waiting worker, activate it immediately
         if (registration.waiting) {
           registration.waiting.postMessage({ type: "SKIP_WAITING" });
-          if (import.meta.env.DEV) console.log("[lazyRetry] Activated waiting SW");
+          logger.log("[lazyRetry] Activated waiting SW");
         }
       }
     }
   } catch (err) {
     // Non-critical: if cache clearing fails, the reload might still work
-    console.warn("[lazyRetry] Error clearing caches:", err);
+    logger.warn("[lazyRetry] Error clearing caches:", err);
   }
 }
 

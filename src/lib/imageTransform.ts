@@ -36,9 +36,9 @@ const STORAGE_RENDER_MARKER = '/storage/v1/render/image/public/';
  * Upload. Folge: Cloudflare CDN bypassed den Edge-Cache (`REVALIDATED` auf
  * jedem Request) → 700ms-2.4s Latenz pro Bild bei jedem Page-Load.
  *
- * Loesung: Worker `caravanwert.de/img/<bucket>/<path>` proxiede das Bild und
- * ueberschrieb Cache-Control mit `max-age=31536000, immutable`. Cloudflare
- * cachte dann 1 Jahr im Edge → <50ms HIT global.
+ * Loesung: Ein Worker unter `<IMAGE_PROXY_HOST>/img/<bucket>/<path>` proxied
+ * das Bild und ueberschreibt Cache-Control mit `max-age=31536000, immutable`.
+ * Cloudflare cached dann 1 Jahr im Edge → <50ms HIT global.
  *
  * KuechenWert hat (noch) keinen eigenen Worker, deshalb ist der Proxy aktuell
  * ausgeschaltet (IMAGE_PROXY_HOST=null). Die Public-Storage-URLs werden direkt
@@ -70,11 +70,12 @@ export interface ProxiedImageOptions {
  * Wandelt eine Supabase Storage Public-URL in eine /img/-Proxy-URL um, die
  * über den Cloudflare Worker geht und CDN-cached wird.
  *
- * - Public-Storage-URLs (`/storage/v1/object/public/...`) → `caravanwert.de/img/...`
+ * - Public-Storage-URLs (`/storage/v1/object/public/...`) → `<IMAGE_PROXY_HOST>/img/...`
  * - Render-Image-URLs (`/storage/v1/render/image/public/...`) → unverändert
  *   (haben eigene Cache-Header von Supabase Image Transformation)
  * - Externe URLs, signed URLs, leere Strings → unverändert
- * - DEV-Mode (Vite) → unverändert (Worker läuft nur auf caravanwert.de)
+ * - Ohne IMAGE_PROXY_HOST (aktueller Stand) → Supabase Image Transformation
+ *   direkt, wenn eine Breite angegeben ist, sonst unverändert
  *
  * Mit `opts.width` aktiviert sich der **on-demand Resize**: Der Worker fetcht
  * die transformierte Variant via Supabase Image Transformation und cached sie
@@ -90,8 +91,8 @@ export function proxiedImageUrl(
 ): string {
   if (!url || typeof url !== 'string') return url ?? '';
   if (!IMAGE_PROXY_HOST) {
-    // DEV-Mode: kein Worker → Fallback auf Supabase Image Transformation direkt,
-    // damit DEV-Bilder ähnlich klein sind und das Layout nicht abweicht.
+    // Kein Worker → Fallback auf Supabase Image Transformation direkt,
+    // damit die Bilder trotzdem klein ausgeliefert werden.
     if (opts.width) return getStorageImageUrl(url, { width: opts.width, quality: opts.quality ?? 75, resize: 'contain' });
     return url;
   }
@@ -180,13 +181,11 @@ export function getResponsiveImageProps(
     return { src: url, srcSet: '', sizes: opts.sizes };
   }
 
-  // 2026-04-22: srcSet läuft jetzt über den CF-Worker /img/?w= Proxy statt
-  // direkt über die Supabase /render/image/-URLs. Vorteil: Der Worker cached
-  // die transformierten Variants 1 Jahr im CF-Edge (Supabase's eigene
-  // Cache-Header sind kürzer + bypass-anfällig). Ergebnis: erste Anfrage
-  // 200 ms (Supabase resize), alle weiteren <50 ms global vom CF-Edge.
-  // Whitelist-Widths (siehe ProxiedImageOptions) müssen mit dem Worker
-  // synchron sein — andernfalls fällt der Worker auf das Original zurück.
+  // srcSet läuft über proxiedImageUrl: mit IMAGE_PROXY_HOST über den
+  // CF-Worker /img/?w= (1 Jahr Edge-Cache), sonst direkt über die Supabase
+  // /render/image/-URLs. Whitelist-Widths (siehe ProxiedImageOptions) müssen
+  // mit dem Worker synchron sein — andernfalls fällt der Worker auf das
+  // Original zurück.
   const safeWidths = widths.filter((w): w is AllowedResizeWidth =>
     ([320, 480, 640, 768, 960, 1024, 1280, 1536, 1920] as number[]).includes(w),
   );

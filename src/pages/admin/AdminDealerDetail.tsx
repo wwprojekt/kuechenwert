@@ -7,7 +7,7 @@ import { useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { invokeWithAuth, SessionExpiredError, ensureValidRLSSession } from "@/lib/sessionGuard";
+import { invokeWithAuth, ensureValidRLSSession } from "@/lib/sessionGuard";
 import { approveDealerApplication, rejectDealerApplication, deleteDealerApplication } from "@/lib/dealerApplications";
 import { adminSuspendUser } from "@/lib/adminSuspendUser";
 import { toast } from "sonner";
@@ -21,7 +21,6 @@ import {
   Phone,
   Globe,
   MapPin,
-  Calendar,
   FileText,
   CheckCircle2,
   CheckCircle,
@@ -31,7 +30,6 @@ import {
   AlertTriangle,
   Trash2,
   Euro,
-  Gavel,
   Ban,
   ExternalLink,
   CreditCard,
@@ -48,14 +46,6 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -82,9 +72,12 @@ import {
   StatsCard,
 } from "@/components/admin/AdminDetailLayout";
 import { DealerEditDialog } from "@/components/admin/DealerEditDialog";
+import { OffersTable } from "@/components/admin/activity/ActivityTables";
+import { countDealerOffers, fetchDealerOffers, type UserOffer } from "@/components/admin/activity/activityData";
 import { CountryFlag } from "@/components/CountryFlag";
+import type { Tables } from "@/integrations/supabase/types";
 import { logger } from "@/lib/logger";
-import { openPrivateDocument, downloadPrivateDocument } from "@/lib/storageUtils";
+import { openPrivateDocument } from "@/lib/storageUtils";
 
 export default function AdminDealerDetail() {
   const { id } = useParams<{ id: string }>();
@@ -95,7 +88,6 @@ export default function AdminDealerDetail() {
   const [showRejectDialog, setShowRejectDialog] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [rejectReason, setRejectReason] = useState("");
-  const [verifyingDocId, setVerifyingDocId] = useState<string | null>(null);
   const [docNoteDialogId, setDocNoteDialogId] = useState<string | null>(null);
   const [docNote, setDocNote] = useState("");
 
@@ -155,7 +147,7 @@ export default function AdminDealerDetail() {
             verified: false,
             verified_at: null,
             verified_by: null,
-            notes: "Aus Händler-Registrierung importiert",
+            notes: "Aus Studio-Registrierung importiert",
           });
         }
         if (data.trade_license_document_url) {
@@ -181,7 +173,7 @@ export default function AdminDealerDetail() {
             verified: false,
             verified_at: null,
             verified_by: null,
-            notes: "Aus Händler-Registrierung importiert",
+            notes: "Aus Studio-Registrierung importiert",
           });
         }
         if (data.hrb_document_url) {
@@ -198,7 +190,7 @@ export default function AdminDealerDetail() {
             verified: false,
             verified_at: null,
             verified_by: null,
-            notes: "Aus Händler-Registrierung importiert",
+            notes: "Aus Studio-Registrierung importiert",
           });
         }
         effectiveLegalDocs = fallbackDocs;
@@ -210,54 +202,32 @@ export default function AdminDealerDetail() {
         .select("id, status, mandate_reference, created_at")
         .eq("dealer_application_id", data.id);
 
-      // 5. Fetch dealer's bids if approved
-      let bids: any[] = [];
-      let wonAuctions: any[] = [];
-      
+      // 5. Offers in the marketplace (approved studios only)
+      let offers: UserOffer[] = [];
+      let offersTotal = 0;
+      let activeOffers = 0;
+      let acceptedOffers = 0;
       if (data.status === "approved" && data.user_id) {
-        const { data: bidsData } = await supabase
-          .from("bids")
-          .select(`
-            id,
-            amount,
-            created_at,
-            auction:auctions(
-              id,
-              status,
-              current_bid,
-              kitchen:kitchens(manufacturer, model, year)
-            )
-          `)
-          .eq("bidder_id", data.user_id)
-          .order("created_at", { ascending: false })
-          .limit(10);
-        
-        bids = bidsData || [];
-
-        // Get won auctions
-        const { data: wonData } = await supabase
-          .from("auctions")
-          .select(`
-            id,
-            status,
-            current_bid,
-            end_time,
-            kitchen:kitchens(id, manufacturer, model, year, sold_to)
-          `)
-          .eq("kitchen.sold_to", data.user_id)
-          .order("end_time", { ascending: false })
-          .limit(5);
-
-        wonAuctions = wonData || [];
+        [{ offers, total: offersTotal }, activeOffers, acceptedOffers] = await Promise.all([
+          fetchDealerOffers(data.user_id),
+          countDealerOffers(data.user_id, "active"),
+          countDealerOffers(data.user_id, "accepted"),
+        ]);
       }
 
       // 6. Fetch invoices
-      const { data: invoices } = await supabase
-        .from("invoices")
-        .select("*")
-        .eq("dealer_id", data.user_id)
-        .order("created_at", { ascending: false })
-        .limit(5);
+      let invoices: Tables<"invoices">[] = [];
+      let invoicesTotal = 0;
+      if (data.user_id) {
+        const { data: invoiceRows, count } = await supabase
+          .from("invoices")
+          .select("*", { count: "exact" })
+          .eq("dealer_id", data.user_id)
+          .order("created_at", { ascending: false })
+          .limit(5);
+        invoices = invoiceRows ?? [];
+        invoicesTotal = count ?? 0;
+      }
 
       // 7. Check email confirmation status via auth
       let emailConfirmed = true;
@@ -266,8 +236,9 @@ export default function AdminDealerDetail() {
           const { data: authCheck } = await invokeWithAuth('get-dealer-auth-status', {
             body: { userId: data.user_id },
           });
-          if (authCheck && typeof authCheck.emailConfirmed === 'boolean') {
-            emailConfirmed = authCheck.emailConfirmed;
+          const confirmed = (authCheck as { emailConfirmed?: unknown } | null)?.emailConfirmed;
+          if (typeof confirmed === 'boolean') {
+            emailConfirmed = confirmed;
           }
         } catch { /* ignore – assume confirmed */ }
       }
@@ -275,11 +246,15 @@ export default function AdminDealerDetail() {
       return {
         ...data,
         profile,
+        profiles: profile,
         legal_documents: effectiveLegalDocs,
         sepa_mandates: sepaMandates || [],
-        bids,
-        wonAuctions,
-        invoices: invoices || [],
+        offers,
+        offersTotal,
+        activeOffers,
+        acceptedOffers,
+        invoices,
+        invoicesTotal,
         emailConfirmed,
       };
     },
@@ -293,7 +268,7 @@ export default function AdminDealerDetail() {
       await approveDealerApplication(id);
     },
     onSuccess: () => {
-      toast.success("Händler erfolgreich genehmigt");
+      toast.success("Küchenstudio erfolgreich genehmigt");
       logEvent({ action: "dealer_approved", entityType: "dealer", entityId: id, details: { company: dealer?.company_name } });
       queryClient.invalidateQueries({ queryKey: ["adminDealerDetail", id] });
       queryClient.invalidateQueries({ queryKey: ["dealerApplications"] });
@@ -301,7 +276,7 @@ export default function AdminDealerDetail() {
     },
     onError: (error) => {
       logger.error("Approve dealer error:", error);
-      toast.error("Fehler beim Genehmigen des Händlers");
+      toast.error("Fehler beim Genehmigen des Küchenstudios");
     },
   });
 
@@ -312,7 +287,7 @@ export default function AdminDealerDetail() {
       await rejectDealerApplication(id, rejectReason);
     },
     onSuccess: () => {
-      toast.success("Händlerantrag abgelehnt");
+      toast.success("Studio-Bewerbung abgelehnt");
       logEvent({ action: "dealer_rejected", entityType: "dealer", entityId: id, details: { reason: rejectReason } });
       setShowRejectDialog(false);
       setRejectReason("");
@@ -321,7 +296,7 @@ export default function AdminDealerDetail() {
     },
     onError: (error) => {
       logger.error("Reject dealer error:", error);
-      toast.error("Fehler beim Ablehnen des Händlerantrags");
+      toast.error("Fehler beim Ablehnen der Studio-Bewerbung");
     },
   });
 
@@ -332,11 +307,11 @@ export default function AdminDealerDetail() {
     },
     onSuccess: (result) => {
       if (result.mailSent) {
-        toast.success("Händlerantrag gelöscht. Bewerber wurde per E-Mail informiert.");
+        toast.success("Studio-Bewerbung gelöscht. Bewerber wurde per E-Mail informiert.");
       } else if (result.mailError) {
         toast.warning(`Antrag gelöscht – E-Mail-Versand fehlgeschlagen: ${result.mailError}`);
       } else {
-        toast.success("Händlerantrag gelöscht (keine E-Mail-Adresse hinterlegt).");
+        toast.success("Studio-Bewerbung gelöscht (keine E-Mail-Adresse hinterlegt).");
       }
       logEvent({ action: "delete", entityType: "dealer", entityId: id });
       queryClient.invalidateQueries({ queryKey: ["dealerApplications"] });
@@ -350,13 +325,13 @@ export default function AdminDealerDetail() {
 
   const suspendMutation = useMutation({
     mutationFn: async (suspend: boolean) => {
-      if (!dealer?.user_id) throw new Error("Händler nicht geladen");
+      if (!dealer?.user_id) throw new Error("Küchenstudio nicht geladen");
       return await adminSuspendUser(dealer.user_id, suspend);
     },
     onSuccess: (result, suspend) => {
-      const baseMsg = suspend ? "Händler gesperrt" : "Händler entsperrt";
+      const baseMsg = suspend ? "Küchenstudio gesperrt" : "Küchenstudio entsperrt";
       if (result.mailSent) {
-        toast.success(`${baseMsg} – Händler wurde per E-Mail informiert.`);
+        toast.success(`${baseMsg} – das Studio wurde per E-Mail informiert.`);
       } else if (result.mailError) {
         toast.warning(`${baseMsg} – E-Mail-Versand fehlgeschlagen: ${result.mailError}`);
       } else {
@@ -367,7 +342,7 @@ export default function AdminDealerDetail() {
     },
     onError: (error) => {
       logger.error("Suspend dealer error:", error);
-      toast.error("Fehler beim Aktualisieren des Händlerstatus");
+      toast.error("Fehler beim Aktualisieren des Studio-Status");
     },
   });
 
@@ -389,7 +364,6 @@ export default function AdminDealerDetail() {
     },
     onSuccess: (_, { verified }) => {
       toast.success(verified ? "Dokument verifiziert" : "Verifizierung aufgehoben");
-      setVerifyingDocId(null);
       queryClient.invalidateQueries({ queryKey: ["adminDealerDetail", id] });
     },
     onError: (error) => {
@@ -451,9 +425,9 @@ export default function AdminDealerDetail() {
       <div className="flex items-center justify-center h-96">
         <div className="text-center">
           <AlertTriangle className="w-12 h-12 mx-auto text-destructive" />
-          <h2 className="mt-4 text-lg font-semibold">Händler nicht gefunden</h2>
+          <h2 className="mt-4 text-lg font-semibold">Küchenstudio nicht gefunden</h2>
           <p className="mt-2 text-muted-foreground">
-            Der angeforderte Händler existiert nicht.
+            Das angeforderte Küchenstudio existiert nicht.
           </p>
           <Button className="mt-4" onClick={() => navigate("/admin/dealers")}>
             Zurück zur Übersicht
@@ -487,21 +461,17 @@ export default function AdminDealerDetail() {
 
   // Ensure all Supabase relations are always arrays (Supabase may return a single object for 1:N)
   const safeArray = (val: any): any[] => Array.isArray(val) ? val : val ? [val] : [];
-  const dealerBids = safeArray(dealer?.bids);
   const dealerLegalDocs = safeArray(dealer?.legal_documents);
   const dealerSepaMandates = safeArray(dealer?.sepa_mandates);
-  const dealerInvoices = safeArray(dealer?.invoices);
-  const dealerWonAuctions = safeArray(dealer?.wonAuctions);
-
-  const totalBidAmount = dealerBids.reduce((sum: number, bid: any) => sum + bid.amount, 0) || 0;
+  const dealerInvoices = dealer?.invoices ?? [];
 
   return (
     <AdminDetailLayout
-      title={dealer?.company_name || "Händler"}
+      title={dealer?.company_name || "Küchenstudio"}
       subtitle={dealer?.company_city ? `${dealer.company_address || ""}, ${dealer.company_postal_code || ""} ${dealer.company_city}` : undefined}
       status={dealer ? getStatusBadge(dealer.status) : undefined}
       backUrl="/admin/dealers"
-      backLabel="Alle Händler"
+      backLabel="Alle Küchenstudios"
       isLoading={isLoading}
       icon={<Building2 className="w-6 h-6" />}
       actions={
@@ -582,8 +552,8 @@ export default function AdminDealerDetail() {
                   E-Mail nicht bestätigt
                 </p>
                 <p className="text-sm text-amber-700 dark:text-amber-400">
-                  Dieser Händler hat seine E-Mail-Adresse noch nicht bestätigt und kann sich daher nicht einloggen oder bieten.
-                  {dealer.status === 'approved' && ' Trotzdem genehmigt – bitte Händler kontaktieren.'}
+                  Dieses Küchenstudio hat seine E-Mail-Adresse noch nicht bestätigt und kann sich daher nicht einloggen oder Angebote abgeben.
+                  {dealer.status === 'approved' && ' Trotzdem genehmigt – bitte das Studio kontaktieren.'}
                 </p>
               </div>
               <Button
@@ -610,24 +580,24 @@ export default function AdminDealerDetail() {
           {/* Stats Overview */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             <StatsCard
-              label="Gebote gesamt"
-              value={dealerBids.length}
-              icon={<Gavel className="w-5 h-5" />}
+              label="Angebote gesamt"
+              value={dealer.offersTotal}
+              icon={<FileText className="w-5 h-5" />}
             />
             <StatsCard
-              label="Gebotsvolumen"
-              value={formatPrice(totalBidAmount)}
-              icon={<Euro className="w-5 h-5" />}
+              label="Aktive Angebote"
+              value={dealer.activeOffers}
+              icon={<Clock className="w-5 h-5" />}
             />
             <StatsCard
-              label="Gewonnene Auktionen"
-              value={dealerWonAuctions.length}
+              label="Angenommene Angebote"
+              value={dealer.acceptedOffers}
               icon={<Award className="w-5 h-5" />}
             />
             <StatsCard
               label="Rechnungen"
-              value={dealerInvoices.length}
-              icon={<FileText className="w-5 h-5" />}
+              value={dealer.invoicesTotal}
+              icon={<Euro className="w-5 h-5" />}
             />
           </div>
 
@@ -652,7 +622,7 @@ export default function AdminDealerDetail() {
             <div className="p-4 rounded-lg bg-amber-50 border border-amber-200 dark:bg-amber-950/20 dark:border-amber-900">
               <div className="flex items-center gap-2 text-amber-600">
                 <Ban className="w-5 h-5" />
-                <span className="font-semibold">Händlerkonto gesperrt</span>
+                <span className="font-semibold">Studio-Konto gesperrt</span>
               </div>
             </div>
           )}
@@ -931,7 +901,7 @@ export default function AdminDealerDetail() {
                         <FileText className="w-12 h-12 mx-auto mb-3 opacity-50" />
                         <p>Keine Dokumente hochgeladen</p>
                         {dealer.status === "pending" && (
-                          <p className="text-sm mt-2 text-amber-600">Der Händler hat noch keine Dokumente eingereicht.</p>
+                          <p className="text-sm mt-2 text-amber-600">Das Küchenstudio hat noch keine Dokumente eingereicht.</p>
                         )}
                       </div>
                     )}
@@ -962,61 +932,8 @@ export default function AdminDealerDetail() {
                 </TabsContent>
 
                 <TabsContent value="activity">
-                  <DetailSection title="Gebotsaktivität" icon={<Gavel className="w-5 h-5" />}>
-                    {dealerBids.length > 0 ? (
-                      <div className="overflow-x-auto">
-                      <Table>
-                        <TableHeader>
-                          <TableRow>
-                            <TableHead>Auktion</TableHead>
-                            <TableHead>Betrag</TableHead>
-                            <TableHead>Status</TableHead>
-                            <TableHead>Zeitpunkt</TableHead>
-                            <TableHead></TableHead>
-                          </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                          {dealerBids.map((bid: any) => (
-                            <TableRow key={bid.id}>
-                              <TableCell>
-                                <p className="font-medium">
-                                  {bid.auction?.kitchen?.manufacturer} {bid.auction?.kitchen?.model}
-                                </p>
-                                <p className="text-xs text-muted-foreground">
-                                  {bid.auction?.kitchen?.year}
-                                </p>
-                              </TableCell>
-                              <TableCell className="font-semibold">{formatPrice(bid.amount)}</TableCell>
-                              <TableCell>
-                                <Badge variant={bid.auction?.status === "active" ? "default" : "outline"}>
-                                  {bid.auction?.status}
-                                </Badge>
-                              </TableCell>
-                              <TableCell className="text-muted-foreground">
-                                {formatDate(bid.created_at)}
-                              </TableCell>
-                              <TableCell>
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  disabled={!bid.auction?.id}
-                                  title="Auktion öffnen"
-                                  onClick={() => bid.auction?.id && navigate(`/admin/auctions/${bid.auction.id}`)}
-                                >
-                                  <ExternalLink className="w-4 h-4" />
-                                </Button>
-                              </TableCell>
-                            </TableRow>
-                          ))}
-                        </TableBody>
-                      </Table>
-                      </div>
-                    ) : (
-                      <div className="text-center py-8 text-muted-foreground">
-                        <Gavel className="w-12 h-12 mx-auto mb-3 opacity-50" />
-                        <p>Keine Gebotsaktivität</p>
-                      </div>
-                    )}
+                  <DetailSection title="Letzte Angebote" icon={<FileText className="w-5 h-5" />}>
+                    <OffersTable offers={dealer.offers} />
                   </DetailSection>
                 </TabsContent>
               </Tabs>
@@ -1065,7 +982,7 @@ export default function AdminDealerDetail() {
               {dealerInvoices.length > 0 && (
                 <DetailSection title="Letzte Rechnungen" icon={<FileText className="w-5 h-5" />}>
                   <div className="space-y-3">
-                    {dealerInvoices.map((invoice: any) => (
+                    {dealerInvoices.map((invoice) => (
                       <div key={invoice.id} className="p-3 rounded-lg border">
                         <div className="flex items-center justify-between mb-2">
                           <span className="font-mono text-sm">{invoice.invoice_number}</span>
@@ -1077,7 +994,7 @@ export default function AdminDealerDetail() {
                           <span className="text-muted-foreground">
                             {formatDate(invoice.created_at)}
                           </span>
-                          <span className="font-semibold">{formatPrice(invoice.total_amount)}</span>
+                          <span className="font-semibold">{formatPrice(invoice.gross_amount)}</span>
                         </div>
                       </div>
                     ))}
@@ -1109,18 +1026,6 @@ export default function AdminDealerDetail() {
                     <Euro className="w-4 h-4 mr-2" />
                     Finanzen anzeigen
                   </Button>
-                  {dealer.trade_license_url && (
-                    <Button
-                      variant="outline"
-                      className="w-full justify-start"
-                      onClick={async () => {
-                        await openPrivateDocument(dealer.trade_license_url, "dealer-documents");
-                      }}
-                    >
-                      <FileText className="w-4 h-4 mr-2" />
-                      Gewerbeschein
-                    </Button>
-                  )}
                 </CardContent>
               </Card>
             </div>
@@ -1143,7 +1048,7 @@ export default function AdminDealerDetail() {
           <DialogHeader>
             <DialogTitle>Hinweis zum Dokument</DialogTitle>
             <DialogDescription>
-              Fügen Sie einen Hinweis hinzu, der dem Händler in seinem Dashboard angezeigt wird (z.B. "Bitte in besserer Qualität erneut hochladen").
+              Fügen Sie einen Hinweis hinzu, der dem Küchenstudio im Studio-Portal angezeigt wird (z.B. "Bitte in besserer Qualität erneut hochladen").
             </DialogDescription>
           </DialogHeader>
           <Textarea
@@ -1174,7 +1079,7 @@ export default function AdminDealerDetail() {
       <Dialog open={showRejectDialog} onOpenChange={setShowRejectDialog}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Händlerantrag ablehnen</DialogTitle>
+            <DialogTitle>Studio-Bewerbung ablehnen</DialogTitle>
             <DialogDescription>
               Bitte geben Sie einen Grund für die Ablehnung an.
             </DialogDescription>

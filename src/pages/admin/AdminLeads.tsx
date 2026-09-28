@@ -1,4 +1,5 @@
 import { useState, useMemo } from "react";
+import { useSearchParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card } from "@/components/ui/card";
@@ -32,6 +33,7 @@ import { formLabel, leadSummaryFromRow, styleLabel } from "@/features/funnel-a/c
 import { fetchTenderStatuses } from "@/features/marketplace/admin-api";
 import { AdminTenderPanel, TenderStatusBadge } from "@/features/marketplace/components/AdminTenderPanel";
 import { ProjectAnswers } from "@/features/marketplace/components/ProjectAnswers";
+import { LEAD_STATUS_LABELS, leadStatusBadge } from "@/components/admin/leadLabels";
 
 type Lead = Database["public"]["Tables"]["leads"]["Row"];
 
@@ -39,22 +41,6 @@ const FUNNEL_TYPE_LABELS: Record<string, string> = {
   a: "A · Angebote",
   b: "B · Unterbieten",
   traumkueche: "C · Traumküche",
-};
-
-// Spiegelt das Enum public.lead_status.
-const STATUS_LABELS: Record<Lead["status"], { label: string; variant: "default" | "secondary" | "destructive" | "outline" }> = {
-  new: { label: "Neu", variant: "default" },
-  qualified: { label: "Qualifiziert", variant: "secondary" },
-  disqualified: { label: "Aussortiert", variant: "destructive" },
-  matched: { label: "Zugeordnet", variant: "secondary" },
-  in_auction: { label: "In Ausschreibung", variant: "secondary" },
-  sold: { label: "Kontakt verkauft", variant: "secondary" },
-  contacted: { label: "Kontaktiert", variant: "secondary" },
-  appointment_set: { label: "Termin vereinbart", variant: "secondary" },
-  offer_sent: { label: "Angebot gesendet", variant: "secondary" },
-  closed_won: { label: "Gewonnen", variant: "default" },
-  closed_lost: { label: "Verloren", variant: "outline" },
-  disputed: { label: "Reklamiert", variant: "destructive" },
 };
 
 // Spiegelt die Check-Constraint auf leads.bot_check (Turnstile beim Absenden).
@@ -94,9 +80,10 @@ function formatDateTime(iso: string): string {
 }
 
 export default function AdminLeads() {
+  const [searchParams] = useSearchParams();
   const [funnelFilter, setFunnelFilter] = useState<string>("all");
   const [statusFilter, setStatusFilter] = useState<string>("all");
-  const [search, setSearch] = useState("");
+  const [search, setSearch] = useState(() => searchParams.get("q") ?? "");
   const [selected, setSelected] = useState<Lead | null>(null);
 
   const { data: leads, isLoading, error } = useQuery({
@@ -207,7 +194,7 @@ export default function AdminLeads() {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">Alle Status</SelectItem>
-              {Object.entries(STATUS_LABELS).map(([key, { label }]) => (
+              {Object.entries(LEAD_STATUS_LABELS).map(([key, { label }]) => (
                 <SelectItem key={key} value={key}>
                   {label}
                 </SelectItem>
@@ -248,7 +235,7 @@ export default function AdminLeads() {
             </TableHeader>
             <TableBody>
               {filtered.map((lead) => {
-                const status = STATUS_LABELS[lead.status] ?? { label: lead.status, variant: "outline" as const };
+                const status = leadStatusBadge(lead.status);
                 return (
                   <TableRow
                     key={lead.id}

@@ -1,4 +1,5 @@
 import { useState, useMemo, useCallback } from "react";
+import { Link } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { useLiveData } from "@/hooks/useLiveData";
@@ -21,13 +22,11 @@ import { useToast } from "@/hooks/use-toast";
 import { ensureValidRLSSession, isNetworkError } from "@/lib/sessionGuard";
 import { logger } from "@/lib/logger";
 import { deriveInvoice } from "@/lib/invoiceDerived";
+import { getInvoiceStoragePath } from "@/lib/invoiceStorage";
+import { invoiceTypeLabel } from "@/lib/invoiceTypeLabels";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { format } from "date-fns";
 import { de } from "date-fns/locale";
-
-interface DealerProfile {
-  customer_number: string | null;
-}
 
 interface Invoice {
   id: string;
@@ -42,13 +41,32 @@ interface Invoice {
   payment_status: string;
   pdf_url: string | null;
   created_at: string | null;
-  auction?: {
-    id: string;
-    kitchen?: {
-      manufacturer: string;
-      model: string;
-    };
-  };
+  invoice_type: string | null;
+  lead_auction_id: string | null;
+}
+
+const invoiceSortAccessors: Record<string, (i: Invoice) => unknown> = {
+  invoice_number: (i) => i.invoice_number || '',
+  project: (i) => i.lead_auction_id || '',
+  invoice_date: (i) => i.invoice_date || '',
+  due_date: (i) => i.due_date || '',
+  gross_amount: (i) => i.gross_amount || 0,
+};
+
+function ProjectCell({ invoice }: { invoice: Invoice }) {
+  const type = invoiceTypeLabel(invoice.invoice_type);
+  if (!invoice.lead_auction_id) return <span>{type}</span>;
+  return (
+    <div className="min-w-0">
+      <Link
+        to={`/dashboard/projekte/${invoice.lead_auction_id}`}
+        className="font-medium text-primary hover:underline"
+      >
+        Projekt {invoice.lead_auction_id.slice(0, 8)}
+      </Link>
+      <p className="text-xs text-muted-foreground">{type}</p>
+    </div>
+  );
 }
 
 export default function MyInvoices() {
@@ -63,18 +81,11 @@ export default function MyInvoices() {
   const isMobile = useIsMobile();
   const { sortField, sortDirection, handleSort, sortData } = useTableSort<Invoice>('invoice_date', 'desc');
 
-  const invoiceSortAccessors: Record<string, (i: Invoice) => unknown> = {
-    invoice_number: (i) => i.invoice_number || '',
-    vehicle: (i) => `${i.auction?.kitchen?.manufacturer || ''} ${i.auction?.kitchen?.model || ''}`.toLowerCase(),
-    invoice_date: (i) => i.invoice_date || '',
-    due_date: (i) => i.due_date || '',
-    gross_amount: (i) => i.gross_amount || 0,
-  };
-
   const sortedInvoices = useMemo(() => sortData(invoices, invoiceSortAccessors), [invoices, sortData]);
 
+  const userId = user?.id;
   const loadInvoices = useCallback(async () => {
-    if (!user) return;
+    if (!userId) return;
 
     const sessionValid = await ensureValidRLSSession();
     if (!sessionValid) return;
@@ -83,27 +94,18 @@ export default function MyInvoices() {
       const { data: profileData } = await supabase
         .from('profiles')
         .select('customer_number')
-        .eq('id', user.id)
+        .eq('id', userId)
         .single();
       if (profileData?.customer_number) setCustomerNumber(profileData.customer_number);
 
       const { data, error } = await supabase
         .from("invoices")
-        .select(`
-          *,
-          auction:auctions (
-            id,
-            kitchen:kitchens (
-              manufacturer,
-              model
-            )
-          )
-        `)
-        .eq("dealer_id", user.id)
+        .select("*")
+        .eq("dealer_id", userId)
         .order("invoice_date", { ascending: false });
 
       if (error) throw error;
-      setInvoices((data as unknown as Invoice[]) || []);
+      setInvoices(data || []);
       setLoadError(false);
     } catch (error) {
       // Transiente Netzwerkfehler nicht als CONSOLE_ERROR ins error_logs spülen
@@ -116,28 +118,28 @@ export default function MyInvoices() {
     } finally {
       setLoading(false);
     }
-  }, [user?.id]);
+  }, [userId]);
 
   useLiveData(loadInvoices, { enabled: !!user, pollingInterval: 60_000 });
 
   const openInvoicePdf = async (invoice: Invoice) => {
     setPdfLoading(invoice.id);
     try {
-      // 1) Try stored pdf_url
-      if (invoice.pdf_url) {
-        window.open(invoice.pdf_url, '_blank');
-        return;
-      }
-      // 2) Fallback: generate fresh signed URL from storage
+      // Frischer, kurzlebiger Link aus dem Storage; die gespeicherte pdf_url
+      // (bis zu ein Jahr gültig) nur, falls das Signieren scheitert.
       if (user?.id && invoice.invoice_number) {
-        const storagePath = `${user.id}/${invoice.invoice_number}.pdf`;
+        await ensureValidRLSSession();
         const { data } = await supabase.storage
           .from('invoices')
-          .createSignedUrl(storagePath, 3600);
+          .createSignedUrl(getInvoiceStoragePath(user.id, invoice.invoice_number), 3600);
         if (data?.signedUrl) {
-          window.open(data.signedUrl, '_blank');
+          window.open(data.signedUrl, '_blank', 'noopener,noreferrer');
           return;
         }
+      }
+      if (invoice.pdf_url) {
+        window.open(invoice.pdf_url, '_blank', 'noopener,noreferrer');
+        return;
       }
       toast({
         title: 'PDF nicht verfügbar',
@@ -163,6 +165,8 @@ export default function MyInvoices() {
     const derived = deriveInvoice(invoice);
 
     switch (derived.displayStatus) {
+      case "draft":
+        return <Badge variant="outline" className="text-muted-foreground">Entwurf</Badge>;
       case "cancelled":
         return (
           <Badge variant="outline" className="text-muted-foreground border-muted-foreground/40 gap-1">
@@ -330,7 +334,6 @@ export default function MyInvoices() {
           ) : isMobile ? (
             <div className="space-y-3">
               {sortedInvoices.map((invoice) => {
-                const amountPaid = invoice.amount_paid || 0;
                 const derived = deriveInvoice(invoice);
                 const remaining = derived.remainingAmount;
                 const paymentProgress = derived.paymentProgress;
@@ -341,11 +344,9 @@ export default function MyInvoices() {
                     <div className="flex items-start justify-between gap-2">
                       <div className="min-w-0">
                         <p className="font-mono text-xs text-muted-foreground">{invoice.invoice_number}</p>
-                        <p className="font-medium text-sm truncate">
-                          {invoice.auction?.kitchen
-                            ? `${invoice.auction.kitchen.manufacturer} ${invoice.auction.kitchen.model}`
-                            : '—'}
-                        </p>
+                        <div className="text-sm">
+                          <ProjectCell invoice={invoice} />
+                        </div>
                       </div>
                       {getStatusBadge(invoice)}
                     </div>
@@ -392,7 +393,7 @@ export default function MyInvoices() {
               <TableHeader>
                 <TableRow>
                   <SortableTableHead field="invoice_number" label="Rechnungsnr." sortField={sortField} sortDirection={sortDirection} onSort={handleSort} />
-                  <SortableTableHead field="vehicle" label="Fahrzeug" sortField={sortField} sortDirection={sortDirection} onSort={handleSort} />
+                  <SortableTableHead field="project" label="Projekt" sortField={sortField} sortDirection={sortDirection} onSort={handleSort} />
                   <SortableTableHead field="invoice_date" label="Datum" sortField={sortField} sortDirection={sortDirection} onSort={handleSort} />
                   <SortableTableHead field="due_date" label="Fällig" sortField={sortField} sortDirection={sortDirection} onSort={handleSort} />
                   <SortableTableHead field="gross_amount" label="Betrag" sortField={sortField} sortDirection={sortDirection} onSort={handleSort} className="text-right" />
@@ -415,13 +416,7 @@ export default function MyInvoices() {
                         {invoice.invoice_number}
                       </TableCell>
                       <TableCell>
-                        {invoice.auction?.kitchen ? (
-                          <span>
-                            {invoice.auction.kitchen.manufacturer} {invoice.auction.kitchen.model}
-                          </span>
-                        ) : (
-                          <span className="text-muted-foreground">-</span>
-                        )}
+                        <ProjectCell invoice={invoice} />
                       </TableCell>
                       <TableCell>
                         {format(new Date(invoice.invoice_date), "dd.MM.yyyy", { locale: de })}

@@ -2,7 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { ensureValidRLSSession } from "@/lib/sessionGuard";
 import { Link } from "react-router-dom";
-import { Bell, UserPlus, Mail, MessageCircle, Building2, FileWarning, Star, Calendar, AlertTriangle } from "lucide-react";
+import { Bell, UserPlus, Mail, MessageCircle, Building2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Popover,
@@ -20,64 +20,41 @@ interface NotificationItem {
   color: string;
 }
 
+export interface AdminNotificationCounts {
+  leads: number;
+  support: number;
+  contacts: number;
+  dealers: number;
+  unreadEmails: number;
+}
+
 /** Zentrale Zähler-Abfrage – wird von Sidebar und Header geteilt */
 export function useAdminNotificationCounts() {
   return useQuery({
     queryKey: ["adminNotificationCounts"],
-    queryFn: async () => {
+    queryFn: async (): Promise<AdminNotificationCounts | null> => {
       const sessionValid = await ensureValidRLSSession();
       if (!sessionValid) return null;
 
       const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
-      const [
-        wizardRes, valuationRes, supportRes, contactRes,
-        dealerRes, questionsRes, unreadEmailsRes, reviewsRes,
-        claimsRes, appointmentsRes, offersRes, festpreisNoPriceRes,
-        wertrechnerReviewsRes,
-      ] = await Promise.all([
-        supabase.from("wizard_sessions").select("*", { count: "exact", head: true }).is("disposition", null).or("is_viewed.is.null,is_viewed.eq.false"),
-        // leads-Tabelle hat kein is_viewed/disposition – wir zeigen stattdessen die letzten 24h an neuen Funnel-B/C-Leads
-        supabase.from("leads").select("*", { count: "exact", head: true }).neq("funnel_type", "angebot").gte("created_at", twentyFourHoursAgo),
-        supabase.from("support_messages").select("*", { count: "exact", head: true }).is("admin_response", null),
-        supabase.from("contact_messages").select("*", { count: "exact", head: true }).or("status.eq.new,status.is.null"),
-        supabase.from("dealer_applications").select("*", { count: "exact", head: true }).eq("status", "pending"),
-        supabase.from("kitchen_questions").select("*", { count: "exact", head: true }).is("answer", null),
-        supabase.from("admin_emails").select("*", { count: "exact", head: true }).eq("direction", "inbound").eq("status", "unread"),
-        supabase.from("dealer_reviews").select("*", { count: "exact", head: true }).eq("status", "pending"),
-        supabase.from("claims").select("*", { count: "exact", head: true }).or("status.eq.submitted,status.eq.in_review"),
-        supabase.from("appointments").select("*", { count: "exact", head: true }).eq("status", "scheduled").gte("appointment_date", new Date().toISOString().split("T")[0]),
-        supabase.from("post_auction_offers").select("*", { count: "exact", head: true }).in("status", ["pending", "countered"]),
-        // Bug-fix #4: surface festpreis listings that are missing a price.
-        // The DB CHECK constraint (kitchens_instant_price_positive, NOT VALID)
-        // blocks new violators, but legacy rows + the cron auto-extend window
-        // mean admins still need a one-click view. This count powers both the
-        // bell badge and the /admin/kitchens?filter=festpreis_no_price view.
-        supabase
-          .from("kitchens")
-          .select("*", { count: "exact", head: true })
-          .eq("sale_channel", "instant_price")
-          .eq("status", "available")
-          .or("instant_price.is.null,instant_price.eq.0"),
-        supabase.from("wertrechner_reviews").select("*", { count: "exact", head: true }).eq("status", "pending"),
+      const [leadsRes, supportRes, contactRes, dealerRes, unreadEmailsRes] = await Promise.all([
+        // leads hat keine is_viewed-Spalte – gezählt werden die neuen Leads aller Funnel der letzten 24 h.
+        supabase.from("leads").select("id", { count: "exact", head: true }).gte("created_at", twentyFourHoursAgo),
+        supabase.from("support_messages").select("id", { count: "exact", head: true }).or("status.eq.open,status.is.null"),
+        supabase.from("contact_messages").select("id", { count: "exact", head: true }).eq("status", "new").is("deleted_at", null),
+        supabase.from("dealer_applications").select("id", { count: "exact", head: true }).eq("status", "pending"),
+        supabase.from("admin_emails").select("id", { count: "exact", head: true }).eq("direction", "inbound").eq("status", "unread"),
       ]);
 
       return {
-        leads: (wizardRes.count || 0) + (valuationRes.count || 0),
+        leads: leadsRes.count || 0,
         support: supportRes.count || 0,
         contacts: contactRes.count || 0,
         dealers: dealerRes.count || 0,
-        questions: questionsRes.count || 0,
         unreadEmails: unreadEmailsRes.count || 0,
-        reviews: reviewsRes.count || 0,
-        claims: claimsRes.count || 0,
-        appointments: appointmentsRes.count || 0,
-        offers: offersRes.count || 0,
-        festpreisNoPrice: festpreisNoPriceRes.count || 0,
-        wertrechnerReviews: wertrechnerReviewsRes.count || 0,
       };
     },
-    // Badge counts are not time-critical; 90 s is plenty and cuts the total
-    // count-query load in the admin layout by ~66 %. staleTime 60 s prevents
+    // Badge counts are not time-critical; 90 s is plenty. staleTime 60 s prevents
     // refetch-on-window-focus from hammering the DB when an admin alt-tabs.
     refetchInterval: 90000,
     staleTime: 60000,
@@ -90,24 +67,11 @@ export function AdminNotificationBell() {
   const [open, setOpen] = useState(false);
 
   const items: NotificationItem[] = [
-    { label: "Neue Leads", count: data?.leads || 0, path: "/admin/leads", icon: UserPlus, color: "text-cyan-600" },
+    { label: "Neue Leads (24 h)", count: data?.leads || 0, path: "/admin/leads", icon: UserPlus, color: "text-cyan-600" },
     { label: "Ungelesene E-Mails", count: data?.unreadEmails || 0, path: "/admin/email", icon: Mail, color: "text-purple-600" },
-    { label: "Support-Nachrichten", count: data?.support || 0, path: "/admin/messages", icon: MessageCircle, color: "text-orange-600" },
-    { label: "Kontakt-Anfragen", count: data?.contacts || 0, path: "/admin/messages", icon: MessageCircle, color: "text-pink-600" },
-    { label: "Offene Fragen", count: data?.questions || 0, path: "/admin/questions", icon: MessageCircle, color: "text-indigo-600" },
-    { label: "Händler-Bewerbungen", count: data?.dealers || 0, path: "/admin/dealers", icon: Building2, color: "text-amber-600" },
-    { label: "Neue Händler-Bewertungen", count: data?.reviews || 0, path: "/admin/reviews", icon: Star, color: "text-yellow-600" },
-    { label: "Neue Wertrechner-Bewertungen", count: data?.wertrechnerReviews || 0, path: "/admin/wertrechner-reviews", icon: Star, color: "text-amber-600" },
-    { label: "Offene Reklamationen", count: data?.claims || 0, path: "/admin/claims", icon: FileWarning, color: "text-red-600" },
-    { label: "Anstehende Termine", count: data?.appointments || 0, path: "/admin/appointments", icon: Calendar, color: "text-teal-600" },
-    { label: "Offene Angebote", count: data?.offers || 0, path: "/admin/offers", icon: Building2, color: "text-green-600" },
-    {
-      label: "Festpreis ohne Preis",
-      count: data?.festpreisNoPrice || 0,
-      path: "/admin/kitchens?filter=festpreis_no_price",
-      icon: AlertTriangle,
-      color: "text-rose-600",
-    },
+    { label: "Kontaktanfragen", count: data?.contacts || 0, path: "/admin/messages?tab=kontakt", icon: MessageCircle, color: "text-pink-600" },
+    { label: "Support-Nachrichten", count: data?.support || 0, path: "/admin/messages?tab=support", icon: MessageCircle, color: "text-orange-600" },
+    { label: "Studio-Bewerbungen", count: data?.dealers || 0, path: "/admin/dealers", icon: Building2, color: "text-amber-600" },
   ];
 
   const activeItems = items.filter((i) => i.count > 0);

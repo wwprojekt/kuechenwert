@@ -13,35 +13,20 @@ import {
   CommandSeparator,
 } from "@/components/ui/command";
 import {
-  LayoutDashboard, Car, Gavel, Users, Building2, Mail, Settings,
-  TrendingUp, FileText, Calculator, Calendar, Shield, Search,
-  MessageCircle, Star, AlertTriangle, CreditCard, FileSignature,
-  Scale, UserPlus, Receipt, TimerReset, Sparkles,
+  LayoutDashboard, Users, Building2, Mail, Settings,
+  TrendingUp, FileText, Shield, Search, MessageCircle,
+  AlertTriangle, CreditCard, Scale, UserPlus, Receipt, TimerReset, Sparkles,
 } from "lucide-react";
 
 const ADMIN_PAGES = [
   { title: "Übersicht", path: "/admin", icon: LayoutDashboard, keywords: "dashboard startseite home" },
-  { title: "Leads & Anfragen", path: "/admin/leads", icon: UserPlus, keywords: "wizard sessions anfragen kontakt" },
+  { title: "Leads & Anfragen", path: "/admin/leads", icon: UserPlus, keywords: "leads anfragen funnel ausschreibung projekte" },
   { title: "Traumküchen-KI (Funnel C)", path: "/admin/planner-sessions", icon: Sparkles, keywords: "ai ki fal flux openai planner renders visualisierung funnel c traumkueche" },
-  { title: "Küchen-Katalog (Legacy)", path: "/admin/kitchens", icon: Car, keywords: "katalog kitchen hersteller modell legacy caravan" },
-  { title: "Auktionen", path: "/admin/auctions", icon: Gavel, keywords: "gebote bieten versteigerung" },
-  { title: "Nachauktions-Angebote", path: "/admin/offers", icon: Gavel, keywords: "kaufchance angebote" },
   { title: "E-Mail-Center", path: "/admin/email", icon: Mail, keywords: "nachrichten posteingang" },
-  { title: "Support-Nachrichten", path: "/admin/messages", icon: MessageCircle, keywords: "support hilfe" },
-  { title: "Produktfragen", path: "/admin/questions", icon: MessageCircle, keywords: "fragen antworten küche legacy" },
-  { title: "Benutzer", path: "/admin/users", icon: Users, keywords: "nutzer accounts konten" },
-  { title: "Händler", path: "/admin/dealers", icon: Building2, keywords: "dealer bewerbungen" },
-  { title: "Händler-Statistik", path: "/admin/dealer-stats", icon: TrendingUp, keywords: "statistik level ranking" },
-  { title: "Bewertungen", path: "/admin/reviews", icon: Star, keywords: "rezensionen sterne händler dealer" },
-  { title: "Wertrechner-Bewertungen", path: "/admin/wertrechner-reviews", icon: Star, keywords: "wertrechner calculator rezensionen sterne moderation" },
-  { title: "Google-Review-Outreach", path: "/admin/google-reviews", icon: Mail, keywords: "google bewertung outreach mail kampagne suppression unsubscribe" },
-  { title: "Provisionen", path: "/admin/commissions", icon: Calculator, keywords: "provision staffel" },
-  { title: "Kaufverträge", path: "/admin/contracts", icon: FileSignature, keywords: "vertrag dokument" },
+  { title: "Nachrichten", path: "/admin/messages", icon: MessageCircle, keywords: "support kontakt kontaktformular hilfe" },
+  { title: "Benutzer", path: "/admin/users", icon: Users, keywords: "nutzer accounts konten kunden" },
+  { title: "Küchenstudios", path: "/admin/dealers", icon: Building2, keywords: "studios händler dealer bewerbungen" },
   { title: "Finanzen", path: "/admin/financials", icon: CreditCard, keywords: "rechnungen umsatz zahlung" },
-  { title: "Partner-Showrooms", path: "/admin/stations", icon: Building2, keywords: "station standort showroom küchenstudio" },
-  { title: "Termine", path: "/admin/appointments", icon: Calendar, keywords: "besichtigung kalender" },
-  { title: "Übergabe", path: "/admin/handover", icon: Calendar, keywords: "übergabe pin" },
-  { title: "Reklamationen", path: "/admin/claims", icon: AlertTriangle, keywords: "beschwerde reklamation" },
   { title: "Analytics", path: "/admin/analytics", icon: TrendingUp, keywords: "statistik besucher" },
   { title: "Blog", path: "/admin/blog", icon: FileText, keywords: "artikel beitrag" },
   { title: "Rechtliches", path: "/admin/legal", icon: Scale, keywords: "impressum datenschutz agb" },
@@ -51,51 +36,45 @@ const ADMIN_PAGES = [
   { title: "Einstellungen", path: "/admin/settings", icon: Settings, keywords: "konfiguration branding" },
 ];
 
+const EMPTY_RESULTS = { profiles: [], leads: [], invoices: [] };
+
+// Kommas und Klammern würden den PostgREST-`or`-Filter aufbrechen.
+function toSearchPattern(query: string): string {
+  return `%${query.replace(/[,()%*\\]/g, " ").trim()}%`;
+}
+
 function useQuickSearchData(query: string) {
   return useQuery({
     queryKey: ["adminQuickSearch", query],
     queryFn: async () => {
-      if (!query || query.length < 2)
-        return { kitchens: [], profiles: [], auctions: [], invoices: [], contracts: [] };
+      if (!query || query.length < 2) return EMPTY_RESULTS;
       const sessionValid = await ensureValidRLSSession();
-      if (!sessionValid)
-        return { kitchens: [], profiles: [], auctions: [], invoices: [], contracts: [] };
+      if (!sessionValid) return EMPTY_RESULTS;
 
-      const q = `%${query}%`;
-      const [mhRes, profileRes, auctionRes, invoiceRes, contractRes] = await Promise.all([
-        supabase
-          .from("kitchens")
-          .select("id, manufacturer, model, year, status")
-          .or(`manufacturer.ilike.${q},model.ilike.${q}`)
-          .limit(5),
+      const q = toSearchPattern(query);
+      const [profileRes, leadRes, invoiceRes] = await Promise.all([
         supabase
           .from("profiles")
           .select("id, first_name, last_name, email, company_name")
           .or(`first_name.ilike.${q},last_name.ilike.${q},email.ilike.${q},company_name.ilike.${q}`)
           .limit(5),
         supabase
-          .from("auctions")
-          .select("id, status, kitchen:kitchens!inner(manufacturer, model)")
-          .or(`manufacturer.ilike.${q},model.ilike.${q}`, { referencedTable: 'kitchens' })
+          .from("leads")
+          .select("id, first_name, last_name, email, postal_code, created_at")
+          .or(`first_name.ilike.${q},last_name.ilike.${q},email.ilike.${q},postal_code.ilike.${q}`)
+          .order("created_at", { ascending: false })
           .limit(5),
         supabase
           .from("invoices")
-          .select("id, invoice_number, gross_amount, payment_status, dealer_id")
+          .select("id, invoice_number, gross_amount, payment_status")
           .ilike("invoice_number", q)
-          .limit(5),
-        supabase
-          .from("purchase_contracts")
-          .select("id, contract_number, status")
-          .ilike("contract_number", q)
           .limit(5),
       ]);
 
       return {
-        kitchens: mhRes.data || [],
         profiles: profileRes.data || [],
-        auctions: auctionRes.data || [],
+        leads: leadRes.data || [],
         invoices: invoiceRes.data || [],
-        contracts: contractRes.data || [],
       };
     },
     enabled: query.length >= 2,
@@ -129,6 +108,11 @@ export function AdminCommandPalette() {
     [navigate]
   );
 
+  const hasDataResults =
+    (searchData?.profiles.length || 0) > 0 ||
+    (searchData?.leads.length || 0) > 0 ||
+    (searchData?.invoices.length || 0) > 0;
+
   return (
     <>
       <button
@@ -147,29 +131,16 @@ export function AdminCommandPalette() {
 
       <CommandDialog open={open} onOpenChange={setOpen}>
         <CommandInput
-          placeholder="Seite, Kunde, Wohnmobil, Auktion, Rechnung oder Vertrag suchen…"
+          placeholder="Seite, Benutzer, Studio, Lead oder Rechnung suchen…"
           value={query}
           onValueChange={setQuery}
         />
         <CommandList>
           <CommandEmpty>Keine Ergebnisse gefunden.</CommandEmpty>
 
-          {/* Daten-Ergebnisse */}
-          {searchData?.kitchens && searchData.kitchens.length > 0 && (
-            <CommandGroup heading="Küchen-Katalog">
-              {searchData.kitchens.map((m: any) => (
-                <CommandItem key={m.id} onSelect={() => go(`/admin/kitchens/${m.id}`)}>
-                  <Car className="mr-2 h-4 w-4 text-green-600" />
-                  <span>{m.manufacturer} {m.model}</span>
-                  <span className="ml-auto text-xs text-muted-foreground">{m.year}</span>
-                </CommandItem>
-              ))}
-            </CommandGroup>
-          )}
-
-          {searchData?.profiles && searchData.profiles.length > 0 && (
-            <CommandGroup heading="Benutzer">
-              {searchData.profiles.map((p: any) => (
+          {searchData && searchData.profiles.length > 0 && (
+            <CommandGroup heading="Benutzer & Studios">
+              {searchData.profiles.map((p) => (
                 <CommandItem key={p.id} onSelect={() => go(`/admin/users/${p.id}`)}>
                   <Users className="mr-2 h-4 w-4 text-blue-600" />
                   <span>
@@ -181,21 +152,21 @@ export function AdminCommandPalette() {
             </CommandGroup>
           )}
 
-          {searchData?.auctions && searchData.auctions.length > 0 && (
-            <CommandGroup heading="Auktionen">
-              {searchData.auctions.map((a: any) => (
-                <CommandItem key={a.id} onSelect={() => go(`/admin/auctions/${a.id}`)}>
-                  <Gavel className="mr-2 h-4 w-4 text-purple-600" />
-                  <span>{a.kitchen?.manufacturer} {a.kitchen?.model}</span>
-                  <span className="ml-auto text-xs text-muted-foreground">{a.status}</span>
+          {searchData && searchData.leads.length > 0 && (
+            <CommandGroup heading="Leads">
+              {searchData.leads.map((l) => (
+                <CommandItem key={l.id} onSelect={() => go("/admin/leads")}>
+                  <UserPlus className="mr-2 h-4 w-4 text-cyan-600" />
+                  <span>{`${l.first_name || ""} ${l.last_name || ""}`.trim() || l.email || "Ohne Namen"}</span>
+                  <span className="ml-auto text-xs text-muted-foreground">PLZ {l.postal_code}</span>
                 </CommandItem>
               ))}
             </CommandGroup>
           )}
 
-          {searchData?.invoices && searchData.invoices.length > 0 && (
+          {searchData && searchData.invoices.length > 0 && (
             <CommandGroup heading="Rechnungen">
-              {searchData.invoices.map((inv: any) => (
+              {searchData.invoices.map((inv) => (
                 <CommandItem key={inv.id} onSelect={() => go("/admin/financials")}>
                   <Receipt className="mr-2 h-4 w-4 text-amber-600" />
                   <span>{inv.invoice_number}</span>
@@ -207,27 +178,8 @@ export function AdminCommandPalette() {
             </CommandGroup>
           )}
 
-          {searchData?.contracts && searchData.contracts.length > 0 && (
-            <CommandGroup heading="Kaufverträge">
-              {searchData.contracts.map((c: any) => (
-                <CommandItem key={c.id} onSelect={() => go("/admin/contracts")}>
-                  <FileText className="mr-2 h-4 w-4 text-slate-600" />
-                  <span>{c.contract_number}</span>
-                  <span className="ml-auto text-xs text-muted-foreground">{c.status}</span>
-                </CommandItem>
-              ))}
-            </CommandGroup>
-          )}
+          {hasDataResults ? <CommandSeparator /> : null}
 
-          {(searchData?.kitchens?.length || 0) > 0 ||
-          (searchData?.profiles?.length || 0) > 0 ||
-          (searchData?.auctions?.length || 0) > 0 ||
-          (searchData?.invoices?.length || 0) > 0 ||
-          (searchData?.contracts?.length || 0) > 0 ? (
-            <CommandSeparator />
-          ) : null}
-
-          {/* Seiten-Navigation */}
           <CommandGroup heading="Seiten">
             {ADMIN_PAGES.map((page) => (
               <CommandItem key={page.path} onSelect={() => go(page.path)} keywords={[page.keywords]}>

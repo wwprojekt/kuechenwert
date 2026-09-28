@@ -1,10 +1,10 @@
 /**
- * Dialog to edit user profile and manage roles in the admin panel.
+ * Dialog to edit user profile and manage the role in the admin panel.
  *
- * When the admin switches a user's role from "private" (seller) to "dealer",
- * the role is NOT changed directly. Instead a dealer_application with
- * status = "pending" is created so the standard dealer-approval workflow
- * kicks in (banner in dashboard, admin review under "Händler", email
+ * When the admin switches a customer (seller/consumer) to "dealer", the role
+ * is NOT changed directly. Instead a dealer_application with
+ * status = "pending" is created so the standard studio approval workflow
+ * kicks in (banner in dashboard, admin review under "Küchenstudios", email
  * notification, etc.).
  */
 
@@ -22,16 +22,18 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { invokeWithAuth, SessionExpiredError, ensureValidRLSSession } from "@/lib/sessionGuard";
+import { invokeWithAuth, ensureValidRLSSession } from "@/lib/sessionGuard";
 import { adminSuspendUser } from "@/lib/adminSuspendUser";
-import { Loader2, Save, Shield, User, Ban, AlertTriangle, ArrowRightLeft, MapPin } from "lucide-react";
+import { Loader2, Save, Shield, User, Ban, ArrowRightLeft, MapPin } from "lucide-react";
 import { logger } from "@/lib/logger";
+import { CUSTOMER_ROLES, ROLE_INFO, ROLE_ORDER, isAppRole, type AppRole } from "@/components/admin/roleLabels";
 
 interface UserRole {
   role: string;
@@ -68,12 +70,6 @@ interface UserEditDialogProps {
   onOpenChange: (open: boolean) => void;
 }
 
-const AVAILABLE_ROLES = [
-  { value: "admin", label: "Admin", description: "Vollzugriff auf alle Funktionen" },
-  { value: "dealer", label: "Händler", description: "Kann auf Auktionen bieten" },
-  { value: "seller", label: "Verkäufer", description: "Kann Wohnmobile einstellen" },
-];
-
 export function UserEditDialog({
   user,
   open,
@@ -97,8 +93,8 @@ export function UserEditDialog({
     company_city: "",
     company_country: "",
   });
-  const [userRoles, setUserRoles] = useState<string[]>([]);
-  const [originalRoles, setOriginalRoles] = useState<string[]>([]);
+  const [selectedRole, setSelectedRole] = useState<AppRole | null>(null);
+  const [originalRole, setOriginalRole] = useState<AppRole | null>(null);
   const [isSuspended, setIsSuspended] = useState(false);
   const [suspendedReason, setSuspendedReason] = useState("");
 
@@ -120,23 +116,18 @@ export function UserEditDialog({
         company_city: user.company_city || "",
         company_country: user.company_country || "",
       });
-      const roles = user.roles?.map((r) => r.role) || [];
-      setUserRoles(roles);
-      setOriginalRoles(roles);
+      const role = user.roles?.map((r) => r.role).find(isAppRole) ?? null;
+      setSelectedRole(role);
+      setOriginalRole(role);
       setIsSuspended(user.is_suspended || false);
       setSuspendedReason(user.suspended_reason || "");
     }
   }, [user]);
 
-  // Detect if this is a seller→dealer upgrade
-  const isSellerToDealerUpgrade =
-    originalRoles.includes("seller") &&
-    !originalRoles.includes("dealer") &&
-    userRoles.includes("dealer") &&
-    !userRoles.includes("seller");
-
-  // Check if user has dealer role (to show company address section)
-  const isDealer = userRoles.includes("dealer");
+  // Users without a role row count as customers (useUserRole defaults to "seller").
+  const isCustomerToDealerUpgrade =
+    selectedRole === "dealer" &&
+    (originalRole === null || CUSTOMER_ROLES.includes(originalRole));
 
   const updateProfileMutation = useMutation({
     mutationFn: async () => {
@@ -155,12 +146,10 @@ export function UserEditDialog({
           last_name: formData.last_name || null,
           phone: formData.phone || null,
           company_name: formData.company_name || null,
-          // Privatadresse (Verkäufer)
           address_street: formData.address_street || null,
           address_zip: formData.address_zip || null,
           address_city: formData.address_city || null,
           address_country: formData.address_country || null,
-          // Firmenadresse (Händler/Käufer)
           company_street: formData.company_street || null,
           company_zip: formData.company_zip || null,
           company_city: formData.company_city || null,
@@ -199,8 +188,8 @@ export function UserEditDialog({
         }
       }
 
-      // ── Seller → Dealer upgrade path ──────────────────────────────
-      if (isSellerToDealerUpgrade) {
+      // ── Customer → Dealer upgrade path ────────────────────────────
+      if (isCustomerToDealerUpgrade) {
         // 1. Check if there is already a dealer_application for this user
         const { data: existingApp } = await supabase
           .from("dealer_applications")
@@ -209,7 +198,7 @@ export function UserEditDialog({
           .maybeSingle();
 
         if (existingApp && existingApp.status === "pending") {
-          throw new Error("Dieser Benutzer hat bereits einen offenen Händlerantrag.");
+          throw new Error("Dieser Benutzer hat bereits eine offene Studio-Bewerbung.");
         }
 
         // 2. If there is an old rejected/approved application, delete it first
@@ -221,7 +210,7 @@ export function UserEditDialog({
             .eq("id", existingApp.id);
           if (deleteError) {
             logger.error("Failed to delete old dealer application:", deleteError);
-            throw new Error("Alte Händler-Bewerbung konnte nicht entfernt werden.");
+            throw new Error("Alte Studio-Bewerbung konnte nicht entfernt werden.");
           }
         }
 
@@ -234,23 +223,22 @@ export function UserEditDialog({
           .from("dealer_applications")
           .insert({
             user_id: user.id,
-            company_name: formData.company_name || `${contactName} (Händler)`,
-            company_address: formData.company_street || "Wird vom Händler ergänzt",
+            company_name: formData.company_name || `${contactName} (Küchenstudio)`,
+            company_address: formData.company_street || "Wird vom Studio ergänzt",
             company_postal_code: formData.company_zip || "00000",
-            company_city: formData.company_city || "Wird vom Händler ergänzt",
+            company_city: formData.company_city || "Wird vom Studio ergänzt",
             contact_person_name: contactName,
-            phone: formData.phone || "Wird vom Händler ergänzt",
+            phone: formData.phone || "Wird vom Studio ergänzt",
             status: "pending",
           });
 
         if (insertError) {
           logger.error("Failed to create dealer application:", insertError);
-          throw new Error("Händler-Antrag konnte nicht erstellt werden: " + insertError.message);
+          throw new Error("Studio-Bewerbung konnte nicht erstellt werden: " + insertError.message);
         }
 
-        // 4. Keep the role as "private" (seller) – do NOT change to dealer yet.
+        // 4. Keep the customer role – do NOT change to dealer yet.
         //    The approve_dealer_application RPC will handle the role change.
-        //    But still update other profile fields and non-dealer role changes.
 
         // 5. Send notification email to the user (fire-and-forget)
         try {
@@ -259,7 +247,7 @@ export function UserEditDialog({
               email: user.email,
               name: contactName,
               type: "role_upgrade",
-              companyName: formData.company_name || `${contactName} (Händler)`,
+              companyName: formData.company_name || `${contactName} (Küchenstudio)`,
             },
           });
         } catch (emailErr) {
@@ -270,40 +258,13 @@ export function UserEditDialog({
         return; // Skip normal role update logic
       }
 
-      // ── Standard role update (non seller→dealer) ──────────────────
-      const { data: currentRoles, error: getRolesError } = await supabase
-        .from("user_roles")
-        .select("role")
-        .eq("user_id", user.id);
-
-      if (getRolesError) throw getRolesError;
-
-      const currentRoleNames = currentRoles?.map((r) => r.role) || [];
-
-      // Roles to add
-      const rolesToAdd = userRoles.filter((r) => !currentRoleNames.includes(r));
-      // Roles to remove
-      const rolesToRemove = currentRoleNames.filter((r) => !userRoles.includes(r));
-
-      // Add new roles
-      if (rolesToAdd.length > 0) {
-        const { error: addError } = await supabase.from("user_roles").insert(
-          rolesToAdd.map((role) => ({
-            user_id: user.id,
-            role,
-          }))
-        );
-        if (addError) throw addError;
-      }
-
-      // Remove old roles
-      if (rolesToRemove.length > 0) {
-        const { error: removeError } = await supabase
+      // ── Standard role change ──────────────────────────────────────
+      // user_roles allows one row per user, so the role is replaced in place.
+      if (selectedRole && selectedRole !== originalRole) {
+        const { error: roleError } = await supabase
           .from("user_roles")
-          .delete()
-          .eq("user_id", user.id)
-          .in("role", rolesToRemove);
-        if (removeError) throw removeError;
+          .upsert({ user_id: user.id, role: selectedRole }, { onConflict: "user_id" });
+        if (roleError) throw roleError;
       }
 
       return { suspensionResult };
@@ -313,11 +274,11 @@ export function UserEditDialog({
       queryClient.invalidateQueries({ queryKey: ["adminUserDetail"] });
       queryClient.invalidateQueries({ queryKey: ["dealerApplications"] });
 
-      if (isSellerToDealerUpgrade) {
+      if (isCustomerToDealerUpgrade) {
         toast({
-          title: "Händlerantrag erstellt",
+          title: "Studio-Bewerbung erstellt",
           description:
-            "Ein Händlerantrag wurde erstellt. Der Benutzer wurde per E-Mail benachrichtigt. Sie finden den Antrag unter Händler → Offene Anträge.",
+            "Eine Studio-Bewerbung wurde angelegt und der Benutzer per E-Mail benachrichtigt. Sie finden sie unter Küchenstudios → Studio-Bewerbungen.",
         });
       } else {
         const susp = result?.suspensionResult;
@@ -348,12 +309,6 @@ export function UserEditDialog({
       });
     },
   });
-
-  const toggleRole = (role: string) => {
-    setUserRoles((prev) =>
-      prev.includes(role) ? prev.filter((r) => r !== role) : [...prev, role]
-    );
-  };
 
   const handleSave = () => {
     updateProfileMutation.mutate();
@@ -439,14 +394,13 @@ export function UserEditDialog({
 
             {/* Address Tab */}
             <TabsContent value="address" className="space-y-6 mt-4">
-              {/* Privatadresse (Verkäufer) */}
               <div className="space-y-4">
                 <div className="flex items-center gap-2">
                   <MapPin className="w-4 h-4 text-muted-foreground" />
-                  <Label className="text-sm font-semibold">Privatadresse (Verkäufer)</Label>
+                  <Label className="text-sm font-semibold">Privatadresse</Label>
                 </div>
                 <p className="text-xs text-muted-foreground -mt-2">
-                  Wird im Kaufvertrag als Verkäufer-Anschrift verwendet
+                  Auf Studio-Rechnungen nur verwendet, wenn keine Firmenadresse hinterlegt ist
                 </p>
 
                 <div className="space-y-2">
@@ -499,14 +453,13 @@ export function UserEditDialog({
                 </div>
               </div>
 
-              {/* Firmenadresse (Händler/Käufer) */}
               <div className="border-t pt-6 space-y-4">
                 <div className="flex items-center gap-2">
                   <MapPin className="w-4 h-4 text-muted-foreground" />
-                  <Label className="text-sm font-semibold">Firmenadresse (Händler/Käufer)</Label>
+                  <Label className="text-sm font-semibold">Firmenadresse</Label>
                 </div>
                 <p className="text-xs text-muted-foreground -mt-2">
-                  Wird im Kaufvertrag als Käufer-Anschrift verwendet
+                  Rechnungsanschrift für Küchenstudios
                 </p>
 
                 <div className="space-y-2">
@@ -558,18 +511,6 @@ export function UserEditDialog({
                   />
                 </div>
               </div>
-
-              {/* Hinweis für den Admin */}
-              <Alert className="border-blue-200 bg-blue-50 dark:bg-blue-950/30 dark:border-blue-700">
-                <MapPin className="h-4 w-4 text-blue-600" />
-                <AlertDescription className="text-blue-800 dark:text-blue-200 text-sm">
-                  <strong>Hinweis zur Kaufvertragserstellung:</strong> Die
-                  Privatadresse wird als Verkäufer-Anschrift und die Firmenadresse
-                  als Käufer-Anschrift im Kaufvertrag verwendet. Bitte stellen Sie
-                  sicher, dass die Adressdaten vollständig und korrekt sind, bevor
-                  ein Kaufvertrag generiert wird.
-                </AlertDescription>
-              </Alert>
             </TabsContent>
 
             {/* Roles Tab */}
@@ -577,69 +518,56 @@ export function UserEditDialog({
               <div className="space-y-2">
                 <Label className="flex items-center gap-2">
                   <Shield className="w-4 h-4" />
-                  Benutzerrollen
+                  Benutzerrolle
                 </Label>
                 <p className="text-sm text-muted-foreground">
-                  Wählen Sie die Rollen für diesen Benutzer
+                  Jedes Konto hat genau eine Rolle
                 </p>
               </div>
 
-              <div className="space-y-3">
-                {AVAILABLE_ROLES.map((role) => (
-                  <div
-                    key={role.value}
-                    className="flex items-center justify-between p-3 border rounded-lg"
+              <RadioGroup
+                value={selectedRole ?? ""}
+                onValueChange={(value) => {
+                  if (isAppRole(value)) setSelectedRole(value);
+                }}
+                className="gap-3"
+              >
+                {ROLE_ORDER.map((role) => (
+                  <Label
+                    key={role}
+                    htmlFor={`role-${role}`}
+                    className="flex items-center justify-between gap-3 p-3 border rounded-lg cursor-pointer font-normal"
                   >
                     <div className="space-y-1">
                       <div className="flex items-center gap-2">
-                        <Badge
-                          variant={
-                            role.value === "admin"
-                              ? "default"
-                              : role.value === "dealer"
-                              ? "secondary"
-                              : "outline"
-                          }
-                        >
-                          {role.label}
-                        </Badge>
+                        <Badge variant={ROLE_INFO[role].variant}>{ROLE_INFO[role].label}</Badge>
+                        <code className="text-xs text-muted-foreground">{role}</code>
                       </div>
                       <p className="text-xs text-muted-foreground">
-                        {role.description}
+                        {ROLE_INFO[role].description}
                       </p>
                     </div>
-                    <Switch
-                      checked={userRoles.includes(role.value)}
-                      onCheckedChange={() => toggleRole(role.value)}
-                    />
-                  </div>
+                    <RadioGroupItem id={`role-${role}`} value={role} />
+                  </Label>
                 ))}
-              </div>
+              </RadioGroup>
 
-              {/* Info banner when seller→dealer upgrade is detected */}
-              {isSellerToDealerUpgrade && (
+              {isCustomerToDealerUpgrade && (
                 <Alert className="border-amber-300 bg-amber-50 dark:bg-amber-950/30 dark:border-amber-700">
                   <ArrowRightLeft className="h-4 w-4 text-amber-600" />
                   <AlertDescription className="text-amber-800 dark:text-amber-200">
-                    <strong>Rollenwechsel: Verkäufer → Händler</strong>
+                    <strong>Rollenwechsel: Kunde → Küchenstudio</strong>
                     <br />
                     <span className="text-sm">
-                      Die Rolle wird nicht sofort geändert. Stattdessen wird ein
-                      Händlerantrag erstellt, den Sie unter{" "}
-                      <strong>Händler → Offene Anträge</strong> genehmigen können.
+                      Die Rolle wird nicht sofort geändert. Stattdessen wird eine
+                      Studio-Bewerbung angelegt, die Sie unter{" "}
+                      <strong>Küchenstudios → Studio-Bewerbungen</strong> freigeben können.
                       Der Benutzer wird per E-Mail benachrichtigt und sieht im
                       Dashboard einen Hinweis.
                     </span>
                   </AlertDescription>
                 </Alert>
               )}
-
-              <div className="mt-4 p-3 bg-muted rounded-lg">
-                <p className="text-sm">
-                  <strong>Aktive Rollen:</strong>{" "}
-                  {userRoles.length > 0 ? userRoles.join(", ") : "Keine"}
-                </p>
-              </div>
             </TabsContent>
 
             {/* Status Tab */}
@@ -696,12 +624,12 @@ export function UserEditDialog({
           <Button onClick={handleSave} disabled={updateProfileMutation.isPending}>
             {updateProfileMutation.isPending ? (
               <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-            ) : isSellerToDealerUpgrade ? (
+            ) : isCustomerToDealerUpgrade ? (
               <ArrowRightLeft className="w-4 h-4 mr-2" />
             ) : (
               <Save className="w-4 h-4 mr-2" />
             )}
-            {isSellerToDealerUpgrade ? "Händlerantrag erstellen" : "Speichern"}
+            {isCustomerToDealerUpgrade ? "Studio-Bewerbung anlegen" : "Speichern"}
           </Button>
         </DialogFooter>
       </DialogContent>

@@ -8,24 +8,12 @@ import { ensureValidRLSSession } from "@/lib/sessionGuard";
 const ROUTE_LABELS: Record<string, string> = {
   admin: "Admin",
   leads: "Leads & Anfragen",
-  auctions: "Auktionen",
-  kitchens: "Küchen",
+  "planner-sessions": "Traumküchen-KI",
   users: "Benutzer",
-  dealers: "Händler",
-  "dealer-stats": "Händler-Statistik",
+  dealers: "Küchenstudios",
   email: "E-Mail-Center",
-  messages: "Support-Nachrichten",
-  questions: "Küchenfragen",
-  commissions: "Provisionen",
-  contracts: "Kaufverträge",
+  messages: "Nachrichten",
   financials: "Finanzen",
-  stations: "Ankaufstationen",
-  appointments: "Termine",
-  handover: "Übergabe",
-  claims: "Reklamationen",
-  offers: "Nachauktions-Angebote",
-  reviews: "Händler-Bewertungen",
-  "wertrechner-reviews": "Wertrechner-Bewertungen",
   analytics: "Analytics",
   blog: "Blog",
   legal: "Rechtliches",
@@ -35,15 +23,10 @@ const ROUTE_LABELS: Record<string, string> = {
   settings: "Einstellungen",
 };
 
-const BREADCRUMB_QUERY_PARENTS = new Set(["kitchens", "auctions", "users", "dealers"]);
+const BREADCRUMB_QUERY_PARENTS = new Set(["users", "dealers"]);
 
 function isUuid(str: string): boolean {
   return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(str);
-}
-
-function formatKitchenLabel(manufacturer: string | null | undefined, model: string | null | undefined): string | null {
-  const label = [manufacturer, model].filter(Boolean).join(" ").trim();
-  return label || null;
 }
 
 function UuidBreadcrumbLabel({ parentSegment, uuidSegment }: { parentSegment: string; uuidSegment: string }) {
@@ -56,26 +39,6 @@ function UuidBreadcrumbLabel({ parentSegment, uuidSegment }: { parentSegment: st
       if (!sessionOk) return null;
 
       switch (parentSegment) {
-        case "kitchens": {
-          const { data: row, error } = await supabase
-            .from("kitchens")
-            .select("manufacturer, model")
-            .eq("id", uuidSegment)
-            .maybeSingle();
-          if (error) throw error;
-          return formatKitchenLabel(row?.manufacturer, row?.model);
-        }
-        case "auctions": {
-          const { data: row, error } = await supabase
-            .from("auctions")
-            .select("kitchen:kitchens(manufacturer, model)")
-            .eq("id", uuidSegment)
-            .maybeSingle();
-          if (error) throw error;
-          const mh = row?.kitchen as { manufacturer: string; model: string } | null | undefined;
-          const vehicle = formatKitchenLabel(mh?.manufacturer, mh?.model);
-          return vehicle ? `Auktion: ${vehicle}` : null;
-        }
         case "users": {
           const { data: row, error } = await supabase
             .from("profiles")
@@ -102,10 +65,6 @@ function UuidBreadcrumbLabel({ parentSegment, uuidSegment }: { parentSegment: st
       }
     },
   });
-
-  if (parentSegment === "appointments") {
-    return <>Termin-Details</>;
-  }
 
   if (!BREADCRUMB_QUERY_PARENTS.has(parentSegment)) {
     return <>Details</>;

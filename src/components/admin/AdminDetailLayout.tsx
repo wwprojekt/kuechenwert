@@ -3,7 +3,7 @@
  * Provides consistent structure with back navigation, title, and action buttons
  */
 
-import { ReactNode } from "react";
+import type { ReactNode } from "react";
 import { useNavigate } from "react-router-dom";
 import { ArrowLeft, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";

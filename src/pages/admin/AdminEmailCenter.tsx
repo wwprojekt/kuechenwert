@@ -1,8 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { invokeWithAuth, SessionExpiredError, ensureValidRLSSession } from "@/lib/sessionGuard";
+import { invokeWithAuth, ensureValidRLSSession } from "@/lib/sessionGuard";
 import { FunctionsHttpError } from "@supabase/supabase-js";
-import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -26,18 +25,14 @@ import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import {
-  Pagination, PaginationContent, PaginationItem, PaginationLink,
-  PaginationPrevious, PaginationNext, PaginationEllipsis,
-} from "@/components/ui/pagination";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
   Mail, Inbox, Send, Users, FileText, History,
   Clock, CheckCircle, AlertCircle, Eye, Reply, Star,
   StarOff, Archive, Trash2, RefreshCw, Search, Plus,
-  Loader2, ArrowLeft, ExternalLink, User, MessageSquare,
+  Loader2, ArrowLeft, ExternalLink, User,
   BarChart3, Paperclip, CalendarClock, UserCircle, XCircle,
-  ChevronLeft, ChevronRight, Unlink, Zap, Bot, CheckSquare,
+  ChevronLeft, ChevronRight, Zap, Bot,
   Settings, Save, MailCheck, Bell, Shield, MousePointerClick,
 } from "lucide-react";
 import { format } from "date-fns";
@@ -45,10 +40,8 @@ import { de } from "date-fns/locale";
 import DOMPurify from "dompurify";
 import { BRAND } from "@/lib/brand/config";
 
-// Email-Logo (interim): das alte Caravan-Logo liegt noch im alten Supabase-
-// Projekt. Bis ein eigenes KuechenWert-Email-Logo in Supabase Storage hochgeladen
-// ist, zeigen wir das lokale Brand-SVG in der Vorschau an. Fuer tatsaechlich
-// gesendete E-Mails wird der Pfad in site_settings.logo_url verwendet.
+// Die Vorschau zeigt das lokale Brand-SVG. Fuer tatsaechlich gesendete
+// E-Mails wird der Pfad in site_settings.logo_url verwendet.
 const EMAIL_LOGO_URL = `${BRAND.baseUrl}/logo.svg`;
 
 /**
@@ -112,8 +105,8 @@ interface AdminEmail {
   resend_id: string | null;
   related_message_id: string | null;
   related_message_type: string | null;
-  cc: string | null;
-  bcc: string | null;
+  cc: string[] | null;
+  bcc: string[] | null;
   attachments: any[] | null;
   scheduled_at: string | null;
 }
@@ -263,7 +256,6 @@ const PAGE_SIZE = 25;
 // ─── Main Component ─────────────────────────────────────────────────────────
 
 export default function AdminEmailCenter() {
-  const { user, session } = useAuth();
   const [activeTab, setActiveTab] = useState("inbox");
   const [inboxCount, setInboxCount] = useState(0);
 
@@ -374,7 +366,6 @@ interface EmailBodyContent {
 type EmailBodyRow = Pick<AdminEmail, "body_html" | "body_text" | "attachments" | "resend_id" | "cc" | "bcc">;
 
 function InboxTab({ onUnreadCountChange }: { onUnreadCountChange: (count: number) => void }) {
-  const { session } = useAuth();
   const [items, setItems] = useState<InboxItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedItem, setSelectedItem] = useState<InboxItem | null>(null);
@@ -643,7 +634,7 @@ function InboxTab({ onUnreadCountChange }: { onUnreadCountChange: (count: number
     if (!selectedItem || !replyContent.trim()) return;
     setIsReplying(true);
     try {
-      const { data, error } = await invokeWithAuth('send-admin-email', {
+      const { error } = await invokeWithAuth('send-admin-email', {
         body: {
           to: selectedItem.from_email,
           subject: `Re: ${selectedItem.subject}`,
@@ -923,11 +914,12 @@ function InboxTab({ onUnreadCountChange }: { onUnreadCountChange: (count: number
                         const { data, error } = await invokeWithAuth('fetch-attachment-url', {
                           body: { emailId: emailResendId, attachmentId: att.id },
                         });
+                        const downloadUrl = (data as { download_url?: string } | null)?.download_url;
                         if (error) {
                           toast.error("Anhang konnte nicht geladen werden");
                           console.error('Failed to fetch attachment URL:', error);
-                        } else if (data?.download_url) {
-                          window.open(data.download_url, '_blank');
+                        } else if (downloadUrl) {
+                          window.open(downloadUrl, '_blank');
                         } else {
                           toast.error("Kein Download-Link verfügbar");
                         }
@@ -1495,7 +1487,7 @@ function ComposeTab() {
     if (!to || !subject || !bodyHtml) { toast.error("Bitte füllen Sie alle Pflichtfelder aus"); return; }
     setIsSending(true);
     try {
-      const { data, error } = await invokeWithAuth('send-admin-email', {
+      const { error } = await invokeWithAuth('send-admin-email', {
         body: {
           to,
           subject,
@@ -1801,8 +1793,9 @@ function BroadcastTab() {
         body: { group: selectedGroup, is_promotional: promotional },
       });
       if (error) throw error;
-      setRecipientCount(data.count);
-      setRecipientLabel(data.label);
+      const result = data as { count?: number; label?: string } | null;
+      setRecipientCount(result?.count ?? null);
+      setRecipientLabel(result?.label ?? "");
     } catch (error) {
       console.error("Error fetching count:", error);
       setRecipientCount(null);
@@ -1823,7 +1816,7 @@ function BroadcastTab() {
     }
     setIsTesting(true);
     try {
-      const { data, error } = await invokeWithAuth('send-broadcast-email', {
+      const { error } = await invokeWithAuth('send-broadcast-email', {
         body: {
           subject,
           body_html: bodyHtml,
@@ -1836,41 +1829,42 @@ function BroadcastTab() {
       });
       if (error) throw error;
       toast.success(`Test-E-Mail an ${testEmail} gesendet`);
-    } catch (error: any) {
+    } catch {
       toast.error("Test-E-Mail konnte nicht gesendet werden");
     } finally {
       setIsTesting(false);
     }
   };
 
-  const checkDuplicate = async () => {
-    if (!group || !subject) return;
-    const sessionValid = await ensureValidRLSSession();
-    if (!sessionValid) return;
-    try {
-      const twoHoursAgo = new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString();
-      const { data } = await supabase
-        .from('admin_emails')
-        .select('id, created_at')
-        .eq('email_type', 'broadcast')
-        .eq('broadcast_group', group)
-        .eq('subject', subject)
-        .gte('created_at', twoHoursAgo)
-        .limit(1);
-      if (data && data.length > 0) {
-        const sentAt = format(new Date(data[0].created_at), "dd.MM.yy HH:mm", { locale: de });
-        setDuplicateWarning(`Eine Rundmail mit dem gleichen Betreff wurde bereits am ${sentAt} an diese Gruppe gesendet.`);
-      } else {
-        setDuplicateWarning(null);
-      }
-    } catch (e) {
-      console.error('Duplicate check error:', e);
-    }
-  };
-
   useEffect(() => {
-    if (group && subject) checkDuplicate();
-    else setDuplicateWarning(null);
+    if (!group || !subject) {
+      setDuplicateWarning(null);
+      return;
+    }
+    const checkDuplicate = async () => {
+      const sessionValid = await ensureValidRLSSession();
+      if (!sessionValid) return;
+      try {
+        const twoHoursAgo = new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString();
+        const { data } = await supabase
+          .from('admin_emails')
+          .select('id, created_at')
+          .eq('email_type', 'broadcast')
+          .eq('broadcast_group', group)
+          .eq('subject', subject)
+          .gte('created_at', twoHoursAgo)
+          .limit(1);
+        if (data && data.length > 0) {
+          const sentAt = format(new Date(data[0].created_at), "dd.MM.yy HH:mm", { locale: de });
+          setDuplicateWarning(`Eine Rundmail mit dem gleichen Betreff wurde bereits am ${sentAt} an diese Gruppe gesendet.`);
+        } else {
+          setDuplicateWarning(null);
+        }
+      } catch (e) {
+        console.error('Duplicate check error:', e);
+      }
+    };
+    checkDuplicate();
   }, [group, subject]);
 
   const handleBroadcast = async () => {
@@ -1887,9 +1881,10 @@ function BroadcastTab() {
         },
       });
       if (error) throw error;
-      toast.success(`Rundmail gesendet: ${data.sent} erfolgreich, ${data.failed} fehlgeschlagen`);
+      const result = data as { sent?: number; failed?: number } | null;
+      toast.success(`Rundmail gesendet: ${result?.sent ?? 0} erfolgreich, ${result?.failed ?? 0} fehlgeschlagen`);
       setSubject(""); setBodyHtml(""); setGroup(""); setRecipientCount(null);
-    } catch (error: any) {
+    } catch {
       toast.error("Rundmail konnte nicht gesendet werden");
     } finally {
       setIsSending(false);
@@ -2155,7 +2150,7 @@ function TemplatesTab() {
       }
       setEditingTemplate(null); setIsCreating(false);
       fetchTemplates();
-    } catch (error) {
+    } catch {
       toast.error("Fehler beim Speichern");
     } finally {
       setIsSaving(false);
@@ -2171,7 +2166,7 @@ function TemplatesTab() {
 
   const getCategoryLabel = (cat: string) => {
     const labels: Record<string, string> = {
-      general: 'Allgemein', dealer: 'Händler', customer: 'Kunden',
+      general: 'Allgemein', dealer: 'Küchenstudios', customer: 'Kunden',
       system: 'System', marketing: 'Marketing',
     };
     return labels[cat] || cat;
@@ -2200,7 +2195,7 @@ function TemplatesTab() {
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="general">Allgemein</SelectItem>
-                  <SelectItem value="dealer">Händler</SelectItem>
+                  <SelectItem value="dealer">Küchenstudios</SelectItem>
                   <SelectItem value="customer">Kunden</SelectItem>
                   <SelectItem value="system">System</SelectItem>
                   <SelectItem value="marketing">Marketing</SelectItem>
@@ -2305,34 +2300,36 @@ function SentTab() {
 
   // Cache for lazy-loaded body content (body_html / cc / bcc fetched only when
   // the user opens an email in detail view). Keeps the list query light.
-  const [bodyCache, setBodyCache] = useState<Map<string, { body_html: string; body_text: string; cc: string | null; bcc: string | null; resend_id: string | null }>>(new Map());
+  const [bodyCache, setBodyCache] = useState<Map<string, { body_html: string; body_text: string; cc: string[] | null; bcc: string[] | null; resend_id: string | null }>>(new Map());
   const [loadingBody, setLoadingBody] = useState(false);
 
-  const fetchSent = async () => {
-    setLoading(true);
-    const sessionValid = await ensureValidRLSSession();
-    if (!sessionValid) { setLoading(false); return; }
+  useEffect(() => {
+    const fetchSent = async () => {
+      setLoading(true);
+      const sessionValid = await ensureValidRLSSession();
+      if (!sessionValid) { setLoading(false); return; }
 
-    // body_html / body_text excluded from the list — they're lazy-loaded when
-    // the admin opens an individual email. Limit lowered from 1000 → 500 since
-    // the UI paginates at 25 per page; 500 already covers ~20 pages.
-    const query = supabase
-      .from('admin_emails')
-      .select('id, sender_email, sender_name, recipient_email, recipient_name, subject, status, email_type, direction, created_at, scheduled_at, broadcast_id, broadcast_group')
-      .eq('direction', 'outbound')
-      .order('created_at', { ascending: false })
-      .limit(500);
+      // body_html / body_text excluded from the list — they're lazy-loaded when
+      // the admin opens an individual email. Limit lowered from 1000 → 500 since
+      // the UI paginates at 25 per page; 500 already covers ~20 pages.
+      const query = supabase
+        .from('admin_emails')
+        .select('id, sender_email, sender_name, recipient_email, recipient_name, subject, status, email_type, direction, created_at, scheduled_at, broadcast_id, broadcast_group')
+        .eq('direction', 'outbound')
+        .order('created_at', { ascending: false })
+        .limit(500);
 
-    if (filter !== 'all') {
-      query.eq('email_type', filter);
-    }
+      if (filter !== 'all') {
+        query.eq('email_type', filter);
+      }
 
-    const { data } = await query;
-    setEmails((data || []) as any);
-    setLoading(false);
-  };
-
-  useEffect(() => { fetchSent(); setPage(1); }, [filter]);
+      const { data } = await query;
+      setEmails((data || []) as any);
+      setLoading(false);
+    };
+    fetchSent();
+    setPage(1);
+  }, [filter]);
 
   // Lazy-load body when user opens a sent email
   useEffect(() => {
@@ -2390,7 +2387,7 @@ function SentTab() {
 
   if (selectedEmail) {
     const cachedBody = bodyCache.get(selectedEmail.id);
-    const ccLine = cachedBody?.cc ?? selectedEmail.cc;
+    const ccLine = (cachedBody?.cc ?? selectedEmail.cc)?.join(", ");
     const resendId = cachedBody?.resend_id ?? selectedEmail.resend_id;
     return (
       <Card>
@@ -2906,67 +2903,66 @@ function StatsTab() {
 
 // ─── Tab: System-E-Mails (automatisch versendete E-Mails) ─────────────────
 
-// System email types that are NOT manually sent by admin
-const SYSTEM_EMAIL_TYPES = [
-  'auto_response',
-  'welcome',
-  'wizard_recovery_first',
-  'wizard_recovery_followup',
-  'inactivity',
-  'appointment_reminder',
-  'payment_reminder',
-  'auction_summary',
-  'favorite_notification',
-  'scheduled',
-];
-
+// Unbekannte Typen (z. B. aus älteren Protokollen) werden mit ihrem Schlüssel angezeigt.
 const SYSTEM_TYPE_LABELS: Record<string, string> = {
   auto_response: 'Auto-Antwort',
   welcome: 'Willkommen',
-  wizard_recovery_first: 'Wizard-Erinnerung (2h)',
-  wizard_recovery_followup: 'Wizard-Follow-up (14d)',
-  inactivity: 'Inaktivitäts-Erinnerung',
-  appointment_reminder: 'Termin-Erinnerung',
-  payment_reminder: 'Zahlungserinnerung',
-  auction_summary: 'Auktions-Zusammenfassung',
-  favorite_notification: 'Favoriten-Benachrichtigung',
-  scheduled: 'Geplant',
-  bid_outbid: 'Überboten',
-  bid_confirmed: 'Gebot bestätigt',
-  expert_valuation: 'Expertenbewertung',
-  bid_won: 'Auktion gewonnen',
-  auction_ending: 'Auktion endet bald',
-  new_auction: 'Neue Auktion',
-  lead_notification: 'Lead-Benachrichtigung',
+  contact_admin: 'Kontaktanfrage',
   contact_confirmation: 'Kontaktbestätigung',
+  lead_notification: 'Lead-Benachrichtigung',
+  email_confirmation_resend: 'Bestätigungslink',
+  account_deleted: 'Konto gelöscht',
+  dealer_application: 'Studio-Bewerbung',
+  dealer_application_deleted: 'Studio-Bewerbung gelöscht',
+  dealer_documents_request: 'Dokument-Anforderung',
+  project_created: 'Projekt angelegt',
+  project_link: 'Projektlink',
+  project_admin_new: 'Projekt-Hinweis (Admin)',
+  project_new_dealer: 'Neues Projekt (Studio)',
+  project_new_offer: 'Neues Angebot (Kunde)',
+  project_awarded_consumer: 'Zuschlag (Kunde)',
+  project_awarded_dealer: 'Zuschlag (Studio)',
+  project_not_awarded_dealer: 'Kein Zuschlag (Studio)',
+  project_contact_unlocked: 'Kontakt freigeschaltet',
+  project_tender_ended: 'Ausschreibung beendet',
+  order_admin: 'Auftrag (Admin)',
+  order_reminder: 'Auftrags-Erinnerung',
+  order_update_consumer: 'Auftragsstatus (Kunde)',
+  order_update_dealer: 'Auftragsstatus (Studio)',
+  invoice: 'Rechnung',
+  invoice_cancellation: 'Rechnungsstorno',
+  invoice_issue_blocked: 'Rechnung blockiert',
+  payment_confirmation: 'Zahlungsbestätigung',
+  payment_reminder: 'Zahlungserinnerung',
+  scheduled: 'Geplant',
   password_reset: 'Passwort zurücksetzen',
   verification: 'Verifizierung',
-  invoice: 'Rechnung',
   notification: 'Benachrichtigung',
 };
 
 const SYSTEM_TYPE_COLORS: Record<string, string> = {
   auto_response: 'text-blue-600 border-blue-600',
   welcome: 'text-green-600 border-green-600',
-  wizard_recovery_first: 'text-orange-600 border-orange-600',
-  wizard_recovery_followup: 'text-amber-600 border-amber-600',
-  inactivity: 'text-purple-600 border-purple-600',
-  appointment_reminder: 'text-cyan-600 border-cyan-600',
-  payment_reminder: 'text-red-600 border-red-600',
-  auction_summary: 'text-indigo-600 border-indigo-600',
-  favorite_notification: 'text-pink-600 border-pink-600',
-  scheduled: 'text-slate-600 border-slate-600',
-  bid_outbid: 'text-red-500 border-red-500',
-  bid_confirmed: 'text-emerald-600 border-emerald-600',
-  expert_valuation: 'text-violet-600 border-violet-600',
-  bid_won: 'text-green-700 border-green-700',
-  auction_ending: 'text-yellow-600 border-yellow-600',
-  new_auction: 'text-sky-600 border-sky-600',
-  lead_notification: 'text-teal-600 border-teal-600',
+  contact_admin: 'text-lime-700 border-lime-700',
   contact_confirmation: 'text-lime-600 border-lime-600',
+  lead_notification: 'text-teal-600 border-teal-600',
+  dealer_application: 'text-violet-600 border-violet-600',
+  dealer_documents_request: 'text-violet-500 border-violet-500',
+  project_admin_new: 'text-teal-700 border-teal-700',
+  project_new_dealer: 'text-sky-600 border-sky-600',
+  project_new_offer: 'text-emerald-600 border-emerald-600',
+  project_awarded_consumer: 'text-green-700 border-green-700',
+  project_awarded_dealer: 'text-green-700 border-green-700',
+  project_tender_ended: 'text-yellow-600 border-yellow-600',
+  order_admin: 'text-indigo-700 border-indigo-700',
+  order_update_consumer: 'text-indigo-600 border-indigo-600',
+  order_update_dealer: 'text-indigo-500 border-indigo-500',
+  invoice: 'text-amber-700 border-amber-700',
+  invoice_issue_blocked: 'text-red-600 border-red-600',
+  payment_reminder: 'text-red-600 border-red-600',
+  scheduled: 'text-slate-600 border-slate-600',
   password_reset: 'text-gray-600 border-gray-600',
   verification: 'text-blue-500 border-blue-500',
-  invoice: 'text-amber-700 border-amber-700',
   notification: 'text-gray-500 border-gray-500',
 };
 
@@ -3298,8 +3294,6 @@ function SettingsTab() {
   const [leadForwardEmail, setLeadForwardEmail] = useState("");
 
   // Benachrichtigungen
-  const [notifyNewAuction, setNotifyNewAuction] = useState(true);
-  const [notifyNewBid, setNotifyNewBid] = useState(true);
   const [notifyNewRegistration, setNotifyNewRegistration] = useState(true);
 
   // E-Mail-Absender
@@ -3315,7 +3309,7 @@ function SettingsTab() {
     try {
       const { data, error } = await supabase
         .from("site_settings")
-        .select("id, lead_forward_email, notify_new_auction, notify_new_bid, notify_new_registration, from_email, contact_email")
+        .select("id, lead_forward_email, notify_new_registration, from_email, contact_email")
         .limit(1)
         .single();
 
@@ -3323,8 +3317,6 @@ function SettingsTab() {
       if (data) {
         setSettingsId(data.id);
         setLeadForwardEmail(data.lead_forward_email || "");
-        setNotifyNewAuction(data.notify_new_auction ?? true);
-        setNotifyNewBid(data.notify_new_bid ?? true);
         setNotifyNewRegistration(data.notify_new_registration ?? true);
         setFromEmail(data.from_email || "");
         setContactEmail(data.contact_email || "");
@@ -3345,8 +3337,6 @@ function SettingsTab() {
         .from("site_settings")
         .update({
           lead_forward_email: leadForwardEmail.trim() || null,
-          notify_new_auction: notifyNewAuction,
-          notify_new_bid: notifyNewBid,
           notify_new_registration: notifyNewRegistration,
           from_email: fromEmail.trim(),
           contact_email: contactEmail.trim(),
@@ -3384,7 +3374,7 @@ function SettingsTab() {
             Lead-Weiterleitung
           </CardTitle>
           <CardDescription>
-            Fahrzeuganfragen, Wizard-Bewertungen und Wertrechner-Anfragen werden an diese E-Mail-Adresse weitergeleitet, anstatt im Posteingang angezeigt zu werden.
+            Admin-Hinweise aus dem Marktplatz (neue Küchenprojekte, Zuschläge, Ausschreibungen ohne Angebot, Auftrags- und Rechnungsprobleme) werden an diese E-Mail-Adresse gesendet.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -3393,12 +3383,12 @@ function SettingsTab() {
             <Input
               id="lead-forward-email"
               type="email"
-              placeholder="z.B. r.daban@icloud.com"
+              placeholder={`z. B. ${BRAND.supportEmail}`}
               value={leadForwardEmail}
               onChange={(e) => setLeadForwardEmail(e.target.value)}
             />
             <p className="text-sm text-muted-foreground">
-              Alle Lead-Benachrichtigungen werden an diese Adresse gesendet. Leer lassen, um die Standard-Admin-E-Mail zu verwenden.
+              Leer lassen, um die Kontakt-E-Mail aus der E-Mail-Konfiguration zu verwenden.
             </p>
           </div>
         </CardContent>
@@ -3416,26 +3406,6 @@ function SettingsTab() {
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="flex items-center justify-between p-3 rounded-lg border">
-            <div>
-              <p className="font-medium">Neue Auktion erstellt</p>
-              <p className="text-sm text-muted-foreground">Benachrichtigung, wenn ein Verkäufer eine neue Auktion erstellt</p>
-            </div>
-            <Switch
-              checked={notifyNewAuction}
-              onCheckedChange={setNotifyNewAuction}
-            />
-          </div>
-          <div className="flex items-center justify-between p-3 rounded-lg border">
-            <div>
-              <p className="font-medium">Neues Gebot abgegeben</p>
-              <p className="text-sm text-muted-foreground">Benachrichtigung bei jedem neuen Gebot auf eine Auktion</p>
-            </div>
-            <Switch
-              checked={notifyNewBid}
-              onCheckedChange={setNotifyNewBid}
-            />
-          </div>
           <div className="flex items-center justify-between p-3 rounded-lg border">
             <div>
               <p className="font-medium">Neue Registrierung</p>

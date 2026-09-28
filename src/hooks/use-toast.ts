@@ -198,43 +198,23 @@ function toast({ ...props }: Toast) {
 
     // Business-Events erkennen: Normale Geschäftsvorgänge die kein Fehler-Logging benötigen
     const businessEventTitles = [
-      'Sie wurden überboten!',
-      'Neues Gebot!',
-      'Gebot fehlgeschlagen',
-      'Ungültiges Gebot',
       'Ungültiger Betrag',
-      'Auktion beendet',
-      'Angebot abgelehnt',
-      'Gegenangebot abgelehnt',
       'Anmeldung erforderlich',
       'Sitzung abgelaufen',
       'Nicht gefunden',
       'Gleiches Passwort',
       'Passwort bereits vergeben',
       'Zu viele Anfragen',
-      'KI-Bewertung vorübergehend nicht verfügbar',
       'Dokument-Upload fehlgeschlagen',
-      'Favorit konnte nicht',
     ];
     const businessEventDescriptions = [
-      'Bieten Sie erneut!',
       'Bitte melden Sie sich an',
       'Ihre Sitzung ist abgelaufen',
       'muss sich vom bisherigen Passwort unterscheiden',
       'muss sich vom alten Passwort unterscheiden',
       'ist bereits Ihr aktuelles Passwort',
       'Bitte warten Sie einige Minuten',
-      'Mindestgebot',
-      'Gebot muss mindestens',
-      'Gebot zu niedrig',
       'nach dem Login im Dashboard nachreichen',
-      // Seller-seitige Pflichtfeld-Validierung beim Inserat-Edit / Dealer-
-      // Listing-Create: juristische Mindestanforderungen (AGB §6.4 c), kein
-      // echter Bug. Quelle: ListingEdit.tsx, DealerListingCreate.tsx und
-      // RPC seller_update_listing_prices (ERRCODE 23514).
-      'Mindestpreis ist Pflicht für Auktions-Inserate',
-      'Sofortkauf-Preis ist Pflicht für Sofortkauf-Inserate',
-      'Bearbeitung gesperrt: Die Auktion ist aktiv',
     ];
     const isBusinessEvent = businessEventTitles.some(t => titleStr.includes(t))
       || businessEventDescriptions.some(d => errorMessage.includes(d));

@@ -88,12 +88,12 @@ const CONVERSION_LABELS_DE: Record<ConversionValueKey, { title: string; subtitle
   WIZARD_ABGESCHLOSSEN:    { title: "Wizard abgeschlossen (Altlast)", subtitle: "Wird nicht mehr ausgelöst",                  primary: false },
   WERTRECHNER_LEAD:        { title: "Wertrechner Lead (Altlast)",   subtitle: "Wird nicht mehr ausgelöst",                     primary: false },
   WERTERMITTLUNG_LEAD:     { title: "Wertermittlung Lead (Altlast)", subtitle: "Wird nicht mehr ausgelöst",                    primary: false },
-  TERMINBUCHUNG:           { title: "Terminbuchung (Altlast)",      subtitle: "Nur noch aus dem alten Termin-Dialog",          primary: false },
-  LANDING_PAGE_LEAD:       { title: "Landing Page Funnel",          subtitle: "Sekundär – Funnel-Einstieg ohne Kontaktdaten",  primary: false },
-  WIZARD_GESTARTET:        { title: "Wizard gestartet",             subtitle: "Sekundär – Schritt 1 geladen",                  primary: false },
-  WIZARD_FAHRZEUGDATEN:    { title: "Wizard Fahrzeugdaten",         subtitle: "Sekundär – Schritt 2 erreicht",                 primary: false },
-  BEWERTUNG_ABGESCHLOSSEN: { title: "Bewertung abgeschlossen (Legacy)", subtitle: "DEPRECATED – wird nicht mehr gefeuert",     primary: false },
-  INSTANT_BUY:             { title: "Sofortkauf (€-Wert)",          subtitle: "0 = Kaufpreis übernehmen, sonst fester Wert",   primary: false },
+  TERMINBUCHUNG:           { title: "Terminbuchung (Altlast)",      subtitle: "Wird nicht mehr ausgelöst",                     primary: false },
+  LANDING_PAGE_LEAD:       { title: "Landing Page Funnel (Altlast)", subtitle: "Wird nicht mehr ausgelöst",                    primary: false },
+  WIZARD_GESTARTET:        { title: "Wizard gestartet (Altlast)",   subtitle: "Wird nicht mehr ausgelöst",                     primary: false },
+  WIZARD_FAHRZEUGDATEN:    { title: "Wizard Schritt 2 (Altlast)",   subtitle: "Wird nicht mehr ausgelöst",                     primary: false },
+  BEWERTUNG_ABGESCHLOSSEN: { title: "Bewertung abgeschlossen (Altlast)", subtitle: "Wird nicht mehr ausgelöst",                primary: false },
+  INSTANT_BUY:             { title: "Sofortkauf (Altlast)",         subtitle: "Wird nicht mehr ausgelöst",                     primary: false },
 };
 
 function ensureConfig(value: TrackingFormValue): TrackingConfig {
@@ -478,7 +478,7 @@ export default function AdminTrackingTab({ value, onChange }: AdminTrackingTabPr
               <h4 className="font-medium">Conversion-Werte (€)</h4>
               <p className="text-sm text-muted-foreground">
                 Smart Bidding nutzt diese Werte zur Optimierung. Höher = aggressiver geboten.
-                Datenbasis: Wizard 41% Konversionsrate, Wertrechner 2%.
+                Aktiv ausgelöst werden nur Küchenanfrage und Kontaktformular.
               </p>
             </div>
             <div className="grid gap-2 md:grid-cols-2 lg:grid-cols-3">
@@ -520,7 +520,7 @@ export default function AdminTrackingTab({ value, onChange }: AdminTrackingTabPr
             )}
           </CardTitle>
           <CardDescription>
-            Optional. Aktuell nutzt CaravanWert direktes gtag.js statt GTM. Ein Container kann zusätzlich
+            Optional. Aktuell nutzt KüchenWert direktes gtag.js statt GTM. Ein Container kann zusätzlich
             geladen werden, falls Sie GTM für Tag-Management einführen wollen.
           </CardDescription>
         </CardHeader>
@@ -674,7 +674,7 @@ export default function AdminTrackingTab({ value, onChange }: AdminTrackingTabPr
                       <Input
                         value={cfg.microsoft_ads.conversion_goals[key] || ""}
                         onChange={(e) => updateMsGoal(key, e.target.value)}
-                        placeholder="z.B. wizard_completed"
+                        placeholder="z.B. kuechen_lead"
                         className="font-mono text-xs"
                       />
                     </div>

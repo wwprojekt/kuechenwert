@@ -4,11 +4,10 @@
  * Logs all errors to Supabase error_logs table for admin dashboard
  */
 
-import React, { Component, type ErrorInfo, type ReactNode } from 'react';
+import { Component, type ErrorInfo, type ReactNode } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { AlertTriangle, RefreshCw, Home } from 'lucide-react';
-import { errorLogger } from '@/lib/errorLogger';
 import { logErrorToSupabase } from '@/lib/errorLogService';
 import { getPageTitle } from '@/lib/germanErrors';
 
@@ -46,21 +45,6 @@ export class ErrorBoundary extends Component<Props, State> {
   }
 
   componentDidCatch(error: Error, errorInfo: ErrorInfo): void {
-    // Bestehendes Logging beibehalten
-    errorLogger.logError({
-      message: `React Error Boundary: ${error.message}`,
-      stack: error.stack,
-      name: error.name,
-      severity: 'high',
-      category: 'ui',
-      tags: ['react-error-boundary'],
-      metadata: {
-        componentStack: errorInfo.componentStack,
-        errorBoundary: 'GlobalErrorBoundary',
-      },
-    });
-
-    // NEU: In Supabase error_logs loggen für Admin-Dashboard
     logErrorToSupabase({
       errorCode: 'UI_REACT_ERROR_BOUNDARY',
       errorMessage: 'Ein unerwarteter Fehler ist aufgetreten. Unser Team wurde automatisch benachrichtigt.',
@@ -80,10 +64,6 @@ export class ErrorBoundary extends Component<Props, State> {
     this.setState({ errorInfo });
     this.props.onError?.(error, errorInfo);
   }
-
-  private handleReload = (): void => {
-    window.location.reload();
-  };
 
   private handleGoHome = (): void => {
     window.location.href = '/';
@@ -172,206 +152,6 @@ export class ErrorBoundary extends Component<Props, State> {
             </div>
           </Card>
         </div>
-      );
-    }
-
-    return this.props.children;
-  }
-}
-
-/**
- * Higher-order component to wrap components with error boundary
- */
-export function withErrorBoundary<P extends object>(
-  WrappedComponent: React.ComponentType<P>,
-  errorBoundaryProps?: Omit<Props, 'children'>
-) {
-  const WithErrorBoundaryComponent = (props: P) => (
-    <ErrorBoundary {...errorBoundaryProps}>
-      <WrappedComponent {...props} />
-    </ErrorBoundary>
-  );
-
-  WithErrorBoundaryComponent.displayName = 
-    `withErrorBoundary(${WrappedComponent.displayName || WrappedComponent.name})`;
-
-  return WithErrorBoundaryComponent;
-}
-
-/**
- * Specialized Error Boundary for Form Components
- */
-export class FormErrorBoundary extends Component<Props, State> {
-  constructor(props: Props) {
-    super(props);
-    this.state = {
-      hasError: false,
-      error: null,
-      errorInfo: null,
-      errorId: null,
-    };
-  }
-
-  static getDerivedStateFromError(error: Error): Partial<State> {
-    return {
-      hasError: true,
-      error,
-      errorId: `form-error-${Date.now()}`,
-    };
-  }
-
-  componentDidCatch(error: Error, errorInfo: ErrorInfo): void {
-    errorLogger.logError({
-      message: `Form Error: ${error.message}`,
-      stack: error.stack,
-      severity: 'medium',
-      category: 'ui',
-      tags: ['form-error', 'react-error-boundary'],
-      metadata: {
-        componentStack: errorInfo.componentStack,
-        errorBoundary: 'FormErrorBoundary',
-      },
-    });
-
-    // In Supabase loggen
-    logErrorToSupabase({
-      errorCode: 'UI_FORM_ERROR',
-      errorMessage: 'Beim Laden des Formulars ist ein Fehler aufgetreten.',
-      errorCategory: 'ui',
-      severity: 'high',
-      pagePath: window.location.pathname,
-      pageTitle: getPageTitle(window.location.pathname),
-      componentName: 'FormErrorBoundary',
-      originalError: error.message,
-      stackTrace: error.stack,
-      metadata: {
-        componentStack: errorInfo.componentStack,
-      },
-    });
-
-    this.setState({ errorInfo });
-    this.props.onError?.(error, errorInfo);
-  }
-
-  private handleRetry = (): void => {
-    this.setState({
-      hasError: false,
-      error: null,
-      errorInfo: null,
-      errorId: null,
-    });
-  };
-
-  render(): ReactNode {
-    if (this.state.hasError) {
-      return (
-        <div className="bg-destructive/10 border border-destructive/20 rounded-lg p-4">
-          <div className="flex items-center gap-3">
-            <AlertTriangle className="h-5 w-5 text-destructive flex-shrink-0" />
-            <div className="flex-1">
-              <h3 className="font-medium text-destructive">
-                Formular-Fehler
-              </h3>
-              <p className="text-sm text-muted-foreground mt-1">
-                Beim Laden des Formulars ist ein Fehler aufgetreten.
-              </p>
-            </div>
-            <Button 
-              size="sm" 
-              variant="outline"
-              onClick={this.handleRetry}
-              className="flex items-center gap-1"
-            >
-              <RefreshCw className="h-3 w-3" />
-              Wiederholen
-            </Button>
-          </div>
-        </div>
-      );
-    }
-
-    return this.props.children;
-  }
-}
-
-/**
- * Specialized Error Boundary for Auction Components
- */
-export class AuctionErrorBoundary extends Component<Props, State> {
-  constructor(props: Props) {
-    super(props);
-    this.state = {
-      hasError: false,
-      error: null,
-      errorInfo: null,
-      errorId: null,
-    };
-  }
-
-  static getDerivedStateFromError(error: Error): Partial<State> {
-    return {
-      hasError: true,
-      error,
-      errorId: `auction-error-${Date.now()}`,
-    };
-  }
-
-  componentDidCatch(error: Error, errorInfo: ErrorInfo): void {
-    errorLogger.logError({
-      message: `Auction Error: ${error.message}`,
-      stack: error.stack,
-      severity: 'high',
-      category: 'business',
-      tags: ['auction-error', 'react-error-boundary'],
-      metadata: {
-        componentStack: errorInfo.componentStack,
-        errorBoundary: 'AuctionErrorBoundary',
-      },
-    });
-
-    // In Supabase loggen
-    logErrorToSupabase({
-      errorCode: 'BIZ_AUCTION_ERROR',
-      errorMessage: 'Die Auktionsdaten konnten nicht geladen werden.',
-      errorCategory: 'business',
-      severity: 'high',
-      pagePath: window.location.pathname,
-      pageTitle: getPageTitle(window.location.pathname),
-      componentName: 'AuctionErrorBoundary',
-      originalError: error.message,
-      stackTrace: error.stack,
-      metadata: {
-        componentStack: errorInfo.componentStack,
-      },
-    });
-
-    this.setState({ errorInfo });
-    this.props.onError?.(error, errorInfo);
-  }
-
-  private handleRetry = (): void => {
-    this.setState({
-      hasError: false,
-      error: null,
-      errorInfo: null,
-      errorId: null,
-    });
-  };
-
-  render(): ReactNode {
-    if (this.state.hasError) {
-      return (
-        <Card className="p-6 text-center">
-          <AlertTriangle className="h-8 w-8 text-destructive mx-auto mb-4" />
-          <h3 className="text-lg font-medium mb-2">Auktions-Fehler</h3>
-          <p className="text-muted-foreground mb-4">
-            Die Auktionsdaten konnten nicht geladen werden.
-          </p>
-          <Button onClick={this.handleRetry} className="flex items-center gap-2 mx-auto">
-            <RefreshCw className="h-4 w-4" />
-            Erneut laden
-          </Button>
-        </Card>
       );
     }
 

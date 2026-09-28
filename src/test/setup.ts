@@ -4,9 +4,9 @@
  */
 
 import '@testing-library/jest-dom';
-import { vi } from 'vitest';
+import { afterEach, vi } from 'vitest';
 
-// Mock environment variables
+// Mock Supabase client (tests override it with their own vi.mock where needed)
 vi.mock('@/integrations/supabase/client', () => ({
   supabase: {
     auth: {
@@ -82,26 +82,6 @@ vi.mock('@/lib/imageOptimization', () => ({
       format: 'jpeg',
     },
   },
-}));
-
-// Mock error logger
-vi.mock('@/lib/errorLogger', () => ({
-  errorLogger: {
-    logError: vi.fn(),
-    logException: vi.fn(),
-    logBusinessError: vi.fn(),
-    logApiError: vi.fn(),
-    logAuthError: vi.fn(),
-    setUserContext: vi.fn(),
-    clearUserContext: vi.fn(),
-  },
-  logError: vi.fn(),
-  logException: vi.fn(),
-  logBusinessError: vi.fn(),
-  logApiError: vi.fn(),
-  logAuthError: vi.fn(),
-  setUserContext: vi.fn(),
-  clearUserContext: vi.fn(),
 }));
 
 // Mock service worker

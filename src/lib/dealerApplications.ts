@@ -4,37 +4,20 @@
  */
 
 import { supabase } from '@/integrations/supabase/client';
+import type { Database } from '@/integrations/supabase/types';
 import { invokeWithAuth, ensureValidRLSSession } from '@/lib/sessionGuard';
 
-export interface DealerApplicationData {
-  id: string;
-  user_id: string;
-  company_name: string;
-  company_address: string;
-  company_postal_code: string;
-  company_city: string;
-  tax_id: string;
-  trade_license_number: string;
-  contact_person_name: string;
-  contact_person_position?: string;
-  phone: string;
-  website?: string;
-  business_description?: string;
-  status: 'pending' | 'approved' | 'rejected';
-  rejection_reason?: string;
-  submitted_at: string;
-  reviewed_at?: string;
-  reviewed_by?: string;
-  confirmation_link_sent_count?: number;
-  confirmation_link_last_sent_at?: string;
-  document_request_sent_count?: number;
-  document_request_last_sent_at?: string;
-  profiles?: {
-    first_name?: string;
-    last_name?: string;
-    email: string;
-  };
-}
+type ProfileRow = Database['public']['Tables']['profiles']['Row'];
+
+export type DealerApplicationRow = Database['public']['Tables']['dealer_applications']['Row'];
+
+/** Profile columns joined onto an application; the studio list also loads phone and suspension. */
+export type ApplicantProfile = Pick<ProfileRow, 'id' | 'email' | 'first_name' | 'last_name'> &
+  Partial<Pick<ProfileRow, 'phone' | 'is_suspended'>>;
+
+export type DealerApplicationData = DealerApplicationRow & {
+  profiles: ApplicantProfile | null;
+};
 
 /**
  * Fetch all dealer applications (admin only)
@@ -287,6 +270,6 @@ export async function deleteDealerApplication(
     companyName: result.companyName ?? null,
     mailSent: result.mailSent ?? false,
     mailError: result.mailError ?? null,
-    message: result.message ?? "Händlerbewerbung wurde gelöscht",
+    message: result.message ?? "Studio-Bewerbung wurde gelöscht",
   };
 }

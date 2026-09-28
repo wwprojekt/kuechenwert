@@ -1,210 +1,113 @@
-/**
- * useUserRole Hook Tests
- * Tests for user role management and permission logic
- */
-
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { renderHook, waitFor } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { createElement, type ReactNode } from 'react';
+import { supabase } from '@/integrations/supabase/client';
+import { useUserRole } from './useUserRole';
 
-// Mock modules before importing the hook
+type RoleResult = { data: { role: string } | null; error: null };
+
+const mocks = vi.hoisted(() => ({
+  user: null as { id: string } | null,
+  maybeSingle: vi.fn<() => Promise<RoleResult>>(),
+  refreshSession: vi.fn(),
+  ensureValidRLSSession: vi.fn<() => Promise<boolean>>(),
+}));
+
 vi.mock('@/contexts/AuthContext', () => ({
-  useAuth: vi.fn(() => ({
-    user: null,
-    session: null,
-    loading: false,
-    signOut: async () => {},
-  })),
+  useAuth: () => ({ user: mocks.user, session: null, loading: false, signOut: vi.fn() }),
 }));
 
 vi.mock('@/integrations/supabase/client', () => ({
   supabase: {
     from: vi.fn(() => ({
-      select: vi.fn(() => ({
-        eq: vi.fn(() => Promise.resolve({ data: [], error: null })),
-      })),
+      select: () => ({ eq: () => ({ limit: () => ({ maybeSingle: mocks.maybeSingle }) }) }),
     })),
+    auth: { refreshSession: mocks.refreshSession },
   },
 }));
 
-// Mocks are set up above - imports are used implicitly by vi.mock
-// We don't need to explicitly import them as we're just testing the hook behavior
+vi.mock('@/lib/sessionGuard', () => ({
+  ensureValidRLSSession: mocks.ensureValidRLSSession,
+  isLockError: () => false,
+}));
 
-// Helper function to test getPrimaryRole logic (extracted from hook)
-function getPrimaryRole(roles: ('admin' | 'dealer' | 'seller')[]): 'admin' | 'dealer' | 'seller' {
-  if (roles.includes('admin')) return 'admin';
-  if (roles.includes('dealer')) return 'dealer';
-  return 'seller';
-}
+vi.mock('@/lib/logger', () => ({
+  logger: { log: vi.fn(), info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() },
+}));
 
-// Helper function to test getDashboardRoute logic (extracted from hook)
-function getDashboardRoute(primaryRole: 'admin' | 'dealer' | 'seller'): string {
-  switch (primaryRole) {
-    case 'admin':
-      return '/admin';
-    case 'dealer':
-      return '/dashboard';
-    case 'seller':
-      return '/dashboard';
-    default:
-      return '/dashboard';
-  }
-}
-
-// Create a test wrapper with QueryClient
-const createWrapper = () => {
-  const queryClient = new QueryClient({
-    defaultOptions: {
-      queries: {
-        retry: false,
-      },
-    },
-  });
-  
-  return ({ children }: { children: ReactNode }) =>
+function renderUserRole() {
+  const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  const wrapper = ({ children }: { children: ReactNode }) =>
     createElement(QueryClientProvider, { client: queryClient }, children);
-};
+  return renderHook(() => useUserRole(), { wrapper });
+}
 
-describe('getPrimaryRole', () => {
-  it('should return admin when roles include admin', () => {
-    expect(getPrimaryRole(['admin'])).toBe('admin');
-    expect(getPrimaryRole(['admin', 'dealer'])).toBe('admin');
-    expect(getPrimaryRole(['admin', 'dealer', 'seller'])).toBe('admin');
-  });
+function roleRow(role: string | null): RoleResult {
+  return { data: role ? { role } : null, error: null };
+}
 
-  it('should return dealer when roles include dealer but not admin', () => {
-    expect(getPrimaryRole(['dealer'])).toBe('dealer');
-    expect(getPrimaryRole(['dealer', 'seller'])).toBe('dealer');
-  });
-
-  it('should return seller when only seller role', () => {
-    expect(getPrimaryRole(['seller'])).toBe('seller');
-  });
-
-  it('should return seller for empty roles', () => {
-    expect(getPrimaryRole([])).toBe('seller');
-  });
-
-  it('should follow hierarchy admin > dealer > seller', () => {
-    // Admin takes precedence
-    expect(getPrimaryRole(['seller', 'admin'])).toBe('admin');
-    expect(getPrimaryRole(['dealer', 'admin'])).toBe('admin');
-    
-    // Dealer takes precedence over seller
-    expect(getPrimaryRole(['seller', 'dealer'])).toBe('dealer');
-  });
-});
-
-describe('getDashboardRoute', () => {
-  it('should return /admin for admin role', () => {
-    expect(getDashboardRoute('admin')).toBe('/admin');
-  });
-
-  it('should return /dashboard for dealer role', () => {
-    expect(getDashboardRoute('dealer')).toBe('/dashboard');
-  });
-
-  it('should return /dashboard for seller role', () => {
-    expect(getDashboardRoute('seller')).toBe('/dashboard');
-  });
-});
-
-describe('useUserRole hook', () => {
+describe('useUserRole', () => {
   beforeEach(() => {
-    vi.clearAllMocks();
+    mocks.user = { id: 'user-1' };
+    mocks.maybeSingle.mockReset();
+    mocks.refreshSession.mockReset().mockResolvedValue({ error: null });
+    mocks.ensureValidRLSSession.mockReset().mockResolvedValue(true);
   });
 
-  it('should return seller defaults when no user is logged in', async () => {
-    // Import the hook dynamically to get fresh instance with mocks
-    const { useUserRole } = await import('./useUserRole');
-    
-    const { result } = renderHook(() => useUserRole(), {
-      wrapper: createWrapper(),
-    });
+  it('returns empty role data without querying when nobody is logged in', () => {
+    mocks.user = null;
+    const { result } = renderUserRole();
 
-    // Should return default seller values for unauthenticated user
-    await waitFor(() => {
-      expect(result.current.isLoading).toBe(false);
-    });
-    
-    // No user means no roles data
-    expect(result.current.primaryRole).toBeUndefined();
-    expect(result.current.isAdmin).toBeUndefined();
-    expect(result.current.isDealer).toBeUndefined();
-    expect(result.current.isSeller).toBeUndefined();
-  });
-
-  it('should return getDashboardRoute function', async () => {
-    const { useUserRole } = await import('./useUserRole');
-    
-    const { result } = renderHook(() => useUserRole(), {
-      wrapper: createWrapper(),
-    });
-
-    expect(typeof result.current.getDashboardRoute).toBe('function');
-    // Should return /dashboard for default seller
+    expect(result.current.isLoading).toBe(false);
+    expect(result.current.primaryRole).toBeNull();
+    expect(result.current.isAdmin).toBe(false);
+    expect(result.current.isDealer).toBe(false);
+    expect(result.current.isSeller).toBe(false);
     expect(result.current.getDashboardRoute()).toBe('/dashboard');
-  });
-});
-
-describe('Permission logic', () => {
-  it('admin should have access to all areas', () => {
-    const roles: ('admin' | 'dealer' | 'seller')[] = ['admin'];
-    const isAdmin = roles.includes('admin');
-    const isDealer = roles.includes('dealer');
-    const isSeller = roles.includes('seller');
-
-    const canAccessAdmin = isAdmin;
-    const canAccessDealer = isDealer || isAdmin;
-    const canAccessUser = isSeller || isDealer || isAdmin;
-
-    expect(canAccessAdmin).toBe(true);
-    expect(canAccessDealer).toBe(true);
-    expect(canAccessUser).toBe(true);
+    expect(supabase.from).not.toHaveBeenCalled();
   });
 
-  it('dealer should not have admin access but can access dealer and user areas', () => {
-    const roles: ('admin' | 'dealer' | 'seller')[] = ['dealer'];
-    const isAdmin = roles.includes('admin');
-    const isDealer = roles.includes('dealer');
-    const isSeller = roles.includes('seller');
+  it.each([
+    ['admin', { isAdmin: true, isDealer: false, isSeller: false }, '/admin'],
+    ['dealer', { isAdmin: false, isDealer: true, isSeller: false }, '/dashboard'],
+    ['seller', { isAdmin: false, isDealer: false, isSeller: true }, '/dashboard'],
+    ['consumer', { isAdmin: false, isDealer: false, isSeller: false }, '/dashboard'],
+  ])('resolves the %s role', async (role, flags, route) => {
+    mocks.maybeSingle.mockResolvedValue(roleRow(role));
+    const { result } = renderUserRole();
 
-    const canAccessAdmin = isAdmin;
-    const canAccessDealer = isDealer || isAdmin;
-    const canAccessUser = isSeller || isDealer || isAdmin;
-
-    expect(canAccessAdmin).toBe(false);
-    expect(canAccessDealer).toBe(true);
-    expect(canAccessUser).toBe(true);
+    expect(result.current.isLoading).toBe(true);
+    await waitFor(() => expect(result.current.primaryRole).toBe(role));
+    expect(result.current).toMatchObject({ ...flags, isLoading: false });
+    expect(result.current.getDashboardRoute()).toBe(route);
+    expect(supabase.from).toHaveBeenCalledWith('user_roles');
   });
 
-  it('seller should only have user access', () => {
-    const roles: ('admin' | 'dealer' | 'seller')[] = ['seller'];
-    const isAdmin = roles.includes('admin');
-    const isDealer = roles.includes('dealer');
-    const isSeller = roles.includes('seller');
+  it('re-queries after a session refresh when no role row is found', async () => {
+    mocks.maybeSingle.mockResolvedValueOnce(roleRow(null)).mockResolvedValueOnce(roleRow('dealer'));
+    const { result } = renderUserRole();
 
-    const canAccessAdmin = isAdmin;
-    const canAccessDealer = isDealer || isAdmin;
-    const canAccessUser = isSeller || isDealer || isAdmin;
-
-    expect(canAccessAdmin).toBe(false);
-    expect(canAccessDealer).toBe(false);
-    expect(canAccessUser).toBe(true);
+    await waitFor(() => expect(result.current.primaryRole).toBe('dealer'));
+    expect(mocks.refreshSession).toHaveBeenCalledTimes(1);
+    expect(mocks.maybeSingle).toHaveBeenCalledTimes(2);
   });
 
-  it('hasAnyRole should work correctly', () => {
-    const allRoles: ('admin' | 'dealer' | 'seller')[] = ['dealer', 'seller'];
-    
-    const hasAnyRole = (requiredRoles: ('admin' | 'dealer' | 'seller')[]) => {
-      return requiredRoles.some(role => allRoles.includes(role));
-    };
+  it('falls back to seller when the user has no role row at all', async () => {
+    mocks.maybeSingle.mockResolvedValue(roleRow(null));
+    const { result } = renderUserRole();
 
-    expect(hasAnyRole(['admin'])).toBe(false);
-    expect(hasAnyRole(['dealer'])).toBe(true);
-    expect(hasAnyRole(['seller'])).toBe(true);
-    expect(hasAnyRole(['admin', 'dealer'])).toBe(true);
-    expect(hasAnyRole(['admin', 'seller'])).toBe(true);
+    await waitFor(() => expect(result.current.primaryRole).toBe('seller'));
+    expect(result.current.isSeller).toBe(true);
+  });
+
+  it('reports an expired session instead of guessing a role', async () => {
+    mocks.ensureValidRLSSession.mockResolvedValue(false);
+    const { result } = renderUserRole();
+
+    await waitFor(() => expect(result.current.error?.message).toBe('SESSION_EXPIRED'));
+    expect(result.current.isLoading).toBe(false);
+    expect(result.current.primaryRole).toBeNull();
+    expect(mocks.maybeSingle).not.toHaveBeenCalled();
   });
 });

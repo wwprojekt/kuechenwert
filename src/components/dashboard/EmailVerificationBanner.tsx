@@ -103,7 +103,7 @@ export default function EmailVerificationBanner({ email }: EmailVerificationBann
         <div className="flex items-center gap-2 text-xs text-amber-700 dark:text-amber-400">
           <Shield className="w-3.5 h-3.5 flex-shrink-0" />
           <span>
-            Nach der Bestätigung können Sie Ihr Inserat vollständig verwalten, Fotos hochladen und Ihr Fahrzeug an Händler vermitteln lassen.
+            Nach der Bestätigung ist Ihr Konto vollständig aktiv und wir können Sie zuverlässig über Küchenprojekte und Angebote informieren.
           </span>
         </div>
       </div>

@@ -7,14 +7,12 @@ import { logger } from "@/lib/logger";
 import { Card } from "@/components/ui/card";
 import {
   fetchDealerApplications,
-  approveDealerApplication,
-  rejectDealerApplication,
   deleteDealerApplication,
+  type DealerApplicationData as DealerApplication,
 } from "@/lib/dealerApplications";
 import { adminSuspendUser } from "@/lib/adminSuspendUser";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import {
   Table,
@@ -40,7 +38,6 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { useState, useMemo, useEffect } from "react";
 import {
@@ -61,63 +58,28 @@ import {
   AlertTriangle,
   UserPlus,
   FileUp,
-  Send,
-  ShieldCheck,
-  FileCheck2,
-  CreditCard,
 } from "lucide-react";
 import { useTableSort } from "@/hooks/useTableSort";
 import { SortableTableHead } from "@/components/ui/sortable-table-head";
 import { format } from "date-fns";
 import { de } from "date-fns/locale";
 import { supabase } from "@/integrations/supabase/client";
-import { invokeWithAuth, SessionExpiredError, ensureValidRLSSession } from "@/lib/sessionGuard";
+import { invokeWithAuth, ensureValidRLSSession } from "@/lib/sessionGuard";
 import { DealerEditDialog } from "@/components/admin/DealerEditDialog";
 import { DealerCreateDialog } from "@/components/admin/DealerCreateDialog";
 import { CountryFlag } from "@/components/CountryFlag";
 
-interface DealerProfile {
-  id: string;
-  email: string;
-  first_name: string | null;
-  last_name: string | null;
-  phone: string | null;
-  is_suspended?: boolean;
-}
+type AuthStatus = { id: string; email_confirmed_at: string | null; created_at: string; last_sign_in_at: string | null };
+type FunctionMessage = { message?: string; error?: string } | null;
 
-interface DealerApplication {
-  id: string;
-  user_id: string;
-  company_name: string;
-  company_address: string;
-  company_postal_code: string;
-  company_city: string;
-  tax_id: string;
-  trade_license_number: string;
-  contact_person_name: string;
-  contact_person_position: string | null;
-  phone: string;
-  website: string | null;
-  business_description: string | null;
-  trade_license_document_url: string | null;
-  status: string;
-  submitted_at: string;
-  reviewed_at: string | null;
-  rejection_reason: string | null;
-  legal_form?: string | null;
-  founded_year?: number | null;
-  handelsregister_number?: string | null;
-  employee_count?: string | null;
-  annual_revenue?: string | null;
-  iban?: string | null;
-  bic?: string | null;
-  country?: string | null;
-  confirmation_link_sent_count?: number;
-  confirmation_link_last_sent_at?: string | null;
-  document_request_sent_count?: number;
-  document_request_last_sent_at?: string | null;
-  profiles?: DealerProfile;
-}
+const dealerSortAccessors: Record<string, (d: DealerApplication) => unknown> = {
+  company_name: (d) => (d.company_name || '').toLowerCase(),
+  contact_person: (d) => (d.contact_person_name || `${d.profiles?.first_name || ''} ${d.profiles?.last_name || ''}`).toLowerCase(),
+  country: (d) => (d.country || '').toLowerCase(),
+  email: (d) => (d.profiles?.email || '').toLowerCase(),
+  created_at: (d) => d.created_at || '',
+  rejected_at: (d) => d.reviewed_at || d.updated_at || '',
+};
 
 export default function AdminDealers() {
   const { toast } = useToast();
@@ -125,27 +87,16 @@ export default function AdminDealers() {
   const queryClient = useQueryClient();
   const [selectedApplication, setSelectedApplication] =
     useState<DealerApplication | null>(null);
-  const [showDetailDialog, setShowDetailDialog] = useState(false);
-  const [showRejectDialog, setShowRejectDialog] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [showEditDialog, setShowEditDialog] = useState(false);
   const [showCreateDialog, setShowCreateDialog] = useState(false);
-  const [rejectionReason, setRejectionReason] = useState("");
   const [activeTab, setActiveTab] = useState("applications");
 
   // ---- Sortierung ----
-  const { sortField, sortDirection, handleSort, sortData } = useTableSort('created_at', 'desc');
+  const { sortField, sortDirection, handleSort, sortData } = useTableSort<DealerApplication>('created_at', 'desc');
 
-  const dealerSortAccessors: Record<string, (d: any) => unknown> = {
-    company_name: (d) => (d.company_name || '').toLowerCase(),
-    contact_person: (d) => (d.contact_person_name || `${d.profiles?.first_name || ''} ${d.profiles?.last_name || ''}`).toLowerCase(),
-    country: (d) => (d.country || '').toLowerCase(),
-    email: (d) => (d.profiles?.email || '').toLowerCase(),
-    created_at: (d) => d.created_at || '',
-    rejected_at: (d) => d.rejected_at || d.updated_at || '',
-  };
   const [searchTerm, setSearchTerm] = useState("");
-  const [authStatusMap, setAuthStatusMap] = useState<Record<string, { email_confirmed_at: string | null; created_at: string; last_sign_in_at: string | null }>>({});
+  const [authStatusMap, setAuthStatusMap] = useState<Record<string, AuthStatus>>({});
   const [resendingUserId, setResendingUserId] = useState<string | null>(null);
   const [requestingDocUserId, setRequestingDocUserId] = useState<string | null>(null);
 
@@ -187,12 +138,10 @@ export default function AdminDealers() {
         .in("id", userIds);
 
       // 3. Join manually
-      const data = applicationsData.map((application) => ({
+      return applicationsData.map((application): DealerApplication => ({
         ...application,
         profiles: profilesData?.find((profile) => profile.id === application.user_id) || null,
       }));
-
-      return data as DealerApplication[];
     },
     retry: 1,
     staleTime: 0,
@@ -210,9 +159,10 @@ export default function AdminDealers() {
         const res = await invokeWithAuth('get-dealer-auth-status', {
           body: { user_ids: allUserIds },
         });
-        if (res.data?.data) {
-          const map: Record<string, any> = {};
-          res.data.data.forEach((u: any) => { map[u.id] = u; });
+        const statuses = (res.data as { data?: AuthStatus[] } | null)?.data;
+        if (statuses) {
+          const map: Record<string, AuthStatus> = {};
+          statuses.forEach((u) => { map[u.id] = u; });
           setAuthStatusMap(map);
         }
       } catch (err) {
@@ -315,7 +265,7 @@ export default function AdminDealers() {
 
   const sortedFilteredDealers = useMemo(() => sortData(filteredDealers, dealerSortAccessors), [filteredDealers, sortData]);
 
-  // Pagination für Händler
+  // Pagination für Küchenstudios
   const [dealerPage, setDealerPage] = useState(1);
   const DEALER_PAGE_SIZE = 20;
   useEffect(() => { setDealerPage(1); }, [searchTerm, activeTab]);
@@ -324,7 +274,7 @@ export default function AdminDealers() {
   }, [sortedFilteredDealers, dealerPage]);
 
   const { exportCSV, exportExcel, isExporting } = useExport({
-    filename: "haendler",
+    filename: "kuechenstudios",
     columns: [
       { key: "company_name", label: "Firma" },
       { key: "country", label: "Land" },
@@ -349,66 +299,17 @@ export default function AdminDealers() {
     ],
   });
 
-  const approveMutation = useMutation({
-    mutationFn: approveDealerApplication,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["dealerApplications"] });
-      queryClient.invalidateQueries({ queryKey: ["activeDealers"] });
-      toast({
-        title: "Antrag genehmigt",
-        description: "Der Händler-Zugang wurde aktiviert",
-      });
-      setShowDetailDialog(false);
-    },
-    onError: (error: Error) => {
-      toast({
-        title: "Fehler",
-        description: error.message,
-        variant: "destructive",
-      });
-    },
-  });
-
-  const rejectMutation = useMutation({
-    mutationFn: async ({
-      applicationId,
-      reason,
-    }: {
-      applicationId: string;
-      reason: string;
-    }) => {
-      await rejectDealerApplication(applicationId, reason);
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["dealerApplications"] });
-      toast({
-        title: "Antrag abgelehnt",
-        description: "Der Antragsteller wurde benachrichtigt",
-      });
-      setShowRejectDialog(false);
-      setShowDetailDialog(false);
-      setRejectionReason("");
-    },
-    onError: (error: Error) => {
-      toast({
-        title: "Fehler",
-        description: error.message,
-        variant: "destructive",
-      });
-    },
-  });
-
   const deleteMutation = useMutation({
     mutationFn: (applicationId: string) => deleteDealerApplication(applicationId),
     onSuccess: (result) => {
       queryClient.invalidateQueries({ queryKey: ["dealerApplications"] });
       const desc = result.mailSent
-        ? "Der Händlerantrag wurde gelöscht und der Bewerber per E-Mail informiert."
+        ? "Die Studio-Bewerbung wurde gelöscht und das Studio per E-Mail informiert."
         : result.mailError
-          ? `Der Antrag wurde gelöscht, aber die E-Mail konnte nicht gesendet werden: ${result.mailError}`
-          : "Der Händlerantrag wurde gelöscht (keine E-Mail-Adresse hinterlegt).";
+          ? `Die Bewerbung wurde gelöscht, aber die E-Mail konnte nicht gesendet werden: ${result.mailError}`
+          : "Die Studio-Bewerbung wurde gelöscht (keine E-Mail-Adresse hinterlegt).";
       toast({
-        title: "Antrag gelöscht",
+        title: "Bewerbung gelöscht",
         description: desc,
         variant: result.mailSent || !result.mailError ? "default" : "destructive",
       });
@@ -434,8 +335,9 @@ export default function AdminDealers() {
         body: { user_id: userId, dealer_application_id: dealerApplicationId },
       });
       if (error) throw error;
-      if ((data as any)?.error) throw new Error((data as any).error);
-      return data;
+      const result = data as FunctionMessage;
+      if (result?.error) throw new Error(result.error);
+      return result;
     },
     onSuccess: (data) => {
       toast({
@@ -475,8 +377,9 @@ export default function AdminDealers() {
         },
       });
       if (error) throw error;
-      if ((data as any)?.error) throw new Error((data as any).error);
-      return data;
+      const result = data as FunctionMessage;
+      if (result?.error) throw new Error(result.error);
+      return result;
     },
     onSuccess: (data) => {
       toast({
@@ -503,15 +406,15 @@ export default function AdminDealers() {
     onSuccess: (result, { suspend }) => {
       queryClient.invalidateQueries({ queryKey: ["activeDealers"] });
       const baseDesc = suspend
-        ? "Der Händler kann sich nicht mehr anmelden."
-        : "Der Händler kann sich wieder anmelden.";
+        ? "Das Küchenstudio kann sich nicht mehr anmelden."
+        : "Das Küchenstudio kann sich wieder anmelden.";
       const mailDesc = result.mailSent
-        ? " Der Händler wurde per E-Mail informiert."
+        ? " Das Studio wurde per E-Mail informiert."
         : result.mailError
           ? ` E-Mail-Versand fehlgeschlagen: ${result.mailError}`
           : "";
       toast({
-        title: suspend ? "Händler gesperrt" : "Händler entsperrt",
+        title: suspend ? "Küchenstudio gesperrt" : "Küchenstudio entsperrt",
         description: `${baseDesc}${mailDesc}`,
         variant: result.mailError ? "destructive" : "default",
       });
@@ -591,11 +494,6 @@ export default function AdminDealers() {
     );
   }, [rejectedApplications, searchTerm]);
 
-  // Filter approved applications (not yet active dealers)
-  const approvedApplications = useMemo(() => {
-    return applications?.filter((a: DealerApplication) => a.status === "approved") || [];
-  }, [applications]);
-
   const sortedPending = useMemo(() => sortData(filteredPendingApplications, dealerSortAccessors), [filteredPendingApplications, sortData]);
   const sortedRejected = useMemo(() => sortData(filteredRejectedApplications, dealerSortAccessors), [filteredRejectedApplications, sortData]);
 
@@ -604,10 +502,10 @@ export default function AdminDealers() {
       <div className="flex justify-between items-start">
         <div>
           <h1 className="text-xl sm:text-2xl md:text-3xl font-bold text-foreground mb-2">
-            Händlerverwaltung
+            Küchenstudios
           </h1>
           <p className="text-muted-foreground">
-            Verwalten Sie Händler-Anträge und aktive Händler
+            Studio-Bewerbungen prüfen und freigeschaltete Küchenstudios verwalten
           </p>
         </div>
         <div className="flex gap-2">
@@ -615,7 +513,7 @@ export default function AdminDealers() {
             onClick={() => setShowCreateDialog(true)}
           >
             <UserPlus className="w-4 h-4 mr-2" />
-            Händler anlegen
+            Küchenstudio anlegen
           </Button>
           <Button
             variant="outline"
@@ -659,7 +557,7 @@ export default function AdminDealers() {
             color: "text-red-500",
           },
           {
-            label: "Aktive Händler",
+            label: "Aktive Küchenstudios",
             count: activeDealers?.length || 0,
             icon: Users,
             color: "text-blue-500",
@@ -677,9 +575,9 @@ export default function AdminDealers() {
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
         <TabsList>
-          <TabsTrigger value="applications">Händleranträge ({pendingApplications.length})</TabsTrigger>
+          <TabsTrigger value="applications">Studio-Bewerbungen ({pendingApplications.length})</TabsTrigger>
           <TabsTrigger value="rejected">Abgelehnt ({rejectedApplications.length})</TabsTrigger>
-          <TabsTrigger value="dealers">Aktive Händler</TabsTrigger>
+          <TabsTrigger value="dealers">Aktive Küchenstudios</TabsTrigger>
         </TabsList>
 
         <div className="relative w-full max-w-sm">
@@ -714,7 +612,7 @@ export default function AdminDealers() {
                 {isLoading ? (
                   <TableRow>
                     <TableCell colSpan={7} className="text-center">
-                      Lade Anträge...
+                      Lade Bewerbungen...
                     </TableCell>
                   </TableRow>
                 ) : filteredPendingApplications.length > 0 ? (
@@ -809,7 +707,7 @@ export default function AdminDealers() {
                   <TableRow>
                     <TableCell colSpan={7} className="text-center">
                       {pendingApplications.length === 0
-                        ? "Keine ausstehenden Anträge gefunden."
+                        ? "Keine offenen Studio-Bewerbungen."
                         : "Keine Treffer für die Suche."}
                     </TableCell>
                   </TableRow>
@@ -885,7 +783,7 @@ export default function AdminDealers() {
                   <TableRow>
                     <TableCell colSpan={6} className="text-center">
                       {rejectedApplications.length === 0
-                        ? "Keine abgelehnten Anträge vorhanden."
+                        ? "Keine abgelehnten Bewerbungen vorhanden."
                         : "Keine Treffer für die Suche."}
                     </TableCell>
                   </TableRow>
@@ -900,7 +798,7 @@ export default function AdminDealers() {
         <TabsContent value="dealers" className="space-y-4">
           <div className="flex justify-between items-center">
             <p className="text-sm text-muted-foreground">
-              {filteredDealers.length} aktive Händler
+              {filteredDealers.length} aktive Küchenstudios
             </p>
             <div className="flex items-center gap-2">
               <ExportButton
@@ -929,7 +827,7 @@ export default function AdminDealers() {
                 {isLoadingDealers ? (
                   <TableRow>
                     <TableCell colSpan={8} className="text-center">
-                      Lade Händler...
+                      Lade Küchenstudios...
                     </TableCell>
                   </TableRow>
                 ) : filteredDealers.length > 0 ? (
@@ -1048,7 +946,7 @@ export default function AdminDealers() {
                             >
                               <Ban className="mr-2 h-4 w-4" />
                               <span>
-                                {dealer.profiles?.is_suspended ? "Sperrung aufheben" : "Händler sperren"}
+                                {dealer.profiles?.is_suspended ? "Sperrung aufheben" : "Studio sperren"}
                               </span>
                             </DropdownMenuItem>
                           </DropdownMenuContent>
@@ -1059,7 +957,7 @@ export default function AdminDealers() {
                 ) : (
                   <TableRow>
                     <TableCell colSpan={8} className="text-center">
-                      Keine aktiven Händler gefunden.
+                      Keine aktiven Küchenstudios gefunden.
                     </TableCell>
                   </TableRow>
                 )}
@@ -1080,55 +978,16 @@ export default function AdminDealers() {
         </TabsContent>
       </Tabs>
 
-      {/* Dialog for Rejecting Application */}
-      <Dialog open={showRejectDialog} onOpenChange={setShowRejectDialog}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Antrag ablehnen</DialogTitle>
-            <DialogDescription>
-              Geben Sie einen Grund für die Ablehnung an. Der Bewerber wird per E-Mail benachrichtigt.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="grid gap-4 py-4">
-            <Label htmlFor="rejectionReason">Grund der Ablehnung</Label>
-            <Textarea
-              id="rejectionReason"
-              value={rejectionReason}
-              onChange={(e) => setRejectionReason(e.target.value)}
-              placeholder="z.B. Unvollständige Unterlagen, ..."
-            />
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowRejectDialog(false)}>
-              Abbrechen
-            </Button>
-            <Button
-              variant="destructive"
-              onClick={() =>
-                selectedApplication &&
-                rejectMutation.mutate({
-                  applicationId: selectedApplication.id,
-                  reason: rejectionReason,
-                })
-              }
-              disabled={rejectMutation.isPending || !rejectionReason}
-            >
-              {rejectMutation.isPending ? "Ablehnen..." : "Ablehnung bestätigen"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
       {/* Dialog for Deleting Application */}
       <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <AlertTriangle className="w-5 h-5 text-red-500" />
-              Antrag endgültig löschen?
+              Bewerbung endgültig löschen?
             </DialogTitle>
             <DialogDescription>
-              Der Antrag von <strong>{selectedApplication?.company_name}</strong> wird unwiderruflich gelöscht.
+              Die Bewerbung von <strong>{selectedApplication?.company_name}</strong> wird unwiderruflich gelöscht.
               Diese Aktion kann nicht rückgängig gemacht werden.
             </DialogDescription>
           </DialogHeader>

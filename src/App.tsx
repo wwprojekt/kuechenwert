@@ -37,14 +37,9 @@ const AuthConfirm = lazyRetry(() => import("./pages/AuthConfirm"));
 
 // Core pages
 const Verkaufen = lazyRetry(() => import("./pages/Verkaufen"));
-// VerkaufenWizard (alter Caravan-8-Step-Wizard) ist deaktiviert – die Route
-// /verkaufen/wizard leitet jetzt auf /formular um. Die Datei bleibt vorerst
-// im Repo, falls Teile (Steps, Hooks) fuer Funnel-Features wiederverwendet
-// werden sollen. Kein lazy()-Import => kein Bundle-Chunk.
+// Die Caravan-Routen /verkaufen/wizard, /kaufen und /auktion/:id leiten auf
+// /formular um (siehe Routen-Tabelle).
 const VerkaufenDanke = lazyRetry(() => import("./pages/VerkaufenDanke"));
-// Kaufen (Auktions-Marktplatz) und AuctionDetail stammen aus dem Caravan-
-// Auktionsmodell und zeigen Fahrzeugfelder. /kaufen und /auktion/:id leiten auf
-// /formular um; die Dateien bleiben im Repo, ohne lazy()-Import kein Chunk.
 const Ratgeber = lazyRetry(() => import("./pages/Ratgeber"));
 const UeberUns = lazyRetry(() => import("./pages/UeberUns"));
 const Kontakt = lazyRetry(() => import("./pages/Kontakt"));
@@ -58,6 +53,7 @@ const Kuechenrechner = lazyRetry(() => import("./pages/Kuechenrechner"));
 const Impressum = lazyRetry(() => import("./pages/Impressum"));
 const Datenschutz = lazyRetry(() => import("./pages/Datenschutz"));
 const AGB = lazyRetry(() => import("./pages/AGB"));
+const Barrierefreiheit = lazyRetry(() => import("./pages/Barrierefreiheit"));
 const Abmelden = lazyRetry(() => import("./pages/Abmelden"));
 const Konditionen = lazyRetry(() => import("./pages/Konditionen"));
 const FAQ = lazyRetry(() => import("./pages/FAQ"));
@@ -70,20 +66,13 @@ const BlogPost = lazyRetry(() => import("./pages/BlogPost"));
 // Admin pages
 const AdminLayout = lazyRetry(() => import("./pages/admin/AdminLayout"));
 const AdminDashboard = lazyRetry(() => import("./pages/admin/AdminDashboard"));
-const AdminAuctions = lazyRetry(() => import("./pages/admin/AdminAuctions"));
-const AdminKitchens = lazyRetry(() => import("./pages/admin/AdminKitchens"));
 const AdminUsers = lazyRetry(() => import("./pages/admin/AdminUsers"));
 const AdminSettings = lazyRetry(() => import("./pages/admin/AdminSettings"));
 const AdminDealers = lazyRetry(() => import("./pages/admin/AdminDealers"));
-const AdminStations = lazyRetry(() => import("./pages/admin/AdminStations"));
-const AdminAppointments = lazyRetry(() => import("./pages/admin/AdminAppointments"));
-const AdminStationHandover = lazyRetry(() => import("./pages/admin/AdminStationHandover"));
 const AdminBlog = lazyRetry(() => import("./pages/admin/AdminBlog"));
 const AdminAnalytics = lazyRetry(() => import("./pages/admin/AdminAnalytics"));
-const AdminCommissions = lazyRetry(() => import("./pages/admin/AdminCommissions"));
 const AdminFinancials = lazyRetry(() => import("./pages/admin/AdminFinancials"));
 const AdminLegal = lazyRetry(() => import("./pages/admin/AdminLegal"));
-const AdminQuestions = lazyRetry(() => import("./pages/admin/AdminQuestions"));
 const AdminMessages = lazyRetry(() => import("./pages/admin/AdminMessages"));
 const AdminEmailCenter = lazyRetry(() => import("./pages/admin/AdminEmailCenter"));
 const AdminErrorLogs = lazyRetry(() => import("./pages/admin/AdminErrorLogs"));
@@ -92,18 +81,8 @@ const AdminMarketplaceSettings = lazyRetry(() => import("./pages/admin/AdminMark
 const AdminAuditLog = lazyRetry(() => import("./pages/admin/AdminAuditLog"));
 const AdminLeads = lazyRetry(() => import("./pages/admin/AdminLeads"));
 const AdminPlannerSessions = lazyRetry(() => import("./pages/admin/AdminPlannerSessions"));
-const AdminAuctionDetail = lazyRetry(() => import("./pages/admin/AdminAuctionDetail"));
-const AdminKitchenDetail = lazyRetry(() => import("./pages/admin/AdminKitchenDetail"));
 const AdminUserDetail = lazyRetry(() => import("./pages/admin/AdminUserDetail"));
 const AdminDealerDetail = lazyRetry(() => import("./pages/admin/AdminDealerDetail"));
-const AdminAppointmentDetail = lazyRetry(() => import("./pages/admin/AdminAppointmentDetail"));
-const AdminClaims = lazyRetry(() => import("./pages/admin/AdminClaims"));
-const AdminPostAuctionOffers = lazyRetry(() => import("./pages/admin/AdminPostAuctionOffers"));
-const AdminReviews = lazyRetry(() => import("./pages/admin/AdminReviews"));
-const AdminWertrechnerReviews = lazyRetry(() => import("./pages/admin/AdminWertrechnerReviews"));
-const AdminGoogleReviews = lazyRetry(() => import("./pages/admin/AdminGoogleReviews"));
-const AdminContracts = lazyRetry(() => import("./pages/admin/AdminContracts"));
-const AdminDealerStats = lazyRetry(() => import("./pages/admin/AdminDealerStats"));
 
 // SEO Landing Pages (Kuechen-Themen).
 // Die Wohnmobil-/Wohnwagen-/Schwacke-Landing-Pages (17 Pages + 16 Data-Files)
@@ -223,6 +202,7 @@ const App = () => (
               <Route path="/impressum" element={<Impressum />} />
               <Route path="/datenschutz" element={<Datenschutz />} />
               <Route path="/agb" element={<AGB />} />
+              <Route path="/barrierefreiheit" element={<Barrierefreiheit />} />
               <Route path="/abmelden" element={<Abmelden />} />
               <Route path="/konditionen" element={<Konditionen />} />
               <Route path="/faq" element={<FAQ />} />
@@ -236,30 +216,13 @@ const App = () => (
                 <Route path="analytics" element={<AdminAnalytics />} />
                 <Route path="leads" element={<AdminLeads />} />
                 <Route path="planner-sessions" element={<AdminPlannerSessions />} />
-                <Route path="auctions" element={<AdminAuctions />} />
-                <Route path="auctions/:id" element={<AdminAuctionDetail />} />
-                <Route path="kitchens" element={<AdminKitchens />} />
-                <Route path="kitchens/:id" element={<AdminKitchenDetail />} />
-                <Route path="questions" element={<AdminQuestions />} />
                 <Route path="email" element={<AdminEmailCenter />} />
                 <Route path="messages" element={<AdminMessages />} />
                 <Route path="users" element={<AdminUsers />} />
                 <Route path="users/:id" element={<AdminUserDetail />} />
                 <Route path="dealers" element={<AdminDealers />} />
                 <Route path="dealers/:id" element={<AdminDealerDetail />} />
-                <Route path="dealer-stats" element={<AdminDealerStats />} />
-                <Route path="commissions" element={<AdminCommissions />} />
-                <Route path="contracts" element={<AdminContracts />} />
                 <Route path="financials" element={<AdminFinancials />} />
-                <Route path="stations" element={<AdminStations />} />
-                <Route path="appointments" element={<AdminAppointments />} />
-                <Route path="appointments/:id" element={<AdminAppointmentDetail />} />
-                <Route path="handover" element={<AdminStationHandover />} />
-                <Route path="claims" element={<AdminClaims />} />
-                <Route path="offers" element={<AdminPostAuctionOffers />} />
-                <Route path="reviews" element={<AdminReviews />} />
-                <Route path="wertrechner-reviews" element={<AdminWertrechnerReviews />} />
-                <Route path="google-reviews" element={<AdminGoogleReviews />} />
                 <Route path="blog" element={<AdminBlog />} />
                 <Route path="legal" element={<AdminLegal />} />
                 <Route path="error-logs" element={<AdminErrorLogs />} />

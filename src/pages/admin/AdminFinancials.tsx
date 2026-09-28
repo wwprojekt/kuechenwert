@@ -52,7 +52,7 @@ import {
   Clock,
   Gavel,
   Scale,
-  Truck,
+  ClipboardList,
   ExternalLink,
   XCircle,
   Shield,
@@ -64,8 +64,8 @@ import { de } from 'date-fns/locale';
 import { sendInvoiceWithPdf } from '@/lib/invoiceGenerator';
 import { getInvoiceStoragePath } from '@/lib/invoiceStorage';
 import { deriveInvoice } from '@/lib/invoiceDerived';
+import { invoiceTypeLabel } from '@/lib/invoiceTypeLabels';
 import { RecordPaymentDialog } from '@/components/admin/RecordPaymentDialog';
-import { CreateSellerPenaltyDialog } from '@/components/admin/CreateSellerPenaltyDialog';
 import { useSettings } from '@/contexts/SettingsContext';
 import { useExport } from "@/hooks/useExport";
 import { ExportButton } from "@/components/ExportButton";
@@ -92,6 +92,15 @@ const REMINDER_LEVEL_LABEL: Record<number, string> = {
 
 function getReminderLevelLabel(level: number): string {
   return REMINDER_LEVEL_LABEL[level] ?? `Mahnstufe ${level}`;
+}
+
+type InvoiceLead = { postal_code: string | null; city: string | null; email: string | null } | null | undefined;
+
+/** Same wording as projectReference() in supabase/functions/_shared/invoice-labels.ts. */
+function projectLabel(lead: InvoiceLead): string | null {
+  if (!lead) return null;
+  const place = [lead.postal_code, lead.city].filter(Boolean).join(' ');
+  return place ? `Küchenprojekt · PLZ ${place}` : 'Küchenprojekt';
 }
 
 export default function AdminFinancials() {
@@ -123,7 +132,6 @@ export default function AdminFinancials() {
   const [invoiceToDelete, setInvoiceToDelete] = useState<any>(null);
   const [cancelReason, setCancelReason] = useState('');
   const [activeTab, setActiveTab] = useState('invoices');
-  const [penaltyDialogOpen, setPenaltyDialogOpen] = useState(false);
   const [typeFilter, setTypeFilter] = useState('all');
 
   // Open invoice PDF.
@@ -226,10 +234,7 @@ export default function AdminFinancials() {
         .select(`
           *,
           dealer:profiles(first_name, last_name, company_name, email, customer_number),
-          auction:auctions(
-            id,
-            kitchen:kitchens(id, manufacturer, model)
-          ),
+          lead:leads(postal_code, city, email),
           reminders:payment_reminders(reminder_level, reminder_date)
         `)
         .order('invoice_date', { ascending: false });
@@ -253,7 +258,7 @@ export default function AdminFinancials() {
           invoice:invoices(
             invoice_number,
             customer_number,
-            auction:auctions(id, kitchen:kitchens(id, manufacturer, model))
+            lead:leads(postal_code, city, email)
           ),
           dealer:profiles(first_name, last_name, company_name, customer_number)
         `)
@@ -277,7 +282,7 @@ export default function AdminFinancials() {
         .select(`
           *,
           dealer:profiles(first_name, last_name, company_name, email, customer_number),
-          auction:auctions(id, kitchen:kitchens(id, manufacturer, model))
+          lead:leads(postal_code, city, email)
         `)
         .in('payment_status', ['pending', 'partial'])
         .neq('status', 'cancelled')
@@ -304,7 +309,7 @@ export default function AdminFinancials() {
         .select(`
           *,
           dealer:profiles(first_name, last_name, company_name, email, customer_number, phone, account_restricted, restriction_reason, restricted_at),
-          auction:auctions(id, kitchen:kitchens(id, manufacturer, model)),
+          lead:leads(postal_code, city, email),
           reminders:payment_reminders(id, reminder_level, reminder_date, reminder_fee, total_amount)
         `)
         .in('payment_status', ['pending', 'partial'])
@@ -322,10 +327,10 @@ export default function AdminFinancials() {
     columns: [
       { key: "invoice_number", label: "Rechnungsnummer" },
       { key: "customer_number", label: "Kundennummer" },
-      { key: "dealer", label: "Händler", format: (value: any) => value?.company_name || `${value?.first_name || ''} ${value?.last_name || ''}`.trim() },
+      { key: "dealer", label: "Küchenstudio", format: (value: any) => value?.company_name || `${value?.first_name || ''} ${value?.last_name || ''}`.trim() },
       { key: "dealer", label: "Kd.-Nr.", format: (value: any) => value?.customer_number || '' },
-      { key: "auction", label: "Fahrzeug", format: (value: any) => value?.kitchen ? `${value.kitchen.manufacturer} ${value.kitchen.model}` : "" },
-      { key: "invoice_type", label: "Typ", format: (value: any) => value === 'seller_penalty' ? 'Vertragsstrafe' : 'Provision' },
+      { key: "lead", label: "Projekt", format: (value: any) => projectLabel(value) ?? "" },
+      { key: "invoice_type", label: "Typ", format: (value: any) => invoiceTypeLabel(value) },
       { key: "net_amount", label: "Netto", format: (value: any) => Number(value || 0).toLocaleString("de-DE", { minimumFractionDigits: 2 }) },
       { key: "tax_amount", label: "MwSt", format: (value: any) => Number(value || 0).toLocaleString("de-DE", { minimumFractionDigits: 2 }) },
       { key: "tax_rate", label: "MwSt-%", format: (value: any) => `${Number(value || 0)}%` },
@@ -415,8 +420,8 @@ export default function AdminFinancials() {
       toast({
         title: 'Rechnung versendet',
         description: result.pdfGenerated
-          ? 'Die Rechnung wurde mit aktuellem PDF an den Empfänger gemailt.'
-          : 'Rechnung gemailt, PDF konnte nicht generiert werden – bitte prüfen.',
+          ? 'Die Rechnung wurde mit PDF an den Empfänger gemailt.'
+          : 'Die Rechnung wurde mit dem gespeicherten PDF gemailt.',
       });
     },
     onError: (error: any) => {
@@ -456,7 +461,7 @@ export default function AdminFinancials() {
       queryClient.invalidateQueries({ queryKey: ['overdue-invoices'] });
       queryClient.invalidateQueries({ queryKey: ['dunning-invoices'] });
       const emailHint = data.emailSent
-        ? 'Storno-E-Mail an Händler versendet.'
+        ? 'Storno-E-Mail an das Küchenstudio versendet.'
         : 'ACHTUNG: Storno-E-Mail konnte nicht versendet werden – bitte manuell informieren.';
       toast({
         title: 'Rechnung storniert',
@@ -485,6 +490,9 @@ export default function AdminFinancials() {
 
     if (derived.displayStatus === 'cancelled') {
       return <Badge className="bg-gray-100 text-gray-800">Storniert</Badge>;
+    }
+    if (derived.displayStatus === 'draft') {
+      return <Badge variant="outline" className="border-amber-400 text-amber-800">Entwurf</Badge>;
     }
     if (derived.displayStatus === 'paid') {
       return <Badge className="bg-green-100 text-green-800">Bezahlt</Badge>;
@@ -555,26 +563,14 @@ export default function AdminFinancials() {
     }
   };
 
-  const getVehicleLabel = (invoice: any) => {
-    if (!invoice) return null;
-    const m = invoice.auction?.kitchen;
-    if (!m) return null;
-    return `${m.manufacturer || ''} ${m.model || ''}`.trim() || null;
-  };
-
-  const navigateToVehicle = (invoice: any) => {
-    if (!invoice) return;
-    const kitchenId = invoice.auction?.kitchen?.id || invoice.kitchen_id;
-    if (kitchenId) {
-      navigate(`/admin/kitchens/${kitchenId}`);
-    } else if (invoice.auction_id) {
-      navigate(`/admin/auctions/${invoice.auction_id}`);
-    }
+  const navigateToProject = (invoice: any) => {
+    const query = invoice?.lead?.email || invoice?.lead?.postal_code;
+    navigate(query ? `/admin/leads?q=${encodeURIComponent(query)}` : '/admin/leads');
   };
 
   const filteredInvoices = invoices?.filter(invoice => {
     const searchLower = searchTerm.toLowerCase();
-    const vehicleStr = getVehicleLabel(invoice)?.toLowerCase() || '';
+    const projectStr = projectLabel(invoice.lead)?.toLowerCase() || '';
     const matchesSearch = searchTerm === '' || 
       invoice.invoice_number?.toLowerCase().includes(searchLower) ||
       invoice.customer_number?.toLowerCase().includes(searchLower) ||
@@ -582,7 +578,7 @@ export default function AdminFinancials() {
       invoice.dealer?.customer_number?.toLowerCase().includes(searchLower) ||
       (invoice.dealer?.company_name && invoice.dealer.company_name.toLowerCase().includes(searchLower)) ||
       (`${invoice.dealer?.first_name || ''} ${invoice.dealer?.last_name || ''}`.toLowerCase().includes(searchLower)) ||
-      vehicleStr.includes(searchLower);
+      projectStr.includes(searchLower);
     
     // Status-Filter via deriveInvoice(): kanonische Ableitung, kein erneutes
     // Interpretieren der Rohfelder. "Überfällig" = pending/partial + aktiv +
@@ -594,11 +590,10 @@ export default function AdminFinancials() {
       (statusFilter === 'pending' && derived.displayStatus === 'open') ||
       (statusFilter === 'partial' && derived.displayStatus === 'partial') ||
       (statusFilter === 'cancelled' && derived.displayStatus === 'cancelled') ||
+      (statusFilter === 'draft' && derived.displayStatus === 'draft') ||
       (statusFilter === 'overdue' && derived.isOverdue);
     
-    const matchesType = typeFilter === 'all' ||
-      (typeFilter === 'commission' && (invoice.invoice_type === 'commission' || !invoice.invoice_type)) ||
-      (typeFilter === 'seller_penalty' && invoice.invoice_type === 'seller_penalty');
+    const matchesType = typeFilter === 'all' || (invoice.invoice_type || 'commission') === typeFilter;
 
     const matchesDate = filterByDate(invoice);
     
@@ -650,14 +645,6 @@ export default function AdminFinancials() {
           </p>
         </div>
         <div className="flex gap-2">
-          <Button
-            variant="destructive"
-            size="sm"
-            onClick={() => setPenaltyDialogOpen(true)}
-          >
-            <Scale className="h-4 w-4 mr-2" />
-            Vertragsstrafe erstellen
-          </Button>
           <Button
             variant="outline"
             size="sm"
@@ -832,7 +819,7 @@ export default function AdminFinancials() {
             <CardHeader>
               <CardTitle>Rechnungsübersicht</CardTitle>
               <CardDescription>
-                Suchen Sie nach Rechnungsnummer, Kundennummer, Firma, E-Mail oder Fahrzeug
+                Suchen Sie nach Rechnungsnummer, Kundennummer, Firma, E-Mail oder Projekt-PLZ
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -841,7 +828,7 @@ export default function AdminFinancials() {
                 <div className="relative flex-1 min-w-[250px]">
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                   <Input
-                    placeholder="Rechnungsnr., Kundennr., Firma, E-Mail oder Fahrzeug..."
+                    placeholder="Rechnungsnr., Kundennr., Firma, E-Mail oder PLZ..."
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
                     className="pl-9"
@@ -853,6 +840,7 @@ export default function AdminFinancials() {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">Alle Status</SelectItem>
+                    <SelectItem value="draft">Entwürfe</SelectItem>
                     <SelectItem value="pending">Offen</SelectItem>
                     <SelectItem value="partial">Teilbezahlt</SelectItem>
                     <SelectItem value="paid">Bezahlt</SelectItem>
@@ -866,8 +854,10 @@ export default function AdminFinancials() {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">Alle Typen</SelectItem>
-                    <SelectItem value="commission">Provisionen</SelectItem>
-                    <SelectItem value="seller_penalty">Vertragsstrafen</SelectItem>
+                    <SelectItem value="lead_purchase">Kontaktfreischaltungen</SelectItem>
+                    <SelectItem value="lead_commission">Vermittlungsprovisionen</SelectItem>
+                    <SelectItem value="commission">Provisionen (alt)</SelectItem>
+                    <SelectItem value="seller_penalty">Vertragsstrafen (alt)</SelectItem>
                   </SelectContent>
                 </Select>
                 <Select value={dateFilter} onValueChange={setDateFilter}>
@@ -952,7 +942,7 @@ export default function AdminFinancials() {
                               )}
                             </div>
 
-                            {/* Vehicle / Penalty Reason */}
+                            {/* Project / Penalty Reason */}
                             <div className="hidden lg:block min-w-[150px]">
                               {invoice.invoice_type === 'seller_penalty' ? (
                                 <>
@@ -968,18 +958,21 @@ export default function AdminFinancials() {
                                 </>
                               ) : (
                                 <>
-                                  {getVehicleLabel(invoice) ? (
+                                  {projectLabel(invoice.lead) ? (
                                     <button
-                                      onClick={() => navigateToVehicle(invoice)}
+                                      onClick={() => navigateToProject(invoice)}
                                       className="flex items-center gap-1.5 font-medium text-sm text-primary hover:underline text-left"
                                     >
-                                      <Truck className="h-3.5 w-3.5 shrink-0" />
-                                      {getVehicleLabel(invoice)}
+                                      <ClipboardList className="h-3.5 w-3.5 shrink-0" />
+                                      {projectLabel(invoice.lead)}
                                       <ExternalLink className="h-3 w-3 shrink-0 opacity-50" />
                                     </button>
                                   ) : (
-                                    <div className="text-sm text-muted-foreground">Kein Fahrzeug</div>
+                                    <div className="text-sm text-muted-foreground">Kein Projekt</div>
                                   )}
+                                  <div className="text-xs text-muted-foreground mt-0.5">
+                                    {invoiceTypeLabel(invoice.invoice_type)}
+                                  </div>
                                   <div className="text-xs text-muted-foreground mt-0.5">
                                     {invoice.invoice_date ? format(new Date(invoice.invoice_date), 'dd.MM.yyyy', { locale: de }) : ''}
                                   </div>
@@ -1138,14 +1131,14 @@ export default function AdminFinancials() {
                               <div className="text-xs text-blue-600 font-medium">{custNum}</div>
                             )}
                           </div>
-                          {getVehicleLabel(invoice) && (
+                          {projectLabel(invoice.lead) && (
                             <div className="hidden md:block min-w-[130px]">
                               <button
-                                onClick={() => navigateToVehicle(invoice)}
+                                onClick={() => navigateToProject(invoice)}
                                 className="flex items-center gap-1.5 text-sm text-primary hover:underline"
                               >
-                                <Truck className="h-3.5 w-3.5 shrink-0" />
-                                {getVehicleLabel(invoice)}
+                                <ClipboardList className="h-3.5 w-3.5 shrink-0" />
+                                {projectLabel(invoice.lead)}
                               </button>
                             </div>
                           )}
@@ -1233,11 +1226,11 @@ export default function AdminFinancials() {
                 <Alert className="mb-4 border-blue-200 bg-blue-50/60">
                   <Shield className="h-4 w-4 text-blue-700" />
                   <AlertDescription className="text-blue-900">
-                    Händlerkonten werden ab der{' '}
+                    Studio-Konten werden ab der{' '}
                     <strong>
                       {getReminderLevelLabel(dunningRestrictAtLevel)}
                     </strong>{' '}
-                    automatisch gesperrt (Bieten und Sofortkauf blockiert).
+                    automatisch gesperrt (keine neuen Projekte und Angebote).
                     Bei vollständigem Zahlungseingang wird die Sperre
                     automatisch wieder aufgehoben.{' '}
                     <Link
@@ -1253,7 +1246,7 @@ export default function AdminFinancials() {
                   <ShieldAlert className="h-4 w-4 text-amber-700" />
                   <AlertDescription className="text-amber-900">
                     Automatische Kontosperre ist <strong>deaktiviert</strong>.
-                    Überfällige Händler können weiterhin bieten und kaufen.{' '}
+                    Küchenstudios mit überfälligen Rechnungen erhalten weiterhin neue Projekte.{' '}
                     <Link
                       to="/admin/settings"
                       className="underline font-medium hover:text-amber-700"
@@ -1395,7 +1388,7 @@ export default function AdminFinancials() {
                                   </TooltipTrigger>
                                   <TooltipContent>
                                     {invoice.dealer?.restriction_reason ||
-                                      'Händler ist aktuell für Bieten und Sofortkauf gesperrt'}
+                                      'Küchenstudio ist aktuell gesperrt und erhält keine neuen Projekte'}
                                   </TooltipContent>
                                 </Tooltip>
                               )}
@@ -1405,13 +1398,13 @@ export default function AdminFinancials() {
                               {invoice.dealer?.email && (
                                 <div className="text-xs text-muted-foreground">{invoice.dealer.email}</div>
                               )}
-                              {getVehicleLabel(invoice) && (
+                              {projectLabel(invoice.lead) && (
                                 <button
-                                  onClick={() => navigateToVehicle(invoice)}
+                                  onClick={() => navigateToProject(invoice)}
                                   className="flex items-center gap-1.5 text-xs text-primary hover:underline mt-1"
                                 >
-                                  <Truck className="h-3 w-3 shrink-0" />
-                                  {getVehicleLabel(invoice)}
+                                  <ClipboardList className="h-3 w-3 shrink-0" />
+                                  {projectLabel(invoice.lead)}
                                 </button>
                               )}
                             </div>
@@ -1436,7 +1429,7 @@ export default function AdminFinancials() {
                                       </TooltipTrigger>
                                       <TooltipContent>
                                         Achtung: Die nächste Mahnung sperrt
-                                        das Händlerkonto automatisch
+                                        das Studio-Konto automatisch
                                         (Schwelle: {getReminderLevelLabel(dunningRestrictAtLevel)}).
                                       </TooltipContent>
                                     </Tooltip>
@@ -1558,14 +1551,14 @@ export default function AdminFinancials() {
                             <div className="text-xs text-blue-600 font-medium">{payment.dealer.customer_number}</div>
                           )}
                         </div>
-                        {payment.invoice?.auction?.kitchen && (
+                        {projectLabel(payment.invoice?.lead) && (
                           <div className="hidden md:block">
                             <button
-                              onClick={() => navigate(`/admin/kitchens/${payment.invoice?.auction?.kitchen?.id}`)}
+                              onClick={() => navigateToProject(payment.invoice)}
                               className="flex items-center gap-1.5 text-xs text-primary hover:underline"
                             >
-                              <Truck className="h-3 w-3 shrink-0" />
-                              {payment.invoice?.auction?.kitchen?.manufacturer} {payment.invoice?.auction?.kitchen?.model}
+                              <ClipboardList className="h-3 w-3 shrink-0" />
+                              {projectLabel(payment.invoice?.lead)}
                             </button>
                           </div>
                         )}
@@ -1639,9 +1632,9 @@ export default function AdminFinancials() {
                     )}
                   </div>
                 )}
-                {getVehicleLabel(invoiceToDelete) && (
+                {projectLabel(invoiceToDelete?.lead) && (
                   <div>
-                    Fahrzeug: <strong>{getVehicleLabel(invoiceToDelete)}</strong>
+                    Projekt: <strong>{projectLabel(invoiceToDelete?.lead)}</strong>
                   </div>
                 )}
                 <div>
@@ -1654,7 +1647,7 @@ export default function AdminFinancials() {
                 </div>
                 <div className="text-amber-700 font-medium mt-3">
                   Die Rechnung wird als storniert markiert und bleibt aus Aufbewahrungsgründen im System erhalten.
-                  Offene Forderungen werden auf 0 gesetzt. Der Händler erhält automatisch eine Storno-E-Mail.
+                  Offene Forderungen werden auf 0 gesetzt. Das Küchenstudio erhält automatisch eine Storno-E-Mail.
                 </div>
               </div>
             </AlertDialogDescription>
@@ -1687,12 +1680,6 @@ export default function AdminFinancials() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-
-      {/* Seller Penalty Dialog */}
-      <CreateSellerPenaltyDialog
-        open={penaltyDialogOpen}
-        onOpenChange={setPenaltyDialogOpen}
-      />
     </div>
   );
 }

@@ -6,7 +6,6 @@ import {
   Plus,
   Home,
   MessageSquare,
-  FileText,
   Settings,
 } from "lucide-react";
 import {
@@ -75,35 +74,25 @@ function UserBadge({ count }: { count: number }) {
 // Types & Menu Items
 // ============================================================================
 
-/**
- * Menu items with role-based visibility.
- * - showForRoles: if set, item is ONLY shown for these roles (whitelist)
- * - hideForRoles: if set, item is hidden for these roles (blacklist)
- * - If neither is set, item is shown for all roles
- */
 interface MenuItem {
   title: string;
   url: string;
   icon: React.ComponentType<{ className?: string }>;
-  hideForRoles: string[];
-  showForRoles?: string[];
   badgeKey?: string;
 }
 
-const baseMenuItems: MenuItem[] = [
-  { title: "Übersicht", url: "/dashboard", icon: LayoutDashboard, hideForRoles: [] },
-  { title: "Nachrichten", url: "/dashboard/messages", icon: MessageSquare, hideForRoles: [], badgeKey: "messages" },
-  { title: "Rechnungen", url: "/dashboard/invoices", icon: FileText, hideForRoles: [], showForRoles: ['dealer'] },
-  { title: "Dokumente", url: "/dashboard/documents", icon: FileText, hideForRoles: [], showForRoles: ['seller'] },
-  { title: "Profil", url: "/dashboard/profile", icon: User, hideForRoles: [] },
-  { title: "Einstellungen", url: "/dashboard/settings", icon: Settings, hideForRoles: [] },
+const menuItems: MenuItem[] = [
+  { title: "Übersicht", url: "/dashboard", icon: LayoutDashboard },
+  { title: "Nachrichten", url: "/dashboard/messages", icon: MessageSquare, badgeKey: "messages" },
+  { title: "Profil", url: "/dashboard/profile", icon: User },
+  { title: "Einstellungen", url: "/dashboard/settings", icon: Settings },
 ];
 
 /**
- * Roles that should see the "Neue Anfrage" button.
- * Dealers have their own dashboard with different CTAs.
+ * Customer roles that see the "Neue Anfrage" button.
+ * Studios have their own sidebar with different CTAs.
  */
-const ROLES_WITH_NEW_LISTING = ['seller'];
+const ROLES_WITH_NEW_REQUEST = ['seller', 'consumer'];
 
 // ============================================================================
 // Main Component
@@ -128,19 +117,7 @@ export function UserSidebar() {
     messages: badges?.messages || 0,
   };
 
-  // Filter menu items based on user role
-  const menuItems = baseMenuItems.filter(item => {
-    const role = primaryRole || '';
-    // If showForRoles is defined, only show for those roles
-    if (item.showForRoles && item.showForRoles.length > 0) {
-      return item.showForRoles.includes(role);
-    }
-    // Otherwise, hide for specified roles
-    return !item.hideForRoles.includes(role);
-  });
-
-  // Bug 3.2 fix: Only show "Neues Inserat" button for seller role
-  const showNewListingButton = ROLES_WITH_NEW_LISTING.includes(primaryRole || '');
+  const showNewRequestButton = ROLES_WITH_NEW_REQUEST.includes(primaryRole || '');
 
   const handleSignOut = async () => {
     await signOut();
@@ -167,8 +144,7 @@ export function UserSidebar() {
 
         <Separator className="mb-4" />
 
-        {/* Quick Actions – only for sellers */}
-        {showNewListingButton && !collapsed && (
+        {showNewRequestButton && !collapsed && (
           <div className="px-3 mb-6 animate-fade-in">
             <Button
               className="w-full bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 text-primary-foreground shadow-lg hover:shadow-xl transition-all"
@@ -180,7 +156,7 @@ export function UserSidebar() {
           </div>
         )}
 
-        {showNewListingButton && collapsed && (
+        {showNewRequestButton && collapsed && (
           <div className="px-2 mb-6">
             <Button
               size="icon"

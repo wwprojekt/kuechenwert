@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { ensureValidRLSSession } from "@/lib/sessionGuard";
+import { logger } from "@/lib/logger";
 import PageLayout from "@/components/PageLayout";
 import { BRAND } from "@/lib/brand";
 
@@ -123,7 +124,7 @@ const AuthConfirm = () => {
                 "link_wizard_sessions_to_confirmed_user"
               );
               if (linkError) {
-                console.warn(
+                logger.warn(
                   "link_wizard_sessions_to_confirmed_user RPC failed (non-critical):",
                   linkError
                 );

@@ -1,6 +1,6 @@
 /**
- * Dialog to manually create a new dealer from the admin panel.
- * 
+ * Dialog to manually create a new kitchen studio (role `dealer`) from the admin panel.
+ *
  * Flow:
  * 1. Admin fills in user account data (email, name, phone) + company data
  * 2. Backend: admin-create-user creates auth user + profiles + user_roles(dealer)
@@ -34,7 +34,7 @@ import {
 import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { invokeWithAuth, SessionExpiredError, ensureValidRLSSession } from "@/lib/sessionGuard";
+import { invokeWithAuth, ensureValidRLSSession } from "@/lib/sessionGuard";
 import {
   Loader2,
   UserPlus,
@@ -50,6 +50,8 @@ interface DealerCreateDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }
+
+type CreateUserResult = { userId?: string; isExisting?: boolean } | null;
 
 const initialFormData = {
   // User account
@@ -128,12 +130,13 @@ export function DealerCreateDialog({
         throw new Error(`Benutzer konnte nicht erstellt werden: ${createUserError.message}`);
       }
 
-      if (!createUserResult?.userId) {
+      const created = createUserResult as CreateUserResult;
+      if (!created?.userId) {
         throw new Error("Benutzer-ID wurde nicht zurückgegeben");
       }
 
-      const userId = createUserResult.userId;
-      const isExisting = createUserResult.isExisting;
+      const userId = created.userId;
+      const isExisting = created.isExisting === true;
 
       // Step 2: Create dealer_applications entry with status='approved'
       const { error: applicationError } = await supabase
@@ -165,7 +168,7 @@ export function DealerCreateDialog({
         });
 
       if (applicationError) {
-        throw new Error(`Händlerantrag konnte nicht erstellt werden: ${applicationError.message}`);
+        throw new Error(`Studio-Bewerbung konnte nicht erstellt werden: ${applicationError.message}`);
       }
 
       // Step 2b: Set profile account_type to 'business' (same as approve_dealer_application)
@@ -220,10 +223,10 @@ export function DealerCreateDialog({
       queryClient.invalidateQueries({ queryKey: ["activeDealers"] });
       queryClient.invalidateQueries({ queryKey: ["dealerApplications"] });
       toast({
-        title: "Händler angelegt",
+        title: "Küchenstudio angelegt",
         description: result.isExisting
-          ? `Bestehender Benutzer wurde als Händler aktiviert.`
-          : `Neuer Händler "${formData.company_name}" wurde erfolgreich angelegt.${formData.sendInviteEmail ? " Eine Einladungs-E-Mail wurde versendet." : ""}`,
+          ? `Bestehender Benutzer wurde als Küchenstudio freigeschaltet.`
+          : `Küchenstudio "${formData.company_name}" wurde erfolgreich angelegt.${formData.sendInviteEmail ? " Eine Einladungs-E-Mail wurde versendet." : ""}`,
       });
       resetForm();
       onOpenChange(false);
@@ -256,10 +259,10 @@ export function DealerCreateDialog({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <UserPlus className="w-5 h-5" />
-            Neuen Händler anlegen
+            Neues Küchenstudio anlegen
           </DialogTitle>
           <DialogDescription>
-            Erstellen Sie manuell ein neues Händlerkonto. Der Händler erhält optional eine Einladungs-E-Mail zum Passwort setzen.
+            Erstellen Sie manuell ein freigeschaltetes Studio-Konto. Das Studio erhält optional eine Einladungs-E-Mail zum Setzen des Passworts.
           </DialogDescription>
         </DialogHeader>
 
@@ -284,7 +287,7 @@ export function DealerCreateDialog({
               <div className="bg-blue-50 border border-blue-200 rounded-md p-3 text-sm text-blue-800 flex items-start gap-2">
                 <Info className="w-4 h-4 mt-0.5 shrink-0" />
                 <p>
-                  Es wird ein neues Benutzerkonto erstellt. Falls bereits ein Konto mit dieser E-Mail existiert, wird der bestehende Benutzer als Händler aktiviert.
+                  Es wird ein neues Benutzerkonto erstellt. Falls bereits ein Konto mit dieser E-Mail existiert, wird der bestehende Benutzer als Küchenstudio freigeschaltet.
                 </p>
               </div>
 
@@ -295,7 +298,7 @@ export function DealerCreateDialog({
                 <Input
                   id="create_email"
                   type="email"
-                  placeholder="haendler@firma.de"
+                  placeholder="info@kuechenstudio-muster.de"
                   value={formData.email}
                   onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                 />
@@ -356,7 +359,7 @@ export function DealerCreateDialog({
                 </Label>
                 <Input
                   id="create_company_name"
-                  placeholder="Mustermann Wohnmobile GmbH"
+                  placeholder="Küchenstudio Muster GmbH"
                   value={formData.company_name}
                   onChange={(e) => setFormData({ ...formData, company_name: e.target.value })}
                 />
@@ -615,7 +618,7 @@ export function DealerCreateDialog({
               ) : (
                 <>
                   <UserPlus className="w-4 h-4 mr-2" />
-                  Händler anlegen
+                  Küchenstudio anlegen
                 </>
               )}
             </Button>

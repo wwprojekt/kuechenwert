@@ -1,34 +1,22 @@
 import { NavLink } from "react-router-dom";
 import {
   LayoutDashboard,
-  Gavel,
   Users,
-  Car,
   Settings,
   LogOut,
-  BarChart3,
   Home,
   Building2,
-  Calendar,
-  HandshakeIcon,
   FileText,
-  FileSignature,
   TrendingUp,
-  Calculator,
   CreditCard,
   Scale,
-  MessageCircle,
   MessageSquare,
   AlertTriangle,
   UserPlus,
   Mail,
   Shield,
-  FileWarning,
-  Star,
   ChevronDown,
   Inbox,
-  DollarSign,
-  Wrench,
   Database,
   TimerReset,
   Sparkles,
@@ -39,7 +27,6 @@ import {
   SidebarContent,
   SidebarGroup,
   SidebarGroupContent,
-  SidebarGroupLabel,
   SidebarMenu,
   SidebarMenuItem,
   SidebarFooter,
@@ -50,43 +37,19 @@ import { useAuth } from "@/contexts/AuthContext";
 import { SiteLogo } from "@/components/SiteLogo";
 import { useNavigate } from "react-router-dom";
 import { useState } from "react";
-
-// ============================================================================
-// Badge Counts Hook – nutzt den geteilten Cache von AdminNotificationBell
-// ============================================================================
-
 import { useAdminNotificationCounts } from "@/components/admin/AdminNotificationBell";
-
-function useSidebarBadges() {
-  const { data } = useAdminNotificationCounts();
-  return {
-    data: data
-      ? {
-          leads: data.leads,
-          messages: data.support,
-          support: data.support,
-          contacts: 0,
-          dealers: data.dealers,
-          questions: data.questions,
-          unreadEmails: data.unreadEmails,
-          reviews: data.reviews,
-          claims: data.claims,
-          appointments: data.appointments,
-          offers: data.offers,
-        }
-      : undefined,
-  };
-}
 
 // ============================================================================
 // Types
 // ============================================================================
 
+type BadgeKey = "leads" | "messages" | "dealers" | "unreadEmails";
+
 interface MenuItem {
   title: string;
   url: string;
   icon: React.ElementType;
-  badgeKey?: string;
+  badgeKey?: BadgeKey;
 }
 
 interface MenuGroup {
@@ -110,9 +73,7 @@ const menuGroups: MenuGroup[] = [
       { title: "Leads & Anfragen", url: "/admin/leads", icon: UserPlus, badgeKey: "leads" },
       { title: "Marktplatz-Einstellungen", url: "/admin/marktplatz", icon: SlidersHorizontal },
       { title: "Traumküchen-KI", url: "/admin/planner-sessions", icon: Sparkles },
-      { title: "Küchen-Katalog (Legacy)", url: "/admin/kitchens", icon: Database },
-      { title: "Auktionen", url: "/admin/auctions", icon: Gavel },
-      { title: "Nachauktions-Angebote", url: "/admin/offers", icon: HandshakeIcon, badgeKey: "offers" },
+      { title: "Finanzen", url: "/admin/financials", icon: CreditCard },
     ],
   },
   {
@@ -121,41 +82,16 @@ const menuGroups: MenuGroup[] = [
     defaultOpen: true,
     items: [
       { title: "E-Mail-Center", url: "/admin/email", icon: Mail, badgeKey: "unreadEmails" },
-      { title: "Support-Nachrichten", url: "/admin/messages", icon: MessageSquare, badgeKey: "support" },
-      { title: "Produktfragen", url: "/admin/questions", icon: MessageCircle, badgeKey: "questions" },
-      { title: "Google-Review-Outreach", url: "/admin/google-reviews", icon: Star },
+      { title: "Nachrichten", url: "/admin/messages", icon: MessageSquare, badgeKey: "messages" },
     ],
   },
   {
-    label: "Benutzer & Händler",
+    label: "Benutzer & Studios",
     icon: Users,
     defaultOpen: true,
     items: [
       { title: "Benutzer", url: "/admin/users", icon: Users },
-      { title: "Händler", url: "/admin/dealers", icon: Building2, badgeKey: "dealers" },
-      { title: "Händler-Statistik", url: "/admin/dealer-stats", icon: BarChart3 },
-      { title: "Bewertungen", url: "/admin/reviews", icon: Star, badgeKey: "reviews" },
-    ],
-  },
-  {
-    label: "Finanzen",
-    icon: DollarSign,
-    defaultOpen: false,
-    items: [
-      { title: "Provisionen", url: "/admin/commissions", icon: Calculator },
-      { title: "Kaufverträge", url: "/admin/contracts", icon: FileSignature },
-      { title: "Finanzen", url: "/admin/financials", icon: CreditCard },
-    ],
-  },
-  {
-    label: "Betrieb",
-    icon: Wrench,
-    defaultOpen: false,
-    items: [
-      { title: "Partner-Showrooms", url: "/admin/stations", icon: Building2 },
-      { title: "Termine", url: "/admin/appointments", icon: Calendar, badgeKey: "appointments" },
-      { title: "Übergabe", url: "/admin/handover", icon: HandshakeIcon },
-      { title: "Reklamationen", url: "/admin/claims", icon: FileWarning, badgeKey: "claims" },
+      { title: "Küchenstudios", url: "/admin/dealers", icon: Building2, badgeKey: "dealers" },
     ],
   },
   {
@@ -197,7 +133,7 @@ function CollapsibleGroup({
   collapsed,
 }: {
   group: MenuGroup;
-  badges: Record<string, number>;
+  badges: Record<BadgeKey, number>;
   collapsed: boolean;
 }) {
   const { isMobile, setOpenMobile } = useSidebar();
@@ -321,20 +257,13 @@ export function AdminSidebar() {
   const { signOut } = useAuth();
   const navigate = useNavigate();
   const collapsed = state === "collapsed";
-  const { data: badges } = useSidebarBadges();
+  const { data: counts } = useAdminNotificationCounts();
 
-  const badgeCounts: Record<string, number> = {
-    leads: badges?.leads || 0,
-    messages: badges?.messages || 0,
-    support: badges?.support || 0,
-    contacts: badges?.contacts || 0,
-    dealers: badges?.dealers || 0,
-    questions: badges?.questions || 0,
-    unreadEmails: badges?.unreadEmails || 0,
-    reviews: badges?.reviews || 0,
-    claims: badges?.claims || 0,
-    appointments: badges?.appointments || 0,
-    offers: badges?.offers || 0,
+  const badgeCounts: Record<BadgeKey, number> = {
+    leads: counts?.leads || 0,
+    messages: (counts?.support || 0) + (counts?.contacts || 0),
+    dealers: counts?.dealers || 0,
+    unreadEmails: counts?.unreadEmails || 0,
   };
 
   const handleSignOut = async () => {

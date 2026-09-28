@@ -6,8 +6,8 @@
  *
  * Verwendung:
  *   <SortableTableHead
- *     field="current_bid"
- *     label="Aktuelles Gebot"
+ *     field="price"
+ *     label="Angebotspreis"
  *     sortField={sortField}
  *     sortDirection={sortDirection}
  *     onSort={handleSort}

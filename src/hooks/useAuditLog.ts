@@ -1,6 +1,7 @@
 import { useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { ensureValidRLSSession } from "@/lib/sessionGuard";
+import { logger } from "@/lib/logger";
 
 export type AuditAction =
   | "login"
@@ -11,24 +12,16 @@ export type AuditAction =
   | "export"
   | "email_sent"
   | "email_broadcast"
-  | "bid_placed"
-  | "auction_created"
-  | "auction_closed"
-  | "auction_activated"
-  | "auction_manually_sold"
   | "user_suspended"
   | "user_unsuspended"
   | "dealer_approved"
   | "dealer_rejected"
   | "invoice_created"
   | "payment_received"
-  | "settings_changed"
-  | "push_notification_sent";
+  | "settings_changed";
 
 export type AuditEntityType =
   | "user"
-  | "auction"
-  | "bid"
   | "kitchen"
   | "dealer"
   | "invoice"
@@ -63,7 +56,7 @@ export function useAuditLog() {
       });
     } catch (error) {
       // Silently fail - audit logging should never break the app
-      console.warn("Audit log failed:", error);
+      logger.warn("Audit log failed:", error);
     }
   }, []);
 

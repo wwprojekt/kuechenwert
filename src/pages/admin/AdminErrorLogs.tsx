@@ -9,8 +9,9 @@
  * - Zeitfilter, Trend-Anzeige, Occurrence-Count
  */
 
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import type { Json, Tables } from "@/integrations/supabase/types";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
@@ -76,24 +77,18 @@ import {
   WifiOff,
   Zap,
   Hash,
-  ArrowUpRight,
   Copy,
-  ChevronDown,
-  ChevronUp,
   TrendingUp,
-  TrendingDown,
   Calendar,
-  Fingerprint,
   Navigation,
   MousePointer,
   Server,
-  MemoryStick,
-  ScreenShare,
-  Download,
   FileText,
 } from "lucide-react";
 
 // Types
+type Breadcrumb = { type: string; message: string; timestamp: number; data?: Record<string, unknown> };
+
 interface ErrorLog {
   id: string;
   error_code: string;
@@ -125,7 +120,7 @@ interface ErrorLog {
   app_version: string | null;
   http_status: number | null;
   request_info: Record<string, unknown> | null;
-  breadcrumbs: Array<{ type: string; message: string; timestamp: number; data?: Record<string, unknown> }> | null;
+  breadcrumbs: Breadcrumb[] | null;
   occurrence_count: number;
   first_seen_at: string | null;
   last_seen_at: string | null;
@@ -134,6 +129,31 @@ interface ErrorLog {
   screen_resolution: string | null;
   connection_type: string | null;
   memory_usage: Record<string, unknown> | null;
+}
+
+// errorLogService schreibt die Rolle aus user_roles, ohne Rolleneintrag "customer".
+const CUSTOMER_ROLE_VALUES = ['customer', 'seller', 'consumer'];
+const ROLE_LABELS: Record<string, string> = {
+  customer: 'Kunde', seller: 'Kunde', consumer: 'Kunde', dealer: 'Küchenstudio', admin: 'Admin', anonymous: 'Anonym',
+};
+
+function roleFilterValues(filter: string): string[] {
+  return filter === 'customer' ? CUSTOMER_ROLE_VALUES : [filter];
+}
+
+function asRecord(value: Json | null): Record<string, unknown> | null {
+  return value && typeof value === 'object' && !Array.isArray(value) ? value : null;
+}
+
+/** Die JSON-Spalten von error_logs; errorLogService schreibt Breadcrumbs als Array. */
+function toErrorLog(row: Tables<'error_logs'>): ErrorLog {
+  return {
+    ...row,
+    metadata: asRecord(row.metadata) ?? {},
+    request_info: asRecord(row.request_info),
+    memory_usage: asRecord(row.memory_usage),
+    breadcrumbs: Array.isArray(row.breadcrumbs) ? (row.breadcrumbs as unknown as Breadcrumb[]) : null,
+  };
 }
 
 interface ErrorStats {
@@ -242,17 +262,7 @@ const AdminErrorLogs = () => {
         .order('created_at', { ascending: false })
         .range(page * ITEMS_PER_PAGE, (page + 1) * ITEMS_PER_PAGE - 1);
 
-      // Business-Events ausschließen: Normale Geschäftsvorgänge sind keine echten Fehler
-      // 1. Auktions-Benachrichtigungen (überboten, Gebote, Auktion beendet)
-      query = query.not('error_message', 'ilike', '%Sie wurden überboten%');
-      query = query.not('error_message', 'ilike', '%Neues Gebot%');
-      query = query.not('error_message', 'ilike', '%Bieten Sie erneut%');
-      query = query.not('error_message', 'ilike', '%Gebot fehlgeschlagen%');
-      query = query.not('error_message', 'ilike', '%Gebot muss höher%');
-      query = query.not('error_message', 'ilike', '%Gebot muss mindestens%');
-      query = query.not('error_message', 'ilike', '%Auktion ist nicht mehr aktiv%');
-      query = query.not('error_message', 'ilike', '%Auktion ist bereits beendet%');
-      // 2. Auth-Hinweise (keine echten Fehler, sondern User-Aktionen)
+      // Auth-Hinweise ausschließen: keine echten Fehler, sondern User-Aktionen
       query = query.not('error_message', 'ilike', '%Anmeldung erforderlich%');
       query = query.not('error_message', 'ilike', '%Sitzung abgelaufen%');
       query = query.not('error_message', 'ilike', '%Bitte melden Sie sich an%');
@@ -263,7 +273,7 @@ const AdminErrorLogs = () => {
       if (severityFilter !== 'all') query = query.eq('severity', severityFilter);
       if (statusFilter === 'resolved') query = query.eq('is_resolved', true);
       else if (statusFilter === 'unresolved') query = query.eq('is_resolved', false);
-      if (roleFilter !== 'all') query = query.eq('user_role', roleFilter);
+      if (roleFilter !== 'all') query = query.in('user_role', roleFilterValues(roleFilter));
       if (sourceFilter !== 'all') query = query.eq('error_source', sourceFilter);
       
       const timeDate = getTimeFilterDate();
@@ -278,7 +288,7 @@ const AdminErrorLogs = () => {
       const { data, error, count } = await query;
       if (error) throw error;
 
-      setErrors(data || []);
+      setErrors((data || []).map(toErrorLog));
       setTotalCount(count || 0);
     } catch (error) {
       console.error('Error fetching error logs:', error);
@@ -290,7 +300,7 @@ const AdminErrorLogs = () => {
     } finally {
       setIsLoading(false);
     }
-  }, [page, categoryFilter, severityFilter, statusFilter, roleFilter, sourceFilter, timeFilter, searchQuery, toast, getTimeFilterDate]);
+  }, [page, categoryFilter, severityFilter, statusFilter, roleFilter, sourceFilter, searchQuery, toast, getTimeFilterDate]);
 
   // Fetch stats
   const fetchStats = useCallback(async () => {
@@ -299,19 +309,9 @@ const AdminErrorLogs = () => {
       today.setHours(0, 0, 0, 0);
       const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
 
-      // Business-Events-Filter: Normale Geschäftsvorgänge aus Statistiken ausschließen
+      // Auth-Hinweise (User-Aktionen, keine echten Fehler) aus Statistiken ausschließen
       const excludeBusinessEvents = (q: any) => {
         return q
-          // Auktions-Benachrichtigungen
-          .not('error_message', 'ilike', '%Sie wurden überboten%')
-          .not('error_message', 'ilike', '%Neues Gebot%')
-          .not('error_message', 'ilike', '%Bieten Sie erneut%')
-          .not('error_message', 'ilike', '%Gebot fehlgeschlagen%')
-          .not('error_message', 'ilike', '%Gebot muss höher%')
-          .not('error_message', 'ilike', '%Gebot muss mindestens%')
-          .not('error_message', 'ilike', '%Auktion ist nicht mehr aktiv%')
-          .not('error_message', 'ilike', '%Auktion ist bereits beendet%')
-          // Auth-Hinweise
           .not('error_message', 'ilike', '%Anmeldung erforderlich%')
           .not('error_message', 'ilike', '%Sitzung abgelaufen%')
           .not('error_message', 'ilike', '%Bitte melden Sie sich an%')
@@ -385,7 +385,7 @@ const AdminErrorLogs = () => {
       fetchErrors();
       fetchStats();
       setShowDetailDialog(false);
-    } catch (error) {
+    } catch {
       toast({ title: "Fehler", description: "Status konnte nicht aktualisiert werden.", variant: "destructive" });
     }
   };
@@ -400,7 +400,7 @@ const AdminErrorLogs = () => {
       toast({ title: "Status zurückgesetzt" });
       fetchErrors();
       fetchStats();
-    } catch (error) {
+    } catch {
       toast({ title: "Fehler", description: "Status konnte nicht aktualisiert werden.", variant: "destructive" });
     }
   };
@@ -418,7 +418,7 @@ const AdminErrorLogs = () => {
       setSelectedIds(new Set());
       fetchErrors();
       fetchStats();
-    } catch (error) {
+    } catch {
       toast({ title: "Fehler", description: "Bulk-Auflösung fehlgeschlagen.", variant: "destructive" });
     } finally {
       setIsBulkResolving(false);
@@ -438,7 +438,7 @@ const AdminErrorLogs = () => {
       setSelectedIds(new Set());
       fetchErrors();
       fetchStats();
-    } catch (error) {
+    } catch {
       toast({ title: "Fehler", description: "Status konnte nicht aktualisiert werden.", variant: "destructive" });
     } finally {
       setIsBulkUnresolving(false);
@@ -460,7 +460,7 @@ const AdminErrorLogs = () => {
         if (severityFilter !== 'all') query = query.eq('severity', severityFilter);
         if (statusFilter === 'resolved') query = query.eq('is_resolved', true);
         else if (statusFilter === 'unresolved') query = query.eq('is_resolved', false);
-        if (roleFilter !== 'all') query = query.eq('user_role', roleFilter);
+        if (roleFilter !== 'all') query = query.in('user_role', roleFilterValues(roleFilter));
         if (sourceFilter !== 'all') query = query.eq('error_source', sourceFilter);
         const timeDate = getTimeFilterDate();
         if (timeDate) query = query.gte('created_at', timeDate);
@@ -493,7 +493,7 @@ const AdminErrorLogs = () => {
       setShowDetailDialog(false);
       fetchErrors();
       fetchStats();
-    } catch (error) {
+    } catch {
       toast({ title: "Fehler", description: "Löschen fehlgeschlagen.", variant: "destructive" });
     } finally {
       setIsDeleting(false);
@@ -510,7 +510,7 @@ const AdminErrorLogs = () => {
       if (error) throw error;
       toast({ title: "Gespeichert", description: "Admin-Notizen wurden aktualisiert." });
       fetchErrors();
-    } catch (error) {
+    } catch {
       toast({ title: "Fehler", description: "Notizen konnten nicht gespeichert werden.", variant: "destructive" });
     }
   };
@@ -552,8 +552,8 @@ const AdminErrorLogs = () => {
       admin: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300',
       anonymous: 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-300',
     };
-    const labels: Record<string, string> = { customer: 'Kunde', dealer: 'Händler', admin: 'Admin', anonymous: 'Anonym' };
-    return <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${variants[role] || variants.anonymous}`}>{labels[role] || role}</span>;
+    const variant = variants[CUSTOMER_ROLE_VALUES.includes(role) ? 'customer' : role] || variants.anonymous;
+    return <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${variant}`}>{ROLE_LABELS[role] || role}</span>;
   };
 
   const getSourceBadge = (source: string | null) => {
@@ -622,7 +622,7 @@ const AdminErrorLogs = () => {
       if (severityFilter !== 'all') query = query.eq('severity', severityFilter);
       if (statusFilter === 'resolved') query = query.eq('is_resolved', true);
       else if (statusFilter === 'unresolved') query = query.eq('is_resolved', false);
-      if (roleFilter !== 'all') query = query.eq('user_role', roleFilter);
+      if (roleFilter !== 'all') query = query.in('user_role', roleFilterValues(roleFilter));
       if (sourceFilter !== 'all') query = query.eq('error_source', sourceFilter);
       const timeDate = getTimeFilterDate();
       if (timeDate) query = query.gte('created_at', timeDate);
@@ -632,9 +632,10 @@ const AdminErrorLogs = () => {
         );
       }
 
-      const { data: allErrors, error } = await query;
+      const { data: rows, error } = await query;
       if (error) throw error;
-      if (!allErrors || allErrors.length === 0) {
+      const allErrors = (rows ?? []).map(toErrorLog);
+      if (allErrors.length === 0) {
         toast({ title: "Keine Daten", description: "Es gibt keine Fehler zum Exportieren.", variant: "destructive" });
         return;
       }
@@ -642,8 +643,6 @@ const AdminErrorLogs = () => {
       const severityLabels: Record<string, string> = { low: 'Niedrig', medium: 'Mittel', high: 'Hoch', critical: 'Kritisch' };
       const categoryLabels: Record<string, string> = { validation: 'Validierung', auth: 'Auth', api: 'API', business: 'Geschäftslogik', system: 'System', ui: 'UI', unknown: 'Unbekannt' };
       const sourceLabels: Record<string, string> = { caught: 'Gefangen', uncaught: 'Ungefangen', 'unhandled-rejection': 'Promise-Rejection', 'error-boundary': 'ErrorBoundary', global: 'Global' };
-      const roleLabels: Record<string, string> = { customer: 'Kunde', dealer: 'Händler', admin: 'Admin', anonymous: 'Anonym' };
-
       const now = new Date();
       const exportDate = now.toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
 
@@ -658,7 +657,7 @@ const AdminErrorLogs = () => {
       if (categoryFilter !== 'all') activeFilters.push(`Kategorie: ${categoryLabels[categoryFilter] || categoryFilter}`);
       if (severityFilter !== 'all') activeFilters.push(`Schweregrad: ${severityLabels[severityFilter] || severityFilter}`);
       if (statusFilter !== 'all') activeFilters.push(`Status: ${statusFilter === 'resolved' ? 'Gelöst' : 'Ungelöst'}`);
-      if (roleFilter !== 'all') activeFilters.push(`Rolle: ${roleLabels[roleFilter] || roleFilter}`);
+      if (roleFilter !== 'all') activeFilters.push(`Rolle: ${ROLE_LABELS[roleFilter] || roleFilter}`);
       if (sourceFilter !== 'all') activeFilters.push(`Quelle: ${sourceLabels[sourceFilter] || sourceFilter}`);
       if (timeFilter !== 'all') {
         const timeLabels: Record<string, string> = { hour: 'Letzte Stunde', today: 'Heute', week: 'Diese Woche', month: 'Dieser Monat' };
@@ -703,7 +702,7 @@ const AdminErrorLogs = () => {
         const sev = severityLabels[err.severity] || err.severity;
         const cat = categoryLabels[err.error_category] || err.error_category;
         const src = sourceLabels[err.error_source || ''] || err.error_source || 'Unbekannt';
-        const role = roleLabels[err.user_role || ''] || err.user_role || 'Unbekannt';
+        const role = ROLE_LABELS[err.user_role || ''] || err.user_role || 'Unbekannt';
 
         md += `### ${i + 1}. ${err.error_code} — ${sev}\n\n`;
 
@@ -1102,7 +1101,7 @@ const AdminErrorLogs = () => {
               <SelectContent>
                 <SelectItem value="all">Alle Rollen</SelectItem>
                 <SelectItem value="customer">Kunde</SelectItem>
-                <SelectItem value="dealer">Händler</SelectItem>
+                <SelectItem value="dealer">Küchenstudio</SelectItem>
                 <SelectItem value="admin">Admin</SelectItem>
                 <SelectItem value="anonymous">Anonym</SelectItem>
               </SelectContent>

@@ -2,7 +2,7 @@
  * Zentrales deutsches Fehlermeldungssystem
  * 
  * Übersetzt alle englischen Fehlermeldungen (Supabase, Zod, Browser-APIs)
- * in verständliche deutsche Fehlermeldungen für Kunden und Händler.
+ * in verständliche deutsche Fehlermeldungen für Kunden und Küchenstudios.
  */
 
 import { z } from 'zod';
@@ -147,18 +147,11 @@ const API_ERROR_MAP: Record<string, string> = {
 // ============================================================================
 
 const BUSINESS_ERROR_MAP: Record<string, string> = {
-  'Auction has ended': 'Diese Auktion ist bereits beendet.',
-  'Auction is not active': 'Diese Auktion ist nicht mehr aktiv.',
-  'Bid must be higher than current bid': 'Ihr Gebot muss höher sein als das aktuelle Höchstgebot.',
-  'Bid must be at least': 'Ihr Gebot muss mindestens den Mindestbetrag erreichen.',
-  'Cannot bid on your own auction': 'Sie können nicht auf Ihre eigene Auktion bieten.',
   'Insufficient permissions': 'Sie haben keine Berechtigung für diese Aktion.',
-  'Dealer not approved': 'Ihr Händlerkonto wurde noch nicht freigeschaltet.',
-  'Dealer suspended': 'Ihr Händlerkonto wurde gesperrt. Bitte kontaktieren Sie den Support.',
+  'Dealer not approved': 'Ihr Studio-Konto wurde noch nicht freigeschaltet.',
+  'Dealer suspended': 'Ihr Studio-Konto wurde gesperrt. Bitte kontaktieren Sie den Support.',
   'User suspended': 'Ihr Konto wurde gesperrt. Bitte kontaktieren Sie den Support.',
   'Payment required': 'Eine Zahlung ist erforderlich, um fortzufahren.',
-  'Already purchased': 'Dieses Fahrzeug wurde bereits gekauft.',
-  'Stock not available': 'Dieses Fahrzeug ist nicht mehr verfügbar.',
 };
 
 // ============================================================================
@@ -405,20 +398,23 @@ export function getPageTitle(path: string): string {
     '/': 'Startseite',
     '/login': 'Anmeldung',
     '/login/haendler': 'Anmeldung (Weiterleitung)',
-    '/register': 'Registrierung (Privatkunde)',
-    '/register/haendler': 'Registrierung (Händler)',
+    '/register': 'Registrierung',
+    '/register/privat': 'Registrierung (Kunde)',
+    '/register/haendler': 'Registrierung (Küchenstudio)',
     '/forgot-password': 'Passwort vergessen',
     '/reset-password': 'Passwort zurücksetzen',
-    '/verkaufen': 'Verkaufen',
-    '/verkaufen/wizard': 'Verkaufen-Assistent',
-    '/kaufen': 'Kaufen / Marktplatz',
+    '/formular': 'Angebote einholen',
+    '/funnel/a': 'Funnel A (Angebote einholen)',
+    '/funnel/b': 'Funnel B (Unterbieten)',
+    '/funnel/c': 'Funnel C (Traumküchen-KI)',
+    '/funnel/danke': 'Funnel-Danke-Seite',
+    '/projekt': 'Projektlink anfordern',
+    '/kuechenrechner': 'Küchenrechner',
     '/ratgeber': 'Ratgeber',
     '/ueber-uns': 'Über uns',
     '/kontakt': 'Kontakt',
-    '/haendler': 'Für Händler',
+    '/haendler': 'Für Küchenstudios',
     '/kuechenstudios': 'Küchenstudios',
-    '/wertermittlung': 'Wertermittlung',
-    '/wertrechner': 'Wertrechner',
     '/impressum': 'Impressum',
     '/datenschutz': 'Datenschutz',
     '/agb': 'AGB',
@@ -426,53 +422,40 @@ export function getPageTitle(path: string): string {
     '/preise': 'Preise',
     '/blog': 'Blog',
     '/dashboard': 'Dashboard',
-    '/dashboard/listings': 'Meine Inserate',
-    '/dashboard/bids': 'Meine Gebote',
-    '/dashboard/favorites': 'Favoriten',
+    '/dashboard/projekte': 'Studio-Portal: Projekte',
+    '/dashboard/projekte/einstellungen': 'Studio-Portal: Einzugsgebiet',
     '/dashboard/messages': 'Nachrichten',
-    '/dashboard/profile': 'Profil',
-    '/dashboard/contracts': 'Kaufverträge',
     '/dashboard/invoices': 'Rechnungen',
-    '/dashboard/appointments': 'Termine',
-    '/dashboard/kaufchancen': 'Kaufchancen',
+    '/dashboard/profile': 'Profil',
+    '/dashboard/settings': 'Einstellungen',
     '/admin': 'Admin-Übersicht',
     '/admin/analytics': 'Admin-Analytics',
-    '/admin/auctions': 'Admin-Auktionen',
-    '/admin/kitchens': 'Admin-Wohnmobile',
+    '/admin/leads': 'Admin-Leads',
+    '/admin/planner-sessions': 'Admin-Traumküchen-KI',
+    '/admin/email': 'Admin-E-Mail-Center',
+    '/admin/messages': 'Admin-Nachrichten',
     '/admin/users': 'Admin-Benutzer',
-    '/admin/dealers': 'Admin-Händler',
-    '/admin/settings': 'Admin-Einstellungen',
-    '/admin/commissions': 'Admin-Provisionen',
+    '/admin/dealers': 'Admin-Küchenstudios',
     '/admin/financials': 'Admin-Finanzen',
-    '/admin/stations': 'Admin-Ankaufstationen',
-    '/admin/appointments': 'Admin-Termine',
     '/admin/blog': 'Admin-Blog',
     '/admin/legal': 'Admin-Rechtliches',
-    '/admin/questions': 'Admin-Fahrzeugfragen',
-    '/admin/messages': 'Admin-Nachrichten',
     '/admin/error-logs': 'Admin-Fehlerprotokoll',
-    // SEO Landing Pages
-    '/wohnmobil-verkaufen': 'LP: Wohnmobil verkaufen',
-    '/wohnwagen-verkaufen': 'LP: Wohnwagen verkaufen',
-    '/was-ist-mein-wohnmobil-wert': 'LP: Was ist mein Wohnmobil wert?',
-    '/wohnmobil-wertermittlung-kostenlos': 'LP: Wertermittlung kostenlos',
-    '/wir-kaufen-dein-wohnmobil': 'LP: Wir kaufen dein Wohnmobil',
-    '/wieviel-ist-mein-wohnmobil-wert': 'LP: Wieviel ist mein Wohnmobil wert?',
+    '/admin/cron-health': 'Admin-Cron-Health',
+    '/admin/audit-log': 'Admin-Audit-Log',
+    '/admin/settings': 'Admin-Einstellungen',
   };
 
   // Exakter Match
   if (pageMap[path]) return pageMap[path];
 
   // Dynamische Routen
-  if (path.startsWith('/auktion/')) return 'Auktionsdetail';
+  if (path.startsWith('/projekt/')) return 'Projektseite';
+  if (path.startsWith('/funnel/a/')) return 'Funnel A (Angebote einholen)';
   if (path.startsWith('/blog/')) return 'Blog-Artikel';
   if (path.startsWith('/ratgeber/')) return 'Ratgeber-Artikel';
-  if (path.startsWith('/admin/auctions/')) return 'Admin-Auktionsdetail';
-  if (path.startsWith('/admin/kitchens/')) return 'Admin-Wohnmobildetail';
+  if (path.startsWith('/dashboard/projekte/')) return 'Studio-Portal: Projektdetail';
   if (path.startsWith('/admin/users/')) return 'Admin-Benutzerdetail';
-  if (path.startsWith('/admin/dealers/')) return 'Admin-Händlerdetail';
-  if (path.startsWith('/admin/appointments/')) return 'Admin-Termindetail';
-  if (path.startsWith('/dashboard/listings/')) return 'Inseratdetail';
+  if (path.startsWith('/admin/dealers/')) return 'Admin-Küchenstudio-Detail';
 
   return path;
 }

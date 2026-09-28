@@ -2,7 +2,7 @@ import { useState, useCallback } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { useLiveData } from "@/hooks/useLiveData";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
@@ -53,8 +53,9 @@ export default function MyMessages() {
     message: "",
   });
 
+  const userId = user?.id;
   const loadMessages = useCallback(async () => {
-    if (!user) return;
+    if (!userId) return;
 
     const sessionValid = await ensureValidRLSSession();
     if (!sessionValid) return;
@@ -63,7 +64,7 @@ export default function MyMessages() {
       const { data, error } = await supabase
         .from("support_messages")
         .select("*")
-        .eq("user_id", user.id)
+        .eq("user_id", userId)
         .order("created_at", { ascending: false });
 
       if (error) throw error;
@@ -80,7 +81,7 @@ export default function MyMessages() {
     } finally {
       setLoading(false);
     }
-  }, [user?.id]);
+  }, [userId]);
 
   useLiveData(loadMessages, { enabled: !!user, pollingInterval: 60_000 });
 

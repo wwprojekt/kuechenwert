@@ -23,10 +23,8 @@ import {
   SidebarFooter,
   useSidebar,
 } from "@/components/ui/sidebar";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
-import { useSettings } from "@/contexts/SettingsContext";
 import { SiteLogo } from "@/components/SiteLogo";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
@@ -47,13 +45,14 @@ function useDealerBadges() {
       const sessionValid = await ensureValidRLSSession();
       if (!sessionValid) return null;
 
-      const [notificationsRes, messagesRes] = await Promise.all([
-        supabase.from('dealer_notifications').select('id', { count: 'exact', head: true }).eq('user_id', user.id).eq('is_read', false),
-        supabase.from('support_messages').select('id', { count: 'exact', head: true }).eq('user_id', user.id).not('admin_response', 'is', null).or('status.eq.open,status.is.null'),
-      ]);
+      const messagesRes = await supabase
+        .from('support_messages')
+        .select('id', { count: 'exact', head: true })
+        .eq('user_id', user.id)
+        .not('admin_response', 'is', null)
+        .or('status.eq.open,status.is.null');
 
       return {
-        notifications: notificationsRes.count ?? 0,
         messages: messagesRes.count ?? 0,
       };
     },
@@ -72,7 +71,6 @@ interface MenuItem {
   url: string;
   icon: typeof LayoutDashboard;
   badgeKey?: string;
-  showCountBadge?: boolean;
   /** If true, this item remains accessible even when the account is locked (pending/rejected) */
   allowWhenLocked?: boolean;
   /** If true, this item gets a special visual highlight in the sidebar */
@@ -130,7 +128,6 @@ function DealerBadge({ count }: { count: number }) {
 export function DealerSidebar() {
   const { state, setOpenMobile, isMobile } = useSidebar();
   const { signOut } = useAuth();
-  const { settings } = useSettings();
   const navigate = useNavigate();
   const collapsed = state === "collapsed";
   const { isPendingDealer, isRejectedDealer } = useDealerPending();
@@ -145,9 +142,14 @@ export function DealerSidebar() {
   };
 
   const badgeCounts: Record<string, number> = {
-    notifications: badges?.notifications || 0,
     messages: badges?.messages || 0,
   };
+
+  const portalLabel = isPendingDealer
+    ? "Studio-Portal (Bewerbung in Prüfung)"
+    : isRejectedDealer
+      ? "Studio-Portal (Bewerbung abgelehnt)"
+      : "Studio-Portal";
 
   const handleSignOut = async () => {
     await signOut();
@@ -161,9 +163,7 @@ export function DealerSidebar() {
           {!collapsed ? (
             <div className="space-y-1">
               <SiteLogo variant="icon-text-compact" linkTo="/" className="mb-2" />
-              <p className="text-xs text-muted-foreground">
-                {isLocked ? "Händler Portal (Antrag in Prüfung)" : "Händler Portal"}
-              </p>
+              <p className="text-xs text-muted-foreground">{portalLabel}</p>
             </div>
           ) : (
             <SiteLogo variant="icon-only" linkTo="/" iconSize="h-8 w-8" />
@@ -218,7 +218,7 @@ export function DealerSidebar() {
                         {collapsed ? (
                           <div className="relative">
                             <item.icon className="w-5 h-5 flex-shrink-0" />
-                            {badgeCount > 0 && !item.showCountBadge && (
+                            {badgeCount > 0 && (
                               <span className="absolute -top-1 -right-1 inline-flex items-center justify-center w-4 h-4 text-[9px] font-bold text-white bg-red-500 rounded-full">
                                 {badgeCount > 9 ? "9+" : badgeCount}
                               </span>
@@ -228,14 +228,7 @@ export function DealerSidebar() {
                           <>
                             <item.icon className="w-5 h-5 flex-shrink-0" />
                             <span className="flex-1">{item.title}</span>
-                            {item.showCountBadge && badgeCount > 0 && (
-                              <Badge variant={badgeCount > 0 ? 'default' : 'secondary'} className="text-xs px-1.5 py-0 h-5 min-w-[20px] justify-center">
-                                {badgeCount}
-                              </Badge>
-                            )}
-                            {!item.showCountBadge && badgeCount > 0 && (
-                              <DealerBadge count={badgeCount} />
-                            )}
+                            <DealerBadge count={badgeCount} />
                           </>
                         )}
                       </NavLink>

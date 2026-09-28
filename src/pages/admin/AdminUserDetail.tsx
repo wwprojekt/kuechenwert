@@ -4,7 +4,7 @@
  */
 
 import { useState } from "react";
-import { useParams, useNavigate, Link } from "react-router-dom";
+import { useParams, useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { ensureValidRLSSession } from "@/lib/sessionGuard";
@@ -20,28 +20,18 @@ import {
   Shield,
   Ban,
   CheckCircle2,
-  Car,
-  Gavel,
-  Heart,
+  ClipboardList,
+  FileText,
+  Receipt,
   MessageSquare,
   Edit,
   AlertTriangle,
-  ExternalLink,
   MapPin,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -61,6 +51,9 @@ import {
   StatsCard,
 } from "@/components/admin/AdminDetailLayout";
 import { UserEditDialog } from "@/components/admin/UserEditDialog";
+import { UserActivityTabs } from "@/components/admin/activity/UserActivityTabs";
+import { fetchDealerOffers, fetchUserProjects } from "@/components/admin/activity/activityData";
+import { roleInfo } from "@/components/admin/roleLabels";
 import { logger } from "@/lib/logger";
 
 export default function AdminUserDetail() {
@@ -88,60 +81,14 @@ export default function AdminUserDetail() {
 
       if (profileError) throw profileError;
 
-      // Fetch user's kitchens
-      const { data: kitchens, error: kitchensError } = await supabase
-        .from("kitchens")
-        .select(`
-          id,
-          manufacturer,
-          model,
-          year,
-          status,
-          sale_channel,
-          created_at,
-          kitchen_photos(url, card_url, medium_url, display_order)
-        `)
-        .eq("seller_id", id)
-        .order("created_at", { ascending: false })
-        .limit(5);
-      if (kitchensError) throw kitchensError;
+      const { projects, total: projectsTotal } = await fetchUserProjects(profile.id);
+      const { offers, total: offersTotal } = await fetchDealerOffers(profile.id);
 
-      const { count: kitchensTotal, error: kitchensCountError } = await supabase
-        .from("kitchens")
-        .select("*", { count: "exact", head: true })
-        .eq("seller_id", id);
-      if (kitchensCountError) throw kitchensCountError;
-
-      // Fetch user's bids
-      const { data: bids, error: bidsError } = await supabase
-        .from("bids")
-        .select(`
-          id,
-          amount,
-          created_at,
-          auction:auctions(
-            id,
-            status,
-            kitchen:kitchens(manufacturer, model, year)
-          )
-        `)
-        .eq("bidder_id", id)
-        .order("created_at", { ascending: false })
-        .limit(10);
-      if (bidsError) throw bidsError;
-
-      const { count: bidsTotal, error: bidsCountError } = await supabase
-        .from("bids")
-        .select("*", { count: "exact", head: true })
-        .eq("bidder_id", id);
-      if (bidsCountError) throw bidsCountError;
-
-      // Fetch user's favorites count
-      const { count: favoritesCount, error: favoritesError } = await supabase
-        .from("user_favorites")
-        .select("*", { count: "exact", head: true })
-        .eq("user_id", id);
-      if (favoritesError) throw favoritesError;
+      const { count: invoicesCount, error: invoicesError } = await supabase
+        .from("invoices")
+        .select("id", { count: "exact", head: true })
+        .eq("dealer_id", id);
+      if (invoicesError) throw invoicesError;
 
       // Fetch user's messages count
       const { count: messagesCount, error: messagesError } = await supabase
@@ -161,11 +108,11 @@ export default function AdminUserDetail() {
       return {
         ...profile,
         roles: (Array.isArray(profile.user_roles) ? profile.user_roles : profile.user_roles ? [profile.user_roles] : []).map((r: any) => r.role),
-        kitchens: kitchens || [],
-        bids: bids || [],
-        kitchensTotal: kitchensTotal ?? 0,
-        bidsTotal: bidsTotal ?? 0,
-        favoritesCount: favoritesCount || 0,
+        projects,
+        projectsTotal,
+        offers,
+        offersTotal,
+        invoicesCount: invoicesCount ?? 0,
         messagesCount: messagesCount || 0,
         dealerApplication,
       };
@@ -222,23 +169,7 @@ export default function AdminUserDetail() {
     return format(new Date(date), "dd.MM.yyyy HH:mm", { locale: de });
   };
 
-  const formatPrice = (price: number | null) => {
-    if (!price) return "—";
-    return new Intl.NumberFormat("de-DE", {
-      style: "currency",
-      currency: "EUR",
-    }).format(price);
-  };
-
-  const getRoleBadge = (role: string) => {
-    const roleConfig: Record<string, { label: string; variant: "default" | "secondary" | "outline" }> = {
-      admin: { label: "Admin", variant: "default" },
-      dealer: { label: "Händler", variant: "secondary" },
-      seller: { label: "Verkäufer", variant: "outline" },
-      private: { label: "Privat", variant: "outline" },
-    };
-    return roleConfig[role] || { label: role, variant: "outline" };
-  };
+  const isDealer = user?.roles.includes("dealer") ?? false;
 
   const displayName = user ? `${user.first_name || ""} ${user.last_name || ""}`.trim() || user.email : "";
 
@@ -321,19 +252,19 @@ export default function AdminUserDetail() {
           {/* Stats Overview */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             <StatsCard
-              label="Inserate"
-              value={user.kitchensTotal}
-              icon={<Car className="w-5 h-5" />}
+              label="Küchenprojekte"
+              value={user.projectsTotal}
+              icon={<ClipboardList className="w-5 h-5" />}
             />
             <StatsCard
-              label="Gebote"
-              value={user.bidsTotal}
-              icon={<Gavel className="w-5 h-5" />}
+              label="Angebote"
+              value={user.offersTotal}
+              icon={<FileText className="w-5 h-5" />}
             />
             <StatsCard
-              label="Favoriten"
-              value={user.favoritesCount}
-              icon={<Heart className="w-5 h-5" />}
+              label="Rechnungen"
+              value={user.invoicesCount}
+              icon={<Receipt className="w-5 h-5" />}
             />
             <StatsCard
               label="Nachrichten"
@@ -366,7 +297,7 @@ export default function AdminUserDetail() {
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       {user.address_street && (
                         <div className="p-3 bg-muted/50 rounded-lg">
-                          <p className="text-xs font-medium text-muted-foreground mb-1">Privatadresse (Verkäufer)</p>
+                          <p className="text-xs font-medium text-muted-foreground mb-1">Privatadresse</p>
                           <p className="text-sm">{user.address_street}</p>
                           <p className="text-sm">{[user.address_zip, user.address_city].filter(Boolean).join(' ')}</p>
                           {user.address_country && <p className="text-sm text-muted-foreground">{user.address_country}</p>}
@@ -374,7 +305,7 @@ export default function AdminUserDetail() {
                       )}
                       {user.company_street && (
                         <div className="p-3 bg-muted/50 rounded-lg">
-                          <p className="text-xs font-medium text-muted-foreground mb-1">Firmenadresse (Käufer)</p>
+                          <p className="text-xs font-medium text-muted-foreground mb-1">Firmenadresse</p>
                           <p className="text-sm">{user.company_street}</p>
                           <p className="text-sm">{[user.company_zip, user.company_city].filter(Boolean).join(' ')}</p>
                           {user.company_country && <p className="text-sm text-muted-foreground">{user.company_country}</p>}
@@ -384,15 +315,14 @@ export default function AdminUserDetail() {
                   </div>
                 )}
 
-                {/* Adresse fehlt Warnung */}
-                {!user.address_street && !user.company_street && (
+                {isDealer && !user.address_street && !user.company_street && (
                   <div className="mt-6 p-3 rounded-lg bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-700">
                     <div className="flex items-center gap-2 text-amber-700 dark:text-amber-300">
                       <AlertTriangle className="w-4 h-4" />
                       <span className="text-sm font-medium">Keine Adresse hinterlegt</span>
                     </div>
                     <p className="text-xs text-amber-600 dark:text-amber-400 mt-1">
-                      Für die Kaufvertragserstellung wird eine Adresse benötigt. Klicken Sie auf "Bearbeiten", um die Adresse zu ergänzen.
+                      Für Rechnungen an das Küchenstudio wird eine Adresse benötigt. Klicken Sie auf "Bearbeiten", um die Adresse zu ergänzen.
                     </p>
                   </div>
                 )}
@@ -401,12 +331,12 @@ export default function AdminUserDetail() {
                 <div className="mt-6">
                   <p className="text-sm font-medium text-muted-foreground mb-2 flex items-center gap-2">
                     <Shield className="w-4 h-4" />
-                    Rollen
+                    Rolle
                   </p>
                   <div className="flex flex-wrap gap-2">
                     {user.roles.length > 0 ? (
                       user.roles.map((role: string) => {
-                        const config = getRoleBadge(role);
+                        const config = roleInfo(role);
                         return (
                           <Badge key={role} variant={config.variant}>
                             {config.label}
@@ -414,7 +344,7 @@ export default function AdminUserDetail() {
                         );
                       })
                     ) : (
-                      <span className="text-sm text-muted-foreground">Keine Rollen zugewiesen</span>
+                      <span className="text-sm text-muted-foreground">Keine Rolle zugewiesen</span>
                     )}
                   </div>
                 </div>
@@ -438,171 +368,14 @@ export default function AdminUserDetail() {
                 )}
               </DetailSection>
 
-              {/* Tabs for Activity */}
-              <Tabs defaultValue="listings" className="space-y-4">
-                <TabsList className="grid w-full grid-cols-2">
-                  <TabsTrigger value="listings">Inserate ({user.kitchensTotal})</TabsTrigger>
-                  <TabsTrigger value="bids">Gebote ({user.bidsTotal})</TabsTrigger>
-                </TabsList>
-
-                <TabsContent value="listings">
-                  <DetailSection
-                    title="Inserate"
-                    icon={<Car className="w-5 h-5" />}
-                    actions={
-                      id ? (
-                        <Button variant="link" className="h-auto p-0 text-sm" asChild>
-                          <Link to={`/admin/kitchens?seller=${id}`}>
-                            Alle Inserate anzeigen
-                            <ExternalLink className="w-3.5 h-3.5 ml-1 inline" />
-                          </Link>
-                        </Button>
-                      ) : null
-                    }
-                  >
-                    {Array.isArray(user.kitchens) && user.kitchens.length > 0 ? (
-                      <Table>
-                        <TableHeader>
-                          <TableRow>
-                            <TableHead>Fahrzeug</TableHead>
-                            <TableHead>Status</TableHead>
-                            <TableHead>Verkaufsweg</TableHead>
-                            <TableHead>Erstellt</TableHead>
-                            <TableHead></TableHead>
-                          </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                          {user.kitchens.map((kitchen: any) => {
-                            const safePhotos = Array.isArray(kitchen.kitchen_photos) ? kitchen.kitchen_photos : kitchen.kitchen_photos ? [kitchen.kitchen_photos] : [];
-                            const mainPhoto = [...safePhotos].sort(
-                              (a: any, b: any) => (a.display_order || 0) - (b.display_order || 0)
-                            )[0];
-                            return (
-                              <TableRow key={kitchen.id}>
-                                <TableCell>
-                                  <div className="flex items-center gap-3">
-                                    <div className="w-12 h-9 rounded bg-muted overflow-hidden">
-                                      {mainPhoto ? (
-                                        <img
-                                          src={mainPhoto.card_url || mainPhoto.url}
-                                          alt={`${kitchen.manufacturer} ${kitchen.model} Foto`}
-                                          loading="lazy"
-                                          className="w-full h-full object-cover"
-                                        />
-                                      ) : (
-                                        <div className="w-full h-full flex items-center justify-center">
-                                          <Car className="w-4 h-4 text-muted-foreground" />
-                                        </div>
-                                      )}
-                                    </div>
-                                    <div>
-                                      <p className="font-medium">
-                                        {kitchen.manufacturer} {kitchen.model}
-                                      </p>
-                                      <p className="text-xs text-muted-foreground">{kitchen.year}</p>
-                                    </div>
-                                  </div>
-                                </TableCell>
-                                <TableCell>
-                                  <Badge variant="outline">{kitchen.status}</Badge>
-                                </TableCell>
-                                <TableCell>
-                                  {kitchen.sale_channel === "auction" ? "Auktion" : kitchen.sale_channel === "instant_price" ? "Nur Festpreis" : kitchen.sale_channel === "station" ? "Ankaufstation" : kitchen.sale_channel || "—"}
-                                </TableCell>
-                                <TableCell className="text-muted-foreground">
-                                  {format(new Date(kitchen.created_at), "dd.MM.yyyy")}
-                                </TableCell>
-                                <TableCell>
-                                  <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    onClick={() => navigate(`/admin/kitchens/${kitchen.id}`)}
-                                  >
-                                    <ExternalLink className="w-4 h-4" />
-                                  </Button>
-                                </TableCell>
-                              </TableRow>
-                            );
-                          })}
-                        </TableBody>
-                      </Table>
-                    ) : (
-                      <div className="text-center py-8 text-muted-foreground">
-                        <Car className="w-12 h-12 mx-auto mb-3 opacity-50" />
-                        <p>Keine Inserate vorhanden</p>
-                      </div>
-                    )}
-                  </DetailSection>
-                </TabsContent>
-
-                <TabsContent value="bids">
-                  <DetailSection
-                    title="Gebote"
-                    icon={<Gavel className="w-5 h-5" />}
-                    actions={
-                      id ? (
-                        <Button variant="link" className="h-auto p-0 text-sm" asChild>
-                          <Link to={`/admin/auctions?bidder=${id}`}>
-                            Alle Gebote anzeigen
-                            <ExternalLink className="w-3.5 h-3.5 ml-1 inline" />
-                          </Link>
-                        </Button>
-                      ) : null
-                    }
-                  >
-                    {Array.isArray(user.bids) && user.bids.length > 0 ? (
-                      <Table>
-                        <TableHeader>
-                          <TableRow>
-                            <TableHead>Auktion</TableHead>
-                            <TableHead>Betrag</TableHead>
-                            <TableHead>Status</TableHead>
-                            <TableHead>Zeitpunkt</TableHead>
-                            <TableHead></TableHead>
-                          </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                          {user.bids.map((bid: any) => (
-                            <TableRow key={bid.id}>
-                              <TableCell>
-                                <p className="font-medium">
-                                  {bid.auction?.kitchen?.manufacturer} {bid.auction?.kitchen?.model}
-                                </p>
-                                <p className="text-xs text-muted-foreground">
-                                  {bid.auction?.kitchen?.year}
-                                </p>
-                              </TableCell>
-                              <TableCell className="font-semibold">{formatPrice(bid.amount)}</TableCell>
-                              <TableCell>
-                                <Badge variant={bid.auction?.status === "active" ? "default" : "outline"}>
-                                  {bid.auction?.status}
-                                </Badge>
-                              </TableCell>
-                              <TableCell className="text-muted-foreground">
-                                {formatDate(bid.created_at)}
-                              </TableCell>
-                              <TableCell>
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() => navigate(`/admin/auctions/${bid.auction?.id}`)}
-                                >
-                                  <ExternalLink className="w-4 h-4" />
-                                </Button>
-                              </TableCell>
-                            </TableRow>
-                          ))}
-                        </TableBody>
-                      </Table>
-                    ) : (
-                      <div className="text-center py-8 text-muted-foreground">
-                        <Gavel className="w-12 h-12 mx-auto mb-3 opacity-50" />
-                        <p>Keine Gebote vorhanden</p>
-                      </div>
-                    )}
-                  </DetailSection>
-                </TabsContent>
-              </Tabs>
+              <UserActivityTabs
+                email={user.email}
+                isDealer={isDealer}
+                projects={user.projects}
+                projectsTotal={user.projectsTotal}
+                offers={user.offers}
+                offersTotal={user.offersTotal}
+              />
             </div>
 
             {/* Right Column - Sidebar */}
@@ -629,14 +402,14 @@ export default function AdminUserDetail() {
                     <MessageSquare className="w-4 h-4 mr-2" />
                     Nachrichten anzeigen
                   </Button>
-                  {user.roles.includes("dealer") && user.dealerApplication && (
+                  {isDealer && user.dealerApplication && (
                     <Button
                       variant="outline"
                       className="w-full justify-start"
                       onClick={() => navigate(`/admin/dealers/${user.dealerApplication.id}`)}
                     >
                       <Building2 className="w-4 h-4 mr-2" />
-                      Händlerprofil
+                      Studio-Profil
                     </Button>
                   )}
                 </CardContent>
@@ -644,7 +417,7 @@ export default function AdminUserDetail() {
 
               {/* Dealer Application Info */}
               {user.dealerApplication && (
-                <DetailSection title="Händlerantrag" icon={<Building2 className="w-5 h-5" />}>
+                <DetailSection title="Studio-Bewerbung" icon={<Building2 className="w-5 h-5" />}>
                   <div className="space-y-3">
                     <div className="flex items-center justify-between">
                       <span className="text-sm text-muted-foreground">Status</span>
@@ -665,7 +438,7 @@ export default function AdminUserDetail() {
                       </Badge>
                     </div>
                     <InfoItem label="Firma" value={user.dealerApplication.company_name} />
-                    <InfoItem label="Stadt" value={user.dealerApplication.city} />
+                    <InfoItem label="Stadt" value={user.dealerApplication.company_city} />
                     <Button
                       variant="outline"
                       className="w-full"

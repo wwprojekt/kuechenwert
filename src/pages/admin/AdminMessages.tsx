@@ -1,39 +1,18 @@
-import { useEffect, useState } from "react";
-import { useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
-import { ensureValidRLSSession, invokeWithAuth } from "@/lib/sessionGuard";
+import { useMemo, useState } from "react";
+import { useSearchParams } from "react-router-dom";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { format } from "date-fns";
+import { de } from "date-fns/locale";
+import { AlertCircle, CheckCircle, Clock, Eye, Loader2, MessageSquare, Search, Trash2, User, X } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Textarea } from "@/components/ui/textarea";
-import { Label } from "@/components/ui/label";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-} from "@/components/ui/dialog";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { MessageSquare, Clock, CheckCircle, AlertCircle, Eye, Send, User, Trash2, Loader2, Mail, Phone, ExternalLink, Truck, Hash, Search } from "lucide-react";
-import { Link } from "react-router-dom";
 import { Input } from "@/components/ui/input";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -44,248 +23,130 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Checkbox } from "@/components/ui/checkbox";
-import { format } from "date-fns";
-import { de } from "date-fns/locale";
+import { MessageDetailDialog } from "@/components/admin/messages/MessageDetailDialog";
+import {
+  STATUS_LABELS,
+  STATUS_OPTIONS,
+  deleteMessages,
+  fetchAdminMessages,
+  sendMessageReply,
+  updateMessageStatus,
+  type AdminMessage,
+  type MessageSource,
+  type MessageStatus,
+} from "@/components/admin/messages/adminMessagesApi";
 
-interface UserKitchen {
-  id: string;
-  manufacturer: string;
-  model: string;
-  year: number;
-  listing_number: string | null;
-  status: string;
-}
+const TAB_TO_SOURCE: Record<string, MessageSource> = { kontakt: "contact", support: "support" };
+const RELATED_QUERY_KEYS = [["adminMessages"], ["adminNotificationCounts"], ["adminDashboardCounts"], ["adminActionItems"]];
 
-interface SupportMessage {
-  id: string;
-  user_id: string | null;
-  subject: string;
-  message: string;
-  status: string | null;
-  admin_response: string | null;
-  responded_at: string | null;
-  created_at: string | null;
-  user?: {
-    email?: string;
-    phone?: string | null;
-    first_name?: string;
-    last_name?: string;
-    customer_number?: string | null;
-  };
-  kitchens?: UserKitchen[];
+function StatusBadge({ status }: { status: MessageStatus }) {
+  if (status === "resolved") {
+    return <Badge variant="outline" className="text-green-600 border-green-600 gap-1"><CheckCircle className="w-3 h-3" />{STATUS_LABELS.resolved}</Badge>;
+  }
+  if (status === "in_progress") {
+    return <Badge variant="outline" className="text-blue-600 border-blue-600 gap-1"><AlertCircle className="w-3 h-3" />{STATUS_LABELS.in_progress}</Badge>;
+  }
+  return <Badge variant="outline" className="text-orange-600 border-orange-600 gap-1"><Clock className="w-3 h-3" />{STATUS_LABELS.open}</Badge>;
 }
 
 export default function AdminMessages() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const [messages, setMessages] = useState<SupportMessage[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [selectedMessage, setSelectedMessage] = useState<SupportMessage | null>(null);
-  const [response, setResponse] = useState("");
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [filter, setFilter] = useState<"all" | "open" | "in_progress" | "resolved">("all");
-  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
-  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [deleteIds, setDeleteIds] = useState<string[]>([]);
-  const [isDeleting, setIsDeleting] = useState(false);
+  const [searchParams, setSearchParams] = useSearchParams();
+  const userFilter = searchParams.get("user");
+  const source: MessageSource = userFilter ? "support" : TAB_TO_SOURCE[searchParams.get("tab") ?? ""] ?? "contact";
+
+  const [statusFilter, setStatusFilter] = useState<"all" | MessageStatus>("all");
   const [searchQuery, setSearchQuery] = useState("");
+  const [selected, setSelected] = useState<AdminMessage | null>(null);
+  const [checkedIds, setCheckedIds] = useState<Set<string>>(new Set());
+  const [deleteTargets, setDeleteTargets] = useState<AdminMessage[]>([]);
+  const [isDeleting, setIsDeleting] = useState(false);
 
-  const fetchMessages = async () => {
+  const { data: messages = [], isLoading } = useQuery({
+    queryKey: ["adminMessages"],
+    queryFn: fetchAdminMessages,
+    staleTime: 30000,
+  });
+
+  const openCounts = useMemo(() => {
+    const counts: Record<MessageSource, number> = { contact: 0, support: 0 };
+    for (const m of messages) if (m.status === "open") counts[m.source] += 1;
+    return counts;
+  }, [messages]);
+
+  const visible = useMemo(() => {
+    const q = searchQuery.toLowerCase().trim();
+    return messages.filter((m) => {
+      if (m.source !== source) return false;
+      if (userFilter && m.sender.userId !== userFilter) return false;
+      if (statusFilter !== "all" && m.status !== statusFilter) return false;
+      if (!q) return true;
+      return [m.sender.name, m.sender.email, m.subject, m.message].some((v) => (v || "").toLowerCase().includes(q));
+    });
+  }, [messages, source, userFilter, statusFilter, searchQuery]);
+
+  const refresh = () => {
+    for (const queryKey of RELATED_QUERY_KEYS) queryClient.invalidateQueries({ queryKey });
+  };
+
+  const switchTab = (tab: string) => {
+    setSearchParams({ tab }, { replace: true });
+    setCheckedIds(new Set());
+    setStatusFilter("all");
+  };
+
+  const handleStatusChange = async (message: AdminMessage, status: MessageStatus) => {
     try {
-      const sessionValid = await ensureValidRLSSession();
-      if (!sessionValid) return;
-
-      // Fetch messages
-      const { data: messagesData, error: messagesError } = await supabase
-        .from("support_messages")
-        .select("*")
-        .order("created_at", { ascending: false });
-
-      if (messagesError) throw messagesError;
-
-      const userIds = [...new Set(messagesData?.map(m => m.user_id).filter(Boolean) as string[])];
-
-      type ProfileInfo = { first_name: string | null; last_name: string | null; email: string; phone: string | null; customer_number: string | null };
-      let profilesMap: Record<string, ProfileInfo> = {};
-      let kitchensMap: Record<string, UserKitchen[]> = {};
-      
-      if (userIds.length > 0) {
-        const [profilesRes, kitchensRes] = await Promise.all([
-          supabase
-            .from("profiles")
-            .select("id, first_name, last_name, email, phone, customer_number")
-            .in("id", userIds),
-          supabase
-            .from("kitchens")
-            .select("id, seller_id, manufacturer, model, year, listing_number, status")
-            .in("seller_id", userIds)
-            .order("created_at", { ascending: false }),
-        ]);
-
-        if (profilesRes.data) {
-          profilesMap = profilesRes.data.reduce((acc, p) => {
-            acc[p.id] = { first_name: p.first_name, last_name: p.last_name, email: p.email, phone: p.phone, customer_number: p.customer_number };
-            return acc;
-          }, {} as Record<string, ProfileInfo>);
-        }
-
-        if (kitchensRes.data) {
-          kitchensMap = kitchensRes.data.reduce((acc, m) => {
-            const key = m.seller_id;
-            if (!acc[key]) acc[key] = [];
-            acc[key].push({ id: m.id, manufacturer: m.manufacturer, model: m.model, year: m.year, listing_number: m.listing_number, status: m.status });
-            return acc;
-          }, {} as Record<string, UserKitchen[]>);
-        }
-      }
-
-      const messagesWithUsers = messagesData?.map(msg => ({
-        ...msg,
-        user: msg.user_id ? profilesMap[msg.user_id] : undefined,
-        kitchens: msg.user_id ? kitchensMap[msg.user_id] ?? [] : [],
-      })) || [];
-
-      setMessages(messagesWithUsers as SupportMessage[]);
+      await updateMessageStatus(message, status);
+      setSelected((prev) => (prev?.id === message.id ? { ...prev, status } : prev));
+      toast({ title: status === "resolved" ? "Als erledigt markiert" : `Status: ${STATUS_LABELS[status]}` });
+      refresh();
     } catch (error) {
-      console.error("Error fetching messages:", error);
+      console.error("Status konnte nicht geändert werden:", error);
       toast({
-        title: "Fehler",
-        description: "Nachrichten konnten nicht geladen werden",
+        title: "Status konnte nicht geändert werden",
+        description: error instanceof Error ? error.message : undefined,
         variant: "destructive",
       });
-    } finally {
-      setLoading(false);
     }
   };
 
-  useEffect(() => {
-    fetchMessages();
-  }, []);
-
-  const handleRespond = async () => {
-    if (!selectedMessage || !response.trim()) return;
-
-    const recipientEmail = selectedMessage.user?.email?.trim();
-    if (!recipientEmail) {
-      toast({
-        title: "Keine E-Mail-Adresse",
-        description:
-          "Für diese Nachricht ist keine Empfänger-E-Mail hinterlegt. Antwort kann nicht zugestellt werden.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    setIsSubmitting(true);
-
+  const handleReply = async (message: AdminMessage, reply: string): Promise<boolean> => {
     try {
-      const trimmed = response.trim();
-      const recipientName =
-        selectedMessage.user?.first_name || selectedMessage.user?.last_name
-          ? `${selectedMessage.user?.first_name ?? ""} ${selectedMessage.user?.last_name ?? ""}`.trim()
-          : undefined;
-
-      // Convert plain text response to safe HTML (newlines → <br/>, escape <,>,&)
-      const escaped = trimmed
-        .replace(/&/g, "&amp;")
-        .replace(/</g, "&lt;")
-        .replace(/>/g, "&gt;");
-      const bodyHtml = `<p>${escaped.replace(/\n/g, "<br/>")}</p>`;
-      const subject = selectedMessage.subject?.toLowerCase().startsWith("re:")
-        ? selectedMessage.subject
-        : `Re: ${selectedMessage.subject || "Ihre Anfrage"}`;
-
-      // send-admin-email also marks the original support_message as resolved,
-      // sets admin_response / responded_at / responded_by — so a single call
-      // replaces the previous DB-only "fake send" we used to do here.
-      const { error } = await invokeWithAuth("send-admin-email", {
-        body: {
-          to: recipientEmail,
-          subject,
-          body_html: bodyHtml,
-          recipient_name: recipientName,
-          reply_to_message_id: selectedMessage.id,
-          reply_to_message_type: "support",
-        },
-      });
-
-      if (error) throw error;
-
-      toast({
-        title: "Antwort versendet",
-        description: `E-Mail an ${recipientEmail} gesendet und Nachricht als erledigt markiert.`,
-      });
-
-      setSelectedMessage(null);
-      setResponse("");
-      queryClient.invalidateQueries({ queryKey: ["adminNotificationCounts"] });
-      fetchMessages();
+      const recipient = await sendMessageReply(message, reply);
+      toast({ title: "Antwort versendet", description: `E-Mail an ${recipient} gesendet, Nachricht ist erledigt.` });
+      refresh();
+      return true;
     } catch (error) {
-      console.error("Error responding to message:", error);
-      const message =
-        error instanceof Error ? error.message : "Unbekannter Fehler";
+      console.error("Antwort konnte nicht gesendet werden:", error);
       toast({
         title: "E-Mail-Versand fehlgeschlagen",
-        description: `${message}. Die Antwort wurde NICHT zugestellt – bitte erneut versuchen.`,
+        description: `${error instanceof Error ? error.message : "Unbekannter Fehler"}. Die Antwort wurde NICHT zugestellt.`,
         variant: "destructive",
       });
-    } finally {
-      setIsSubmitting(false);
+      return false;
     }
   };
 
-  const handleStatusChange = async (messageId: string, newStatus: string) => {
-    try {
-      const { error } = await supabase
-        .from("support_messages")
-        .update({ status: newStatus })
-        .eq("id", messageId);
-
-      if (error) throw error;
-      queryClient.invalidateQueries({ queryKey: ["adminNotificationCounts"] });
-      fetchMessages();
-    } catch (error) {
-      console.error("Error updating status:", error);
-      toast({
-        title: "Fehler",
-        description: "Status konnte nicht aktualisiert werden",
-        variant: "destructive",
-      });
-    }
-  };
-
-  const handleDelete = async (ids: string[]) => {
+  const handleDelete = async () => {
     setIsDeleting(true);
     try {
-      const { error } = await supabase
-        .from("support_messages")
-        .delete()
-        .in("id", ids);
-      if (error) throw error;
-      toast({
-        title: `${ids.length} Nachricht${ids.length > 1 ? "en" : ""} gelöscht`,
-        description: "Die ausgewählten Nachrichten wurden entfernt.",
-      });
-      setSelectedIds(new Set());
-      queryClient.invalidateQueries({ queryKey: ["adminNotificationCounts"] });
-      fetchMessages();
+      await deleteMessages(deleteTargets);
+      toast({ title: `${deleteTargets.length} Nachricht${deleteTargets.length > 1 ? "en" : ""} gelöscht` });
+      setCheckedIds(new Set());
+      refresh();
     } catch (error) {
+      console.error("Nachrichten konnten nicht gelöscht werden:", error);
       toast({ title: "Fehler beim Löschen", description: String(error), variant: "destructive" });
     } finally {
       setIsDeleting(false);
-      setDeleteDialogOpen(false);
-      setDeleteIds([]);
+      setDeleteTargets([]);
     }
   };
 
-  const openDeleteDialog = (ids: string[]) => {
-    setDeleteIds(ids);
-    setDeleteDialogOpen(true);
-  };
-
-  const toggleSelection = (id: string) => {
-    setSelectedIds((prev) => {
+  const toggleChecked = (id: string) => {
+    setCheckedIds((prev) => {
       const next = new Set(prev);
       if (next.has(id)) next.delete(id);
       else next.add(id);
@@ -293,62 +154,16 @@ export default function AdminMessages() {
     });
   };
 
-  const filteredMessages = messages.filter((msg) => {
-    if (filter !== "all" && msg.status !== filter) return false;
-    if (searchQuery.trim()) {
-      const q = searchQuery.toLowerCase().trim();
-      const nameMatch = `${msg.user?.first_name || ""} ${msg.user?.last_name || ""}`.toLowerCase().includes(q);
-      const emailMatch = (msg.user?.email || "").toLowerCase().includes(q);
-      const subjectMatch = (msg.subject || "").toLowerCase().includes(q);
-      const messageMatch = (msg.message || "").toLowerCase().includes(q);
-      if (!nameMatch && !emailMatch && !subjectMatch && !messageMatch) return false;
-    }
-    return true;
-  });
-
-  const getStatusBadge = (status: string | null) => {
-    switch (status) {
-      case "resolved":
-        return (
-          <Badge variant="outline" className="text-green-600 border-green-600 gap-1">
-            <CheckCircle className="w-3 h-3" />
-            Beantwortet
-          </Badge>
-        );
-      case "in_progress":
-        return (
-          <Badge variant="outline" className="text-blue-600 border-blue-600 gap-1">
-            <AlertCircle className="w-3 h-3" />
-            In Bearbeitung
-          </Badge>
-        );
-      default:
-        return (
-          <Badge variant="outline" className="text-orange-600 border-orange-600 gap-1">
-            <Clock className="w-3 h-3" />
-            Offen
-          </Badge>
-        );
-    }
-  };
-
-  const openCount = messages.filter(m => m.status === "open" || !m.status).length;
+  const allChecked = visible.length > 0 && visible.every((m) => checkedIds.has(m.id));
 
   return (
     <div className="space-y-6">
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <div>
-          <h1 className="text-xl sm:text-2xl md:text-3xl font-bold">Support-Nachrichten</h1>
-          <p className="text-muted-foreground">
-            Verwalten Sie Benutzeranfragen
-          </p>
+          <h1 className="text-xl sm:text-2xl md:text-3xl font-bold">Nachrichten</h1>
+          <p className="text-muted-foreground">Kontaktformular und Support-Anfragen aus dem Kundenkonto</p>
         </div>
         <div className="flex items-center gap-3 flex-wrap">
-          {openCount > 0 && (
-            <Badge variant="destructive" className="text-sm">
-              {openCount} offene Anfragen
-            </Badge>
-          )}
           <div className="relative w-full sm:w-[260px]">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
             <Input
@@ -358,347 +173,187 @@ export default function AdminMessages() {
               className="pl-9"
             />
           </div>
-          <Select value={filter} onValueChange={(val) => setFilter(val as typeof filter)}>
+          <Select value={statusFilter} onValueChange={(val) => setStatusFilter(val as typeof statusFilter)}>
             <SelectTrigger className="w-full sm:w-[180px]">
               <SelectValue placeholder="Filter" />
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">Alle Nachrichten</SelectItem>
-              <SelectItem value="open">Offen</SelectItem>
-              <SelectItem value="in_progress">In Bearbeitung</SelectItem>
-              <SelectItem value="resolved">Beantwortet</SelectItem>
+              {STATUS_OPTIONS[source].map((s) => (
+                <SelectItem key={s} value={s}>{STATUS_LABELS[s]}</SelectItem>
+              ))}
             </SelectContent>
           </Select>
         </div>
+      </div>
+
+      <div className="flex flex-wrap items-center gap-3">
+        <Tabs value={source === "contact" ? "kontakt" : "support"} onValueChange={switchTab}>
+          <TabsList>
+            <TabsTrigger value="kontakt" className="gap-2">
+              Kontaktformular
+              {openCounts.contact > 0 && <Badge variant="destructive" className="h-5 px-1.5">{openCounts.contact}</Badge>}
+            </TabsTrigger>
+            <TabsTrigger value="support" className="gap-2">
+              Support
+              {openCounts.support > 0 && <Badge variant="destructive" className="h-5 px-1.5">{openCounts.support}</Badge>}
+            </TabsTrigger>
+          </TabsList>
+        </Tabs>
+        {userFilter && (
+          <Button variant="outline" size="sm" onClick={() => switchTab("support")} className="gap-1">
+            <User className="w-3.5 h-3.5" />
+            Nur Nachrichten dieses Benutzers
+            <X className="w-3.5 h-3.5" />
+          </Button>
+        )}
       </div>
 
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <MessageSquare className="w-5 h-5 text-primary" />
-            Eingegangene Anfragen
+            {source === "contact" ? "Kontaktanfragen" : "Support-Nachrichten"}
           </CardTitle>
-          <CardDescription>
-            {filteredMessages.length} Nachrichten gefunden
-          </CardDescription>
+          <CardDescription>{visible.length} Nachrichten gefunden</CardDescription>
         </CardHeader>
         <CardContent>
-          {loading ? (
-            <div className="text-center py-8">
-              <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-primary mx-auto"></div>
-              <p className="text-muted-foreground mt-2">Lädt...</p>
+          {isLoading ? (
+            <div className="flex items-center justify-center py-8 text-muted-foreground">
+              <Loader2 className="w-5 h-5 animate-spin mr-2" />
+              Lädt...
             </div>
-          ) : filteredMessages.length === 0 ? (
+          ) : visible.length === 0 ? (
             <div className="text-center py-8">
               <MessageSquare className="w-12 h-12 text-muted-foreground mx-auto mb-2" />
               <p className="text-muted-foreground">Keine Nachrichten gefunden</p>
             </div>
           ) : (
             <div className="overflow-x-auto">
-            <Table className="min-w-[800px]">
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="w-10">
-                    <Checkbox
-                      checked={filteredMessages.length > 0 && selectedIds.size === filteredMessages.length}
-                      onCheckedChange={() => {
-                        if (selectedIds.size === filteredMessages.length) {
-                          setSelectedIds(new Set());
-                        } else {
-                          setSelectedIds(new Set(filteredMessages.map((m) => m.id)));
-                        }
-                      }}
-                      aria-label="Alle auswählen"
-                    />
-                  </TableHead>
-                  <TableHead>Benutzer</TableHead>
-                  <TableHead>Betreff</TableHead>
-                  <TableHead>Fahrzeuge</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Datum</TableHead>
-                  <TableHead className="text-right">Aktion</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredMessages.map((msg) => (
-                  <TableRow key={msg.id} className={selectedIds.has(msg.id) ? "bg-primary/5" : ""}>
-                    <TableCell>
+              <Table className="min-w-[760px]">
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="w-10">
                       <Checkbox
-                        checked={selectedIds.has(msg.id)}
-                        onCheckedChange={() => toggleSelection(msg.id)}
-                        aria-label="Nachricht auswählen"
+                        checked={allChecked}
+                        onCheckedChange={() => setCheckedIds(allChecked ? new Set() : new Set(visible.map((m) => m.id)))}
+                        aria-label="Alle auswählen"
                       />
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-2">
-                        <User className="w-4 h-4 text-muted-foreground shrink-0 mt-0.5" />
-                        <div className="min-w-0">
-                          <div className="font-medium truncate">
-                            {msg.user?.first_name && msg.user?.last_name 
-                              ? `${msg.user.first_name} ${msg.user.last_name}`
-                              : "Unbekannt"}
-                          </div>
-                          {msg.user?.email && (
-                            <div className="text-xs text-muted-foreground truncate">{msg.user.email}</div>
-                          )}
-                          {msg.user?.customer_number && (
-                            <div className="text-xs text-muted-foreground">#{msg.user.customer_number}</div>
-                          )}
-                        </div>
-                      </div>
-                    </TableCell>
-                    <TableCell className="font-medium max-w-[300px]">
-                      <p className="truncate">{msg.subject}</p>
-                    </TableCell>
-                    <TableCell>
-                      {msg.kitchens && msg.kitchens.length > 0 ? (
-                        <div className="space-y-1">
-                          {msg.kitchens.slice(0, 2).map((mh) => (
-                            <Link
-                              key={mh.id}
-                              to={`/admin/kitchens/${mh.id}`}
-                              className="flex items-center gap-1 text-xs text-primary hover:underline"
-                            >
-                              <Truck className="w-3 h-3" />
-                              <span className="truncate max-w-[140px]">{mh.manufacturer} {mh.model} ({mh.year})</span>
-                            </Link>
-                          ))}
-                          {msg.kitchens.length > 2 && (
-                            <span className="text-xs text-muted-foreground">+{msg.kitchens.length - 2} weitere</span>
-                          )}
-                        </div>
-                      ) : (
-                        <span className="text-xs text-muted-foreground">—</span>
-                      )}
-                    </TableCell>
-                    <TableCell>{getStatusBadge(msg.status)}</TableCell>
-                    <TableCell>
-                      {msg.created_at && format(new Date(msg.created_at), "dd.MM.yyyy HH:mm", { locale: de })}
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <div className="flex items-center justify-end gap-2">
-                        <Select
-                          value={msg.status || "open"}
-                          onValueChange={(val) => handleStatusChange(msg.id, val)}
-                        >
-                          <SelectTrigger className="w-[130px] h-8">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="open">Offen</SelectItem>
-                            <SelectItem value="in_progress">In Bearbeitung</SelectItem>
-                            <SelectItem value="resolved">Beantwortet</SelectItem>
-                          </SelectContent>
-                        </Select>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => {
-                            setSelectedMessage(msg);
-                            setResponse(msg.admin_response || "");
-                          }}
-                        >
-                          <Eye className="w-4 h-4 mr-1" />
-                          {msg.admin_response ? "Ansehen" : "Beantworten"}
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => openDeleteDialog([msg.id])}
-                          title="Nachricht löschen"
-                          className="hover:text-destructive"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </Button>
-                      </div>
-                    </TableCell>
+                    </TableHead>
+                    <TableHead>Absender</TableHead>
+                    <TableHead>Betreff</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Datum</TableHead>
+                    <TableHead className="text-right">Aktion</TableHead>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+                </TableHeader>
+                <TableBody>
+                  {visible.map((msg) => (
+                    <TableRow key={msg.id} className={checkedIds.has(msg.id) ? "bg-primary/5" : ""}>
+                      <TableCell>
+                        <Checkbox
+                          checked={checkedIds.has(msg.id)}
+                          onCheckedChange={() => toggleChecked(msg.id)}
+                          aria-label="Nachricht auswählen"
+                        />
+                      </TableCell>
+                      <TableCell>
+                        <div className="min-w-0">
+                          <div className="font-medium truncate">{msg.sender.name || "Unbekannt"}</div>
+                          {msg.sender.email && <div className="text-xs text-muted-foreground truncate">{msg.sender.email}</div>}
+                          {msg.sender.customerNumber && <div className="text-xs text-muted-foreground">#{msg.sender.customerNumber}</div>}
+                        </div>
+                      </TableCell>
+                      <TableCell className="font-medium max-w-[300px]">
+                        <p className="truncate">{msg.subject}</p>
+                      </TableCell>
+                      <TableCell><StatusBadge status={msg.status} /></TableCell>
+                      <TableCell className="whitespace-nowrap">
+                        {msg.createdAt && format(new Date(msg.createdAt), "dd.MM.yyyy HH:mm", { locale: de })}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <div className="flex items-center justify-end gap-2">
+                          <Select value={msg.status} onValueChange={(val) => handleStatusChange(msg, val as MessageStatus)}>
+                            <SelectTrigger className="w-[140px] h-8">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {STATUS_OPTIONS[msg.source].map((s) => (
+                                <SelectItem key={s} value={s}>{STATUS_LABELS[s]}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <Button variant="outline" size="sm" onClick={() => setSelected(msg)}>
+                            <Eye className="w-4 h-4 mr-1" />
+                            {msg.status === "resolved" ? "Ansehen" : "Beantworten"}
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => setDeleteTargets([msg])}
+                            title="Nachricht löschen"
+                            className="hover:text-destructive"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
             </div>
           )}
         </CardContent>
       </Card>
 
-      {/* Bulk Delete Bar */}
-      {selectedIds.size > 0 && (
+      {checkedIds.size > 0 && (
         <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 flex items-center gap-3 bg-background border shadow-lg rounded-lg px-4 py-3">
-          <span className="text-sm font-medium">
-            {selectedIds.size} ausgewählt
-          </span>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => setSelectedIds(new Set())}
-          >
-            Aufheben
-          </Button>
+          <span className="text-sm font-medium">{checkedIds.size} ausgewählt</span>
+          <Button variant="ghost" size="sm" onClick={() => setCheckedIds(new Set())}>Aufheben</Button>
           <Button
             variant="destructive"
             size="sm"
-            onClick={() => openDeleteDialog(Array.from(selectedIds))}
+            onClick={() => setDeleteTargets(messages.filter((m) => checkedIds.has(m.id)))}
             disabled={isDeleting}
           >
             <Trash2 className="w-4 h-4 mr-2" />
-            {selectedIds.size} löschen
+            {checkedIds.size} löschen
           </Button>
         </div>
       )}
 
-      {/* Delete Confirmation Dialog */}
-      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+      <AlertDialog open={deleteTargets.length > 0} onOpenChange={(open) => !open && setDeleteTargets([])}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle className="flex items-center gap-2">
               <Trash2 className="w-5 h-5 text-destructive" />
-              {deleteIds.length === 1 ? "Nachricht löschen" : `${deleteIds.length} Nachrichten löschen`}
+              {deleteTargets.length === 1 ? "Nachricht löschen" : `${deleteTargets.length} Nachrichten löschen`}
             </AlertDialogTitle>
             <AlertDialogDescription>
-              {deleteIds.length === 1
-                ? "Möchten Sie diese Nachricht wirklich löschen? Diese Aktion kann nicht rückgängig gemacht werden."
-                : `Möchten Sie wirklich ${deleteIds.length} Nachrichten löschen? Diese Aktion kann nicht rückgängig gemacht werden.`}
+              Die Nachrichten verschwinden aus dieser Liste. Kontaktanfragen bleiben als gelöscht markiert in der Datenbank,
+              Support-Nachrichten werden endgültig gelöscht.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel disabled={isDeleting}>Abbrechen</AlertDialogCancel>
             <AlertDialogAction
-              onClick={() => handleDelete(deleteIds)}
+              onClick={handleDelete}
               disabled={isDeleting}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
-              {isDeleting ? (
-                <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Löschen...</>
-              ) : (
-                <><Trash2 className="w-4 h-4 mr-2" />Endgültig löschen</>
-              )}
+              {isDeleting ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Löschen...</> : <><Trash2 className="w-4 h-4 mr-2" />Löschen</>}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* Response Dialog */}
-      <Dialog open={!!selectedMessage} onOpenChange={() => setSelectedMessage(null)}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <MessageSquare className="w-5 h-5 text-primary" />
-              {selectedMessage?.subject}
-            </DialogTitle>
-            <DialogDescription>
-              Anfrage vom{" "}
-              {selectedMessage?.created_at &&
-                format(new Date(selectedMessage.created_at), "dd.MM.yyyy HH:mm", { locale: de })}
-            </DialogDescription>
-          </DialogHeader>
-
-          <div className="space-y-4">
-            {/* User info card */}
-            <div className="p-4 bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800 rounded-lg space-y-2">
-              <p className="text-sm font-semibold text-blue-900 dark:text-blue-100 flex items-center gap-2">
-                <User className="w-4 h-4" />
-                Absender
-              </p>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm">
-                <div className="flex items-center gap-2">
-                  <User className="w-3.5 h-3.5 text-muted-foreground" />
-                  <span className="font-medium">
-                    {selectedMessage?.user?.first_name && selectedMessage?.user?.last_name
-                      ? `${selectedMessage.user.first_name} ${selectedMessage.user.last_name}`
-                      : "Unbekannt"}
-                  </span>
-                </div>
-                {selectedMessage?.user?.email && (
-                  <a href={`mailto:${selectedMessage.user.email}`} className="flex items-center gap-2 text-primary hover:underline">
-                    <Mail className="w-3.5 h-3.5" />
-                    {selectedMessage.user.email}
-                  </a>
-                )}
-                {selectedMessage?.user?.phone && (
-                  <a href={`tel:${selectedMessage.user.phone}`} className="flex items-center gap-2 text-primary hover:underline">
-                    <Phone className="w-3.5 h-3.5" />
-                    {selectedMessage.user.phone}
-                  </a>
-                )}
-                {selectedMessage?.user?.customer_number && (
-                  <div className="flex items-center gap-2 text-muted-foreground">
-                    <Hash className="w-3.5 h-3.5" />
-                    Kd.-Nr.: {selectedMessage.user.customer_number}
-                  </div>
-                )}
-              </div>
-              {selectedMessage?.user_id && (
-                <Link
-                  to={`/admin/users/${selectedMessage.user_id}`}
-                  className="inline-flex items-center gap-1 text-xs text-primary hover:underline mt-1"
-                >
-                  <ExternalLink className="w-3 h-3" />
-                  Benutzerprofil öffnen
-                </Link>
-              )}
-            </div>
-
-            {/* User's kitchens */}
-            {selectedMessage?.kitchens && selectedMessage.kitchens.length > 0 && (
-              <div className="p-4 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-lg space-y-2">
-                <p className="text-sm font-semibold text-amber-900 dark:text-amber-100 flex items-center gap-2">
-                  <Truck className="w-4 h-4" />
-                  Inserate des Benutzers ({selectedMessage.kitchens.length})
-                </p>
-                <div className="space-y-1.5">
-                  {selectedMessage.kitchens.map((mh) => (
-                    <Link
-                      key={mh.id}
-                      to={`/admin/kitchens/${mh.id}`}
-                      className="flex items-center justify-between gap-2 p-2 rounded bg-white dark:bg-background border text-sm hover:bg-accent transition-colors"
-                    >
-                      <span className="font-medium">
-                        {mh.manufacturer} {mh.model} ({mh.year})
-                      </span>
-                      <div className="flex items-center gap-2 shrink-0">
-                        {mh.listing_number && (
-                          <span className="text-xs text-muted-foreground">#{mh.listing_number}</span>
-                        )}
-                        <Badge variant="outline" className="text-xs">
-                          {mh.status}
-                        </Badge>
-                        <ExternalLink className="w-3 h-3 text-muted-foreground" />
-                      </div>
-                    </Link>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* Message content */}
-            <div className="p-4 bg-muted rounded-lg">
-              <p className="text-sm font-medium text-muted-foreground mb-2">Nachricht:</p>
-              <p className="whitespace-pre-wrap">{selectedMessage?.message}</p>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="response">Ihre Antwort</Label>
-              <Textarea
-                id="response"
-                placeholder="Geben Sie Ihre Antwort ein..."
-                value={response}
-                onChange={(e) => setResponse(e.target.value)}
-                className="min-h-[150px]"
-              />
-            </div>
-          </div>
-
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setSelectedMessage(null)}>
-              Abbrechen
-            </Button>
-            <Button onClick={handleRespond} disabled={isSubmitting || !response.trim()}>
-              <Send className="w-4 h-4 mr-2" />
-              {isSubmitting ? "Wird gesendet..." : "Antwort senden"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <MessageDetailDialog
+        message={selected}
+        onClose={() => setSelected(null)}
+        onReply={handleReply}
+        onStatusChange={handleStatusChange}
+      />
     </div>
   );
 }

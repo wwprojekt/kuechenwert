@@ -159,7 +159,7 @@ export default function UserProfile() {
         <h1 className="text-xl sm:text-2xl md:text-3xl font-bold text-foreground mb-2">Mein Profil</h1>
         <p className="text-muted-foreground">
           {isLocked
-            ? "Ihre Profildaten sind nach der Händler-Freigabe gesperrt."
+            ? "Ihre Profildaten sind nach der Freigabe Ihres Studios gesperrt."
             : "Verwalten Sie Ihre persönlichen Informationen"}
         </p>
       </div>
@@ -173,7 +173,7 @@ export default function UserProfile() {
                 Profildaten gesperrt
               </p>
               <p className="text-amber-800 dark:text-amber-300">
-                Als genehmigter Händler können Sie Ihre Stammdaten nicht mehr selbst ändern.
+                Als freigeschaltetes Küchenstudio können Sie Ihre Stammdaten nicht mehr selbst ändern.
                 Bitte wenden Sie sich für Anpassungen an{" "}
                 <a href={`mailto:${BRAND.supportEmail}`} className="underline font-medium">
                   {BRAND.supportEmail}
@@ -403,7 +403,7 @@ export default function UserProfile() {
                   </SelectContent>
                 </Select>
                 {isDealer && (
-                  <p className="text-xs text-muted-foreground mt-1">Händlerkonten sind immer gewerblich</p>
+                  <p className="text-xs text-muted-foreground mt-1">Studio-Konten sind immer gewerblich</p>
                 )}
               </div>
               <div className="space-y-2">
@@ -416,7 +416,7 @@ export default function UserProfile() {
                   autoCapitalize="words"
                   value={formData.company_name}
                   onChange={(e) => setFormData({ ...formData, company_name: e.target.value })}
-                  placeholder="z.B. Autohaus Müller GmbH"
+                  placeholder="z. B. Küchenstudio Muster GmbH"
                   disabled={isLocked}
                 />
               </div>

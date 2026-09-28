@@ -1,5 +1,5 @@
 /**
- * Dialog to edit dealer information in the admin panel
+ * Dialog to edit kitchen studio master data in the admin panel
  */
 
 import { useState, useEffect } from "react";
@@ -41,46 +41,10 @@ import { ensureValidRLSSession } from "@/lib/sessionGuard";
 import { format } from "date-fns";
 import { de } from "date-fns/locale";
 import { EU_COUNTRIES, getLegalFormsByCountry, getCountryName } from "@/lib/euCountries";
-
-interface DealerProfile {
-  id: string;
-  email: string;
-  first_name: string | null;
-  last_name: string | null;
-  phone: string | null;
-}
-
-interface DealerApplication {
-  id: string;
-  user_id: string;
-  company_name: string;
-  company_address: string;
-  company_postal_code: string;
-  company_city: string;
-  country?: string | null;
-  tax_id: string;
-  trade_license_number: string;
-  contact_person_name: string;
-  contact_person_position: string | null;
-  phone: string;
-  website: string | null;
-  business_description: string | null;
-  trade_license_document_url: string | null;
-  status: string;
-  submitted_at: string;
-  reviewed_at: string | null;
-  legal_form?: string | null;
-  founded_year?: number | null;
-  handelsregister_number?: string | null;
-  employee_count?: string | null;
-  annual_revenue?: string | null;
-  iban?: string | null;
-  bic?: string | null;
-  profiles?: DealerProfile;
-}
+import type { DealerApplicationData } from "@/lib/dealerApplications";
 
 interface DealerEditDialogProps {
-  dealer: DealerApplication | null;
+  dealer: DealerApplicationData | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }
@@ -182,7 +146,7 @@ export function DealerEditDialog({
       queryClient.invalidateQueries({ queryKey: ["dealerApplications"] });
       toast({
         title: "Gespeichert",
-        description: "Händler wurde erfolgreich aktualisiert.",
+        description: "Küchenstudio wurde erfolgreich aktualisiert.",
       });
       onOpenChange(false);
     },
@@ -190,7 +154,7 @@ export function DealerEditDialog({
       logger.error("Update error:", error);
       toast({
         title: "Fehler",
-        description: "Händler konnte nicht aktualisiert werden.",
+        description: "Küchenstudio konnte nicht aktualisiert werden.",
         variant: "destructive",
       });
     },
@@ -218,7 +182,7 @@ export function DealerEditDialog({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Building2 className="w-5 h-5" />
-            Händler bearbeiten
+            Küchenstudio bearbeiten
           </DialogTitle>
         </DialogHeader>
 

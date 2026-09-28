@@ -16,6 +16,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { logger } from "@/lib/logger";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import {
@@ -239,7 +240,7 @@ const AdminCronHealth = () => {
       // Drift is best-effort: ignore errors so the dashboard still loads on a
       // fresh DB that has not yet had the drift RPC migrated in.
       if (driftRes.error) {
-        console.warn("CronHealth drift fetch failed", driftRes.error);
+        logger.warn("CronHealth drift fetch failed", driftRes.error);
       }
 
       setJobs((jobsRes.data || []) as JobHealth[]);

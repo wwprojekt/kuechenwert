@@ -2,6 +2,8 @@
  * Geolocation utilities for distance calculation and location handling
  */
 
+import { logger } from '@/lib/logger';
+
 // Country code to flag emoji mapping
 export const countryFlags: Record<string, string> = {
   'DE': '🇩🇪', 'AT': '🇦🇹', 'CH': '🇨🇭', 'NL': '🇳🇱',
@@ -100,7 +102,7 @@ export function getCountryName(countryCode: string | null | undefined): string {
  */
 export async function getCurrentPosition(): Promise<Coordinates | null> {
   if (!navigator.geolocation) {
-    console.warn('Geolocation is not supported by this browser');
+    logger.warn('Geolocation is not supported by this browser');
     return null;
   }
   
@@ -113,7 +115,7 @@ export async function getCurrentPosition(): Promise<Coordinates | null> {
         });
       },
       (error) => {
-        console.warn('Geolocation error:', error.message);
+        logger.warn('Geolocation error:', error.message);
         resolve(null);
       },
       {

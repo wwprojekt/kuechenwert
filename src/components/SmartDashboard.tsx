@@ -42,15 +42,13 @@ const DashboardOverview = lazyRetry(() => import('@/pages/dashboard/DashboardOve
  */
 const MyMessages = lazyRetry(() => import('@/pages/dashboard/MyMessages'));
 const MyInvoices = lazyRetry(() => import('@/pages/dashboard/MyInvoices'));
-const MyDocuments = lazyRetry(() => import('@/pages/dashboard/MyDocuments'));
 const UserProfile = lazyRetry(() => import('@/pages/dashboard/UserProfile'));
 const AccountSettings = lazyRetry(() => import('@/pages/dashboard/AccountSettings'));
 
 /**
  * Pfade aus dem früheren Caravan-Auktionsmodell (Inserate, Gebote, Kaufchancen,
- * Übergabetermine, Kaufverträge …). Sie zeigen Fahrzeugfelder und gehören nicht
- * zum Küchen-Marktplatz; alte Links und Bookmarks landen in der Projekt-Börse.
- * Die Seiten liegen weiter im Code und lassen sich hier wieder einhängen.
+ * Übergabetermine, Kaufverträge …). Alte Links und Bookmarks landen in der
+ * Projekt-Börse.
  */
 const LEGACY_DEALER_PATHS = [
   'auctions', 'inventory', 'inventory/:id', 'bids', 'favorites', 'sofortkauf',
@@ -245,10 +243,9 @@ const UserDashboardWrapper = () => {
     <UserLayoutContent>
       <Routes>
         {/* Exact match for /dashboard */}
-        <Route index element={<DashboardOverview />} />
+        <Route index element={<LazyPage Component={DashboardOverview} />} />
         
         <Route path="messages" element={<LazyPage Component={MyMessages} />} />
-        <Route path="documents" element={<LazyPage Component={MyDocuments} />} />
         <Route path="profile" element={<LazyPage Component={UserProfile} />} />
         <Route
           path="settings"
@@ -260,8 +257,8 @@ const UserDashboardWrapper = () => {
         />
         
         {/* Fallback: Übersicht für unbekannte Pfade, auch für die früheren
-            Caravan-Pfade /listings, /bids, /favorites, /kaufchancen, /appointments */}
-        <Route path="*" element={<DashboardOverview />} />
+            Caravan-Pfade /listings, /bids, /favorites, /documents … */}
+        <Route path="*" element={<LazyPage Component={DashboardOverview} />} />
       </Routes>
     </UserLayoutContent>
   );
@@ -270,23 +267,32 @@ const UserDashboardWrapper = () => {
 /**
  * Dealer Layout Content (extracted from DealerLayout)
  */
-const DealerLayoutContent = ({ children }: { children: React.ReactNode }) => {
-  const { user } = useAuth();
-  const { settings } = useSettings();
-  const { isPendingDealer, isRejectedDealer } = useDealerPending();
+/**
+ * E-Mail-Bestätigung des eingeloggten Kontos (null bis zur Prüfung).
+ * getUser() fragt den Auth-Server, der lokale Session-Cache kann veraltet sein.
+ */
+function useEmailVerified(userId: string | undefined): boolean | null {
   const [emailVerified, setEmailVerified] = useState<boolean | null>(null);
 
-  // Check email verification status (same as UserLayoutContent)
   useEffect(() => {
+    if (!userId) return;
     const checkVerification = async () => {
-      if (!user) return;
       const { data } = await supabase.auth.getUser();
       if (data?.user) {
         setEmailVerified(!!data.user.email_confirmed_at);
       }
     };
     checkVerification();
-  }, [user?.id]);
+  }, [userId]);
+
+  return emailVerified;
+}
+
+const DealerLayoutContent = ({ children }: { children: React.ReactNode }) => {
+  const { user } = useAuth();
+  const { settings } = useSettings();
+  const { isPendingDealer, isRejectedDealer } = useDealerPending();
+  const emailVerified = useEmailVerified(user?.id);
 
   // Check if user arrived via registration magic link and needs to set a password
   const [showSetPassword, setShowSetPassword] = useState(false);
@@ -304,9 +310,9 @@ const DealerLayoutContent = ({ children }: { children: React.ReactNode }) => {
 
   // Show appropriate label based on status
   const statusLabel = isPendingDealer
-    ? "Händler (Antrag in Prüfung)"
+    ? "Küchenstudio (Bewerbung in Prüfung)"
     : isRejectedDealer
-    ? "Händler (Antrag abgelehnt)"
+    ? "Küchenstudio (Bewerbung abgelehnt)"
     : `Küchenstudio • ${settings?.site_name || BRAND.name}`;
 
   return (
@@ -370,7 +376,7 @@ const DealerLayoutContent = ({ children }: { children: React.ReactNode }) => {
 const UserLayoutContent = ({ children }: { children: React.ReactNode }) => {
   const { user } = useAuth();
   const { settings } = useSettings();
-  const [emailVerified, setEmailVerified] = useState<boolean | null>(null);
+  const emailVerified = useEmailVerified(user?.id);
 
   // Check if user arrived via registration magic link and needs to set a password
   const [showSetPassword, setShowSetPassword] = useState(false);
@@ -380,18 +386,6 @@ const UserLayoutContent = ({ children }: { children: React.ReactNode }) => {
       setShowSetPassword(true);
     }
   }, []);
-
-  // Check email verification status
-  useEffect(() => {
-    const checkVerification = async () => {
-      if (!user) return;
-      const { data } = await supabase.auth.getUser();
-      if (data?.user) {
-        setEmailVerified(!!data.user.email_confirmed_at);
-      }
-    };
-    checkVerification();
-  }, [user?.id]);
 
   const userInitials = user?.email
     ?.split("@")[0]

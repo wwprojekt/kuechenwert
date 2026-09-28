@@ -72,7 +72,7 @@ const FUNNEL_META: Record<
     icon: TrendingDown,
     color:
       "text-amber-600 bg-amber-50 border-amber-200 dark:bg-amber-950/20 dark:border-amber-800",
-    description: "Bestehendes Küchen-Angebot von verifizierten Händlern unterbieten lassen.",
+    description: "Bestehendes Küchen-Angebot von geprüften Küchenstudios unterbieten lassen.",
   },
   traumkueche: {
     title: "Traumküche planen",
@@ -94,6 +94,9 @@ function formatStatus(status: string): { label: string; tone: "default" | "succe
       return { label: "Studios zugeordnet", tone: "default" };
     case "in_auction":
       return { label: "Studios bieten", tone: "default" };
+    case "sold":
+    case "contacted":
+      return { label: "Studio meldet sich", tone: "default" };
     case "offer_sent":
       return { label: "Angebot erhalten", tone: "success" };
     case "appointment_set":
@@ -104,6 +107,8 @@ function formatStatus(status: string): { label: string; tone: "default" | "succe
       return { label: "Nicht gewonnen", tone: "muted" };
     case "disqualified":
       return { label: "Nicht passend", tone: "muted" };
+    case "disputed":
+      return { label: "In Klärung", tone: "warning" };
     default:
       return { label: status, tone: "muted" };
   }

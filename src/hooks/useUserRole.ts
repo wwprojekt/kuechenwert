@@ -6,16 +6,18 @@
  * All components that need role information MUST use this hook or usePermissions().
  * The canonical queryKey is ['userRoles', userId] — do NOT create separate role queries.
  * 
- * Each user has exactly ONE role: admin, dealer, or seller.
+ * Each user has exactly ONE role (user_roles has a unique user_id): admin,
+ * dealer (Küchenstudio), seller (default at sign-up) or consumer.
  */
 
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
+import type { Database } from '@/integrations/supabase/types';
 import { logger } from '@/lib/logger';
 import { isLockError, ensureValidRLSSession } from '@/lib/sessionGuard';
 
-export type UserRole = 'admin' | 'dealer' | 'seller';
+export type UserRole = Database['public']['Enums']['app_role'];
 
 /**
  * Canonical query key factory for user roles.
@@ -67,7 +69,7 @@ export const useUserRole = () => {
 
       // Session-Validierung VOR der RLS-Query: user_roles hat
       // USING(auth.uid()=user_id). Bei abgelaufener Session → auth.uid()=NULL
-      // → 0 Zeilen → isDealer=false → Bidding-UI verschwindet still.
+      // → 0 Zeilen → isDealer=false → Studio-Portal verschwindet still.
       // KRITISCH: getSession() gibt auch abgelaufene Tokens aus dem Cache zurück!
       const sessionValid = await ensureValidRLSSession();
       if (!sessionValid) {
@@ -156,56 +158,6 @@ export const useUserRole = () => {
      */
     refetchRoles: () => {
       return queryClient.invalidateQueries({ queryKey: userRolesQueryKey(user?.id) });
-    },
-  };
-};
-
-/**
- * Hook for checking specific permissions
- */
-export const usePermissions = () => {
-  const { role, isAdmin, isDealer, isSeller } = useUserRole();
-
-  const canAccessAdmin = isAdmin;
-  const canAccessDealer = isDealer || isAdmin;
-  const canAccessUser = isSeller || isDealer || isAdmin;
-
-  const canManageAuctions = isAdmin;
-  const canBidOnAuctions = isDealer || isAdmin;
-  const canCreateListings = isSeller || isAdmin;
-  const canManageFinancials = isAdmin;
-  const canViewCommissions = isDealer || isAdmin;
-
-  return {
-    // Role checks
-    primaryRole: role,
-    role,
-    isAdmin,
-    isDealer,
-    isSeller,
-    
-    // Permission checks
-    canAccessAdmin,
-    canAccessDealer,
-    canAccessUser,
-    canManageAuctions,
-    canBidOnAuctions,
-    canCreateListings,
-    canManageFinancials,
-    canViewCommissions,
-    
-    // Utility functions
-    hasPermission: (permission: string) => {
-      switch (permission) {
-        case 'admin':
-          return isAdmin;
-        case 'dealer':
-          return isDealer || isAdmin;
-        case 'seller':
-          return isSeller || isDealer || isAdmin;
-        default:
-          return false;
-      }
     },
   };
 };

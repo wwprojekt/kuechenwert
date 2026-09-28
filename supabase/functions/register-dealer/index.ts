@@ -3,6 +3,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.100.1";
 import { getCorsHeaders, handleCorsPreflightRequest } from "../_shared/cors.ts";
 import { edgeLogger } from "../_shared/edgeLogger.ts";
 import { checkRateLimit, createRateLimitErrorResponse } from "../_shared/rate-limiter.ts";
+import { clientIp, validIp } from "../_shared/kw-http.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -61,12 +62,7 @@ const handler = async (req: Request): Promise<Response> => {
   const rateLimitResult = await checkRateLimit(req, {
     windowMs: 15 * 60 * 1000,
     maxRequests: 5,
-    keyGenerator: (r) => {
-      const ip = r.headers.get('x-forwarded-for')?.split(',')[0]?.trim()
-        || r.headers.get('x-real-ip')
-        || 'unknown';
-      return `register-dealer:${ip}`;
-    },
+    keyGenerator: (r) => `register-dealer:${clientIp(r)}`,
   });
   if (!rateLimitResult.allowed) {
     return createRateLimitErrorResponse(rateLimitResult, getCorsHeaders(req));
@@ -186,7 +182,7 @@ const handler = async (req: Request): Promise<Response> => {
       await supabase.rpc('record_agb_acceptance', {
         p_user_id: userId,
         p_context: 'dealer_registration',
-        p_ip_address: req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || req.headers.get('x-real-ip') || null,
+        p_ip_address: validIp(clientIp(req)),
         p_user_agent: req.headers.get('user-agent') || null,
       });
       edgeLogger.info(`Recorded AGB acceptance for dealer ${userId}`);
@@ -202,6 +198,7 @@ const handler = async (req: Request): Promise<Response> => {
     const { data: linkData, error: linkError } = await supabase.auth.admin.generateLink({
       type: "signup",
       email,
+      password: body.password,
       options: {
         redirectTo: redirectUrl,
       },

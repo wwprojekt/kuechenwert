@@ -1,191 +1,146 @@
-﻿import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.100.1';
-import { getCorsHeaders, handleCorsPreflightRequest } from '../_shared/cors.ts';
+﻿/**
+ * resend-confirmation-email — Admin sendet einem Konto mit unbestätigter
+ * E-Mail-Adresse einen neuen Bestätigungslink (KüchenWert-Layout über Resend).
+ *
+ * Der Link ist ein Magic Link: Beim Öffnen bestätigt Supabase die Adresse und
+ * meldet das Konto an. Ins Mail-Protokoll kommt er nicht, weil er wie ein
+ * Passwort wirkt.
+ *
+ * Body: { email?: string; user_id?: string; dealer_application_id?: string }
+ * Auth: Admin oder service_role
+ */
+import { checkServiceRoleOrAdmin } from "../_shared/auth.ts";
+import { BRAND } from "../_shared/brand-config.ts";
+import { buildEmailLayout, button, greeting, paragraph } from "../_shared/email-builder.ts";
+import { HttpError, isEmail, jsonResponse, readJson, serve, serviceClient } from "../_shared/kw-http.ts";
 
-const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
-const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY") ?? "";
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-Deno.serve(async (req: Request) => {
-  if (req.method === "OPTIONS") {
-    return handleCorsPreflightRequest(req);
+type Body = { email?: unknown; user_id?: unknown; dealer_application_id?: unknown };
+
+serve(async (req) => {
+  const auth = await checkServiceRoleOrAdmin(req, {});
+  if (!auth.authorized) {
+    throw new HttpError(auth.response.status === 403 ? 403 : 401, "Nur für Admins.", "unauthorized");
   }
 
-  const corsHeaders = getCorsHeaders(req);
+  const body = await readJson<Body>(req);
+  const sb = serviceClient();
 
+  let userId = typeof body.user_id === "string" && UUID_RE.test(body.user_id) ? body.user_id : null;
+  if (!userId) {
+    const email = typeof body.email === "string" ? body.email.trim().toLowerCase() : "";
+    if (!isEmail(email)) throw new HttpError(422, "Bitte eine gültige E-Mail-Adresse oder Nutzer-ID angeben.", "target");
+    const { data: profile, error } = await sb.from("profiles").select("id").eq("email", email).maybeSingle();
+    if (error) throw error;
+    if (!profile) throw new HttpError(404, "Zu dieser E-Mail-Adresse gibt es kein Konto.", "not_found");
+    userId = profile.id as string;
+  }
+
+  const { data: target, error: lookupError } = await sb.auth.admin.getUserById(userId);
+  if (lookupError || !target?.user?.email) throw new HttpError(404, "Konto nicht gefunden.", "not_found");
+  const user = target.user;
+  const email = user.email!;
+  if (user.email_confirmed_at) {
+    throw new HttpError(409, "Diese E-Mail-Adresse ist bereits bestätigt.", "already_confirmed");
+  }
+
+  const { data: link, error: linkError } = await sb.auth.admin.generateLink({
+    type: "magiclink",
+    email,
+    options: { redirectTo: `${BRAND.baseUrl}/login` },
+  });
+  const actionLink = link?.properties?.action_link;
+  if (linkError || !actionLink) {
+    console.error("[resend-confirmation-email] generateLink failed", linkError?.message);
+    throw new HttpError(502, "Der Bestätigungslink konnte nicht erzeugt werden.", "link_failed");
+  }
+
+  if (!RESEND_API_KEY) throw new HttpError(503, "E-Mail-Versand ist nicht konfiguriert.", "mail_unconfigured");
+
+  const { data: settings } = await sb
+    .from("site_settings")
+    .select("site_name, site_description, contact_email, support_phone")
+    .limit(1)
+    .maybeSingle();
+  const layoutSettings = {
+    site_name: settings?.site_name || BRAND.name,
+    site_description: settings?.site_description || BRAND.tagline,
+    contact_email: settings?.contact_email || BRAND.supportEmail,
+    support_phone: settings?.support_phone || "",
+  };
+  const firstName = typeof user.user_metadata?.first_name === "string" ? user.user_metadata.first_name : undefined;
+  const subject = `Bitte bestätigen Sie Ihre E-Mail-Adresse – ${layoutSettings.site_name}`;
+  const content = (url: string) =>
+    greeting(firstName) +
+    paragraph(`bitte bestätigen Sie Ihre E-Mail-Adresse für Ihr ${layoutSettings.site_name}-Konto. Mit dem Klick auf den Button wird die Adresse bestätigt und Sie werden angemeldet.`) +
+    button("E-Mail-Adresse bestätigen", url) +
+    paragraph("Der Link ist aus Sicherheitsgründen nur begrenzt gültig. Falls Sie kein Konto bei uns angelegt haben, können Sie diese E-Mail ignorieren.");
+
+  const html = buildEmailLayout(layoutSettings, "E-Mail-Adresse bestätigen", content(actionLink));
+  const resp = await fetch("https://api.resend.com/emails", {
+    method: "POST",
+    headers: { Authorization: `Bearer ${RESEND_API_KEY}`, "Content-Type": "application/json" },
+    body: JSON.stringify({
+      from: `${layoutSettings.site_name} <${BRAND.noReplyEmail}>`,
+      to: [email],
+      reply_to: BRAND.supportEmail,
+      subject,
+      html,
+    }),
+  });
+  const resendText = await resp.text();
+  if (!resp.ok) {
+    console.error("[resend-confirmation-email] Resend", resp.status, resendText.slice(0, 300));
+    throw new HttpError(502, "Die E-Mail konnte nicht versendet werden.", "send_failed");
+  }
+  let resendId: string | null = null;
   try {
-    // Auth check: must be authenticated admin
-    const authHeader = req.headers.get('authorization') ?? '';
-    const token = authHeader.replace('Bearer ', '');
-    
-    const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
-    
-    const { data: { user: adminUser }, error: userError } = await supabase.auth.getUser(token);
-    if (userError || !adminUser) {
-      const errorMsg = userError?.message?.includes('expired') 
-        ? 'Sitzung abgelaufen. Bitte laden Sie die Seite neu und melden Sie sich erneut an.'
-        : !token 
-          ? 'Nicht authentifiziert. Bitte melden Sie sich an.'
-          : 'Sitzung ungültig. Bitte laden Sie die Seite neu.';
-      console.error('Auth error in resend-confirmation-email:', userError?.message || 'No user found', 'Token present:', !!token);
-      return new Response(JSON.stringify({ error: errorMsg }), {
-        status: 401,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
-    }
-
-    // Verify admin role
-    const { data: roleCheck } = await supabase
-      .from('user_roles')
-      .select('role')
-      .eq('user_id', adminUser.id)
-      .eq('role', 'admin')
-      .single();
-
-    if (!roleCheck) {
-      return new Response(JSON.stringify({ error: 'Admin access required' }), {
-        status: 403,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
-    }
-
-    // Get target user email from request body
-    const body = await req.json();
-    const { email, user_id, dealer_application_id } = body;
-
-    if (!email && !user_id) {
-      return new Response(JSON.stringify({ error: 'email or user_id is required' }), {
-        status: 400,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
-    }
-
-    let targetEmail = email;
-
-    // If only user_id is provided, look up the email
-    if (!targetEmail && user_id) {
-      const { data: { user: targetUser }, error: lookupError } = await supabase.auth.admin.getUserById(user_id);
-      if (lookupError || !targetUser) {
-        return new Response(JSON.stringify({ error: 'User not found' }), {
-          status: 404,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        });
-      }
-      targetEmail = targetUser.email;
-
-      // Check if email is already confirmed
-      if (targetUser.email_confirmed_at) {
-        return new Response(JSON.stringify({ 
-          error: 'Email is already confirmed',
-          email_confirmed_at: targetUser.email_confirmed_at,
-        }), {
-          status: 400,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        });
-      }
-    }
-
-    // Use Supabase's built-in resend method to send a new confirmation email
-    const { error: resendError } = await supabase.auth.resend({
-      type: 'signup',
-      email: targetEmail,
-    });
-
-    if (resendError) {
-      // Fallback: If resend fails (e.g., rate limited), try generating an invite link
-      // and sending it manually via the admin API
-      console.log('Resend failed, trying admin generateLink:', resendError.message);
-      
-      const { data: linkData, error: linkError } = await supabase.auth.admin.generateLink({
-        type: 'magiclink',
-        email: targetEmail,
-        options: {
-          redirectTo: `${SUPABASE_URL.replace('.supabase.co', '')}.supabase.co/auth/v1/verify?redirect_to=https://kuechenwert24.de/dashboard`,
-        },
-      });
-
-      if (linkError) {
-        return new Response(JSON.stringify({ 
-          error: `Failed to resend confirmation: ${resendError.message}. Fallback also failed: ${linkError.message}`,
-        }), {
-          status: 500,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        });
-      }
-
-      // If generateLink succeeded, we can confirm the email directly via admin
-      // since the admin explicitly wants to resend confirmation
-      const { error: updateError } = await supabase.auth.admin.updateUser(user_id || '', {
-        email_confirm: true,
-      });
-
-      if (updateError) {
-        console.log('Could not auto-confirm, but magic link was generated:', updateError.message);
-      }
-
-    // Update confirmation link counter if dealer_application_id provided
-    if (dealer_application_id) {
-      try {
-        const { data: currentApp } = await supabase
-          .from('dealer_applications')
-          .select('confirmation_link_sent_count')
-          .eq('id', dealer_application_id)
-          .single();
-        const currentCount = currentApp?.confirmation_link_sent_count || 0;
-        await supabase
-          .from('dealer_applications')
-          .update({
-            confirmation_link_sent_count: currentCount + 1,
-            confirmation_link_last_sent_at: new Date().toISOString(),
-          })
-          .eq('id', dealer_application_id);
-      } catch (counterErr) {
-        console.log('Could not update confirmation_link_sent_count:', counterErr);
-      }
-    }
-
-    return new Response(JSON.stringify({ 
-      success: true,
-      method: 'admin_confirm',
-      message: `E-Mail-Adresse ${targetEmail} wurde direkt bestätigt (Bestätigungslink konnte nicht gesendet werden).`,
-    }), {
-      status: 200,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    });
-    }
-
-    // Update confirmation link counter if dealer_application_id provided
-    if (dealer_application_id) {
-      try {
-        const { data: currentApp } = await supabase
-          .from('dealer_applications')
-          .select('confirmation_link_sent_count')
-          .eq('id', dealer_application_id)
-          .single();
-        const currentCount = currentApp?.confirmation_link_sent_count || 0;
-        await supabase
-          .from('dealer_applications')
-          .update({
-            confirmation_link_sent_count: currentCount + 1,
-            confirmation_link_last_sent_at: new Date().toISOString(),
-          })
-          .eq('id', dealer_application_id);
-      } catch (counterErr) {
-        console.log('Could not update confirmation_link_sent_count:', counterErr);
-      }
-    }
-
-    return new Response(JSON.stringify({ 
-      success: true,
-      method: 'resend',
-      message: `Bestätigungslink wurde erneut an ${targetEmail} gesendet.`,
-    }), {
-      status: 200,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    });
-
-  } catch (error) {
-    return new Response(JSON.stringify({ error: error.message }), {
-      status: 500,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    });
+    resendId = JSON.parse(resendText)?.id ?? null;
+  } catch {
+    /* Antwort ohne JSON-Body */
   }
+
+  const { error: logError } = await sb.from("admin_emails").insert({
+    sender_email: BRAND.noReplyEmail,
+    sender_name: layoutSettings.site_name,
+    recipient_email: email,
+    recipient_id: user.id,
+    subject,
+    body_html: buildEmailLayout(layoutSettings, "E-Mail-Adresse bestätigen", content(`${BRAND.baseUrl}/login`)),
+    body_text: "",
+    email_type: "email_confirmation_resend",
+    direction: "outbound",
+    status: "sent",
+    resend_id: resendId,
+    is_read: true,
+  });
+  if (logError) console.warn("[resend-confirmation-email] admin_emails log failed", logError.message);
+
+  const applicationId =
+    typeof body.dealer_application_id === "string" && UUID_RE.test(body.dealer_application_id)
+      ? body.dealer_application_id
+      : null;
+  if (applicationId) {
+    const { data: app } = await sb
+      .from("dealer_applications")
+      .select("confirmation_link_sent_count")
+      .eq("id", applicationId)
+      .maybeSingle();
+    const { error: counterError } = await sb
+      .from("dealer_applications")
+      .update({
+        confirmation_link_sent_count: (app?.confirmation_link_sent_count ?? 0) + 1,
+        confirmation_link_last_sent_at: new Date().toISOString(),
+      })
+      .eq("id", applicationId);
+    if (counterError) console.warn("[resend-confirmation-email] counter update failed", counterError.message);
+  }
+
+  return jsonResponse(req, {
+    success: true,
+    method: "resend",
+    message: `Bestätigungslink wurde an ${email} gesendet.`,
+  });
 });

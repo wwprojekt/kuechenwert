@@ -389,7 +389,7 @@ Deno.serve(async (req: Request) => {
 
   } catch (error) {
     console.error('Unexpected error:', error);
-    return new Response(JSON.stringify({ error: error.message || 'Unerwarteter Fehler' }), {
+    return new Response(JSON.stringify({ error: 'Unerwarteter Fehler beim Hochladen. Bitte erneut versuchen.' }), {
       status: 500,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });

@@ -77,7 +77,8 @@ Deno.serve(async (req: Request) => {
     });
 
   } catch (error) {
-    return new Response(JSON.stringify({ error: error.message }), {
+    console.error('get-dealer-auth-status error:', error);
+    return new Response(JSON.stringify({ error: 'Der Kontostatus konnte nicht geladen werden.' }), {
       status: 500,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });

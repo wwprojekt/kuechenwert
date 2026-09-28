@@ -12,6 +12,8 @@ Disallow: /login
 Disallow: /register
 Disallow: /forgot-password
 Disallow: /reset-password
+# Persoenliche Projektlinks (Token in der URL)
+Disallow: /projekt/
 
 # Google Ads bots (critical for Google Ads compliance)
 User-agent: AdsBot-Google

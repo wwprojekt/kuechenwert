@@ -4,18 +4,21 @@
 # ============================================================================
 # Build Stage
 # ============================================================================
-FROM node:20-alpine AS builder
+FROM node:22-alpine AS builder
 
 # Set working directory
 WORKDIR /app
 
-# Install dependencies for native modules + image optimization tools
+# Install dependencies for native modules + image optimization tools.
+# chromium nur für das Prerendering (scripts/prerender.mjs), landet nicht
+# im Production-Image.
 RUN apk add --no-cache \
     python3 \
     make \
     g++ \
     libc6-compat \
-    libwebp-tools
+    libwebp-tools \
+    chromium
 
 # pnpm-Version fest (= packageManager in package.json). "latest" hat den
 # Build unbemerkt gebrochen, als pnpm 11 ungeprüfte Build-Skripte zum Fehler machte.
@@ -54,10 +57,16 @@ ENV VITE_BUILD_TIME=$BUILD_TIME
 # Build the application
 RUN pnpm run build
 
+# Öffentliche Seiten als statisches HTML vorrendern (dist/<route>/index.html,
+# SPA-Shell als dist/spa.html). Scheitert Chromium oder eine Route, bleibt es
+# beim reinen SPA-Build; der Docker-Build bricht deshalb nicht ab.
+ENV PRERENDER_CHROME=/usr/bin/chromium-browser
+RUN PRERENDER=1 node scripts/prerender.mjs
+
 # ============================================================================
 # Development Stage (for local development with Docker)
 # ============================================================================
-FROM node:20-alpine AS development
+FROM node:22-alpine AS development
 
 WORKDIR /app
 

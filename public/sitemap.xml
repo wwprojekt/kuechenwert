@@ -1,41 +1,30 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
-        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-        xsi:schemaLocation="http://www.sitemaps.org/schemas/sitemap/0.9
-        http://www.sitemaps.org/schemas/sitemap/0.9/sitemap.xsd">
-  <!-- KuechenWert Sitemap
-       Diese statische sitemap.xml ist der Bundle-Fallback. In Production wird
-       sie durch die dynamische Edge-Function /sitemap (Supabase) ersetzt, die
-       auch Blog-Posts und neue Landing-Pages einschliesst (siehe nginx-Proxy
-       in docker/default.conf, Location = /sitemap.xml). -->
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <!-- KuechenWert Sitemap (statische Kopie)
+       In Production beantwortet nginx /sitemap.xml mit der Edge Function
+       supabase/functions/sitemap (docker/default.conf, Location = /sitemap.xml):
+       dieselben Seiten plus veroeffentlichte Blog-Posts. Beide Listen gemeinsam
+       pflegen. Nur indexierbare Seiten, Seiten mit noIndex (Rechtstexte,
+       /ratgeber, /blog ohne Artikel, Login/Registrierung) fehlen bewusst. -->
 
-  <!-- Main Pages -->
-  <url><loc>https://kuechenwert24.de/</loc><lastmod>2026-04-29</lastmod><changefreq>daily</changefreq><priority>1.0</priority></url>
+  <url><loc>https://kuechenwert24.de/</loc></url>
 
   <!-- Funnel-Einstiege -->
-  <url><loc>https://kuechenwert24.de/formular</loc><lastmod>2026-09-25</lastmod><changefreq>weekly</changefreq><priority>0.9</priority></url>
-  <url><loc>https://kuechenwert24.de/funnel/b</loc><lastmod>2026-04-29</lastmod><changefreq>weekly</changefreq><priority>0.9</priority></url>
-  <url><loc>https://kuechenwert24.de/funnel/c</loc><lastmod>2026-04-29</lastmod><changefreq>weekly</changefreq><priority>0.9</priority></url>
+  <url><loc>https://kuechenwert24.de/formular</loc></url>
+  <url><loc>https://kuechenwert24.de/funnel/b</loc></url>
+  <url><loc>https://kuechenwert24.de/funnel/c</loc></url>
 
   <!-- Preis-/Budget-Rechner -->
-  <url><loc>https://kuechenwert24.de/kuechenrechner</loc><lastmod>2026-04-29</lastmod><changefreq>weekly</changefreq><priority>0.9</priority></url>
+  <url><loc>https://kuechenwert24.de/kuechenrechner</loc></url>
 
   <!-- Content-Seiten -->
-  <url><loc>https://kuechenwert24.de/haendler</loc><lastmod>2026-04-29</lastmod><changefreq>monthly</changefreq><priority>0.7</priority></url>
-  <url><loc>https://kuechenwert24.de/ratgeber</loc><lastmod>2026-04-29</lastmod><changefreq>weekly</changefreq><priority>0.7</priority></url>
-  <url><loc>https://kuechenwert24.de/blog</loc><lastmod>2026-04-29</lastmod><changefreq>daily</changefreq><priority>0.7</priority></url>
-  <url><loc>https://kuechenwert24.de/faq</loc><lastmod>2026-04-29</lastmod><changefreq>weekly</changefreq><priority>0.7</priority></url>
-  <url><loc>https://kuechenwert24.de/preise</loc><lastmod>2026-04-29</lastmod><changefreq>monthly</changefreq><priority>0.6</priority></url>
-
-  <!-- Partner-Studios / Showrooms -->
-  <url><loc>https://kuechenwert24.de/kuechenstudios</loc><lastmod>2026-09-25</lastmod><changefreq>monthly</changefreq><priority>0.6</priority></url>
+  <url><loc>https://kuechenwert24.de/haendler</loc></url>
+  <url><loc>https://kuechenwert24.de/kuechenstudios</loc></url>
+  <url><loc>https://kuechenwert24.de/preise</loc></url>
+  <url><loc>https://kuechenwert24.de/faq</loc></url>
 
   <!-- Unternehmen -->
-  <url><loc>https://kuechenwert24.de/ueber-uns</loc><lastmod>2026-04-29</lastmod><changefreq>monthly</changefreq><priority>0.6</priority></url>
-  <url><loc>https://kuechenwert24.de/kontakt</loc><lastmod>2026-04-29</lastmod><changefreq>monthly</changefreq><priority>0.6</priority></url>
-
-  <!-- Rechtliches -->
-  <url><loc>https://kuechenwert24.de/impressum</loc><lastmod>2026-04-29</lastmod><changefreq>yearly</changefreq><priority>0.3</priority></url>
-  <url><loc>https://kuechenwert24.de/datenschutz</loc><lastmod>2026-04-29</lastmod><changefreq>yearly</changefreq><priority>0.3</priority></url>
-  <url><loc>https://kuechenwert24.de/agb</loc><lastmod>2026-04-29</lastmod><changefreq>yearly</changefreq><priority>0.3</priority></url>
+  <url><loc>https://kuechenwert24.de/ueber-uns</loc></url>
+  <url><loc>https://kuechenwert24.de/kontakt</loc></url>
+  <url><loc>https://kuechenwert24.de/barrierefreiheit</loc></url>
 </urlset>

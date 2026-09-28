@@ -35,12 +35,26 @@ const NotFound = () => {
           <p className="mb-6 text-xl text-muted-foreground">
             Diese Seite wurde nicht gefunden
           </p>
-          <Link to="/">
-            <Button className="gradient-hero hover:gradient-hero-hover">
+          <Button asChild className="gradient-hero hover:gradient-hero-hover">
+            <Link to="/">
               <Home className="w-4 h-4 mr-2" />
               Zurück zur Startseite
-            </Button>
-          </Link>
+            </Link>
+          </Button>
+          <nav aria-label="Beliebte Seiten" className="mt-6 flex flex-wrap justify-center gap-x-5 gap-y-2 text-sm">
+            <Link to="/formular" className="font-medium text-primary underline-offset-4 hover:underline">
+              Angebote holen
+            </Link>
+            <Link to="/funnel/c" className="font-medium text-primary underline-offset-4 hover:underline">
+              Küche planen
+            </Link>
+            <Link to="/faq" className="font-medium text-primary underline-offset-4 hover:underline">
+              Häufige Fragen
+            </Link>
+            <Link to="/kontakt" className="font-medium text-primary underline-offset-4 hover:underline">
+              Kontakt
+            </Link>
+          </nav>
         </div>
       </div>
     </PageLayout>

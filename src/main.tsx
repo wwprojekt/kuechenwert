@@ -5,7 +5,6 @@ import { HelmetProvider } from "react-helmet-async";
 import { z } from "zod";
 import { germanZodErrorMap } from "./lib/germanErrors";
 import { installGlobalErrorHandlers, initBreadcrumbTracking } from "./lib/errorLogService";
-import "./lib/serviceWorker"; // Side-effect: auto-registers SW in production
 import { AuthProvider } from "./contexts/AuthContext";
 import { SettingsProvider } from "./contexts/SettingsContext";
 import { ErrorBoundary } from "./components/ErrorBoundary";
@@ -25,8 +24,16 @@ import "./index.css";
 // Globale deutsche Fehlermeldungen für alle Zod-Validierungen setzen
 z.setErrorMap(germanZodErrorMap);
 
-installGlobalErrorHandlers();
-initBreadcrumbTracking();
+// scripts/prerender.mjs setzt das Flag per Init-Skript: Beim Rendern zur
+// Build-Zeit weder Service Worker noch Fehlerprotokoll an Supabase.
+const isPrerender = (window as Window & { __KW_PRERENDER__?: boolean }).__KW_PRERENDER__ === true;
+
+if (!isPrerender) {
+  installGlobalErrorHandlers();
+  initBreadcrumbTracking();
+  // Side-effect: registriert den Service Worker in Production
+  void import("./lib/serviceWorker");
+}
 
 // Auto-Reload bei lazy-chunk Ladefehlern.
 //

@@ -1,285 +1,210 @@
 /**
  * Service Worker for KüchenWert
- * 
- * Caching strategies:
- *   - Hashed build assets (/assets/*.js, /assets/*.css): Network-First with cache fallback
- *     → Vite generates unique hashes per build, so stale chunks must never be served from cache
- *   - Immutable assets (fonts, favicon, manifest): Cache-First (they rarely change)
- *   - Images: Cache-First with network fallback
- *   - API / Supabase: Network-First with 5-min cache fallback
- *   - Navigation (HTML): Network-First, fallback to cached /index.html for SPA routing
  *
- * IMPORTANT: After every deployment the chunk hashes change. The old Cache-First strategy
- * caused "Failed to fetch dynamically imported module" errors because the SW served stale
- * JS files. This version fixes that by using Network-First for all hashed build assets.
+ * Only same-origin GET requests are handled:
+ *   - Hashed build assets (/assets/*.js, /assets/*.css): Network-First with cache fallback.
+ *     Every deployment changes the chunk hashes; the cached copy is only used offline.
+ *   - Other hashed build assets (/assets/* fonts, images): Cache-First, the hash changes with the content.
+ *   - Unhashed public files (logos, /og-image.*, /images/*, favicons, manifest, fonts):
+ *     Stale-While-Revalidate. They keep their file name when replaced, so every use
+ *     refreshes the cached copy in the background. Images: at most 60 entries, entries
+ *     older than 30 days are not served from the cache.
+ *   - Navigation (HTML): Network-First, the network response is returned unchanged (also 404).
+ *     Public pages are cached per path as offline fallback.
+ *   - Never cached: cross-origin requests (Supabase REST/Auth/Storage/Functions, tracking),
+ *     /api/*, personal pages (/projekt*, /abmelden, /dashboard*, /admin*, login/registration/auth).
+ *
+ * Do NOT precache '/' or '/index.html': the HTML changes with every deployment (new chunk
+ * hashes), a stale copy would reference chunks that no longer exist.
  */
 
-const CACHE_VERSION = 'v7';
+const CACHE_VERSION = 'v8';
 const STATIC_CACHE_NAME = `kuechenwert-static-${CACHE_VERSION}`;
 const ASSETS_CACHE_NAME = `kuechenwert-assets-${CACHE_VERSION}`;
-const DYNAMIC_CACHE_NAME = `kuechenwert-dynamic-${CACHE_VERSION}`;
+const PAGES_CACHE_NAME = `kuechenwert-pages-${CACHE_VERSION}`;
 const IMAGE_CACHE_NAME = `kuechenwert-images-${CACHE_VERSION}`;
+const CURRENT_CACHES = [STATIC_CACHE_NAME, ASSETS_CACHE_NAME, PAGES_CACHE_NAME, IMAGE_CACHE_NAME];
 
-// Only truly immutable files that rarely change.
-// IMPORTANT: Do NOT precache '/' or '/index.html' here!
-// The SPA shell changes with every deployment (new chunk hashes in <script> tags).
-// Precaching it would serve a stale version with old chunk references.
-// Navigation requests use Network-First via handleNavigation() instead.
-const PRECACHE_ASSETS = [
-  '/favicon.ico',
-  '/favicon.png',
-];
+const MAX_ASSET_ENTRIES = 150;
+const MAX_PAGE_ENTRIES = 30;
+const MAX_IMAGE_ENTRIES = 60;
+const MAX_IMAGE_AGE_MS = 30 * 24 * 60 * 60 * 1000;
 
-// Image patterns to cache
-const IMAGE_PATTERNS = [
-  /\.(?:png|jpg|jpeg|svg|gif|webp)$/,
-  /supabase\.co.*\/storage\/v1\/object\/public/,
-];
+const IMAGE_EXTENSION = /\.(?:png|jpe?g|gif|webp|avif|svg|ico)$/i;
+const STATIC_FILE = /(?:^\/manifest\.webmanifest|\.(?:woff2?|ttf))$/i;
+// Tokens in the URL (/projekt/<token>, /auth/confirm, /reset-password) or account data.
+const PRIVATE_PAGE = /^\/(?:projekt|abmelden|dashboard|admin|auth|login|register|forgot-password|reset-password)(?:\/|$)/;
 
-// ─── Install ────────────────────────────────────────────────────────────────
-self.addEventListener('install', (event) => {
-  console.log('Service Worker: Installing...');
+let expiredImagesPurged = false;
 
-  event.waitUntil(
-    caches.open(STATIC_CACHE_NAME)
-      .then((cache) => {
-        console.log('Service Worker: Pre-caching shell assets');
-        return cache.addAll(PRECACHE_ASSETS);
-      })
-      .then(() => {
-        console.log('Service Worker: Installation complete');
-        // Activate immediately so the new SW takes over right away
-        return self.skipWaiting();
-      })
-      .catch((error) => {
-        console.error('Service Worker: Installation failed', error);
-      })
-  );
+// ─── Install / Activate ─────────────────────────────────────────────────────
+// skipWaiting + clients.claim: the new worker takes over immediately. The page
+// reloads only if an older worker was in control (src/lib/serviceWorker.ts),
+// never on the first visit.
+self.addEventListener('install', () => {
+  self.skipWaiting();
 });
 
-// ─── Activate ───────────────────────────────────────────────────────────────
 self.addEventListener('activate', (event) => {
-  console.log('Service Worker: Activating...');
-
-  // List of caches that belong to the CURRENT version
-  const currentCaches = [
-    STATIC_CACHE_NAME,
-    ASSETS_CACHE_NAME,
-    DYNAMIC_CACHE_NAME,
-    IMAGE_CACHE_NAME,
-  ];
-
   event.waitUntil(
-    caches.keys()
-      .then((cacheNames) => {
-        return Promise.all(
-          cacheNames.map((cacheName) => {
-            // Delete any cache that is NOT in the current set
-            if (!currentCaches.includes(cacheName)) {
-              console.log('Service Worker: Deleting old cache', cacheName);
-              return caches.delete(cacheName);
-            }
-          })
-        );
-      })
-      .then(() => {
-        console.log('Service Worker: Activation complete');
-        // Take control of all open tabs immediately
-        return self.clients.claim();
-      })
+    (async () => {
+      const cacheNames = await caches.keys();
+      await Promise.all(
+        cacheNames.filter((name) => !CURRENT_CACHES.includes(name)).map((name) => caches.delete(name)),
+      );
+      // Push notifications belonged to the former auction platform. Dropping leftover
+      // subscriptions keeps browsers from showing generic "updated in the background" notices.
+      const subscription = await self.registration.pushManager?.getSubscription().catch(() => null);
+      await subscription?.unsubscribe().catch(() => false);
+      await self.clients.claim();
+    })(),
   );
 });
 
 // ─── Fetch ──────────────────────────────────────────────────────────────────
 self.addEventListener('fetch', (event) => {
   const { request } = event;
-  const url = new URL(request.url);
-
-  // Skip non-GET requests
   if (request.method !== 'GET') return;
 
-  // Skip chrome-extension and other non-http(s) requests
-  if (!url.protocol.startsWith('http')) return;
+  const url = new URL(request.url);
+  // Supabase (REST, Auth, Storage, Functions), tracking and other hosts go straight to the network.
+  if (url.origin !== self.location.origin) return;
+  if (url.pathname.startsWith('/api/')) return;
 
-  // Supabase requests: pass through directly without any SW interception.
-  // The SW was previously cloning every response body and writing it to a
-  // CacheStorage entry keyed by the full PostgREST URL. For long admin
-  // sessions this (a) doubles memory while the clone is held, (b) keeps
-  // hundreds of 1-2 MB JSON blobs on disk, and (c) slows every Supabase
-  // request by an extra read/write cycle. Supabase + the browser HTTP cache
-  // handle freshness already – no offline story needed for live data.
-  if (isApiRequest(url)) return;
-
-  // Route to the correct handler
-  if (isHashedBuildAsset(url)) {
-    event.respondWith(handleHashedAsset(request));
-  } else if (isImmutableAsset(url)) {
-    event.respondWith(handleImmutableAsset(request));
-  } else if (isImage(url)) {
-    event.respondWith(handleImage(request));
-  } else if (isNavigationRequest(request)) {
-    event.respondWith(handleNavigation(request));
+  if (request.mode === 'navigate') {
+    event.respondWith(handleNavigation(event, url));
+  } else if (url.pathname.startsWith('/assets/')) {
+    event.respondWith(
+      /\.(?:js|css)$/.test(url.pathname)
+        ? networkFirst(event, ASSETS_CACHE_NAME, MAX_ASSET_ENTRIES)
+        : cacheFirst(event, ASSETS_CACHE_NAME, MAX_ASSET_ENTRIES),
+    );
+  } else if (request.destination === 'image' || IMAGE_EXTENSION.test(url.pathname)) {
+    if (!expiredImagesPurged) {
+      expiredImagesPurged = true;
+      inBackground(event, deleteExpired(IMAGE_CACHE_NAME, MAX_IMAGE_AGE_MS));
+    }
+    event.respondWith(staleWhileRevalidate(event, IMAGE_CACHE_NAME, MAX_IMAGE_ENTRIES, MAX_IMAGE_AGE_MS));
+  } else if (STATIC_FILE.test(url.pathname)) {
+    event.respondWith(staleWhileRevalidate(event, STATIC_CACHE_NAME));
   }
-  // All other requests pass through to the network without interception
+  // Everything else (sw.js, /js/*.js?v=…, robots.txt, sitemap.xml) uses the browser HTTP cache.
 });
 
-// ─── Request classifiers ────────────────────────────────────────────────────
+// ─── Strategies ─────────────────────────────────────────────────────────────
 
-/**
- * Hashed build assets produced by Vite: /assets/SomeChunk-Ab12Cd34.js
- * These MUST use Network-First because after a deployment the hash changes
- * and old cached chunks would cause "Failed to fetch dynamically imported module".
- */
-function isHashedBuildAsset(url) {
-  return url.origin === location.origin &&
-    url.pathname.startsWith('/assets/') &&
-    (url.pathname.endsWith('.js') || url.pathname.endsWith('.css'));
+async function handleNavigation(event, url) {
+  const cache = await caches.open(PAGES_CACHE_NAME);
+  try {
+    const response = await fetch(event.request);
+    const isHtml = (response.headers.get('content-type') || '').includes('text/html');
+    if (isCacheable(response) && isHtml && !PRIVATE_PAGE.test(url.pathname)) {
+      // Keyed by path only: no tracking parameters in the cache keys.
+      inBackground(event, putAndTrim(cache, url.pathname, response.clone(), MAX_PAGE_ENTRIES));
+    }
+    return response;
+  } catch (error) {
+    // Offline: this page if cached, otherwise any cached page (the app renders the route itself).
+    const cached = (await cache.match(url.pathname)) || (await newestEntry(cache));
+    return cached || offlineResponse();
+  }
 }
 
-/**
- * Truly immutable assets that almost never change: fonts, favicon, manifest.
- * Safe to use Cache-First.
- */
-function isImmutableAsset(url) {
-  return url.origin === location.origin && (
-    url.pathname.endsWith('.woff') ||
-    url.pathname.endsWith('.woff2') ||
-    url.pathname === '/manifest.webmanifest' ||
-    url.pathname === '/favicon.ico' ||
-    url.pathname === '/favicon.png'
+async function networkFirst(event, cacheName, maxEntries) {
+  const cache = await caches.open(cacheName);
+  try {
+    return await fetchAndCache(event, cache, maxEntries);
+  } catch (error) {
+    return (await cache.match(event.request)) || offlineResponse();
+  }
+}
+
+async function cacheFirst(event, cacheName, maxEntries) {
+  const cache = await caches.open(cacheName);
+  const cached = await cache.match(event.request);
+  if (cached) return cached;
+  try {
+    return await fetchAndCache(event, cache, maxEntries);
+  } catch (error) {
+    return offlineResponse();
+  }
+}
+
+async function staleWhileRevalidate(event, cacheName, maxEntries, maxAgeMs) {
+  const cache = await caches.open(cacheName);
+  const cached = await cache.match(event.request);
+  if (cached && !isExpired(cached, maxAgeMs)) {
+    inBackground(event, fetchAndCache(event, cache, maxEntries));
+    return cached;
+  }
+  try {
+    return await fetchAndCache(event, cache, maxEntries);
+  } catch (error) {
+    // Offline: an expired copy is still better than nothing.
+    return cached || offlineResponse();
+  }
+}
+
+// ─── Helpers ────────────────────────────────────────────────────────────────
+
+async function fetchAndCache(event, cache, maxEntries) {
+  const response = await fetch(event.request);
+  if (isCacheable(response)) {
+    inBackground(event, putAndTrim(cache, event.request, response.clone(), maxEntries));
+  }
+  return response;
+}
+
+function isCacheable(response) {
+  return response.status === 200 && response.type === 'basic';
+}
+
+function isExpired(response, maxAgeMs) {
+  if (!maxAgeMs) return false;
+  const fetchedAt = Date.parse(response.headers.get('date') || '');
+  return Number.isNaN(fetchedAt) || Date.now() - fetchedAt > maxAgeMs;
+}
+
+/** Stores the response and drops the oldest entries (Cache API keys are in insertion order). */
+async function putAndTrim(cache, key, response, maxEntries) {
+  await cache.put(key, response);
+  if (!maxEntries) return;
+  const keys = await cache.keys();
+  const excess = Math.max(0, keys.length - maxEntries);
+  await Promise.all(keys.slice(0, excess).map((entry) => cache.delete(entry)));
+}
+
+async function deleteExpired(cacheName, maxAgeMs) {
+  const cache = await caches.open(cacheName);
+  const keys = await cache.keys();
+  await Promise.all(
+    keys.map(async (key) => {
+      const response = await cache.match(key);
+      if (!response || isExpired(response, maxAgeMs)) await cache.delete(key);
+    }),
   );
 }
 
-function isImage(url) {
-  return IMAGE_PATTERNS.some((pattern) => pattern.test(url.href));
+async function newestEntry(cache) {
+  const keys = await cache.keys();
+  return keys.length > 0 ? cache.match(keys[keys.length - 1]) : undefined;
 }
 
-function isApiRequest(url) {
-  return url.hostname.includes('supabase.co');
-}
-
-function isNavigationRequest(request) {
-  return request.mode === 'navigate';
-}
-
-// ─── Handlers ───────────────────────────────────────────────────────────────
-
-/**
- * NETWORK-FIRST for hashed build assets.
- * Try the network; on success, update the cache. On failure, fall back to cache.
- * This ensures users always get the latest chunks after a deployment.
- */
-async function handleHashedAsset(request) {
-  const cache = await caches.open(ASSETS_CACHE_NAME);
-
+function inBackground(event, promise) {
+  const settled = promise.catch(() => {});
   try {
-    const networkResponse = await fetch(request);
-
-    if (networkResponse.ok) {
-      // Update cache with the fresh response
-      cache.put(request, networkResponse.clone());
-    }
-
-    return networkResponse;
+    event.waitUntil(settled);
   } catch (error) {
-    // Network unavailable – try cache as fallback
-    const cachedResponse = await cache.match(request);
-    if (cachedResponse) {
-      console.log('Service Worker: Serving cached build asset (offline)', request.url);
-      return cachedResponse;
-    }
-
-    console.error('Service Worker: Build asset unavailable', request.url);
-    return new Response('Asset not available offline', { status: 503 });
+    // Event already finished: the promise still runs while the worker is alive.
   }
 }
 
-/**
- * CACHE-FIRST for immutable assets (fonts, favicon).
- * These files almost never change, so cache-first is safe and fast.
- */
-async function handleImmutableAsset(request) {
-  try {
-    const cache = await caches.open(STATIC_CACHE_NAME);
-    const cachedResponse = await cache.match(request);
-
-    if (cachedResponse) {
-      return cachedResponse;
-    }
-
-    const networkResponse = await fetch(request);
-
-    if (networkResponse.ok) {
-      cache.put(request, networkResponse.clone());
-    }
-
-    return networkResponse;
-  } catch (error) {
-    console.error('Service Worker: Immutable asset fetch failed', error);
-    return new Response('Asset not available offline', { status: 503 });
-  }
-}
-
-/**
- * CACHE-FIRST for images with network fallback.
- */
-async function handleImage(request) {
-  try {
-    const cache = await caches.open(IMAGE_CACHE_NAME);
-    const cachedResponse = await cache.match(request);
-
-    if (cachedResponse) {
-      return cachedResponse;
-    }
-
-    const networkResponse = await fetch(request);
-
-    if (networkResponse.ok) {
-      cache.put(request, networkResponse.clone());
-    }
-
-    return networkResponse;
-  } catch (error) {
-    console.error('Service Worker: Image fetch failed', error);
-    return new Response('', { status: 503 });
-  }
-}
-
-/**
- * NETWORK-FIRST for navigation, fallback to cached /index.html for SPA routing.
- */
-async function handleNavigation(request) {
-  try {
-    const networkResponse = await fetch(request);
-
-    if (networkResponse.ok) {
-      // Update cached index.html with the latest version
-      const cache = await caches.open(STATIC_CACHE_NAME);
-      cache.put('/index.html', networkResponse.clone());
-      return networkResponse;
-    }
-
-    // Non-ok network response – fall back to cached shell
-    const cache = await caches.open(STATIC_CACHE_NAME);
-    const cachedResponse = await cache.match('/index.html');
-
-    if (cachedResponse) {
-      return cachedResponse;
-    }
-
-    throw new Error('No cached fallback available');
-  } catch (error) {
-    // Offline – serve cached SPA shell
-    const cache = await caches.open(STATIC_CACHE_NAME);
-    const cachedResponse = await cache.match('/index.html');
-
-    if (cachedResponse) {
-      return cachedResponse;
-    }
-
-    console.error('Service Worker: Navigation fetch failed', error);
-    return new Response('Page not available offline', { status: 503 });
-  }
+function offlineResponse() {
+  return new Response('Offline – bitte die Internetverbindung prüfen.', {
+    status: 503,
+    statusText: 'Service Unavailable',
+    headers: { 'Content-Type': 'text/plain; charset=utf-8' },
+  });
 }
 
 // ─── Message handling ───────────────────────────────────────────────────────
@@ -327,99 +252,3 @@ async function getCacheSize() {
 
   return totalSize;
 }
-
-// ─── Push notifications ─────────────────────────────────────────────────────
-self.addEventListener('push', (event) => {
-  console.log('Service Worker: Push received');
-
-  let data = {
-    title: 'KüchenWert',
-    body: 'Neue Benachrichtigung',
-    icon: '/logo.png',
-    badge: '/favicon.png',
-    url: self.location.origin,
-    tag: 'default',
-  };
-
-  try {
-    if (event.data) {
-      const payload = event.data.json();
-      data = { ...data, ...payload };
-    }
-  } catch (e) {
-    console.error('Service Worker: Push data parse error', e);
-  }
-
-  const options = {
-    body: data.body,
-    icon: data.icon,
-    badge: data.badge,
-    tag: data.tag,
-    renotify: true,
-    requireInteraction: data.tag === 'outbid' || data.tag === 'auction-ending',
-    data: {
-      url: data.url,
-      ...data.data,
-    },
-    actions: [],
-    vibrate: [200, 100, 200],
-  };
-
-  if (data.tag === 'outbid') {
-    options.actions = [
-      { action: 'bid', title: 'Jetzt bieten' },
-      { action: 'dismiss', title: 'Schließen' },
-    ];
-  } else if (data.tag === 'auction-ending') {
-    options.actions = [
-      { action: 'view', title: 'Auktion ansehen' },
-      { action: 'dismiss', title: 'Schließen' },
-    ];
-  } else if (data.tag === 'auction-won') {
-    options.actions = [
-      { action: 'view', title: 'Details ansehen' },
-    ];
-  }
-
-  event.waitUntil(
-    self.registration.showNotification(data.title, options)
-  );
-});
-
-self.addEventListener('notificationclick', (event) => {
-  console.log('Service Worker: Notification clicked', event.action);
-  event.notification.close();
-
-  const url = event.notification.data?.url || self.location.origin;
-
-  if (event.action === 'dismiss') return;
-
-  event.waitUntil(
-    clients.matchAll({ type: 'window', includeUncontrolled: true })
-      .then((clientList) => {
-        for (const client of clientList) {
-          if (client.url.startsWith(self.location.origin) && 'focus' in client) {
-            client.navigate(url);
-            return client.focus();
-          }
-        }
-        return clients.openWindow(url);
-      })
-  );
-});
-
-self.addEventListener('pushsubscriptionchange', (event) => {
-  console.log('Service Worker: Push subscription changed');
-  event.waitUntil(
-    self.registration.pushManager.subscribe(event.oldSubscription.options)
-      .then((subscription) => {
-        return fetch('https://gzqayoalwtmypndrmqes.supabase.co/functions/v1/save-push-subscription', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(subscription),
-        });
-      })
-  );
-});
-
-console.log(`Service Worker: Loaded (${CACHE_VERSION} – No precache for index.html, Network-First for build assets, Supabase pass-through)`);

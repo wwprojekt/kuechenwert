@@ -4,10 +4,19 @@
  * structured data generation, and breadcrumb creation
  */
 
-import { BRAND } from "@/lib/brand/config";
+import { BRAND, BRAND_LEGAL } from "@/lib/brand/config";
+import { FALLBACK_SUPPORT_PHONE } from "@/hooks/useSupportPhone";
 
 // Base URL for canonical URLs (aus zentraler Brand-Config).
 const BASE_URL = BRAND.baseUrl;
+
+const LEGAL_ADDRESS = {
+  '@type': 'PostalAddress',
+  streetAddress: BRAND_LEGAL.street,
+  postalCode: BRAND_LEGAL.postalCode,
+  addressLocality: BRAND_LEGAL.city,
+  addressCountry: 'DE',
+} as const;
 
 // Logo-URL fuer Structured Data (Google, Facebook). SVG ist seit 2024 offiziell
 // in schema.org ImageObject erlaubt und wird von Google fuer Organization-Logos
@@ -34,51 +43,42 @@ export interface OrganizationSchemaSettings {
   site_description?: string;
   support_phone?: string;
   contact_email?: string;
-  company_address?: string | null;
-  company_city?: string | null;
-  company_postal_code?: string | null;
-  company_country?: string | null;
 }
 
 export function generateOrganizationSchema(settings?: OrganizationSchemaSettings) {
-  const phone = settings?.support_phone || '';
-  const email = settings?.contact_email || '';
+  const phone = settings?.support_phone?.trim() || FALLBACK_SUPPORT_PHONE;
+  const email = settings?.contact_email || BRAND.supportEmail;
+  // sameAs erst eintragen, wenn es echte Social-Profile gibt (BRAND.social sind Platzhalter).
   return {
     '@context': 'https://schema.org',
     '@type': ['Organization', 'LocalBusiness'],
     name: settings?.site_name || BRAND.name,
+    legalName: BRAND_LEGAL.company,
     description: settings?.site_description || 'Traumküche im eigenen Raum mit KI visualisieren, Preis schätzen und Angebote geprüfter Küchenstudios vergleichen.',
     url: BASE_URL,
     logo: SCHEMA_LOGO_URL,
     image: SCHEMA_IMAGE_FALLBACK,
-    ...(phone && { telephone: phone }),
-    ...(email && { email }),
-    ...(settings?.company_address && {
-      address: {
-        '@type': 'PostalAddress',
-        streetAddress: settings.company_address,
-        addressLocality: settings.company_city || '',
-        postalCode: settings.company_postal_code || '',
-        addressCountry: 'DE',
-      },
-    }),
+    telephone: phone,
+    email,
+    address: LEGAL_ADDRESS,
     areaServed: {
       '@type': 'Country',
       name: 'Germany',
     },
-    ...(phone && {
-      contactPoint: {
-        '@type': 'ContactPoint',
-        telephone: phone,
-        contactType: 'Customer Service',
-        areaServed: 'DE',
-        availableLanguage: 'German',
+    contactPoint: {
+      '@type': 'ContactPoint',
+      telephone: phone,
+      email,
+      contactType: 'Customer Service',
+      areaServed: 'DE',
+      availableLanguage: 'German',
+      hoursAvailable: {
+        '@type': 'OpeningHoursSpecification',
+        dayOfWeek: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'],
+        opens: '10:00',
+        closes: '18:00',
       },
-    }),
-    sameAs: [
-      BRAND.social.facebook,
-      BRAND.social.instagram,
-    ],
+    },
   };
 }
 
@@ -100,7 +100,7 @@ export function generateServiceSchema(serviceName: string, description: string) 
       '@type': 'Country',
       name: 'Germany',
     },
-    serviceType: 'Kitchen Trading',
+    serviceType: 'Vermittlung von Küchenangeboten',
   };
 }
 
@@ -141,7 +141,7 @@ export function generateArticleSchema(data: ArticleSchemaData) {
     articleSection: data.articleSection || 'Küchen',
     mainEntityOfPage: {
       '@type': 'WebPage',
-      '@id': window.location.href,
+      '@id': getCanonicalUrl(window.location.pathname),
     },
   };
 }

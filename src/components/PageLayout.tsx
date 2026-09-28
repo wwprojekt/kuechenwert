@@ -9,7 +9,6 @@ import { useLocation } from "react-router-dom";
 import { getCanonicalUrl, injectStructuredData } from "@/lib/seo";
 import type { BreadcrumbItem } from "@/lib/seo";
 import { BRAND } from "@/lib/brand/config";
-import { BRAND_LOGOS } from "@/lib/brand/assets";
 
 interface PageLayoutProps {
   children: ReactNode;
@@ -26,6 +25,11 @@ interface PageLayoutProps {
   /** Blendet den Footer aus (z.B. im Wizard-Flow) */
   hideFooter?: boolean;
 }
+
+const INDEX_ROBOTS = "index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1";
+
+const isBreadcrumbList = (schema: object) =>
+  (schema as { "@type"?: unknown })["@type"] === "BreadcrumbList";
 
 const PageLayout = ({ 
   children, 
@@ -46,49 +50,40 @@ const PageLayout = ({
 
   // Use provided canonical path or current location
   const canonical = getCanonicalUrl(canonicalPath || location.pathname);
-  const ogImageUrl = ogImage || `${BRAND.baseUrl}${BRAND_LOGOS.ogImage}`;
+  const fullTitle = title.includes(siteName) ? title : `${title} | ${siteName}`;
 
   // Determine if breadcrumbs should be shown
   const showBreadcrumbs = breadcrumbs !== undefined && breadcrumbs !== false;
   const breadcrumbItems = Array.isArray(breadcrumbs) ? breadcrumbs : undefined;
-  
+
+  // Sichtbare <Breadcrumbs> liefern ihr BreadcrumbList-Schema selbst.
+  const schemas = (Array.isArray(structuredData) ? structuredData : structuredData ? [structuredData] : [])
+    .filter((schema) => !(showBreadcrumbs && isBreadcrumbList(schema)));
+
   return (
     <>
       <Helmet>
-        <title>{title.includes(siteName) ? title : `${title} | ${siteName}`}</title>
+        <title>{fullTitle}</title>
         <meta name="description" content={description} />
         {keywords && <meta name="keywords" content={keywords} />}
-        
-        {/* Robots meta */}
-        {noIndex ? (
-          <meta name="robots" content="noindex, nofollow" />
-        ) : (
-          <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1" />
-        )}
-        
-        {/* Canonical URL */}
+        <meta name="robots" content={noIndex ? "noindex, nofollow" : INDEX_ROBOTS} />
         <link rel="canonical" href={canonical} />
-        
-        {/* Open Graph tags */}
-        <meta property="og:title" content={`${title} | ${siteName}`} />
+
+        {/* og:image, og:site_name, og:locale und twitter:card gelten für alle
+            Seiten und stehen statisch in index.html; hier nur Abweichungen. */}
+        <meta property="og:title" content={fullTitle} />
         <meta property="og:description" content={description} />
         <meta property="og:url" content={canonical} />
-        <meta property="og:image" content={ogImageUrl} />
         <meta property="og:type" content="website" />
-        <meta property="og:site_name" content={siteName} />
-        <meta property="og:locale" content="de_DE" />
-        
-        {/* Twitter Card tags */}
-        <meta name="twitter:card" content="summary_large_image" />
-        <meta name="twitter:title" content={`${title} | ${siteName}`} />
+        {ogImage && <meta property="og:image" content={ogImage} />}
+
+        <meta name="twitter:title" content={fullTitle} />
         <meta name="twitter:description" content={description} />
-        <meta name="twitter:image" content={ogImageUrl} />
-        <meta name="twitter:url" content={canonical} />
-        
-        {/* Structured Data */}
-        {structuredData && (
+        {ogImage && <meta name="twitter:image" content={ogImage} />}
+
+        {schemas.length > 0 && (
           <script type="application/ld+json">
-            {injectStructuredData(structuredData)}
+            {injectStructuredData(schemas)}
           </script>
         )}
       </Helmet>

@@ -57,8 +57,8 @@ mkdir -p "$DST" "$ASSETS_DIR"
 
 log "Starte Sync von $SRC → $DST (Retention: ${RETENTION_DAYS}d)"
 
-# 1) Root-Level Files (index.html, sw.js, robots.txt, sitemap.xml,
-#    _redirects, favicon.*, logo*.png/webp, og-image.*, etc.)
+# 1) Root-Level Files (index.html, spa.html, sw.js, robots.txt, sitemap.xml,
+#    favicon.*, logo*.png/webp, og-image.*, etc.)
 #    IMMER überschreiben — diese sind kanonisch für den aktuellen Build.
 ROOT_FILE_COUNT=0
 for f in "$SRC"/*; do
@@ -68,7 +68,8 @@ for f in "$SRC"/*; do
 done
 log "Root-Files überschrieben: $ROOT_FILE_COUNT"
 
-# 2) Sub-Directories außer 'assets' (z.B. images/) — komplett überschreiben.
+# 2) Sub-Directories außer 'assets' (z.B. images/, js/ und die vorgerenderten
+#    Seiten wie faq/index.html) — komplett überschreiben.
 SUBDIR_COUNT=0
 for d in "$SRC"/*/; do
     [ -d "$d" ] || continue

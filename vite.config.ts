@@ -1,7 +1,28 @@
-import { defineConfig } from "vite";
+import { defineConfig, type Plugin } from "vite";
 import react from "@vitejs/plugin-react-swc";
 import path from "path";
+import { createHash } from "node:crypto";
+import { readFileSync } from "node:fs";
 import { componentTagger } from "lovable-tagger";
+
+// Die klassischen Skripte aus public/js/ (index.html) haben keinen Hash im
+// Dateinamen und werden einen Tag gecacht: ?v=<Inhalts-Hash> sorgt dafür, dass
+// Browser nach einem Deploy die neue Fassung laden.
+const versionPublicScripts = (): Plugin => ({
+  name: "kw-version-public-scripts",
+  apply: "build",
+  transformIndexHtml: {
+    order: "post",
+    handler: (html) =>
+      html.replace(/<script src="\/js\/([\w.-]+\.js)"><\/script>/g, (_tag, file: string) => {
+        const hash = createHash("sha256")
+          .update(readFileSync(path.resolve(__dirname, "public/js", file)))
+          .digest("hex")
+          .slice(0, 10);
+        return `<script src="/js/${file}?v=${hash}"></script>`;
+      }),
+  },
+});
 
 // https://vitejs.dev/config/
 export default defineConfig(({ mode }) => ({
@@ -9,7 +30,7 @@ export default defineConfig(({ mode }) => ({
     host: "::",
     port: 8080,
   },
-  plugins: [react(), mode === "development" && componentTagger()].filter(Boolean),
+  plugins: [react(), versionPublicScripts(), mode === "development" && componentTagger()].filter(Boolean),
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),

@@ -113,9 +113,6 @@ verify_jwt = false
 [functions.track-conversion]
 verify_jwt = false
 
-[functions.log-error]
-verify_jwt = false
-
 # --- Stillgelegt (410 Gone, _shared/gone.ts) ---
 # Caravan-Auktionen, Termine/Übergaben, Kaufverträge, Verkaufs-Wizard,
 # öffentliche Mail-Versender, alter Planer und Einmal-Werkzeuge. Können im
@@ -199,6 +196,10 @@ verify_jwt = false
 verify_jwt = false
 
 [functions.kw-planner-submit-lead]
+verify_jwt = false
+
+# Fehlerprotokoll läuft über die RPC log_error.
+[functions.log-error]
 verify_jwt = false
 
 [functions.notify-admin-missing-reserve]

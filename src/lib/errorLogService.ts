@@ -452,26 +452,9 @@ export async function logErrorToSupabase(entry: ErrorLogEntry): Promise<void> {
     }
 
     // Aktuellen Nutzer und Rolle ermitteln
+    // Nutzer, E-Mail und Rolle bestimmt log_error serverseitig aus dem JWT;
+    // eine frische Sitzung genügt.
     await ensureValidRLSSession();
-    const { data: { user } } = await supabase.auth.getUser();
-    let userRole = 'anonymous';
-    let userEmail: string | undefined;
-
-    if (user) {
-      userEmail = user.email;
-      // Rolle aus user_roles Tabelle holen
-      const { data: roles } = await supabase
-        .from('user_roles')
-        .select('role')
-        .eq('user_id', user.id)
-        .limit(1);
-      
-      if (roles && roles.length > 0) {
-        userRole = roles[0].role;
-      } else {
-        userRole = 'customer';
-      }
-    }
 
     const errorHash = generateErrorHash(entry);
 
@@ -504,9 +487,6 @@ export async function logErrorToSupabase(entry: ErrorLogEntry): Promise<void> {
       p_page_path: redactProjectToken(entry.pagePath || window.location.pathname),
       p_page_title: entry.pageTitle || getPageTitle(window.location.pathname),
       p_component_name: entry.componentName || null,
-      p_user_id: user?.id || null,
-      p_user_role: userRole,
-      p_user_email: userEmail || null,
       p_stack_trace: entry.stackTrace || null,
       p_original_error: entry.originalError || null,
       p_metadata: (entry.metadata || {}) as Json,

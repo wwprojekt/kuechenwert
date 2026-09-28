@@ -134,7 +134,7 @@ const Process = () => {
         </div>
 
         <div className="text-center">
-          <Button asChild size="lg" className="gradient-hero h-12 px-8 text-base font-semibold hover:shadow-glow sm:h-14 sm:px-10 sm:text-lg">
+          <Button asChild size="lg" className="h-12 px-8 text-base font-semibold sm:h-14 sm:px-10 sm:text-lg">
             <Link to="/funnel/c">
               Jetzt Traumküche planen
               <ArrowRight className="ml-2 h-5 w-5" />

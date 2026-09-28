@@ -7,7 +7,8 @@ interface PageHeroProps {
 }
 
 /**
- * Consistent hero/header section for subpages with the same gradient as the main Hero
+ * Einheitlicher Kopfbereich der Unterseiten – derselbe warme Salbei-zu-Creme-
+ * Verlauf wie der Hero der Startseite.
  */
 const PageHero = ({ children, className = "", size = "md" }: PageHeroProps) => {
   const sizeClasses = {
@@ -18,13 +19,8 @@ const PageHero = ({ children, className = "", size = "md" }: PageHeroProps) => {
 
   return (
     <section className={`relative overflow-hidden ${sizeClasses[size]} ${className}`}>
-      {/* Gradient background matching main Hero */}
-      <div className="absolute inset-0 bg-gradient-to-b from-cyan-100/80 via-sky-100/50 to-slate-100/80" />
-      <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-transparent" />
-      
-      {/* Decorative elements for depth */}
-      <div className="absolute top-0 right-0 w-1/2 h-full bg-gradient-to-l from-cyan-100/30 to-transparent" />
-      <div className="absolute bottom-0 left-0 w-full h-24 bg-gradient-to-t from-slate-100/50 to-transparent" />
+      <div className="absolute inset-0 bg-gradient-to-b from-primary/[0.08] via-background to-background" />
+      <div className="absolute top-0 right-0 h-full w-1/2 bg-gradient-to-l from-accent/[0.06] to-transparent" />
       
       {/* Subtle pattern overlay */}
       <div 

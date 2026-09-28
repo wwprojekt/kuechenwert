@@ -3,7 +3,6 @@ import { Calculator } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Separator } from "@/components/ui/separator";
 import { cn } from "@/lib/utils";
 import { type CommissionTier, calculateCommission, formatEuroExact, formatPercent } from "./studio-pricing";
 
@@ -12,7 +11,7 @@ const VAT_PERCENT = 19;
 
 function Line({ label, value, strong = false }: { label: string; value: string; strong?: boolean }) {
   return (
-    <div className={cn("flex justify-between gap-4", strong && "font-semibold")}>
+    <div className={cn("flex justify-between gap-4", strong && "border-t pt-2 font-semibold")}>
       <dt className={strong ? undefined : "text-muted-foreground"}>{label}</dt>
       <dd className={strong ? "text-primary" : "font-medium"}>{value}</dd>
     </div>
@@ -56,7 +55,6 @@ export function CommissionCalculator({ tiers }: { tiers: CommissionTier[] }) {
                 value={formatEuroExact(result.commissionCents)}
               />
               <Line label={`zzgl. ${VAT_PERCENT} % MwSt.`} value={formatEuroExact(vatCents)} />
-              <Separator />
               <Line label="Rechnungsbetrag" value={formatEuroExact(result.commissionCents + vatCents)} strong />
             </dl>
           ) : (

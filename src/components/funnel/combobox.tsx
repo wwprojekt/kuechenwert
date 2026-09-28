@@ -133,7 +133,7 @@ export function Combobox({
         <span className="truncate">
           {selected ? selected.label : placeholder}
           {selected?.badge && (
-            <span className="ml-2 inline-flex items-center rounded bg-neutral-100 px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-ink-muted">
+            <span className="ml-2 inline-flex items-center rounded bg-muted px-1.5 py-0.5 text-[11px] font-medium uppercase tracking-wide text-ink-muted">
               {selected.badge}
             </span>
           )}
@@ -145,11 +145,11 @@ export function Combobox({
 
       {open && (
         <div
-          className="absolute z-30 mt-1 w-full overflow-hidden rounded-xl border border-slate-200 bg-white shadow-xl"
+          className="absolute z-30 mt-1 w-full overflow-hidden rounded-xl border border-border bg-popover shadow-xl"
           role="listbox"
         >
           {showSearch && (
-            <div className="flex items-center gap-2 border-b border-slate-100 px-3 py-2">
+            <div className="flex items-center gap-2 border-b border-border px-3 py-2">
               <Search className="h-4 w-4 text-ink-subtle" />
               <input
                 ref={inputRef}
@@ -164,7 +164,7 @@ export function Combobox({
                 <button
                   type="button"
                   onClick={() => setQuery("")}
-                  className="rounded p-0.5 text-ink-subtle hover:bg-slate-100"
+                  className="rounded p-0.5 text-ink-subtle hover:bg-muted"
                   aria-label="Suche zurücksetzen"
                 >
                   <X className="h-3.5 w-3.5" />
@@ -183,7 +183,7 @@ export function Combobox({
             {grouped.map((g, gi) => (
               <div key={`${g.group ?? "_"}-${gi}`}>
                 {g.group && (
-                  <div className="sticky top-0 bg-slate-50/90 px-3 py-1 text-[10px] font-semibold uppercase tracking-wider text-ink-subtle backdrop-blur">
+                  <div className="sticky top-0 bg-muted/90 px-3 py-1 text-[11px] font-semibold uppercase tracking-wider text-ink-subtle backdrop-blur">
                     {g.group}
                   </div>
                 )}
@@ -224,7 +224,7 @@ export function Combobox({
                         )}
                       </span>
                       {opt.badge && (
-                        <span className="mt-0.5 inline-flex items-center rounded bg-neutral-100 px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-ink-muted">
+                        <span className="mt-0.5 inline-flex items-center rounded bg-muted px-1.5 py-0.5 text-[11px] font-medium uppercase tracking-wide text-ink-muted">
                           {opt.badge}
                         </span>
                       )}

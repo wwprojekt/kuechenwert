@@ -152,7 +152,7 @@ const ForgotPassword = () => {
 
                 <Button
                   type="submit"
-                  className="w-full gradient-hero hover:gradient-hero-hover"
+                  className="w-full"
                   size="lg"
                   disabled={isLoading}
                 >
@@ -183,7 +183,7 @@ const ForgotPassword = () => {
           <div className="text-center text-sm text-muted-foreground">
             <p>
               Noch kein Konto?{" "}
-              <Link to="/register" className="text-primary hover:underline">
+              <Link to="/register" className="link-inline">
                 Jetzt registrieren
               </Link>
             </p>

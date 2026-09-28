@@ -26,9 +26,9 @@ const RegisterChoice = () => {
     >
       <div className="min-h-screen flex items-center justify-center py-4 md:py-12 px-4 relative overflow-hidden">
         {/* Consistent gradient background – identisch mit Register.tsx */}
-        <div className="absolute inset-0 bg-gradient-to-b from-cyan-50/80 via-sky-50/40 to-white" />
+        <div className="absolute inset-0 bg-gradient-to-b from-primary/[0.08] via-background to-background" />
         <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-transparent" />
-        <div className="absolute top-0 right-0 w-1/2 h-full bg-gradient-to-l from-cyan-100/30 to-transparent" />
+        <div className="absolute top-0 right-0 w-1/2 h-full bg-gradient-to-l from-accent/[0.06] to-transparent" />
         <div className="absolute inset-0 opacity-[0.015]" style={{ backgroundImage: 'radial-gradient(circle at 1px 1px, currentColor 1px, transparent 0)', backgroundSize: '32px 32px' }} />
 
         <div className="w-full max-w-3xl relative z-10">
@@ -88,7 +88,7 @@ const RegisterChoice = () => {
                     </div>
                   </div>
                   <div className="mt-auto w-full pt-1 md:pt-0">
-                    <div className="w-full h-10 md:h-12 rounded-md gradient-hero flex items-center justify-center text-white text-sm md:text-base font-medium group-hover:gradient-hero-hover shadow-[var(--shadow-glow-sm)] transition-all duration-300">
+                    <div className="w-full h-10 md:h-12 rounded-xl bg-primary flex items-center justify-center text-primary-foreground text-sm md:text-base font-semibold shadow-sm transition-colors duration-300 group-hover:bg-primary/90">
                       Kostenlos registrieren
                       <ArrowRight className="w-4 h-4 md:w-5 md:h-5 ml-2 group-hover:translate-x-1 transition-transform duration-300" />
                     </div>
@@ -148,19 +148,19 @@ const RegisterChoice = () => {
           <div className="mt-4 md:mt-8 text-center space-y-2 md:space-y-3 animate-fade-in">
             <p className="text-xs md:text-sm text-muted-foreground">
               Bereits registriert?{" "}
-              <Link to="/login" className="text-primary hover:underline font-medium">
+              <Link to="/login" className="link-inline">
                 Jetzt anmelden
               </Link>
             </p>
             <p className="text-xs md:text-sm text-muted-foreground">
               Alle Preise für Küchenstudios:{" "}
-              <Link to="/preise" className="text-primary hover:underline">
+              <Link to="/preise" className="link-inline">
                 Preise &amp; Leistungen
               </Link>
             </p>
             <p className="text-xs md:text-sm text-muted-foreground">
               Fragen?{" "}
-              <Link to="/kontakt" className="text-primary hover:underline">
+              <Link to="/kontakt" className="link-inline">
                 Kontaktieren Sie uns
               </Link>
             </p>

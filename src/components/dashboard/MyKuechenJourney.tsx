@@ -63,7 +63,7 @@ const FUNNEL_META: Record<
     title: "Angebote einholen",
     href: "/formular",
     icon: MessageSquarePlus,
-    color: "text-blue-600 bg-blue-50 border-blue-200 dark:bg-blue-950/20 dark:border-blue-800",
+    color: "text-blue-700 bg-blue-50 border-blue-200 dark:bg-blue-950/20 dark:border-blue-800",
     description: "Bis zu 3 geprüfte Studios geben Ihnen ein unverbindliches Angebot.",
   },
   b: {
@@ -71,7 +71,7 @@ const FUNNEL_META: Record<
     href: "/funnel/b",
     icon: TrendingDown,
     color:
-      "text-amber-600 bg-amber-50 border-amber-200 dark:bg-amber-950/20 dark:border-amber-800",
+      "text-warning bg-amber-50 border-amber-200 dark:bg-amber-950/20 dark:border-amber-800",
     description: "Bestehendes Küchen-Angebot von geprüften Küchenstudios unterbieten lassen.",
   },
   traumkueche: {
@@ -259,7 +259,7 @@ export function MyKuechenJourney() {
               return (
                 <div
                   key={lead.id}
-                  className="flex flex-col sm:flex-row gap-3 sm:items-center p-4 rounded-lg border hover:bg-accent/50 transition"
+                  className="flex flex-col sm:flex-row gap-3 sm:items-center p-4 rounded-lg border hover:bg-muted/60 transition"
                 >
                   <div
                     className={`inline-flex p-2.5 rounded-lg border ${meta?.color ?? "bg-muted"} flex-shrink-0`}

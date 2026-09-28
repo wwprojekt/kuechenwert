@@ -11,7 +11,7 @@ interface PendingFileListProps {
 export function PendingFileList({ files, onRemove, disabled = false }: PendingFileListProps) {
   if (files.length === 0) return null;
   return (
-    <ul className="divide-y divide-slate-200 rounded-lg border border-slate-200 bg-white text-sm">
+    <ul className="divide-y divide-border rounded-xl border border-border bg-card text-sm">
       {files.map((item) => {
         const isPdf = leadFileType(item.file) === "application/pdf";
         const Icon = isPdf ? FileText : ImageIcon;
@@ -27,7 +27,7 @@ export function PendingFileList({ files, onRemove, disabled = false }: PendingFi
               type="button"
               onClick={() => onRemove(item.id)}
               disabled={disabled}
-              className="flex-none rounded p-1 text-ink-muted hover:bg-red-50 hover:text-red-700 disabled:opacity-50"
+              className="flex-none rounded p-1 text-ink-muted hover:bg-destructive/10 hover:text-destructive disabled:opacity-50"
               aria-label={`${item.file.name} entfernen`}
             >
               <X className="h-4 w-4" aria-hidden="true" />

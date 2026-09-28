@@ -189,7 +189,7 @@ const Benefits = () => {
           <Button
             asChild
             size="lg"
-            className="gradient-hero hover:gradient-hero-hover h-auto min-h-11 max-w-full whitespace-normal px-6 py-2.5 sm:px-8"
+            className="h-auto min-h-11 max-w-full whitespace-normal px-6 py-2.5 sm:px-8"
           >
             <Link to="/funnel/c">
               Traumküche kostenlos planen

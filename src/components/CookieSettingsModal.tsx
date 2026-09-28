@@ -153,7 +153,7 @@ export function CookieSettingsModal({ open, onOpenChange }: CookieSettingsModalP
       id: 'essential' as const,
       name: 'Notwendige Cookies',
       icon: Shield,
-      iconColor: 'text-green-600',
+      iconColor: 'text-success',
       description: 'Diese Cookies sind für die Grundfunktionen der Website erforderlich und können nicht deaktiviert werden.',
       examples: 'Session-Cookies, Sicherheits-Cookies, Cookie-Einstellungen',
       enabled: true,
@@ -163,7 +163,7 @@ export function CookieSettingsModal({ open, onOpenChange }: CookieSettingsModalP
       id: 'functional' as const,
       name: 'Funktionale Cookies',
       icon: Settings,
-      iconColor: 'text-blue-600',
+      iconColor: 'text-primary',
       description: 'Ermöglichen erweiterte Funktionen und Personalisierung, wie gespeicherte Einstellungen und Präferenzen.',
       examples: 'Gespeicherte Präferenzen und Personalisierung eingebundener Google-Dienste',
       enabled: consent.functional,
@@ -183,7 +183,7 @@ export function CookieSettingsModal({ open, onOpenChange }: CookieSettingsModalP
       id: 'marketing' as const,
       name: 'Marketing Cookies',
       icon: Megaphone,
-      iconColor: 'text-orange-600',
+      iconColor: 'text-warning',
       description: 'Werden für personalisierte Werbung und Remarketing über Drittanbieter verwendet.',
       examples: 'Google Ads, Meta Pixel, Conversion-Tracking',
       enabled: consent.marketing,
@@ -225,7 +225,7 @@ export function CookieSettingsModal({ open, onOpenChange }: CookieSettingsModalP
                     <p id={`cookie-settings-${category.id}-desc`} className="text-sm text-muted-foreground mt-1">
                       {category.description}
                     </p>
-                    <p className="text-xs text-muted-foreground/70 mt-2">
+                    <p className="text-xs text-muted-foreground mt-2">
                       <span className="font-medium">Beispiele:</span> {category.examples}
                     </p>
                   </div>
@@ -250,7 +250,7 @@ export function CookieSettingsModal({ open, onOpenChange }: CookieSettingsModalP
         <div className="text-xs text-muted-foreground bg-muted/50 p-3 rounded-lg">
           <p>
             Weitere Informationen zur Verarbeitung Ihrer Daten finden Sie in unserer{' '}
-            <a href="/datenschutz" className="text-primary hover:underline inline-flex items-center gap-1">
+            <a href="/datenschutz" className="link-inline inline-flex items-center gap-1">
               Datenschutzerklärung
               <ExternalLink className="w-3 h-3" aria-hidden="true" />
             </a>
@@ -275,7 +275,7 @@ export function CookieSettingsModal({ open, onOpenChange }: CookieSettingsModalP
           <Button variant="outline" onClick={handleSave}>
             Auswahl speichern
           </Button>
-          <Button onClick={handleAcceptAll} className="gradient-hero">
+          <Button onClick={handleAcceptAll}>
             Alle akzeptieren
           </Button>
         </DialogFooter>

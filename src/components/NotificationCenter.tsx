@@ -33,14 +33,14 @@ const NOTIFICATION_ICONS: Record<string, typeof Bell> = {
 };
 
 const NOTIFICATION_COLORS: Record<string, string> = {
-  outbid: "text-red-500 bg-red-50",
-  auction_won: "text-green-500 bg-green-50",
-  auction_ending: "text-amber-500 bg-amber-50",
-  new_auction: "text-blue-500 bg-blue-50",
-  search_match: "text-purple-500 bg-purple-50",
-  payment_reminder: "text-orange-500 bg-orange-50",
-  system: "text-gray-500 bg-gray-50",
-  bid_confirmed: "text-emerald-500 bg-emerald-50",
+  outbid: "text-destructive bg-red-50",
+  auction_won: "text-success bg-green-50",
+  auction_ending: "text-warning bg-amber-50",
+  new_auction: "text-blue-700 bg-blue-50",
+  search_match: "text-purple-700 bg-purple-50",
+  payment_reminder: "text-warning bg-orange-50",
+  system: "text-muted-foreground bg-muted",
+  bid_confirmed: "text-success bg-emerald-50",
 };
 
 function timeAgo(dateString: string): string {

@@ -466,7 +466,7 @@ const Kuechenrechner = () => {
                 </div>
 
                 <div className="grid gap-3 sm:grid-cols-2">
-                  <Button asChild size="lg" className="gradient-hero w-full h-14 font-semibold group">
+                  <Button asChild size="lg" className="w-full h-14 font-semibold group">
                     <Link to="/formular">
                       Konkrete Angebote erhalten
                       <ArrowRight className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-smooth" aria-hidden="true" />

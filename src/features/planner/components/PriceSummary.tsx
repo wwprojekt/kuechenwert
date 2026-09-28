@@ -83,7 +83,7 @@ export function PriceSummary({
                   <li key={l.id} className="flex items-baseline justify-between gap-3 text-xs text-muted-foreground">
                     <span className="min-w-0">
                       {l.label}
-                      {l.detail && <span className="text-muted-foreground/80"> · {l.detail}</span>}
+                      {l.detail && <span> · {l.detail}</span>}
                     </span>
                     <span className="flex-none tabular-nums">
                       {euro(l.min)} – {euro(l.max)}

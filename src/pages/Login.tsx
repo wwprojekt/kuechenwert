@@ -121,14 +121,14 @@ const Login = () => {
       noIndex={true}
     >
       <div className="min-h-screen flex items-center justify-center py-12 px-4 relative overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-b from-cyan-50/80 via-sky-50/40 to-white" />
+        <div className="absolute inset-0 bg-gradient-to-b from-primary/[0.08] via-background to-background" />
         <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-transparent" />
-        <div className="absolute top-0 right-0 w-1/2 h-full bg-gradient-to-l from-cyan-100/30 to-transparent" />
+        <div className="absolute top-0 right-0 w-1/2 h-full bg-gradient-to-l from-accent/[0.06] to-transparent" />
         <div className="absolute inset-0 opacity-[0.015]" style={{ backgroundImage: 'radial-gradient(circle at 1px 1px, currentColor 1px, transparent 0)', backgroundSize: '32px 32px' }} />
         
         <div className="w-full max-w-md relative z-10">
           <div className="text-center mb-8 animate-fade-in">
-            <Link to="/" className="inline-block mb-6 hover:opacity-90 transition-opacity">
+            <Link to="/" className="mx-auto mb-6 block w-fit rounded-xl transition-opacity hover:opacity-90">
               <img src="/logo.svg" alt={BRAND.name} className="h-16 w-auto mx-auto" />
             </Link>
             <h1 className="text-3xl md:text-4xl font-bold text-foreground mb-3">
@@ -189,7 +189,7 @@ const Login = () => {
 
               <Button
                 type="submit"
-                className="w-full h-12 text-base gradient-hero hover:gradient-hero-hover shadow-glow-sm"
+                className="w-full h-12 text-base"
                 disabled={isLoading}
               >
                 {isLoading ? "Wird angemeldet..." : "Anmelden"}
@@ -200,14 +200,14 @@ const Login = () => {
             <div className="mt-6 text-center space-y-3">
               <p className="text-sm text-muted-foreground">
                 Noch kein Konto?{" "}
-                <Link to="/register" className="text-primary hover:underline font-medium">
+                <Link to="/register" className="link-inline">
                   Jetzt registrieren
                 </Link>
               </p>
               <div className="h-px bg-border/50" />
               <p className="text-sm text-muted-foreground">
                 Küchenstudio?{" "}
-                <Link to="/register/haendler" className="text-primary hover:underline font-medium">
+                <Link to="/register/haendler" className="link-inline">
                   Zur Studio-Registrierung
                 </Link>
               </p>
@@ -217,7 +217,7 @@ const Login = () => {
           <div className="mt-6 text-center text-sm text-muted-foreground">
             <p>
               Probleme beim Anmelden?{" "}
-              <Link to="/kontakt" className="text-primary hover:underline">
+              <Link to="/kontakt" className="link-inline">
                 Kontaktieren Sie uns
               </Link>
             </p>

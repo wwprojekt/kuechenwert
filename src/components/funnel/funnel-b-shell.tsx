@@ -57,7 +57,7 @@ function StepNav({
           type="button"
           onClick={onNext}
           disabled={!canProceed || isSubmitting}
-          className={cn("btn-accent gap-1.5", compact && "flex-1", FOCUS_RING)}
+          className={cn("btn-primary gap-1.5", compact && "flex-1", FOCUS_RING)}
         >
           {isSubmitting ? (
             <>
@@ -132,7 +132,7 @@ export function FunnelBShell({
               aria-valuemax={totalSteps}
               aria-valuetext={`Schritt ${currentStep + 1} von ${totalSteps}`}
               aria-label="Fortschritt"
-              className="h-[3px] w-full overflow-hidden rounded-full bg-neutral-200"
+              className="h-[3px] w-full overflow-hidden rounded-full bg-border"
             >
               <div
                 className="h-full rounded-full bg-brand-500 transition-[width] duration-500 ease-out motion-reduce:transition-none"
@@ -152,7 +152,7 @@ export function FunnelBShell({
             <section
               key={currentStep}
               aria-labelledby="funnel-question"
-              className="mt-5 animate-step-in rounded-2xl border border-neutral-200 bg-white p-5 shadow-card motion-reduce:animate-none sm:p-10 lg:p-12"
+              className="mt-5 animate-step-in rounded-2xl border border-border bg-card p-5 shadow-card motion-reduce:animate-none sm:p-10 lg:p-12"
             >
               {stepLabel && stepLabel !== stepDescription && (
                 <p className="text-center text-[11px] font-semibold uppercase tracking-[0.16em] text-brand-700">{stepLabel}</p>
@@ -161,7 +161,7 @@ export function FunnelBShell({
                 id="funnel-question"
                 ref={headingRef}
                 tabIndex={-1}
-                className="mx-auto mt-2 max-w-xl text-balance text-center font-display text-[26px] font-bold leading-[1.15] tracking-tight-2 text-black focus:outline-none sm:text-[2rem] lg:text-[2.25rem]"
+                className="mx-auto mt-2 max-w-xl text-balance text-center font-display text-[26px] font-bold leading-[1.15] tracking-tight-2 text-foreground focus:outline-none sm:text-[2rem] lg:text-[2.25rem]"
               >
                 {stepDescription || stepLabel}
               </h1>

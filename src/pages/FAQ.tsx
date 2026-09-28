@@ -55,7 +55,7 @@ const FAQPage = () => {
                 <h3 className="font-bold text-lg mb-2">Telefonische Beratung</h3>
                 <p className="text-muted-foreground mb-4">Mo–Fr von 10:00–18:00 Uhr</p>
                 {supportPhone ? (
-                  <a href={`tel:${supportPhone.replace(/\s/g, "")}`} className="text-primary hover:underline font-semibold">
+                  <a href={`tel:${supportPhone.replace(/\s/g, "")}`} className="link-inline font-semibold">
                     {supportPhone}
                   </a>
                 ) : (
@@ -65,7 +65,7 @@ const FAQPage = () => {
               <div className="bg-card p-6 rounded-lg border shadow-sm">
                 <h3 className="font-bold text-lg mb-2">E-Mail Support</h3>
                 <p className="text-muted-foreground mb-4">Antwort innerhalb von 24 Stunden</p>
-                <a href={`mailto:${contactEmail}`} className="text-primary hover:underline font-semibold">
+                <a href={`mailto:${contactEmail}`} className="link-inline font-semibold">
                   {contactEmail}
                 </a>
               </div>

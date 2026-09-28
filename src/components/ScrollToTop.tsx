@@ -37,7 +37,7 @@ const ScrollToTop = () => {
       <Button
         onClick={scrollToTop}
         size="icon"
-        className="h-12 w-12 rounded-lg gradient-hero hover:shadow-glow shadow-lg hover:scale-110 transition-all duration-300 group"
+        className="h-12 w-12 shadow-lg group"
         aria-label="Nach oben scrollen"
       >
         <ArrowUp className="h-5 w-5 text-white group-hover:-translate-y-1 transition-transform" />

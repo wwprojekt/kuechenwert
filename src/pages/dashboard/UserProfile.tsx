@@ -167,7 +167,7 @@ export default function UserProfile() {
       {isLocked && (
         <Card className="p-4 sm:p-5 border-2 border-amber-300 bg-amber-50 dark:bg-amber-950/20 dark:border-amber-800">
           <div className="flex items-start gap-3">
-            <Lock className="w-5 h-5 text-amber-600 dark:text-amber-400 flex-shrink-0 mt-0.5" />
+            <Lock className="w-5 h-5 text-amber-800 dark:text-amber-400 flex-shrink-0 mt-0.5" />
             <div className="space-y-1 text-sm">
               <p className="font-semibold text-amber-900 dark:text-amber-200">
                 Profildaten gesperrt
@@ -431,7 +431,7 @@ export default function UserProfile() {
               <Button
                 type="submit"
                 size="lg"
-                className="gradient-hero hover:gradient-hero-hover w-full"
+                className="w-full"
                 disabled={updateProfileMutation.isPending}
               >
                 <Save className="w-4 h-4 mr-2" />

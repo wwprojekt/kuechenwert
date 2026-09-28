@@ -137,7 +137,7 @@ export default function MyMessages() {
     switch (status) {
       case "resolved":
         return (
-          <Badge variant="outline" className="text-green-600 border-green-600 gap-1">
+          <Badge variant="outline" className="text-success border-success gap-1">
             <CheckCircle className="w-3 h-3" />
             Beantwortet
           </Badge>
@@ -151,7 +151,7 @@ export default function MyMessages() {
         );
       default:
         return (
-          <Badge variant="outline" className="text-orange-600 border-orange-600 gap-1">
+          <Badge variant="outline" className="text-warning border-warning gap-1">
             <Clock className="w-3 h-3" />
             Offen
           </Badge>

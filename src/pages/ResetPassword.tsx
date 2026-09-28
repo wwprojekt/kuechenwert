@@ -296,19 +296,19 @@ const ResetPassword = () => {
                     Passwort-Anforderungen
                   </p>
                   <ul className="text-xs text-muted-foreground space-y-1">
-                    <li className={password.length >= 8 ? "text-green-600" : ""}>
+                    <li className={password.length >= 8 ? "font-medium text-success" : ""}>
                       • Mindestens 8 Zeichen
                     </li>
-                    <li className={/[A-Z]/.test(password) ? "text-green-600" : ""}>
+                    <li className={/[A-Z]/.test(password) ? "font-medium text-success" : ""}>
                       • Mindestens ein Großbuchstabe
                     </li>
-                    <li className={/[a-z]/.test(password) ? "text-green-600" : ""}>
+                    <li className={/[a-z]/.test(password) ? "font-medium text-success" : ""}>
                       • Mindestens ein Kleinbuchstabe
                     </li>
-                    <li className={/[0-9]/.test(password) ? "text-green-600" : ""}>
+                    <li className={/[0-9]/.test(password) ? "font-medium text-success" : ""}>
                       • Mindestens eine Zahl
                     </li>
-                    <li className={/[^A-Za-z0-9]/.test(password) ? "text-green-600" : ""}>
+                    <li className={/[^A-Za-z0-9]/.test(password) ? "font-medium text-success" : ""}>
                       • Mindestens ein Sonderzeichen (!@#$%^&* etc.)
                     </li>
                   </ul>
@@ -316,7 +316,7 @@ const ResetPassword = () => {
 
                 <Button
                   type="submit"
-                  className="w-full gradient-hero hover:gradient-hero-hover"
+                  className="w-full"
                   size="lg"
                   disabled={isLoading || password !== confirmPassword || passwordStrength < 4}
                 >

@@ -122,7 +122,7 @@ export const SmartDashboard = () => {
           </p>
           <button 
             onClick={() => window.location.reload()} 
-            className="text-primary hover:underline"
+            className="link-inline"
           >
             Seite neu laden
           </button>

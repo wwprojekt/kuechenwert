@@ -171,7 +171,7 @@ export function UserSidebar() {
         {/* Navigation */}
         <SidebarGroup>
           {!collapsed && (
-            <SidebarGroupLabel className="text-xs font-semibold text-muted-foreground/70 uppercase tracking-wider px-3 mb-2">
+            <SidebarGroupLabel className="text-xs font-semibold text-muted-foreground uppercase tracking-wider px-3 mb-2">
               Navigation
             </SidebarGroupLabel>
           )}

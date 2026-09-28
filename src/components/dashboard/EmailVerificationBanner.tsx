@@ -51,7 +51,7 @@ export default function EmailVerificationBanner({ email }: EmailVerificationBann
       <div className="p-5">
         <div className="flex items-start gap-4">
           <div className="h-12 w-12 rounded-xl bg-amber-100 dark:bg-amber-900/50 flex items-center justify-center flex-shrink-0">
-            <Mail className="w-6 h-6 text-amber-600 dark:text-amber-400" />
+            <Mail className="w-6 h-6 text-amber-800 dark:text-amber-400" />
           </div>
 
           <div className="flex-1 min-w-0">
@@ -87,7 +87,7 @@ export default function EmailVerificationBanner({ email }: EmailVerificationBann
                   size="sm"
                   onClick={handleResend}
                   disabled={resending}
-                  className="bg-amber-600 hover:bg-amber-700 text-white shadow-md"
+                  className="bg-amber-700 hover:bg-amber-800 text-white shadow-md"
                 >
                   <RefreshCw className={`w-4 h-4 mr-2 ${resending ? "animate-spin" : ""}`} />
                   {resending ? "Wird gesendet..." : "Bestätigungslink erneut senden"}

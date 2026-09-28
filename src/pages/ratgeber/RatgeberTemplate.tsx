@@ -37,7 +37,7 @@ const OfferRequestCard = () => (
         </li>
       ))}
     </ul>
-    <Button asChild size="lg" className="w-full gradient-hero hover:gradient-hero-hover h-12 font-semibold">
+    <Button asChild size="lg" className="w-full h-12 font-semibold">
       <Link to="/formular">
         Angebote einholen
         <ArrowRight className="ml-2 h-5 w-5" />
@@ -90,7 +90,7 @@ const RatgeberTemplate = ({ config }: RatgeberTemplateProps) => {
               <Button
                 asChild
                 size="lg"
-                className="gradient-hero hover:gradient-hero-hover h-14 text-lg font-semibold px-8"
+                className="h-14 text-lg font-semibold px-8"
               >
                 <Link to={config.primaryCta.href}>
                   {config.primaryCta.text}
@@ -112,7 +112,7 @@ const RatgeberTemplate = ({ config }: RatgeberTemplateProps) => {
       {config.sections.map((section, idx) => (
         <section
           key={idx}
-          className={`py-16 md:py-20 ${idx % 2 === 1 ? "bg-gradient-to-br from-sky-50/60 via-slate-50/40 to-white" : "bg-gradient-to-b from-white to-slate-50/30"}`}
+          className={`py-16 md:py-20 ${idx % 2 === 1 ? "bg-muted/40" : "bg-background"}`}
         >
           <div className="container max-w-6xl">
             <div className="max-w-3xl mx-auto text-center mb-12">
@@ -154,7 +154,7 @@ const RatgeberTemplate = ({ config }: RatgeberTemplateProps) => {
                 <Button
                   asChild
                   size="lg"
-                  className="gradient-hero hover:gradient-hero-hover h-12 px-8 text-base font-semibold"
+                  className="h-12 px-8 text-base font-semibold"
                 >
                   <Link to={section.ctaHref}>
                     {section.ctaText}
@@ -201,7 +201,7 @@ const RatgeberTemplate = ({ config }: RatgeberTemplateProps) => {
       </section>
 
       {/* Trust Signals */}
-      <section className="py-16 bg-gradient-to-b from-slate-50 to-white border-y">
+      <section className="py-16 bg-muted/40 border-y">
         <div className="container">
           <div className="text-center mb-10">
             <h2 className="text-2xl font-bold">Darauf können Sie sich verlassen</h2>
@@ -275,7 +275,7 @@ const RatgeberTemplate = ({ config }: RatgeberTemplateProps) => {
             <Button
               asChild
               size="lg"
-              className="gradient-hero hover:gradient-hero-hover h-14 text-lg font-semibold px-10"
+              className="h-14 text-lg font-semibold px-10"
             >
               <Link to={config.primaryCta.href}>
                 {config.primaryCta.text}

@@ -84,7 +84,7 @@ function PathCard({ path }: { path: Path }) {
         </span>
         <span
           className={cn(
-            "mt-3 inline-flex w-fit items-center gap-1.5 rounded-full px-3.5 py-1.5 text-sm font-semibold transition-colors",
+            "mt-3 inline-flex min-h-9 w-fit items-center gap-1.5 rounded-xl px-3.5 py-1.5 text-sm font-semibold transition-colors",
             path.featured ? "bg-white text-primary" : "bg-primary/10 text-primary group-hover:bg-primary group-hover:text-primary-foreground",
           )}
         >

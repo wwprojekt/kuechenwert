@@ -407,12 +407,12 @@ const RegisterHaendler = () => {
         noIndex={true}
       >
         <div className="min-h-screen flex items-center justify-center py-12 px-4 relative overflow-hidden">
-          <div className="absolute inset-0 bg-gradient-to-b from-cyan-50/80 via-sky-50/40 to-white" />
+          <div className="absolute inset-0 bg-gradient-to-b from-primary/[0.08] via-background to-background" />
           <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-transparent" />
           
           <Card className="p-8 max-w-lg w-full relative z-10 text-center">
             <div className="mx-auto h-16 w-16 rounded-full bg-green-500/10 flex items-center justify-center mb-6">
-              <CheckCircle2 className="w-8 h-8 text-green-500" />
+              <CheckCircle2 className="w-8 h-8 text-success" />
             </div>
             <h1 className="text-2xl font-bold mb-4">{tr.successTitle}</h1>
             <p className="text-muted-foreground mb-6">
@@ -427,7 +427,7 @@ const RegisterHaendler = () => {
             <div className="space-y-3">
               <Button
                 onClick={() => navigate("/login")}
-                className="w-full gradient-hero hover:gradient-hero-hover"
+                className="w-full"
               >
                 {tr.successLoginButton}
                 <ArrowRight className="w-4 h-4 ml-2" />
@@ -456,15 +456,15 @@ const RegisterHaendler = () => {
     >
       <div className="min-h-screen py-12 px-4 relative overflow-hidden">
         {/* Consistent gradient background */}
-        <div className="absolute inset-0 bg-gradient-to-b from-cyan-50/80 via-sky-50/40 to-white" />
+        <div className="absolute inset-0 bg-gradient-to-b from-primary/[0.08] via-background to-background" />
         <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-transparent" />
-        <div className="absolute top-0 right-0 w-1/2 h-full bg-gradient-to-l from-cyan-100/30 to-transparent" />
+        <div className="absolute top-0 right-0 w-1/2 h-full bg-gradient-to-l from-accent/[0.06] to-transparent" />
         <div className="absolute inset-0 opacity-[0.015]" style={{ backgroundImage: 'radial-gradient(circle at 1px 1px, currentColor 1px, transparent 0)', backgroundSize: '32px 32px' }} />
         
         <div className="container max-w-4xl relative z-10">
           {/* Header */}
           <div className="text-center mb-8 animate-fade-in">
-            <Link to="/" className="inline-block mb-6 hover:opacity-90 transition-opacity">
+            <Link to="/" className="mx-auto mb-6 block w-fit rounded-xl transition-opacity hover:opacity-90">
               <img src="/logo.svg" alt={BRAND.name} className="h-16 w-auto mx-auto" />
             </Link>
             <div className="inline-flex items-center gap-2 bg-primary/10 text-primary px-4 py-2 rounded-full mb-4">
@@ -495,7 +495,7 @@ const RegisterHaendler = () => {
           </div>
           <p className="-mt-4 mb-8 text-center text-sm text-muted-foreground">
             {tr.benefitPricingHint}{" "}
-            <Link to="/preise" className="text-primary hover:underline font-medium">
+            <Link to="/preise" className="link-inline">
               {tr.benefitPricingLink}
             </Link>
           </p>
@@ -511,7 +511,10 @@ const RegisterHaendler = () => {
                 </h2>
                 <div className="grid md:grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label htmlFor="email">{tr.labelEmail}</Label>
+                    <Label htmlFor="email" className="flex items-center gap-2">
+                      <Mail className="w-4 h-4 text-primary" />
+                      {tr.labelEmail}
+                    </Label>
                     <Input
                       id="email"
                       name="email"
@@ -546,19 +549,19 @@ const RegisterHaendler = () => {
                         {tr.passwordRequirements}
                       </p>
                       <ul className="text-xs text-muted-foreground space-y-0.5 ml-5">
-                        <li className={formData.password.length >= 8 ? "text-green-600" : ""}>
+                        <li className={formData.password.length >= 8 ? "font-medium text-success" : ""}>
                           • {tr.passwordMinLength}
                         </li>
-                        <li className={/[A-Z]/.test(formData.password) ? "text-green-600" : ""}>
+                        <li className={/[A-Z]/.test(formData.password) ? "font-medium text-success" : ""}>
                           • {tr.passwordUppercase}
                         </li>
-                        <li className={/[a-z]/.test(formData.password) ? "text-green-600" : ""}>
+                        <li className={/[a-z]/.test(formData.password) ? "font-medium text-success" : ""}>
                           • {tr.passwordLowercase}
                         </li>
-                        <li className={/[0-9]/.test(formData.password) ? "text-green-600" : ""}>
+                        <li className={/[0-9]/.test(formData.password) ? "font-medium text-success" : ""}>
                           • {tr.passwordNumber}
                         </li>
-                        <li className={/[^A-Za-z0-9]/.test(formData.password) ? "text-green-600" : ""}>
+                        <li className={/[^A-Za-z0-9]/.test(formData.password) ? "font-medium text-success" : ""}>
                           • {tr.passwordSpecialChar}
                         </li>
                       </ul>
@@ -871,7 +874,7 @@ const RegisterHaendler = () => {
                   />
                   <Label htmlFor="agb" className="text-sm leading-relaxed cursor-pointer">
                     {tr.labelAgb}{" "}
-                    <a href="/agb" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
+                    <a href="/agb" target="_blank" rel="noopener noreferrer" className="link-inline">
                       {tr.labelAgbLink}
                     </a>
                     . *
@@ -879,7 +882,7 @@ const RegisterHaendler = () => {
                 </div>
                 <p className="text-xs text-muted-foreground pl-7">
                   {tr.privacyNotice}{" "}
-                  <a href="/datenschutz" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
+                  <a href="/datenschutz" target="_blank" rel="noopener noreferrer" className="link-inline">
                     {tr.labelPrivacyLink}
                   </a>
                   .
@@ -897,7 +900,7 @@ const RegisterHaendler = () => {
               {/* Submit */}
               <Button
                 type="submit"
-                className="w-full h-12 text-base gradient-hero hover:gradient-hero-hover shadow-glow-sm"
+                className="w-full h-12 text-base"
                 disabled={isLoading || uploadingDocument}
               >
                 {uploadingDocument
@@ -916,14 +919,14 @@ const RegisterHaendler = () => {
             <div className="mt-6 text-center space-y-3">
               <p className="text-sm text-muted-foreground">
                 {tr.alreadyRegistered}{" "}
-                <Link to="/login" className="text-primary hover:underline font-medium">
+                <Link to="/login" className="link-inline">
                   {tr.loginLink}
                 </Link>
               </p>
               <div className="h-px bg-border/50" />
               <p className="text-sm text-muted-foreground">
                 {tr.privateCustomer}{" "}
-                <Link to="/register/privat" className="text-primary hover:underline font-medium">
+                <Link to="/register/privat" className="link-inline">
                   {tr.privateRegistrationLink}
                 </Link>
               </p>

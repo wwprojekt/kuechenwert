@@ -229,7 +229,7 @@ const AuthConfirm = () => {
           {status === "success" && (
             <>
               <div className="w-16 h-16 bg-green-100 dark:bg-green-900/30 rounded-full flex items-center justify-center mx-auto mb-4">
-                <svg className="w-8 h-8 text-green-600 dark:text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="w-8 h-8 text-green-800 dark:text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                 </svg>
               </div>
@@ -239,7 +239,7 @@ const AuthConfirm = () => {
               <p className="text-gray-600 dark:text-gray-400">
                 {message}
               </p>
-              <p className="text-sm text-gray-500 dark:text-gray-500 mt-2">
+              <p className="text-sm text-gray-600 dark:text-gray-500 mt-2">
                 Sie werden in Kürze zu Ihrem Dashboard weitergeleitet...
               </p>
             </>
@@ -248,7 +248,7 @@ const AuthConfirm = () => {
           {status === "error" && (
             <>
               <div className="w-16 h-16 bg-red-100 dark:bg-red-900/30 rounded-full flex items-center justify-center mx-auto mb-4">
-                <svg className="w-8 h-8 text-red-600 dark:text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="w-8 h-8 text-red-700 dark:text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                 </svg>
               </div>
@@ -267,7 +267,7 @@ const AuthConfirm = () => {
                   </svg>
                   {originalType === "recovery" ? "Neuen Passwort-Reset-Link anfordern" : "Neuen Bestätigungslink anfordern"}
                 </h2>
-                <p className="text-xs text-gray-500 dark:text-gray-400 mb-3">
+                <p className="text-xs text-gray-600 dark:text-gray-400 mb-3">
                   Geben Sie Ihre E-Mail-Adresse ein, um einen neuen {originalType === "recovery" ? "Passwort-Reset-Link" : "Bestätigungslink"} zu erhalten.
                 </p>
 
@@ -294,7 +294,7 @@ const AuthConfirm = () => {
                     disabled={resendStatus === "sending" || resendStatus === "sent"}
                     className={`w-full flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-medium rounded-lg transition-all duration-200 ${
                       resendStatus === "sent"
-                        ? "bg-green-600 text-white cursor-default"
+                        ? "bg-green-700 text-white cursor-default"
                         : resendStatus === "sending"
                         ? "bg-primary/70 text-white cursor-wait"
                         : "bg-primary text-white hover:bg-primary/90 active:scale-[0.98]"

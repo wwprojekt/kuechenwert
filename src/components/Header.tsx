@@ -139,7 +139,7 @@ const Header = () => {
       </a>
 
       {/* Top Header Bar */}
-      <div className="w-full bg-slate-900 text-slate-300 py-2.5 hidden lg:block border-b border-slate-800">
+      <div className="w-full bg-secondary text-white/80 py-2.5 hidden lg:block">
         <div className="container flex items-center justify-between text-sm">
           <div className="flex items-center gap-6">
             <a
@@ -161,15 +161,15 @@ const Header = () => {
           <div className="flex items-center gap-4">
             {TOP_NAV.map((item, i) => (
               <span key={item.to} className="flex items-center gap-4">
-                {i > 0 && <span className="text-slate-600" aria-hidden="true">•</span>}
+                {i > 0 && <span className="text-white/35" aria-hidden="true">•</span>}
                 <Link to={item.to} className="flex items-center gap-1.5 hover:text-white transition-colors">
                   {item.icon && <item.icon className="h-3.5 w-3.5" />}
                   {item.label}
                 </Link>
               </span>
             ))}
-            <span className="text-slate-600" aria-hidden="true">•</span>
-            <Link to="/haendler" className="flex items-center gap-1.5 font-semibold text-white hover:text-primary-foreground/80 transition-colors">
+            <span className="text-white/35" aria-hidden="true">•</span>
+            <Link to="/haendler" className="flex items-center gap-1.5 font-semibold text-white hover:text-white/80 transition-colors">
               <Building2 className="h-3.5 w-3.5" />
               Für Küchenstudios
             </Link>
@@ -187,7 +187,7 @@ const Header = () => {
               to="/funnel/c"
               aria-current={plannerActive ? "page" : undefined}
               className={cn(
-                "inline-flex items-center gap-1.5 rounded-full px-4 py-2 text-sm font-semibold shadow-sm transition-all",
+                "inline-flex h-10 items-center gap-1.5 rounded-xl px-4 text-sm font-semibold shadow-sm transition-all",
                 "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
                 plannerActive ? "bg-primary text-primary-foreground" : "bg-primary text-primary-foreground hover:bg-primary/90 hover:shadow-md",
               )}

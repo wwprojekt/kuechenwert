@@ -192,7 +192,7 @@ const UeberUns = () => {
                     href="https://wohnwert24.de"
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="text-primary hover:underline"
+                    className="link-inline"
                   >
                     wohnwert24.de
                   </a>{" "}

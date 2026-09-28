@@ -248,8 +248,9 @@ export function ContactStep({
             "Kostenlos Angebote erhalten"
           )}
         </Button>
-        <p className="flex items-center justify-center gap-1.5 text-center text-xs text-muted-foreground">
-          <Lock className="h-3.5 w-3.5" /> Es gelten unsere{" "}
+        <p className="text-center text-xs leading-relaxed text-muted-foreground">
+          <Lock className="mr-1 inline h-3.5 w-3.5 -translate-y-px" aria-hidden="true" />
+          Es gelten unsere{" "}
           <Link to="/agb" className="underline underline-offset-2">
             AGB
           </Link>

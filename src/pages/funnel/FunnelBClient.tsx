@@ -377,15 +377,15 @@ export default function FunnelBClient() {
 
   const sidebar = (
     <>
-      <div className="card text-sm">
+      <div className="rounded-2xl border border-border bg-card p-5 text-sm shadow-card">
         <div className="flex items-center gap-2 text-brand-700">
           <Lightbulb className="h-4 w-4" />
           <span className="font-semibold text-ink">Tipp</span>
         </div>
         <p className="mt-2 text-ink-muted">{TIPS[step]}</p>
       </div>
-      <div className="card text-sm">
-        <div className="flex items-center gap-2 text-accent-700">
+      <div className="rounded-2xl border border-border bg-card p-5 text-sm shadow-card">
+        <div className="flex items-center gap-2 text-brand-700">
           <ShieldCheck className="h-4 w-4" aria-hidden="true" />
           <span className="font-semibold text-ink">So geht es weiter</span>
         </div>
@@ -396,14 +396,14 @@ export default function FunnelBClient() {
           annehmen, entscheiden Sie frei.
         </p>
       </div>
-      <div className="card text-sm">
+      <div className="rounded-2xl border border-border bg-card p-5 text-sm shadow-card">
         <div className="flex items-center gap-2 text-brand-700">
           <Phone className="h-4 w-4" aria-hidden="true" />
           <span className="font-semibold text-ink">Brauchen Sie Hilfe?</span>
         </div>
         <p className="mt-2 text-ink-muted">
           Rufen Sie uns an:{" "}
-          <a href={phone.href} className="font-medium text-brand-700 hover:underline">
+          <a href={phone.href} className="link-inline text-brand-700 decoration-brand-700/70 hover:decoration-brand-700">
             {phone.display}
           </a>
         </p>
@@ -453,7 +453,7 @@ export default function FunnelBClient() {
       )}
 
       {submitError && (
-        <p ref={errorRef} role="alert" className="mt-4 rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-700">
+        <p ref={errorRef} role="alert" className="mt-4 rounded-xl border border-destructive/30 bg-destructive/5 p-3 text-sm font-medium text-destructive">
           {submitError}
         </p>
       )}
@@ -681,7 +681,7 @@ function Step3({ data, update }: StepProps) {
 
       <div className="space-y-3">
         {data.appliances.map((a, i) => (
-          <div key={a.id} className="rounded-lg border border-slate-200 bg-surface-soft p-4">
+          <div key={a.id} className="rounded-xl border border-border bg-surface-soft p-4">
             <div className="mb-3 flex items-center justify-between">
               <span className="flex items-center gap-2 text-xs font-semibold uppercase text-ink-subtle">
                 {APPLIANCE_CATEGORY_ICON} Gerät {i + 1}
@@ -689,7 +689,7 @@ function Step3({ data, update }: StepProps) {
               <button
                 type="button"
                 onClick={() => remove(a.id)}
-                className="inline-flex items-center gap-1 text-xs text-red-600 hover:underline"
+                className="inline-flex min-h-9 items-center gap-1 rounded-lg px-1 text-xs font-medium text-destructive hover:underline"
               >
                 <Trash2 className="h-3.5 w-3.5" /> Entfernen
               </button>
@@ -826,7 +826,7 @@ function Step5({ data, update }: StepProps) {
                 <div className="flex items-start gap-3">
                   <div
                     className={`mt-0.5 h-5 w-5 flex-none rounded border-2 ${
-                      selected ? "border-brand-700 bg-brand-700" : "border-slate-300 bg-white"
+                      selected ? "border-brand-700 bg-brand-700" : "border-input bg-card"
                     }`}
                     aria-hidden="true"
                   >
@@ -1178,7 +1178,7 @@ function Step8({
         </Field>
       </div>
 
-      <div className="space-y-3 rounded-lg border border-slate-200 bg-surface-soft p-4 text-sm">
+      <div className="space-y-3 rounded-xl border border-border bg-surface-soft p-4 text-sm">
         <label className="flex items-start gap-3">
           <input
             type="checkbox"
@@ -1391,7 +1391,7 @@ function CardGroup({
                 "group flex flex-col items-center justify-center gap-3 rounded-2xl border-2 px-4 py-6 text-center transition-all",
                 selected
                   ? "border-brand-500 bg-brand-50 shadow-card-active ring-4 ring-brand-500/15"
-                  : "border-neutral-200 bg-white hover:-translate-y-0.5 hover:border-neutral-300 hover:shadow-card-hover",
+                  : "border-border bg-card hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-card-hover",
               )}
             >
               {o.icon && (
@@ -1410,7 +1410,7 @@ function CardGroup({
                 <span
                   className={clsx(
                     "font-display text-[15px] font-bold leading-tight sm:text-base",
-                    selected ? "text-brand-900" : "text-black",
+                    selected ? "text-brand-900" : "text-foreground",
                   )}
                 >
                   {o.label}
@@ -1438,7 +1438,7 @@ function CardGroup({
               "group flex items-center gap-4 rounded-2xl border-2 px-4 py-4 text-left transition-all",
               selected
                 ? "border-brand-500 bg-brand-50 shadow-card-active ring-4 ring-brand-500/15"
-                : "border-neutral-200 bg-white hover:-translate-y-0.5 hover:border-neutral-300 hover:shadow-card-hover",
+                : "border-border bg-card hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-card-hover",
             )}
           >
             {o.icon && (
@@ -1457,7 +1457,7 @@ function CardGroup({
               <div
                 className={clsx(
                   "font-display text-[15px] font-bold leading-tight",
-                  selected ? "text-brand-900" : "text-black",
+                  selected ? "text-brand-900" : "text-foreground",
                 )}
               >
                 {o.label}

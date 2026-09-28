@@ -106,7 +106,7 @@ export function ChoiceGrid<T extends string>({
               aria-hidden
               className={cn(
                 "absolute right-2.5 top-2.5 grid h-6 w-6 place-items-center rounded-full border-2 transition",
-                selected ? "border-primary bg-primary text-primary-foreground" : "border-white/80 bg-white/70 text-transparent",
+                selected ? "border-primary bg-primary text-primary-foreground" : "border-input bg-card/90 text-transparent",
               )}
             >
               <Check className="h-3.5 w-3.5" strokeWidth={3} />
@@ -210,7 +210,7 @@ export function ToggleChips<T extends string>({
               aria-hidden
               className={cn(
                 "grid h-4 w-4 place-items-center rounded-full border",
-                active ? "border-primary-foreground bg-primary-foreground text-primary" : "border-muted-foreground/40",
+                active ? "border-primary-foreground bg-primary-foreground text-primary" : "border-input",
               )}
             >
               {active && <Check className="h-3 w-3" strokeWidth={3} />}

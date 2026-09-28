@@ -295,7 +295,7 @@ const CookieBanner = () => {
                     Mehr in der{' '}
                     <a
                       href="/datenschutz"
-                      className="text-primary hover:underline font-medium"
+                      className="link-inline"
                     >
                       Datenschutzerklärung
                     </a>.
@@ -323,7 +323,7 @@ const CookieBanner = () => {
                 {/* Essential Cookies */}
                 <div className="flex items-center justify-between gap-4 p-3 bg-background rounded-lg">
                   <div className="flex items-start gap-3">
-                    <Shield className="w-5 h-5 text-green-600 mt-0.5" aria-hidden="true" />
+                    <Shield className="w-5 h-5 text-success mt-0.5" aria-hidden="true" />
                     <div>
                       <p id="cookie-banner-essential-label" className="font-medium text-sm">Notwendig</p>
                       <p id="cookie-banner-essential-desc" className="text-xs text-muted-foreground">
@@ -343,7 +343,7 @@ const CookieBanner = () => {
                 {/* Functional Cookies */}
                 <div className="flex items-center justify-between gap-4 p-3 bg-background rounded-lg">
                   <div className="flex items-start gap-3">
-                    <Settings className="w-5 h-5 text-blue-600 mt-0.5" aria-hidden="true" />
+                    <Settings className="w-5 h-5 text-primary mt-0.5" aria-hidden="true" />
                     <div>
                       <p id="cookie-banner-functional-label" className="font-medium text-sm">Funktional</p>
                       <p id="cookie-banner-functional-desc" className="text-xs text-muted-foreground">
@@ -381,7 +381,7 @@ const CookieBanner = () => {
                 {/* Marketing Cookies */}
                 <div className="flex items-center justify-between gap-4 p-3 bg-background rounded-lg">
                   <div className="flex items-start gap-3">
-                    <Megaphone className="w-5 h-5 text-orange-600 mt-0.5" aria-hidden="true" />
+                    <Megaphone className="w-5 h-5 text-warning mt-0.5" aria-hidden="true" />
                     <div>
                       <p id="cookie-banner-marketing-label" className="font-medium text-sm">Marketing</p>
                       <p id="cookie-banner-marketing-desc" className="text-xs text-muted-foreground">

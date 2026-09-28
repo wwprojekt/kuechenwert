@@ -57,7 +57,7 @@ export function LeadFileDrop({ option, count, remaining, onFiles, disabled = fal
             ? "border-brand-400 bg-brand-50"
             : dragOver
               ? "border-brand-500 bg-brand-50"
-              : "border-slate-300 bg-surface-soft hover:border-brand-300 hover:bg-white",
+              : "border-input bg-surface-soft hover:border-primary hover:bg-card",
         )}
       >
         {count > 0 ? (
@@ -91,7 +91,7 @@ export function LeadFileDrop({ option, count, remaining, onFiles, disabled = fal
       {problems.length > 0 && (
         <ul className="mt-1.5 space-y-1" role="alert">
           {problems.map((p) => (
-            <li key={p} className="flex items-start gap-1.5 text-xs text-red-700">
+            <li key={p} className="flex items-start gap-1.5 text-xs font-medium text-destructive">
               <AlertCircle className="mt-0.5 h-3.5 w-3.5 flex-none" aria-hidden="true" />
               {p}
             </li>

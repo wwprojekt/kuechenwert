@@ -149,7 +149,7 @@ const SetPasswordDialog = ({ open }: SetPasswordDialogProps) => {
               </DialogDescription>
             </DialogHeader>
             <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground">
-              <CheckCircle2 className="w-4 h-4 text-green-500" />
+              <CheckCircle2 className="w-4 h-4 text-success" />
               <span>Sie können sich ab jetzt mit E-Mail und Passwort einloggen.</span>
             </div>
           </div>
@@ -248,16 +248,16 @@ const SetPasswordDialog = ({ open }: SetPasswordDialogProps) => {
                   Passwort-Anforderungen
                 </p>
                 <ul className="text-xs text-muted-foreground space-y-0.5 ml-5">
-                  <li className={password.length >= 8 ? "text-green-600" : ""}>
+                  <li className={password.length >= 8 ? "font-medium text-success" : ""}>
                     Mindestens 8 Zeichen
                   </li>
-                  <li className={/[A-Z]/.test(password) ? "text-green-600" : ""}>
+                  <li className={/[A-Z]/.test(password) ? "font-medium text-success" : ""}>
                     Mindestens ein Großbuchstabe
                   </li>
-                  <li className={/[a-z]/.test(password) ? "text-green-600" : ""}>
+                  <li className={/[a-z]/.test(password) ? "font-medium text-success" : ""}>
                     Mindestens ein Kleinbuchstabe
                   </li>
-                  <li className={/[0-9]/.test(password) ? "text-green-600" : ""}>
+                  <li className={/[0-9]/.test(password) ? "font-medium text-success" : ""}>
                     Mindestens eine Zahl
                   </li>
                 </ul>

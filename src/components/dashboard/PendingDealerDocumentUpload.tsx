@@ -339,7 +339,7 @@ export default function PendingDealerDocumentUpload({
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="h-10 w-10 rounded-lg bg-blue-100 dark:bg-blue-900/50 flex items-center justify-center">
-              <Shield className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+              <Shield className="w-5 h-5 text-blue-700 dark:text-blue-400" />
             </div>
             <div>
               <CardTitle className="text-lg">{tr.docTitle}</CardTitle>
@@ -368,7 +368,7 @@ export default function PendingDealerDocumentUpload({
           </div>
           <Progress value={completionPct} className="h-2" />
           {completionPct === 100 && (
-            <p className="text-xs text-green-600 dark:text-green-400 flex items-center gap-1">
+            <p className="text-xs text-green-800 dark:text-green-400 flex items-center gap-1">
               <CheckCircle className="w-3 h-3" />
               {tr.docAllUploaded}
             </p>
@@ -411,9 +411,9 @@ export default function PendingDealerDocumentUpload({
                   >
                     {doc ? (
                       doc.verified ? (
-                        <CheckCircle className="w-5 h-5 text-green-600 dark:text-green-400" />
+                        <CheckCircle className="w-5 h-5 text-green-800 dark:text-green-400" />
                       ) : (
-                        <Clock className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+                        <Clock className="w-5 h-5 text-blue-700 dark:text-blue-400" />
                       )
                     ) : (
                       <SlotIcon className="w-5 h-5 text-muted-foreground" />
@@ -480,7 +480,7 @@ export default function PendingDealerDocumentUpload({
                           </p>
                         )}
                         {doc.verified_at && (
-                          <p className="text-green-600 dark:text-green-400">
+                          <p className="text-green-800 dark:text-green-400">
                             <span className="font-medium">
                               {tr.docVerifiedAt}
                             </span>{" "}

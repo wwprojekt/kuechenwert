@@ -26,16 +26,16 @@ const NotFound = () => {
       
       <div className="flex-1 flex items-center justify-center relative overflow-hidden min-h-[60vh]">
         {/* Consistent gradient background */}
-        <div className="absolute inset-0 bg-gradient-to-b from-cyan-50/80 via-sky-50/40 to-white" />
+        <div className="absolute inset-0 bg-gradient-to-b from-primary/[0.08] via-background to-background" />
         <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-transparent" />
-        <div className="absolute top-0 right-0 w-1/2 h-full bg-gradient-to-l from-cyan-100/30 to-transparent" />
+        <div className="absolute top-0 right-0 w-1/2 h-full bg-gradient-to-l from-accent/[0.06] to-transparent" />
         
         <div className="text-center relative z-10">
           <h1 className="mb-4 text-8xl font-bold text-primary">404</h1>
           <p className="mb-6 text-xl text-muted-foreground">
             Diese Seite wurde nicht gefunden
           </p>
-          <Button asChild className="gradient-hero hover:gradient-hero-hover">
+          <Button asChild>
             <Link to="/">
               <Home className="w-4 h-4 mr-2" />
               Zurück zur Startseite

@@ -85,10 +85,10 @@ export function SiteLogo({
         case "footer":
           return (
             <div className="flex items-center gap-3">
-              <div className={`${sizeClass} rounded-full bg-slate-700 animate-pulse flex-shrink-0`} />
+              <div className={`${sizeClass} rounded-full bg-white/10 animate-pulse flex-shrink-0`} />
               <div className="flex flex-col gap-1.5">
-                <div className="h-8 w-40 bg-slate-700 rounded animate-pulse" />
-                <div className="h-3 w-56 bg-slate-700 rounded animate-pulse" />
+                <div className="h-8 w-40 bg-white/10 rounded animate-pulse" />
+                <div className="h-3 w-56 bg-white/10 rounded animate-pulse" />
               </div>
             </div>
           );
@@ -119,7 +119,7 @@ export function SiteLogo({
               <span className="text-xl sm:text-3xl font-bold text-foreground leading-tight tracking-tight truncate">
                 {siteName}
               </span>
-              <span className="hidden sm:block text-[10px] text-muted-foreground leading-tight font-medium truncate">
+              <span className="hidden sm:block text-[11px] text-muted-foreground leading-tight font-medium truncate">
                 {siteTagline}
               </span>
             </div>
@@ -153,7 +153,7 @@ export function SiteLogo({
               <span className="text-3xl font-bold text-white leading-tight tracking-tight">
                 {siteName}
               </span>
-              <span className="text-[10px] text-slate-400 dark:text-slate-500 leading-tight font-medium whitespace-nowrap">
+              <span className="text-[11px] text-white/70 leading-tight font-medium whitespace-nowrap">
                 {siteTagline}
               </span>
             </div>

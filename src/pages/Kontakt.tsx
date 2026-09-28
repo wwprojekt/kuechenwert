@@ -389,13 +389,13 @@ const Kontakt = () => {
 
                   <HoneypotField value={honeypotValue} onChange={setHoneypotValue} />
                   <div ref={turnstileCallbackRef} />
-                  <Button type="submit" size="lg" className="w-full gradient-hero hover:gradient-hero-hover" disabled={isLoading}>
+                  <Button type="submit" size="lg" className="w-full" disabled={isLoading}>
                     <Send className="h-5 w-5 mr-2" />
                     {isLoading ? "Wird gesendet..." : "Nachricht senden"}
                   </Button>
                   <p className="text-xs text-muted-foreground text-center">
                     Hinweise zur Verarbeitung Ihrer Daten finden Sie in der{" "}
-                    <Link to="/datenschutz" className="text-primary hover:underline">
+                    <Link to="/datenschutz" className="link-inline">
                       Datenschutzerklärung
                     </Link>
                     .

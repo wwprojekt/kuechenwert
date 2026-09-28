@@ -130,7 +130,7 @@ const Haendler = () => {
               geben Ihr Angebot ab und gewinnen im besten Fall den Auftrag – Provision nur, wenn die Kund:in Ihr Angebot annimmt.
             </p>
             <div className="flex flex-col gap-4 sm:flex-row">
-              <Button asChild size="lg" className="gradient-hero shadow-lg hover:gradient-hero-hover hover:shadow-glow">
+              <Button asChild size="lg">
                 <Link to="/register/haendler">Kostenlos Partner werden</Link>
               </Button>
               <Button asChild size="lg" variant="outline">

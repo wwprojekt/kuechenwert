@@ -82,8 +82,8 @@ export function PlannerShell({
                     <span className={cn("block h-1.5 rounded-full transition-colors", done || active ? "bg-primary" : "bg-border")} />
                     <span
                       className={cn(
-                        "mt-1.5 hidden items-center gap-1 text-[11px] font-medium md:flex",
-                        active ? "text-foreground" : reachable ? "text-muted-foreground group-hover:text-foreground" : "text-muted-foreground/50",
+                        "mt-1.5 hidden items-center gap-1 text-xs font-medium md:flex",
+                        active ? "text-foreground" : reachable ? "text-muted-foreground group-hover:text-foreground" : "text-muted-foreground",
                       )}
                     >
                       {done && <Check className="h-3 w-3 text-primary" />}

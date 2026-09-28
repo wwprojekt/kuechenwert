@@ -176,7 +176,7 @@ export default function MyInvoices() {
         );
       case "paid":
         return (
-          <Badge variant="outline" className="text-green-600 border-green-600 gap-1">
+          <Badge variant="outline" className="text-success border-success gap-1">
             <CheckCircle className="w-3 h-3" />
             Bezahlt
           </Badge>
@@ -198,7 +198,7 @@ export default function MyInvoices() {
       case "open":
       default:
         return (
-          <Badge variant="outline" className="text-orange-600 border-orange-600 gap-1">
+          <Badge variant="outline" className="text-warning border-warning gap-1">
             <Clock className="w-3 h-3" />
             Offen
           </Badge>
@@ -262,11 +262,11 @@ export default function MyInvoices() {
             <div className="flex items-center justify-between gap-2">
               <div className="min-w-0">
                 <p className="text-xs sm:text-sm text-muted-foreground truncate">Offener Betrag</p>
-                <p className="text-lg sm:text-2xl font-bold text-orange-600 truncate">
+                <p className="text-lg sm:text-2xl font-bold text-warning truncate">
                   {totalOutstanding.toLocaleString('de-DE', { style: 'currency', currency: 'EUR' })}
                 </p>
               </div>
-              <Clock className="w-6 h-6 sm:w-8 sm:h-8 text-orange-600 flex-shrink-0" />
+              <Clock className="w-6 h-6 sm:w-8 sm:h-8 text-warning flex-shrink-0" />
             </div>
           </CardContent>
         </Card>
@@ -275,11 +275,11 @@ export default function MyInvoices() {
             <div className="flex items-center justify-between gap-2">
               <div className="min-w-0">
                 <p className="text-xs sm:text-sm text-muted-foreground truncate">Bezahlt</p>
-                <p className="text-lg sm:text-2xl font-bold text-green-600 truncate">
+                <p className="text-lg sm:text-2xl font-bold text-success truncate">
                   {totalPaid.toLocaleString('de-DE', { style: 'currency', currency: 'EUR' })}
                 </p>
               </div>
-              <CheckCircle className="w-6 h-6 sm:w-8 sm:h-8 text-green-600 flex-shrink-0" />
+              <CheckCircle className="w-6 h-6 sm:w-8 sm:h-8 text-success flex-shrink-0" />
             </div>
           </CardContent>
         </Card>
@@ -360,13 +360,13 @@ export default function MyInvoices() {
                       </span>
                       {!isPaid && remaining > 0.01 ? (
                         <div className="text-right">
-                          <div className="text-xs text-orange-600 font-medium">
+                          <div className="text-xs text-warning font-medium">
                             Offen: €{remaining.toLocaleString('de-DE', { minimumFractionDigits: 2 })}
                           </div>
                           <Progress value={paymentProgress} className="h-1 w-20 mt-0.5" />
                         </div>
                       ) : isPaid ? (
-                        <span className="text-xs text-green-600 font-medium">Bezahlt</span>
+                        <span className="text-xs text-success font-medium">Bezahlt</span>
                       ) : null}
                     </div>
                     <Button
@@ -432,7 +432,7 @@ export default function MyInvoices() {
                       </TableCell>
                       <TableCell>
                         {isPaid ? (
-                          <span className="text-green-600 text-sm font-medium">Vollständig</span>
+                          <span className="text-success text-sm font-medium">Vollständig</span>
                         ) : (
                           <div className="min-w-[120px]">
                             <div className="flex justify-between text-xs mb-1">
@@ -445,7 +445,7 @@ export default function MyInvoices() {
                             </div>
                             <Progress value={paymentProgress} className="h-1.5" />
                             {remaining > 0.01 && (
-                              <div className="text-xs text-orange-600 mt-0.5">
+                              <div className="text-xs text-warning mt-0.5">
                                 Offen: €{remaining.toLocaleString('de-DE', { minimumFractionDigits: 2 })}
                               </div>
                             )}

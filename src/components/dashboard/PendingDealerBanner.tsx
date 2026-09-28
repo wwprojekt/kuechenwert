@@ -98,9 +98,9 @@ export default function PendingDealerBanner({
             }`}
           >
             {isPending ? (
-              <Clock className="w-6 h-6 text-amber-600 dark:text-amber-400" />
+              <Clock className="w-6 h-6 text-amber-800 dark:text-amber-400" />
             ) : (
-              <XCircle className="w-6 h-6 text-red-600 dark:text-red-400" />
+              <XCircle className="w-6 h-6 text-red-700 dark:text-red-400" />
             )}
           </div>
 
@@ -172,8 +172,8 @@ export default function PendingDealerBanner({
               onClick={() => setExpanded(!expanded)}
               className={`mt-2 text-xs font-medium flex items-center gap-1 hover:underline ${
                 isPending
-                  ? "text-amber-600 dark:text-amber-400"
-                  : "text-red-600 dark:text-red-400"
+                  ? "text-amber-800 dark:text-amber-400"
+                  : "text-red-700 dark:text-red-400"
               }`}
             >
               {expanded ? tr.bannerHideDetails : tr.bannerShowDetails}
@@ -260,7 +260,7 @@ export default function PendingDealerBanner({
       {/* Bottom info bar */}
       {isPending && (
         <div className="px-5 py-2.5 bg-amber-100/50 dark:bg-amber-900/20 border-t border-amber-200 dark:border-amber-800">
-          <p className="text-xs text-amber-600 dark:text-amber-400 flex items-center gap-2">
+          <p className="text-xs text-amber-800 dark:text-amber-400 flex items-center gap-2">
             <Clock className="w-3 h-3" />
             {tr.bannerProcessingTime}
           </p>

@@ -43,6 +43,7 @@ export function AiModelSettingsCard() {
       text_model: s.text_model,
       variant_model: s.variant_model,
       fallback_edit_model: s.fallback_edit_model,
+      fallback_edit_model_2: s.fallback_edit_model_2,
       fallback_text_model: s.fallback_text_model,
       challenger_edit_model: s.challenger_edit_model,
       challenger_share: s.challenger_share,
@@ -71,7 +72,7 @@ export function AiModelSettingsCard() {
   }
 
   const set = <K extends keyof Form>(key: K, value: Form[K]) => setForm({ ...form, [key]: value });
-  const usesLora = [form.edit_model, form.variant_model, form.challenger_edit_model, form.fallback_edit_model].some(
+  const usesLora = [form.edit_model, form.variant_model, form.challenger_edit_model, form.fallback_edit_model, form.fallback_edit_model_2].some(
     (id) => falModel(id, "edit")?.supportsLora,
   );
 
@@ -96,20 +97,29 @@ export function AiModelSettingsCard() {
       <CardHeader>
         <CardTitle className="text-base">Modelle und Kostenschutz</CardTitle>
         <CardDescription>
-          Fällt ein Modell aus oder hängt die Warteschlange, wechselt der Planer automatisch einmal auf das Ausweichmodell – am besten ein
-          anderer Anbieter.
+          Fällt ein Modell aus oder hängt die Warteschlange, wechselt der Planer automatisch auf das nächste Ausweichmodell: zuerst ein
+          Schwestermodell, das den Raum gut erhält, zuletzt ein anderer Anbieter für den Fall eines Ausfalls.
         </CardDescription>
       </CardHeader>
       <CardContent className="grid gap-5 sm:grid-cols-2">
         <ModelSelect id="edit_model" label="Hauptmodell mit Raumfoto" kind="edit" value={form.edit_model} onChange={(v) => v && set("edit_model", v)} />
         <ModelSelect
           id="fallback_edit_model"
-          label="Ausweichmodell mit Raumfoto"
+          label="1. Ausweichmodell mit Raumfoto"
           kind="edit"
           value={form.fallback_edit_model}
           onChange={(v) => set("fallback_edit_model", v)}
           emptyLabel="Kein Ausweichmodell"
           hint="Ohne Ausweichmodell scheitert die Visualisierung bei einer Störung."
+        />
+        <ModelSelect
+          id="fallback_edit_model_2"
+          label="2. Ausweichmodell mit Raumfoto"
+          kind="edit"
+          value={form.fallback_edit_model_2}
+          onChange={(v) => set("fallback_edit_model_2", v)}
+          emptyLabel="Kein zweites Ausweichmodell"
+          hint="Am besten ein anderer Anbieter als Haupt- und 1. Ausweichmodell."
         />
         <ModelSelect
           id="variant_model"

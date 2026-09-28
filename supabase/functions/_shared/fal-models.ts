@@ -43,7 +43,7 @@ export const FAL_MODELS: readonly FalModel[] = [
     costCents: 12,
     openWeights: false,
     supportsLora: false,
-    note: "Schneller und günstiger, stark bei gezielten Änderungen.",
+    note: "Schneller und günstiger, erhält den Raum gut – erstes Ausweichmodell.",
   },
   {
     id: "fal-ai/flux-2-pro/edit",
@@ -54,7 +54,7 @@ export const FAL_MODELS: readonly FalModel[] = [
     costCents: 14,
     openWeights: false,
     supportsLora: false,
-    note: "Anderer Anbieter als Google – geeignet als Ausweichmodell bei Störungen.",
+    note: "Anderer Anbieter als Google, gestaltet den Raum aber freier um – letztes Ausweichmodell.",
   },
   {
     id: "fal-ai/qwen-image-edit-plus-lora",
@@ -102,15 +102,23 @@ export const FAL_MODELS: readonly FalModel[] = [
   },
 ];
 
+/**
+ * Ausweichkette mit Foto: erst das Schwestermodell (Kapazitätsproblem eines
+ * Modells, Raum bleibt erhalten), dann ein anderer Anbieter (Ausfall bei
+ * Google, abgelehntes Foto).
+ */
 export const DEFAULT_AI_MODELS = {
   edit: "fal-ai/nano-banana-pro/edit",
   text: "fal-ai/flux-2-pro",
-  fallbackEdit: "fal-ai/flux-2-pro/edit",
+  fallbackEdit: "fal-ai/nano-banana-2/edit",
+  fallbackEdit2: "fal-ai/flux-2-pro/edit",
   fallbackText: "fal-ai/nano-banana-2",
 } as const;
 
 export const DEFAULT_DAILY_RENDER_CAP = 300;
 export const MAX_CHALLENGER_SHARE = 50;
+/** Erstes Modell plus höchstens zwei Ausweichmodelle (CHECK planner_renders.attempt). */
+export const MAX_ATTEMPTS = 3;
 
 export function falModel(id: string | null | undefined, kind?: FalModelKind): FalModel | null {
   const model = FAL_MODELS.find((m) => m.id === id) ?? null;
@@ -175,6 +183,7 @@ export interface AiSettingsRow {
   text_model?: string | null;
   variant_model?: string | null;
   fallback_edit_model?: string | null;
+  fallback_edit_model_2?: string | null;
   fallback_text_model?: string | null;
   challenger_edit_model?: string | null;
   challenger_share?: number | null;
@@ -188,6 +197,7 @@ export interface AiSettings {
   textModel: FalModel;
   variantModel: FalModel;
   fallbackEdit: FalModel | null;
+  fallbackEdit2: FalModel | null;
   fallbackText: FalModel | null;
   challengerEdit: FalModel | null;
   challengerShare: number;
@@ -214,6 +224,7 @@ export function resolveAiSettings(row: AiSettingsRow | null | undefined): AiSett
     textModel,
     variantModel: falModel(r.variant_model, "edit") ?? editModel,
     fallbackEdit: fallback(r.fallback_edit_model, DEFAULT_AI_MODELS.fallbackEdit, "edit"),
+    fallbackEdit2: fallback(r.fallback_edit_model_2, DEFAULT_AI_MODELS.fallbackEdit2, "edit"),
     fallbackText: fallback(r.fallback_text_model, DEFAULT_AI_MODELS.fallbackText, "text"),
     challengerEdit,
     challengerShare: challengerEdit && Number.isFinite(share) ? clamp(Math.round(share), 0, MAX_CHALLENGER_SHARE) : 0,
@@ -241,10 +252,18 @@ export function chooseModel(settings: AiSettings, opts: { mode: FalModelKind; va
   return opts.group === "challenger" && settings.challengerEdit ? settings.challengerEdit : settings.editModel;
 }
 
-/** Ausweichmodell für ein fehlgeschlagenes Modell – nie dasselbe Modell noch einmal. */
-export function fallbackFor(settings: AiSettings, failed: FalModel): FalModel | null {
-  const fallback = failed.kind === "edit" ? settings.fallbackEdit : settings.fallbackText;
-  return fallback && fallback.id !== failed.id ? fallback : null;
+/**
+ * Nächstes Modell der Ausweichkette nach dem gescheiterten `current`. `first`
+ * ist das Modell des ersten Versuchs; es und bereits versuchte Modelle kommen
+ * nicht noch einmal dran.
+ */
+export function nextFallback(settings: AiSettings, first: FalModel, current: FalModel): FalModel | null {
+  const chain = (first.kind === "edit" ? [settings.fallbackEdit, settings.fallbackEdit2] : [settings.fallbackText]).filter(
+    (m, i, all): m is FalModel => !!m && m.kind === first.kind && m.id !== first.id && all.findIndex((x) => x?.id === m.id) === i,
+  );
+  if (current.id === first.id) return chain[0] ?? null;
+  const index = chain.findIndex((m) => m.id === current.id);
+  return index >= 0 ? (chain[index + 1] ?? null) : null;
 }
 
 /** Wartezeiten, nach denen kw-planner auf das Ausweichmodell wechselt. */

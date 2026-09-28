@@ -11,6 +11,7 @@ export type AiSettingsUpdate = Pick<
   | "text_model"
   | "variant_model"
   | "fallback_edit_model"
+  | "fallback_edit_model_2"
   | "fallback_text_model"
   | "challenger_edit_model"
   | "challenger_share"

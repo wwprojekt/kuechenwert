@@ -7,8 +7,8 @@ import {
   buildModelInput,
   chooseModel,
   falModel,
-  fallbackFor,
   fallbackReason,
+  nextFallback,
   resolveAiSettings,
 } from "../../../../supabase/functions/_shared/fal-models.ts";
 
@@ -17,7 +17,11 @@ describe("Modell-Registry", () => {
     expect(new Set(FAL_MODELS.map((m) => m.id)).size).toBe(FAL_MODELS.length);
     expect(falModel(DEFAULT_AI_MODELS.edit, "edit")).not.toBeNull();
     expect(falModel(DEFAULT_AI_MODELS.text, "text")).not.toBeNull();
-    expect(falModel(DEFAULT_AI_MODELS.fallbackEdit, "edit")?.vendor).not.toBe(falModel(DEFAULT_AI_MODELS.edit)?.vendor);
+    expect(falModel(DEFAULT_AI_MODELS.fallbackEdit, "edit")).not.toBeNull();
+  });
+
+  it("endet die Ausweichkette bei einem anderen Anbieter", () => {
+    expect(falModel(DEFAULT_AI_MODELS.fallbackEdit2, "edit")?.vendor).not.toBe(falModel(DEFAULT_AI_MODELS.edit)?.vendor);
     expect(falModel(DEFAULT_AI_MODELS.fallbackText, "text")?.vendor).not.toBe(falModel(DEFAULT_AI_MODELS.text)?.vendor);
   });
 
@@ -72,18 +76,38 @@ describe("A/B-Zuteilung und Modellwahl", () => {
   });
 });
 
-describe("Ausweichmodell", () => {
-  it("wechselt nie auf dasselbe Modell", () => {
-    const s = resolveAiSettings({ fallback_edit_model: DEFAULT_AI_MODELS.edit });
-    expect(fallbackFor(s, s.editModel)).toBeNull();
-    const challenger = falModel("fal-ai/qwen-image-edit-plus-lora")!;
-    expect(fallbackFor(s, challenger)?.id).toBe(DEFAULT_AI_MODELS.edit);
-    expect(fallbackFor(resolveAiSettings(null), falModel(DEFAULT_AI_MODELS.text)!)?.id).toBe(DEFAULT_AI_MODELS.fallbackText);
+describe("Ausweichkette", () => {
+  const model = (id: string) => falModel(id)!;
+
+  it("geht Schwestermodell und anderen Anbieter der Reihe nach durch", () => {
+    const s = resolveAiSettings(null);
+    const first = s.editModel;
+    const step1 = nextFallback(s, first, first)!;
+    expect(step1.id).toBe(DEFAULT_AI_MODELS.fallbackEdit);
+    const step2 = nextFallback(s, first, step1)!;
+    expect(step2.id).toBe(DEFAULT_AI_MODELS.fallbackEdit2);
+    expect(nextFallback(s, first, step2)).toBeNull();
   });
 
-  it("nutzt ohne lesbare Einstellungen die Standard-Ausweichmodelle, bei bewusst leerem Feld keins", () => {
+  it("versucht das erste Modell nie noch einmal und überspringt doppelte Einträge", () => {
+    const s = resolveAiSettings({ fallback_edit_model: DEFAULT_AI_MODELS.edit, fallback_edit_model_2: DEFAULT_AI_MODELS.edit });
+    expect(nextFallback(s, s.editModel, s.editModel)).toBeNull();
+    const challenger = model(DEFAULT_AI_MODELS.fallbackEdit);
+    const chain = resolveAiSettings(null);
+    expect(nextFallback(chain, challenger, challenger)?.id).toBe(DEFAULT_AI_MODELS.fallbackEdit2);
+  });
+
+  it("nutzt ohne Foto das Textmodell-Ausweichen", () => {
+    const s = resolveAiSettings(null);
+    expect(nextFallback(s, s.textModel, s.textModel)?.id).toBe(DEFAULT_AI_MODELS.fallbackText);
+    expect(nextFallback(s, s.textModel, model(DEFAULT_AI_MODELS.fallbackText))).toBeNull();
+  });
+
+  it("nutzt ohne lesbare Einstellungen die Standardkette, bei bewusst leerem Feld keine", () => {
     expect(resolveAiSettings(null).fallbackEdit?.id).toBe(DEFAULT_AI_MODELS.fallbackEdit);
-    expect(resolveAiSettings({ fallback_edit_model: null }).fallbackEdit).toBeNull();
+    expect(resolveAiSettings(null).fallbackEdit2?.id).toBe(DEFAULT_AI_MODELS.fallbackEdit2);
+    const none = resolveAiSettings({ fallback_edit_model: null, fallback_edit_model_2: null });
+    expect(nextFallback(none, none.editModel, none.editModel)).toBeNull();
   });
 
   it("wartet normale Laufzeiten ab und weicht bei Fehlern oder Stau aus", () => {

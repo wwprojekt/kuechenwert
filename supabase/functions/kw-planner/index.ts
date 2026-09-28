@@ -10,7 +10,8 @@
  *   generate      Preis schätzen + KI-Visualisierung einreihen (fal Queue);
  *                 mit base_render_id + variant_hint eine Variante des Bildes
  *   status        Render-Status pollen, bei Fehler oder voller Warteschlange
- *                 einmal auf das Ausweichmodell wechseln, fertiges Bild speichern
+ *                 auf das nächste Modell der Ausweichkette wechseln (höchstens
+ *                 drei Versuche), fertiges Bild speichern
  *   feedback      Bewertung einer Visualisierung (1 / -1 / null)
  *   submit        Kontakt erfassen → Lead + Ausschreibung + Projektlink
  *
@@ -66,12 +67,13 @@ import { describeRoom, estimateKitchenPrice, type KitchenEstimate } from "../_sh
 import { loadRateCard } from "../_shared/rate-card.ts";
 import { buildRenderPrompt, buildVariantPrompt } from "../_shared/kitchen-prompt.ts";
 import {
+  MAX_ATTEMPTS,
   abGroup,
   buildModelInput,
   chooseModel,
   falModel,
-  fallbackFor,
   fallbackReason,
+  nextFallback,
   resolveAiSettings,
   type AbGroup,
   type AiSettings,
@@ -91,7 +93,7 @@ const MAX_RENDERS_PER_SESSION = 16;
 /** So lange gilt eine laufende Visualisierung als „läuft noch“ und wird wiederverwendet. */
 const PENDING_REUSE_MS = 3 * 60 * 1000;
 const RENDER_TIMEOUT_MS = 5 * 60 * 1000;
-/** Nach dem Wechsel aufs Ausweichmodell: so lange darf die neue fal-Anfrage noch fehlen. */
+/** Nach dem Wechsel auf ein Ausweichmodell: so lange darf die neue fal-Anfrage noch fehlen. */
 const FALLBACK_SUBMIT_GRACE_MS = 30 * 1000;
 const SIGNED_URL_TTL = 60 * 60;
 const CONSENT_TEXT_VERSION = "kw-projekt-2026-09-28b";
@@ -138,12 +140,13 @@ type PendingRender = {
   mode: "edit" | "text";
   model_slug: string | null;
   fallback_from: string | null;
+  attempt: number;
   prompt: string;
   input_image_path: string | null;
 };
 
 const RENDER_STATUS_COLUMNS =
-  "id, version, status, image_path, storage_bucket, fal_status_url, fal_response_url, created_at, attempt_started_at, mode, model_slug, fallback_from, prompt, input_image_path";
+  "id, version, status, image_path, storage_bucket, fal_status_url, fal_response_url, created_at, attempt_started_at, mode, model_slug, fallback_from, attempt, prompt, input_image_path";
 
 function newSessionToken(): string {
   const buf = new Uint8Array(24);
@@ -399,44 +402,65 @@ async function submitAttempt(
   if (error) throw error;
 }
 
+type AttemptRef = {
+  id: string;
+  attempt: number;
+  first: FalModel;
+  current: FalModel;
+  prompt: string;
+  imageUrl: string | null;
+};
+
+/** Gibt es nach dem gescheiterten Modell noch ein Ausweichmodell? */
+function canFallBack(settings: AiSettings, ref: Pick<AttemptRef, "attempt" | "first" | "current">): boolean {
+  return ref.attempt < MAX_ATTEMPTS && !!nextFallback(settings, ref.first, ref.current);
+}
+
 /**
- * Wechselt einmal auf das Ausweichmodell. Der bedingte Update verhindert, dass
- * zwei gleichzeitige Status-Abfragen doppelt einreichen. false = kein
- * Ausweichmodell oder auch dieses ließ sich nicht starten.
+ * Wechselt auf das nächste Modell der Ausweichkette und reicht dort ein;
+ * scheitert auch das Einreichen, geht es zum übernächsten. Der bedingte Update
+ * auf (model_slug, attempt) verhindert, dass parallele Status-Abfragen doppelt
+ * einreichen. false = Kette erschöpft, Visualisierung als fehlgeschlagen markiert.
  */
-async function switchToFallback(
-  sb: SupabaseClient,
-  settings: AiSettings,
-  render: { id: string; model: FalModel; prompt: string; imageUrl: string | null },
-  reason: string,
-): Promise<boolean> {
-  const fallback = fallbackFor(settings, render.model);
-  if (!fallback) return false;
-  const { data: claimed, error } = await sb
-    .from("planner_renders")
-    .update({
-      fallback_from: render.model.id,
-      fallback_reason: reason.slice(0, 300),
-      model_slug: fallback.id,
-      cost_cents: fallback.costCents,
-      fal_request_id: null,
-      fal_status_url: null,
-      fal_response_url: null,
-      attempt_started_at: new Date().toISOString(),
-    })
-    .eq("id", render.id)
-    .eq("status", "pending")
-    .is("fallback_from", null)
-    .select("id");
-  if (error) throw error;
-  if (!claimed?.length) return true;
-  try {
-    await submitAttempt(sb, render.id, fallback, { prompt: render.prompt, imageUrl: render.imageUrl, settings });
-    return true;
-  } catch (err) {
-    console.error("[kw-planner] fallback submit failed", fallback.id, err);
-    await markFailed(sb, render.id, `Ausweichmodell ${fallback.id}: ${errorText(err)}`);
-    return false;
+async function switchToFallback(sb: SupabaseClient, settings: AiSettings, ref: AttemptRef, reason: string): Promise<boolean> {
+  let current = ref.current;
+  let attempt = ref.attempt;
+  let why = reason;
+  for (;;) {
+    const next = attempt < MAX_ATTEMPTS ? nextFallback(settings, ref.first, current) : null;
+    if (!next) {
+      await markFailed(sb, ref.id, why);
+      return false;
+    }
+    const { data: claimed, error } = await sb
+      .from("planner_renders")
+      .update({
+        attempt: attempt + 1,
+        fallback_from: ref.first.id,
+        fallback_reason: `${current.id}: ${why}`.slice(0, 300),
+        model_slug: next.id,
+        cost_cents: next.costCents,
+        fal_request_id: null,
+        fal_status_url: null,
+        fal_response_url: null,
+        attempt_started_at: new Date().toISOString(),
+      })
+      .eq("id", ref.id)
+      .eq("status", "pending")
+      .eq("model_slug", current.id)
+      .eq("attempt", attempt)
+      .select("id");
+    if (error) throw error;
+    if (!claimed?.length) return true;
+    try {
+      await submitAttempt(sb, ref.id, next, { prompt: ref.prompt, imageUrl: ref.imageUrl, settings });
+      return true;
+    } catch (err) {
+      console.error("[kw-planner] fallback submit failed", next.id, err);
+      why = `submit: ${errorText(err)}`;
+      current = next;
+      attempt += 1;
+    }
   }
 }
 
@@ -586,9 +610,13 @@ async function actionGenerate(req: Request, sb: SupabaseClient, body: Record<str
     await submitAttempt(sb, render.id, model, { prompt, imageUrl: inputUrl, settings });
   } catch (err) {
     console.error("[kw-planner] fal submit failed", model.id, err);
-    const switched = await switchToFallback(sb, settings, { id: render.id, model, prompt, imageUrl: inputUrl }, `submit: ${errorText(err)}`);
+    const switched = await switchToFallback(
+      sb,
+      settings,
+      { id: render.id, attempt: 1, first: model, current: model, prompt, imageUrl: inputUrl },
+      `submit: ${errorText(err)}`,
+    );
     if (!switched) {
-      await markFailed(sb, render.id, `submit: ${errorText(err)}`);
       throw new HttpError(502, "Die Visualisierung konnte gerade nicht gestartet werden. Bitte gleich noch einmal versuchen.", "render_unavailable");
     }
   }
@@ -701,7 +729,7 @@ async function actionStatus(req: Request, sb: SupabaseClient, body: Record<strin
   }
   const attemptStarted = new Date(render.attempt_started_at ?? render.created_at).getTime();
   if (!render.fal_status_url || !render.fal_response_url) {
-    if (render.fallback_from && now - attemptStarted < FALLBACK_SUBMIT_GRACE_MS) return pending("FALLBACK");
+    if (render.attempt > 1 && now - attemptStarted < FALLBACK_SUBMIT_GRACE_MS) return pending("FALLBACK");
     await markFailed(sb, render.id, "missing fal urls");
     return failed("Die Visualisierung konnte nicht gestartet werden.");
   }
@@ -727,16 +755,17 @@ async function actionStatus(req: Request, sb: SupabaseClient, body: Record<strin
 
   const reason = fallbackReason(state, now - attemptStarted);
   const current = falModel(render.model_slug);
-  if (reason && !render.fallback_from && current) {
+  const first = falModel(render.fallback_from ?? render.model_slug);
+  if (reason && current && first) {
     const settings = await loadAiSettings(sb);
-    const imageUrl =
-      fallbackFor(settings, current) && render.input_image_path ? await signedUrl(sb, render.input_image_path, 900) : null;
-    if (fallbackFor(settings, current) && (render.mode === "text" || imageUrl)) {
+    const ref = { attempt: render.attempt, first, current };
+    const imageUrl = canFallBack(settings, ref) && render.input_image_path ? await signedUrl(sb, render.input_image_path, 900) : null;
+    if (canFallBack(settings, ref) && (render.mode === "text" || imageUrl)) {
       if (state === "IN_QUEUE") await falCancel(render.fal_status_url);
       const switched = await switchToFallback(
         sb,
         settings,
-        { id: render.id, model: current, prompt: render.prompt, imageUrl },
+        { ...ref, id: render.id, prompt: render.prompt, imageUrl },
         problem ? `${reason} (${problem})` : reason,
       );
       return switched ? pending("FALLBACK") : failed("Die Visualisierung ist fehlgeschlagen. Bitte erneut versuchen.");

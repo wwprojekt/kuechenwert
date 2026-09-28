@@ -3220,6 +3220,7 @@ export type Database = {
           daily_render_cap: number
           edit_model: string
           fallback_edit_model: string | null
+          fallback_edit_model_2: string | null
           fallback_text_model: string | null
           id: boolean
           lora_scale: number
@@ -3235,6 +3236,7 @@ export type Database = {
           daily_render_cap?: number
           edit_model?: string
           fallback_edit_model?: string | null
+          fallback_edit_model_2?: string | null
           fallback_text_model?: string | null
           id?: boolean
           lora_scale?: number
@@ -3250,6 +3252,7 @@ export type Database = {
           daily_render_cap?: number
           edit_model?: string
           fallback_edit_model?: string | null
+          fallback_edit_model_2?: string | null
           fallback_text_model?: string | null
           id?: boolean
           lora_scale?: number
@@ -4920,6 +4923,7 @@ export type Database = {
       }
       planner_renders: {
         Row: {
+          attempt: number
           attempt_started_at: string | null
           base_render_id: string | null
           completed_at: string | null
@@ -4952,6 +4956,7 @@ export type Database = {
           version: number
         }
         Insert: {
+          attempt?: number
           attempt_started_at?: string | null
           base_render_id?: string | null
           completed_at?: string | null
@@ -4984,6 +4989,7 @@ export type Database = {
           version?: number
         }
         Update: {
+          attempt?: number
           attempt_started_at?: string | null
           base_render_id?: string | null
           completed_at?: string | null

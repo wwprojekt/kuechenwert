@@ -87,6 +87,7 @@ const AdminMessages = lazyRetry(() => import("./pages/admin/AdminMessages"));
 const AdminEmailCenter = lazyRetry(() => import("./pages/admin/AdminEmailCenter"));
 const AdminErrorLogs = lazyRetry(() => import("./pages/admin/AdminErrorLogs"));
 const AdminCronHealth = lazyRetry(() => import("./pages/admin/AdminCronHealth"));
+const AdminMarketplaceSettings = lazyRetry(() => import("./pages/admin/AdminMarketplaceSettings"));
 const AdminAuditLog = lazyRetry(() => import("./pages/admin/AdminAuditLog"));
 const AdminLeads = lazyRetry(() => import("./pages/admin/AdminLeads"));
 const AdminPlannerSessions = lazyRetry(() => import("./pages/admin/AdminPlannerSessions"));
@@ -261,6 +262,7 @@ const App = () => (
                 <Route path="legal" element={<AdminLegal />} />
                 <Route path="error-logs" element={<AdminErrorLogs />} />
                 <Route path="cron-health" element={<AdminCronHealth />} />
+                <Route path="marktplatz" element={<AdminMarketplaceSettings />} />
                 <Route path="audit-log" element={<AdminAuditLog />} />
                 <Route path="settings" element={<AdminSettings />} />
               </Route>

@@ -32,6 +32,7 @@ import {
   Database,
   TimerReset,
   Sparkles,
+  SlidersHorizontal,
 } from "lucide-react";
 import {
   Sidebar,
@@ -107,6 +108,7 @@ const menuGroups: MenuGroup[] = [
     items: [
       { title: "Übersicht", url: "/admin", icon: LayoutDashboard },
       { title: "Leads & Anfragen", url: "/admin/leads", icon: UserPlus, badgeKey: "leads" },
+      { title: "Marktplatz-Einstellungen", url: "/admin/marktplatz", icon: SlidersHorizontal },
       { title: "Traumküchen-KI", url: "/admin/planner-sessions", icon: Sparkles },
       { title: "Küchen-Katalog (Legacy)", url: "/admin/kitchens", icon: Database },
       { title: "Auktionen", url: "/admin/auctions", icon: Gavel },

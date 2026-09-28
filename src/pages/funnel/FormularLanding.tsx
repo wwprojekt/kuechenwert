@@ -11,7 +11,7 @@ import { captureUtmParams } from "@/lib/utm";
 const TRUST = [
   { icon: ShieldCheck, text: "Kostenlos & unverbindlich" },
   { icon: BadgeCheck, text: "Nur geprüfte Küchenstudios" },
-  { icon: Lock, text: "Kontaktdaten nur mit Ihrer Einwilligung" },
+  { icon: Lock, text: "Studios sehen zuerst nur Ihren PLZ-Bereich" },
 ];
 
 const QUESTION_ID = "formular-frage";

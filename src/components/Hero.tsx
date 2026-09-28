@@ -33,7 +33,7 @@ const PATHS: Path[] = [
     to: "/funnel/b",
     icon: TrendingDown,
     title: "Angebot unterbieten lassen",
-    description: "Vorhandenes Studio-Angebot hochladen – andere Studios bieten weniger.",
+    description: "Vorhandenes Studio-Angebot hochladen – andere Studios können es unterbieten.",
     cta: "Preis drücken",
   },
 ];
@@ -41,7 +41,7 @@ const PATHS: Path[] = [
 const TRUST = [
   { icon: ShieldCheck, text: "Kostenlos & unverbindlich" },
   { icon: BadgeCheck, text: "Nur geprüfte Küchenstudios" },
-  { icon: Lock, text: "Kontaktdaten nur mit Ihrer Einwilligung" },
+  { icon: Lock, text: "Studios sehen zuerst nur Ihren PLZ-Bereich" },
 ];
 
 const EXAMPLE_OFFERS = [
@@ -116,8 +116,8 @@ const Hero = () => {
               Ihre Traumküche – <span className="text-primary">im eigenen Raum</span> visualisiert.
             </h1>
             <p className="mt-5 max-w-xl text-lg leading-relaxed text-muted-foreground sm:text-xl">
-              Foto hochladen, Küche konfigurieren, Preis sofort sehen. Geprüfte Küchenstudios aus Ihrer Region bieten um Ihr
-              Projekt – <strong className="font-semibold text-foreground">Sie wählen das beste Angebot.</strong>
+              Foto hochladen, Küche konfigurieren, Preis sofort sehen. Geprüfte Küchenstudios aus Ihrer Region machen Ihnen
+              Angebote – <strong className="font-semibold text-foreground">Sie wählen das beste.</strong>
             </p>
 
             <nav aria-label="Drei Wege zur neuen Küche" className="mt-8 grid gap-3">

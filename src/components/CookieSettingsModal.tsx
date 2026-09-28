@@ -165,7 +165,7 @@ export function CookieSettingsModal({ open, onOpenChange }: CookieSettingsModalP
       icon: Settings,
       iconColor: 'text-blue-600',
       description: 'Ermöglichen erweiterte Funktionen und Personalisierung, wie gespeicherte Einstellungen und Präferenzen.',
-      examples: 'Spracheinstellungen, Theme-Präferenzen, Merklisten',
+      examples: 'Gespeicherte Präferenzen und Personalisierung eingebundener Google-Dienste',
       enabled: consent.functional,
       locked: false,
     },
@@ -174,8 +174,8 @@ export function CookieSettingsModal({ open, onOpenChange }: CookieSettingsModalP
       name: 'Statistik & Analyse',
       icon: BarChart3,
       iconColor: 'text-purple-600',
-      description: 'Helfen uns zu verstehen, wie Besucher die Website nutzen. Alle Daten werden anonymisiert erhoben.',
-      examples: 'Seitenaufrufe, Verweildauer, Gerätetyp, anonyme Besucherstatistiken',
+      description: 'Helfen uns zu verstehen, wie Besucher die Website nutzen (Google Analytics und eigene Statistik). Die Daten werden pseudonymisiert erhoben.',
+      examples: 'Seitenaufrufe, Verweildauer, Gerätetyp, pseudonymisierte Besucherstatistiken',
       enabled: consent.analytics,
       locked: false,
     },
@@ -196,7 +196,7 @@ export function CookieSettingsModal({ open, onOpenChange }: CookieSettingsModalP
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <Cookie className="w-5 h-5 text-primary" />
+            <Cookie className="w-5 h-5 text-primary" aria-hidden="true" />
             Cookie-Einstellungen
           </DialogTitle>
           <DialogDescription>
@@ -211,18 +211,18 @@ export function CookieSettingsModal({ open, onOpenChange }: CookieSettingsModalP
               <div className="flex items-start justify-between gap-4">
                 <div className="flex items-start gap-3 flex-1">
                   <div className={`p-2 rounded-lg bg-muted ${category.iconColor}`}>
-                    <category.icon className="w-5 h-5" />
+                    <category.icon className="w-5 h-5" aria-hidden="true" />
                   </div>
                   <div className="flex-1">
                     <div className="flex items-center gap-2">
-                      <h4 className="font-medium">{category.name}</h4>
+                      <h3 id={`cookie-settings-${category.id}-label`} className="font-medium">{category.name}</h3>
                       {category.locked && (
                         <span className="text-xs bg-muted text-muted-foreground px-2 py-0.5 rounded">
                           Erforderlich
                         </span>
                       )}
                     </div>
-                    <p className="text-sm text-muted-foreground mt-1">
+                    <p id={`cookie-settings-${category.id}-desc`} className="text-sm text-muted-foreground mt-1">
                       {category.description}
                     </p>
                     <p className="text-xs text-muted-foreground/70 mt-2">
@@ -239,6 +239,8 @@ export function CookieSettingsModal({ open, onOpenChange }: CookieSettingsModalP
                     }
                   }}
                   className={category.locked ? 'opacity-50' : ''}
+                  aria-labelledby={`cookie-settings-${category.id}-label`}
+                  aria-describedby={`cookie-settings-${category.id}-desc`}
                 />
               </div>
             </div>
@@ -250,7 +252,7 @@ export function CookieSettingsModal({ open, onOpenChange }: CookieSettingsModalP
             Weitere Informationen zur Verarbeitung Ihrer Daten finden Sie in unserer{' '}
             <a href="/datenschutz" className="text-primary hover:underline inline-flex items-center gap-1">
               Datenschutzerklärung
-              <ExternalLink className="w-3 h-3" />
+              <ExternalLink className="w-3 h-3" aria-hidden="true" />
             </a>
           </p>
           {consent.timestamp > 0 && (

@@ -1,13 +1,13 @@
-import { ArrowRight, BadgeCheck, Gift, Server, Sparkles } from "lucide-react";
+import { ArrowRight, BadgeCheck, EyeOff, Gift, Sparkles } from "lucide-react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { STYLES } from "@/features/planner/core";
 
 const STATS = [
-  { icon: BadgeCheck, value: "Bundesweit", label: "Geprüfte Küchenstudios" },
+  { icon: BadgeCheck, value: "Geprüft", label: "Jedes Studio wird manuell freigeschaltet" },
   { icon: Sparkles, value: "Sofort", label: "Preisschätzung & KI-Vorschau" },
-  { icon: Gift, value: "100 %", label: "Kostenlos & unverbindlich" },
-  { icon: Server, value: "EU", label: "Daten auf Servern in der EU" },
+  { icon: Gift, value: "0 €", label: "Kostenlos & unverbindlich" },
+  { icon: EyeOff, value: "Anonym", label: "Studios sehen zuerst nur PLZ-Bereich und Projekt" },
 ];
 
 /**

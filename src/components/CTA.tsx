@@ -1,5 +1,5 @@
 import { Button } from "@/components/ui/button";
-import { ArrowRight, Sparkles, CheckCircle, Calculator, Gavel } from "lucide-react";
+import { ArrowRight, Sparkles, CheckCircle, Calculator, TrendingDown } from "lucide-react";
 import { Link } from "react-router-dom";
 
 const CTA = () => {
@@ -15,13 +15,13 @@ const CTA = () => {
               </div>
             </div>
             <div className="flex-1 text-center md:text-left">
-              <h3 className="text-xl sm:text-2xl font-bold text-foreground mb-2">
+              <h2 className="text-xl sm:text-2xl font-bold text-foreground mb-2">
                 Was kostet meine Traumküche?
-              </h3>
+              </h2>
               <p className="text-muted-foreground">
-                Beantworten Sie 4 Fragen zu Größe, Stil und Ausstattung — der
-                KüchenRechner zeigt Ihnen in 30 Sekunden eine realistische
-                Preisspanne. Ohne Kontaktdaten.
+                Beantworten Sie 4 kurze Fragen zu Größe, Ausstattung, Geräten und Region – der
+                KüchenRechner zeigt Ihnen eine Preisspanne als Richtwert.
+                Ohne Kontaktdaten.
               </p>
             </div>
             <div className="flex flex-col sm:flex-row gap-3 w-full md:w-auto">
@@ -33,7 +33,7 @@ const CTA = () => {
               </Button>
               <Button asChild variant="outline" className="border-amber-300 hover:bg-amber-50 w-full sm:w-auto">
                 <Link to="/funnel/b">
-                  <Gavel className="h-4 w-4 mr-2" />
+                  <TrendingDown className="h-4 w-4 mr-2" />
                   Studio-Angebot unterbieten
                 </Link>
               </Button>
@@ -83,7 +83,7 @@ const CTA = () => {
               <p className="text-base sm:text-lg md:text-xl lg:text-2xl text-white/90 max-w-3xl mx-auto leading-relaxed animate-fade-in animate-delay-200 px-4">
                 Planen Sie Ihre Küche in wenigen Minuten – mit KI-Vorschau im
                 eigenen Raum und Preisschätzung. Geprüfte Studios aus Ihrer Region
-                bieten um Ihr Projekt, Sie wählen das beste Angebot.
+                machen Ihnen Angebote, Sie wählen das passende.
               </p>
 
               <div className="flex flex-col sm:flex-row gap-4 sm:gap-6 justify-center pt-4 sm:pt-6 animate-fade-in animate-delay-300">

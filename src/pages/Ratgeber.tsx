@@ -1,252 +1,162 @@
 import PageLayout from "@/components/PageLayout";
 import PageHero from "@/components/PageHero";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
-  Book,
-  ChefHat,
-  AlertTriangle,
   ArrowRight,
-  Users,
-  Ruler,
+  Book,
   Calculator,
-  Gavel,
+  FileText,
+  HelpCircle,
+  MessageSquare,
   Sparkles,
-  Refrigerator,
+  TrendingDown,
+  type LucideIcon,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
 import { BRAND } from "@/lib/brand";
 
-/**
- * Ratgeber/Guides hub for KuechenWert (Kaeufer-Perspektive).
- *
- * Kerngedanke: Der Ratgeber hilft Kund:innen, eine NEUE Kueche zu planen
- * und zu kaufen — nicht zu verkaufen.
- *
- * Alle CTAs fuehren in Funnel A (Angebote einholen), den KuechenRechner
- * (Budget einschaetzen) oder Funnel B (Studio-Preise unterbieten).
- *
- * Phase 3.7 (Marken-Ratgeber Nobilia/Haecker/SieMatic etc.) folgt wenn
- * Markenliste + Content steht. Detailseiten unter /ratgeber/:slug sind
- * weiterhin erreichbar, werden aber Stueck fuer Stueck auf Kuechen-Planung
- * umgeschrieben.
- */
+// Solange es keine Ratgeber-Artikel gibt, leitet /ratgeber/:slug hierher um.
 
-type GuideCategory = {
+interface ResourceLink {
+  to: string;
+  icon: LucideIcon;
   title: string;
   description: string;
-  icon: typeof ChefHat;
-  slug: string;
-};
+  cta: string;
+}
 
-const guideCategories: GuideCategory[] = [
+const FIRST_ANSWERS: ResourceLink[] = [
   {
-    title: "Küche richtig planen",
+    to: "/faq",
+    icon: HelpCircle,
+    title: "Häufige Fragen",
     description:
-      "Grundriss, Abmessungen, Arbeitszonen und Laufwege — so wird Ihre neue Küche wirklich alltagstauglich.",
-    icon: Ruler,
-    slug: "kueche-richtig-planen",
+      "Wie die Angebotsphase abläuft, was KüchenWert kostet und wie wir Küchenstudios prüfen – kurz beantwortet.",
+    cta: "Zu den häufigen Fragen",
   },
   {
-    title: "Budget realistisch einschätzen",
-    description:
-      "Was kostet eine neue Küche wirklich? Wir zeigen typische Preisspannen nach Größe, Stil und Geräte-Level.",
+    to: "/kuechenrechner",
     icon: Calculator,
-    slug: "kueche-budget-einschaetzen",
-  },
-  {
-    title: "Studio-Angebote richtig vergleichen",
+    title: "KüchenRechner",
     description:
-      "Worauf Sie bei Angeboten von Küchenstudios achten müssen — von Preis bis Versteckkosten.",
-    icon: Gavel,
-    slug: "kueche-angebote-vergleichen",
-  },
-  {
-    title: "Geräte auswählen",
-    description:
-      "Bosch, Siemens, Miele, Gaggenau: Welche Marke passt zu Ihrem Kochstil — und wo sich Premium wirklich lohnt.",
-    icon: Refrigerator,
-    slug: "kuechengeraete-waehlen",
+      "Ein Richtwert für eine Küche wie Ihre – auf Basis öffentlich verfügbarer Marktpreise, keine verbindliche Preisauskunft.",
+    cta: "Preis einschätzen",
   },
 ];
 
-const situationGuides: { label: string; description: string; slug: string }[] = [
+const REQUEST_PATHS: ResourceLink[] = [
   {
-    label: "Erstkauf",
+    to: "/funnel/c",
+    icon: Sparkles,
+    title: "Traumküche planen",
     description:
-      "Erste eigene Küche? Wir zeigen Schritt für Schritt, wie Sie von der Idee zum Umzug-fertigen Ergebnis kommen.",
-    slug: "kueche-erstkauf",
+      "Raumfoto hochladen, Küche mit KI gestalten und einen geschätzten Preis sehen. Auf Wunsch machen Ihnen geprüfte Studios 7 Tage lang Angebote.",
+    cta: "Mit KI planen",
   },
   {
-    label: "Renovierung",
+    to: "/formular",
+    icon: FileText,
+    title: "Angebote holen",
     description:
-      "Alte Küche raus, neue rein — so planen Sie den Wechsel ohne wochenlange Baustelle.",
-    slug: "kueche-renovierung",
+      "Wünsche in wenigen Schritten beschreiben – Küchenstudios aus Ihrer Region machen Ihnen 7 Tage lang Angebote.",
+    cta: "Angebote holen",
   },
   {
-    label: "Hausbau",
+    to: "/funnel/b",
+    icon: TrendingDown,
+    title: "Angebot unterbieten lassen",
     description:
-      "Neubau? Wann planen Sie die Küche, wann bestellen, wann einbauen? Der richtige Ablauf spart bares Geld.",
-    slug: "kueche-hausbau",
-  },
-  {
-    label: "Nach Umzug",
-    description:
-      "Umgezogen und die alte Küche passt nicht? So finden Sie schnell eine passende neue zum fairen Preis.",
-    slug: "kueche-nach-umzug",
-  },
-  {
-    label: "Kleines Budget",
-    description:
-      "Traumküche mit kleinem Geldbeutel: Welche Kompromisse lohnen sich — und bei welchen Sie lieber abwarten.",
-    slug: "kueche-kleines-budget",
-  },
-  {
-    label: "Luxus & Design",
-    description:
-      "Bulthaup, SieMatic, Poggenpohl: Wenn das Beste gerade gut genug ist — das ist bei Designerküchen wichtig.",
-    slug: "kueche-luxus-design",
+      "Sie haben schon ein Angebot? Andere Studios können es 72 Stunden lang unterbieten.",
+    cta: "Angebot prüfen lassen",
   },
 ];
+
+const ResourceCard = ({ to, icon: Icon, title, description, cta }: ResourceLink) => (
+  <Link
+    to={to}
+    className="group flex h-full flex-col rounded-xl border-2 bg-card p-6 transition-colors hover:border-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+  >
+    <span className="mb-4 inline-flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
+      <Icon className="h-5 w-5 text-primary" aria-hidden="true" />
+    </span>
+    <h3 className="mb-2 text-xl font-semibold text-foreground">{title}</h3>
+    <p className="mb-4 flex-1 text-sm leading-relaxed text-muted-foreground">{description}</p>
+    <span className="inline-flex items-center gap-2 text-sm font-medium text-primary">
+      {cta}
+      <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-1" aria-hidden="true" />
+    </span>
+  </Link>
+);
 
 const Ratgeber = () => {
   return (
     <PageLayout
       breadcrumbs={true}
       title={`Küchen-Ratgeber | ${BRAND.name}`}
-      description={`Ratgeber rund um die neue Küche: Planung, Budget, Angebotsvergleich, Geräteauswahl und typische Lebenssituationen – kompakt erklärt von ${BRAND.name}.`}
-      keywords="küchen ratgeber, neue küche planen, küchen budget, küchen angebote vergleichen, küchengeräte wählen, küchenkauf tipps"
+      description={`Erste Antworten rund um Ihre neue Küche: häufige Fragen, KüchenRechner und die drei Wege zu Angeboten bei ${BRAND.name}.`}
+      keywords="küchen ratgeber, neue küche planen, küchen budget, küchen angebote vergleichen, küchenkauf tipps"
       canonicalPath="/ratgeber"
+      noIndex={true}
     >
-      <PageHero size="lg">
+      <PageHero size="md">
         <div className="max-w-4xl mx-auto text-center">
           <div className="inline-flex h-16 w-16 items-center justify-center rounded-2xl gradient-hero mb-6 shadow-glow-sm">
-            <Book className="h-8 w-8 text-primary-foreground" />
+            <Book className="h-8 w-8 text-primary-foreground" aria-hidden="true" />
           </div>
           <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold mb-6 leading-tight">
             Ihr <span className="gradient-text">Küchen-Ratgeber</span>
           </h1>
           <p className="text-lg md:text-xl text-muted-foreground mb-4 leading-relaxed">
-            Alles rund um Planung, Budget, Angebotsvergleich und Geräteauswahl
-            für Ihre neue Küche — in kompakten Experten-Guides zusammengefasst.
+            Ausführliche Ratgeber-Artikel sind in Arbeit. Bis dahin finden Sie hier die wichtigsten
+            Anlaufstellen rund um Ihre neue Küche.
           </p>
         </div>
       </PageHero>
 
-      {/* Haupt-Kategorien */}
-      <section className="py-20">
-        <div className="container">
-          <div className="text-center mb-16">
-            <div className="inline-flex h-12 w-12 items-center justify-center rounded-xl gradient-hero mb-4 shadow-glow-sm">
-              <ChefHat className="h-6 w-6 text-primary-foreground" />
-            </div>
-            <h2 className="text-3xl md:text-4xl font-bold mb-4">Die wichtigsten Themen</h2>
-            <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-              Die häufigsten Fragen beim Kauf einer neuen Küche — verständlich erklärt.
-            </p>
-          </div>
-
-          <div className="grid md:grid-cols-2 gap-6 max-w-5xl mx-auto">
-            {guideCategories.map((category, index) => {
-              const Icon = category.icon;
-              return (
-                <Card
-                  key={category.slug}
-                  className="hover-lift border-2 animate-fade-in h-full"
-                  style={{ animationDelay: `${index * 0.05}s` }}
-                >
-                  <CardHeader>
-                    <div className="flex items-center gap-3 mb-2">
-                      <div className="inline-flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
-                        <Icon className="h-5 w-5 text-primary" />
-                      </div>
-                      <CardTitle className="text-xl">{category.title}</CardTitle>
-                    </div>
-                  </CardHeader>
-                  <CardContent>
-                    <p className="text-sm text-muted-foreground mb-4 leading-relaxed">
-                      {category.description}
-                    </p>
-                    <Link
-                      to="/formular"
-                      className="inline-flex items-center gap-2 text-sm text-primary hover:underline font-medium"
-                    >
-                      Kostenlose Angebote einholen
-                      <ArrowRight className="h-3.5 w-3.5" />
-                    </Link>
-                  </CardContent>
-                </Card>
-              );
-            })}
-          </div>
-        </div>
-      </section>
-
-      {/* Situations-Guides */}
-      <section className="py-20 bg-muted/30">
-        <div className="container">
-          <div className="text-center mb-16">
-            <div className="inline-flex h-12 w-12 items-center justify-center rounded-xl gradient-hero mb-4 shadow-glow-sm">
-              <AlertTriangle className="h-6 w-6 text-primary-foreground" />
-            </div>
-            <h2 className="text-3xl md:text-4xl font-bold mb-4">Ratgeber nach Situation</h2>
-            <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-              Jede Lebenslage ist anders. Hier finden Sie Tipps für Ihre konkrete Situation.
-            </p>
-          </div>
-
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 max-w-5xl mx-auto">
-            {situationGuides.map((guide, index) => (
-              <Card
-                key={guide.slug}
-                className="hover-lift border-2 h-full animate-fade-in"
-                style={{ animationDelay: `${index * 0.05}s` }}
-              >
-                <CardHeader className="pb-0">
-                  <CardTitle className="text-lg flex items-center gap-2">
-                    <ArrowRight className="h-4 w-4 text-primary shrink-0" />
-                    {guide.label}
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-sm text-muted-foreground mt-2">{guide.description}</p>
-                </CardContent>
-              </Card>
+      <section className="py-16" aria-labelledby="erste-antworten">
+        <div className="container max-w-5xl">
+          <h2 id="erste-antworten" className="text-3xl md:text-4xl font-bold mb-8 text-center">
+            Erste Antworten
+          </h2>
+          <div className="grid gap-6 md:grid-cols-2">
+            {FIRST_ANSWERS.map((resource) => (
+              <ResourceCard key={resource.to} {...resource} />
             ))}
           </div>
         </div>
       </section>
 
-      {/* Expert Help CTA */}
-      <section className="py-20 bg-gradient-to-br from-primary via-primary-light to-primary text-primary-foreground">
+      <section className="py-16 bg-muted/30" aria-labelledby="wege-zu-angeboten">
+        <div className="container max-w-5xl">
+          <div className="text-center mb-8">
+            <h2 id="wege-zu-angeboten" className="text-3xl md:text-4xl font-bold mb-4">
+              So kommen Sie zu Angeboten
+            </h2>
+            <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
+              Drei Wege, alle kostenlos und unverbindlich – Sie entscheiden, ob und welches Angebot Sie annehmen.
+            </p>
+          </div>
+          <div className="grid gap-6 md:grid-cols-3">
+            {REQUEST_PATHS.map((resource) => (
+              <ResourceCard key={resource.to} {...resource} />
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <section className="py-16 bg-gradient-to-br from-primary via-primary-light to-primary text-primary-foreground">
         <div className="container">
           <div className="max-w-3xl mx-auto text-center">
-            <Users className="h-16 w-16 mx-auto mb-6 opacity-90" />
-            <h2 className="text-3xl md:text-4xl font-bold mb-6">
-              Brauchen Sie persönliche Beratung?
-            </h2>
+            <h2 className="text-3xl md:text-4xl font-bold mb-6">Noch Fragen?</h2>
             <p className="text-xl mb-8 opacity-95">
-              Unser Küchen-Team hilft Ihnen gerne bei allen Fragen rund um Planung,
-              Budget und Studio-Auswahl.
+              Unser Team hilft Ihnen gern weiter – telefonisch Montag bis Freitag von 10 bis 18 Uhr oder per E-Mail.
             </p>
-            <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <Link to="/formular">
-                <Button size="lg" variant="secondary" className="w-full sm:w-auto">
-                  <Sparkles className="h-4 w-4 mr-2" />
-                  Kostenlose Angebote einholen
-                </Button>
+            <Button asChild size="lg" variant="secondary">
+              <Link to="/kontakt">
+                <MessageSquare className="h-4 w-4 mr-2" aria-hidden="true" />
+                Kontakt aufnehmen
               </Link>
-              <Link to="/kuechenrechner">
-                <Button
-                  size="lg"
-                  variant="outline"
-                  className="w-full sm:w-auto bg-white/10 border-white/30 hover:bg-white/20 text-white"
-                >
-                  <Calculator className="h-4 w-4 mr-2" />
-                  Budget-Check
-                </Button>
-              </Link>
-            </div>
+            </Button>
           </div>
         </div>
       </section>

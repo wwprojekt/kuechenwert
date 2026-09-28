@@ -264,6 +264,8 @@ const CookieBanner = () => {
 
   return (
     <div
+      role="region"
+      aria-labelledby="cookie-banner-title"
       className={cn(
         "fixed bottom-0 left-0 right-0 z-50 transform transition-transform duration-300",
         isClosing ? "translate-y-full" : "translate-y-0"
@@ -281,12 +283,12 @@ const CookieBanner = () => {
             <div className="flex items-start justify-between gap-4">
               <div className="flex items-start gap-3">
                 <div className="hidden p-2 rounded-lg bg-primary/10 sm:block">
-                  <Cookie className="h-5 w-5 text-primary" />
+                  <Cookie className="h-5 w-5 text-primary" aria-hidden="true" />
                 </div>
                 <div>
-                  <h3 className="font-semibold text-foreground text-base sm:text-lg">
+                  <h2 id="cookie-banner-title" className="font-semibold text-foreground text-base sm:text-lg">
                     Datenschutz & Cookies
-                  </h3>
+                  </h2>
                   <p className="text-xs sm:text-sm text-muted-foreground mt-1 max-w-2xl">
                     Notwendige Cookies sind immer aktiv. Statistik (Google Analytics) und Marketing (Google Ads, Meta)
                     nutzen wir nur mit Ihrer Einwilligung – jederzeit widerrufbar über „Cookie-Einstellungen“ im Footer.
@@ -304,38 +306,47 @@ const CookieBanner = () => {
 
             {/* Toggle Details Button */}
             <button
+              type="button"
               onClick={() => setShowDetails(!showDetails)}
+              aria-expanded={showDetails}
+              aria-controls="cookie-banner-details"
               className="flex min-h-9 items-center gap-2 text-xs sm:text-sm text-primary hover:text-primary/80 transition-colors w-fit"
             >
-              <Settings className="w-4 h-4" />
+              <Settings className="w-4 h-4" aria-hidden="true" />
               Cookie-Einstellungen anpassen
-              {showDetails ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+              {showDetails ? <ChevronUp className="w-4 h-4" aria-hidden="true" /> : <ChevronDown className="w-4 h-4" aria-hidden="true" />}
             </button>
 
             {/* Detailed Options */}
             {showDetails && (
-              <div className="grid gap-3 p-4 bg-muted/50 rounded-lg border">
+              <div id="cookie-banner-details" className="grid gap-3 p-4 bg-muted/50 rounded-lg border">
                 {/* Essential Cookies */}
                 <div className="flex items-center justify-between gap-4 p-3 bg-background rounded-lg">
                   <div className="flex items-start gap-3">
-                    <Shield className="w-5 h-5 text-green-600 mt-0.5" />
+                    <Shield className="w-5 h-5 text-green-600 mt-0.5" aria-hidden="true" />
                     <div>
-                      <p className="font-medium text-sm">Notwendig</p>
-                      <p className="text-xs text-muted-foreground">
+                      <p id="cookie-banner-essential-label" className="font-medium text-sm">Notwendig</p>
+                      <p id="cookie-banner-essential-desc" className="text-xs text-muted-foreground">
                         Erforderlich für die Grundfunktionen der Website. Kann nicht deaktiviert werden.
                       </p>
                     </div>
                   </div>
-                  <Switch checked={true} disabled className="opacity-50" />
+                  <Switch
+                    checked={true}
+                    disabled
+                    className="opacity-50"
+                    aria-labelledby="cookie-banner-essential-label"
+                    aria-describedby="cookie-banner-essential-desc"
+                  />
                 </div>
 
                 {/* Functional Cookies */}
                 <div className="flex items-center justify-between gap-4 p-3 bg-background rounded-lg">
                   <div className="flex items-start gap-3">
-                    <Settings className="w-5 h-5 text-blue-600 mt-0.5" />
+                    <Settings className="w-5 h-5 text-blue-600 mt-0.5" aria-hidden="true" />
                     <div>
-                      <p className="font-medium text-sm">Funktional</p>
-                      <p className="text-xs text-muted-foreground">
+                      <p id="cookie-banner-functional-label" className="font-medium text-sm">Funktional</p>
+                      <p id="cookie-banner-functional-desc" className="text-xs text-muted-foreground">
                         Ermöglicht erweiterte Funktionen und Personalisierung (z.B. gespeicherte Präferenzen).
                       </p>
                     </div>
@@ -343,16 +354,18 @@ const CookieBanner = () => {
                   <Switch 
                     checked={consent.functional} 
                     onCheckedChange={() => toggleCategory('functional')}
+                    aria-labelledby="cookie-banner-functional-label"
+                    aria-describedby="cookie-banner-functional-desc"
                   />
                 </div>
 
                 {/* Analytics Cookies */}
                 <div className="flex items-center justify-between gap-4 p-3 bg-background rounded-lg">
                   <div className="flex items-start gap-3">
-                    <BarChart3 className="w-5 h-5 text-purple-600 mt-0.5" />
+                    <BarChart3 className="w-5 h-5 text-purple-600 mt-0.5" aria-hidden="true" />
                     <div>
-                      <p className="font-medium text-sm">Statistik & Analyse</p>
-                      <p className="text-xs text-muted-foreground">
+                      <p id="cookie-banner-analytics-label" className="font-medium text-sm">Statistik & Analyse</p>
+                      <p id="cookie-banner-analytics-desc" className="text-xs text-muted-foreground">
                         Hilft uns zu verstehen, wie Besucher die Website nutzen (Google Analytics und eigene Statistik, pseudonymisiert).
                       </p>
                     </div>
@@ -360,16 +373,18 @@ const CookieBanner = () => {
                   <Switch 
                     checked={consent.analytics} 
                     onCheckedChange={() => toggleCategory('analytics')}
+                    aria-labelledby="cookie-banner-analytics-label"
+                    aria-describedby="cookie-banner-analytics-desc"
                   />
                 </div>
 
                 {/* Marketing Cookies */}
                 <div className="flex items-center justify-between gap-4 p-3 bg-background rounded-lg">
                   <div className="flex items-start gap-3">
-                    <Megaphone className="w-5 h-5 text-orange-600 mt-0.5" />
+                    <Megaphone className="w-5 h-5 text-orange-600 mt-0.5" aria-hidden="true" />
                     <div>
-                      <p className="font-medium text-sm">Marketing</p>
-                      <p className="text-xs text-muted-foreground">
+                      <p id="cookie-banner-marketing-label" className="font-medium text-sm">Marketing</p>
+                      <p id="cookie-banner-marketing-desc" className="text-xs text-muted-foreground">
                         Misst den Erfolg unserer Anzeigen und ermöglicht Werbung auf anderen Websites (Google Ads, Meta).
                       </p>
                     </div>
@@ -377,6 +392,8 @@ const CookieBanner = () => {
                   <Switch 
                     checked={consent.marketing} 
                     onCheckedChange={() => toggleCategory('marketing')}
+                    aria-labelledby="cookie-banner-marketing-label"
+                    aria-describedby="cookie-banner-marketing-desc"
                   />
                 </div>
               </div>

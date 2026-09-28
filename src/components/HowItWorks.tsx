@@ -1,4 +1,4 @@
-import { ArrowRight, Calculator, FileCheck, Gavel, Sparkles, type LucideIcon } from "lucide-react";
+import { ArrowRight, Calculator, FileCheck, Sparkles, TrendingDown, type LucideIcon } from "lucide-react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -22,8 +22,8 @@ const CHANNELS: Channel[] = [
     title: "Traumküche visualisieren",
     subtitle: "Ihr Raum, Ihre Küche – fotorealistisch",
     description:
-      "Foto Ihres Raums hochladen, Maße angeben und Fronten, Arbeitsplatte und Geräte wählen. Die KI zeigt Ihre neue Küche in Ihrem Raum – mit Preisschätzung. Auf Wunsch bieten geprüfte Studios um Ihr Projekt.",
-    benefits: ["KI-Vorschau im eigenen Raum", "Preisschätzung mit Einzelpositionen", "Studios bieten – Sie wählen"],
+      "Foto Ihres Raums hochladen, Maße angeben und Fronten, Arbeitsplatte und Geräte wählen. Die KI zeigt Ihre neue Küche in Ihrem Raum – mit Preisschätzung. Auf Wunsch erstellen geprüfte Studios 7 Tage lang Angebote für Ihr Projekt.",
+    benefits: ["KI-Vorschau im eigenen Raum", "Preisschätzung mit Einzelpositionen", "Studios machen Angebote – Sie wählen"],
     to: "/funnel/c",
     ctaLabel: "Küche planen",
     featured: true,
@@ -34,19 +34,19 @@ const CHANNELS: Channel[] = [
     title: "Angebote einholen",
     subtitle: "Von geprüften Studios aus Ihrer Region",
     description:
-      "Beschreiben Sie in 2 Minuten Ihre Wunschküche – Stil, Form, Budget, PLZ. Passende Küchenstudios aus Ihrer Region schicken Ihnen Angebote, die Sie auf Ihrer Projektseite vergleichen.",
-    benefits: ["In 2 Minuten ausgefüllt", "Erste Angebote meist in 48 h", "Keine Abnahmepflicht"],
+      "Beschreiben Sie in ca. 3 Minuten Ihre Wunschküche – Stil, Form, Budget, PLZ. Passende Küchenstudios aus Ihrer Region schicken Ihnen Angebote, die Sie auf Ihrer Projektseite vergleichen.",
+    benefits: ["In ca. 3 Minuten ausgefüllt", "Angebotsphase: 7 Tage", "Keine Abnahmepflicht"],
     to: "/formular",
     ctaLabel: "Angebote holen",
   },
   {
-    icon: Gavel,
-    badge: "Am meisten sparen",
+    icon: TrendingDown,
+    badge: "Schon ein Angebot?",
     title: "Studio-Preis unterbieten",
-    subtitle: "Reverse-Auktion auf Ihr vorhandenes Angebot",
+    subtitle: "Studios unterbieten Ihr vorhandenes Angebot",
     description:
-      "Sie haben schon ein Angebot vom Küchenstudio? Laden Sie es hoch – nach unserem kurzen Experten-Check bieten andere geprüfte Studios 72 Stunden lang für dieselbe oder eine vergleichbare Küche.",
-    benefits: ["72-h-Auktion mit Studio-Geboten", "Experten-Check inklusive", "Studio-Name bleibt anonym"],
+      "Sie haben schon ein Angebot vom Küchenstudio? Laden Sie es hoch – nach einem kurzen Telefonat mit unserem Team können andere geprüfte Studios 72 Stunden lang ein günstigeres Angebot für dieselbe oder eine vergleichbare Küche machen.",
+    benefits: ["72 Stunden Angebotsphase", "Kurzer Angebots-Check am Telefon", "Ohne Ihren Namen vorgestellt"],
     to: "/funnel/b",
     ctaLabel: "Angebot unterbieten lassen",
   },

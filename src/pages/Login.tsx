@@ -27,7 +27,7 @@ const Login = () => {
   const { user } = useAuth();
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
-  const { primaryRole, isLoading: roleLoading, refetchRoles } = useUserRole();
+  const { primaryRole, isLoading: roleLoading } = useUserRole();
 
   useEffect(() => {
     if (user && !roleLoading && primaryRole) {
@@ -116,7 +116,7 @@ const Login = () => {
     <PageLayout
       title={`Anmelden | ${BRAND.name}`}
       description={`Melden Sie sich bei ${BRAND.name} an`}
-      keywords="anmelden, login, küchenwert, küche verkaufen"
+      keywords="anmelden, login, küchenwert, küchen angebote"
       canonicalPath="/login"
       noIndex={true}
     >
@@ -206,9 +206,9 @@ const Login = () => {
               </p>
               <div className="h-px bg-border/50" />
               <p className="text-sm text-muted-foreground">
-                Händler?{" "}
+                Küchenstudio?{" "}
                 <Link to="/register/haendler" className="text-primary hover:underline font-medium">
-                  Zur Händler-Registrierung
+                  Zur Studio-Registrierung
                 </Link>
               </p>
             </div>

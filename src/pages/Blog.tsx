@@ -6,6 +6,7 @@ import { generateBreadcrumbSchema, getBreadcrumbsFromPath } from "@/lib/seo";
 import PageHero from "@/components/PageHero";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Calendar, ArrowRight } from "lucide-react";
 import { Link } from "react-router-dom";
 import { format } from "date-fns";
@@ -24,10 +25,34 @@ interface BlogPost {
   created_at: string;
 }
 
-const BlogPage = () => {
-  const [selectedCategory, setSelectedCategory] = useState<string>("Alle Artikel");
+const ALL_CATEGORIES = "Alle Artikel";
+const CATEGORIES = [ALL_CATEGORIES, "Planung", "Kosten & Budget", "Materialien & Geräte", "Kaufberatung", "Pflege"];
 
-  const { data: posts, isLoading } = useQuery({
+const BlogEmptyState = () => (
+  <div className="mx-auto max-w-2xl py-12 text-center">
+    <h2 className="mb-3 text-2xl font-bold">Die ersten Artikel sind in Arbeit</h2>
+    <p className="mb-8 text-muted-foreground">
+      Bis dahin finden Sie Antworten in unseren häufigen Fragen, einen ersten Richtwert im KüchenRechner – oder
+      Sie holen direkt kostenlose Angebote ein.
+    </p>
+    <div className="flex flex-col justify-center gap-3 sm:flex-row">
+      <Button asChild variant="outline">
+        <Link to="/faq">Häufige Fragen</Link>
+      </Button>
+      <Button asChild variant="outline">
+        <Link to="/kuechenrechner">KüchenRechner</Link>
+      </Button>
+      <Button asChild>
+        <Link to="/formular">Angebote holen</Link>
+      </Button>
+    </div>
+  </div>
+);
+
+const BlogPage = () => {
+  const [selectedCategory, setSelectedCategory] = useState<string>(ALL_CATEGORIES);
+
+  const { data: posts, isLoading, isError, refetch } = useQuery({
     queryKey: ['blog-posts'],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -41,64 +66,76 @@ const BlogPage = () => {
     },
   });
 
-  const categories = ["Alle Artikel", "Allgemein", "Kaufberatung", "Verkaufstipps", "Wartung & Pflege", "Reiseberichte", "Rechtliches"];
-
+  const hasPosts = (posts?.length ?? 0) > 0;
   const filteredPosts = posts?.filter((post) => {
-    return selectedCategory === "Alle Artikel" || post.category === selectedCategory;
+    return selectedCategory === ALL_CATEGORIES || post.category === selectedCategory;
   }) || [];
 
   return (
     <PageLayout
       breadcrumbs={true}
-      title="Blog – Ratgeber & News rund um Ihre neue Traumküche"
-      description="Aktuelle Artikel, Tipps und Ratgeber rund um Küchen-Planung, Budget, Geräte, Stile und den Kauf einer neuen Küche. Markttrends, Expertenwissen und Insider-Tipps."
-      keywords="Küchen Blog, Küchen Ratgeber, Küchen Planung, Küchen Trends, neue Küche kaufen Tipps, Küchenkauf Beratung"
+      title="Blog – Tipps rund um Ihre neue Küche"
+      description="Artikel und Tipps rund um Planung, Budget, Materialien, Geräte und den Kauf einer neuen Küche."
+      keywords="Küchen Blog, Küchen Planung, Küchen Budget, neue Küche kaufen Tipps, Küchenkauf Beratung"
       canonicalPath="/blog"
+      noIndex={true}
       structuredData={generateBreadcrumbSchema(getBreadcrumbsFromPath("/blog"))}
     >
       {/* Hero Section */}
       <PageHero size="md">
         <div className="max-w-3xl mx-auto text-center">
           <h1 className="text-4xl md:text-5xl font-bold mb-6">
-            Blog & Ratgeber
+            Blog
           </h1>
           <p className="text-lg text-muted-foreground">
-            Expertenwissen, Markttrends und Tipps rund um Planung, Budget und Kauf Ihrer neuen Küche – regelmäßig aktualisiert.
+            Tipps rund um Planung, Budget und Kauf Ihrer neuen Küche.
           </p>
         </div>
       </PageHero>
 
       {/* Categories */}
-      <section className="py-8 border-b">
-        <div className="container">
-          <div className="flex flex-wrap gap-4 justify-center">
-            {categories.map((category) => (
-              <button
-                key={category}
-                onClick={() => setSelectedCategory(category)}
-                className={`px-6 py-3 rounded-full border-2 transition-colors font-medium ${
-                  selectedCategory === category
-                    ? 'border-primary bg-primary/10 text-primary'
-                    : 'border-border hover:border-primary hover:bg-primary/5'
-                }`}
-              >
-                {category}
-              </button>
-            ))}
+      {hasPosts && (
+        <section className="py-8 border-b" aria-label="Kategorien">
+          <div className="container">
+            <div className="flex flex-wrap gap-4 justify-center">
+              {CATEGORIES.map((category) => (
+                <button
+                  key={category}
+                  type="button"
+                  aria-pressed={selectedCategory === category}
+                  onClick={() => setSelectedCategory(category)}
+                  className={`px-6 py-3 rounded-full border-2 transition-colors font-medium ${
+                    selectedCategory === category
+                      ? 'border-primary bg-primary/10 text-primary'
+                      : 'border-border hover:border-primary hover:bg-primary/5'
+                  }`}
+                >
+                  {category}
+                </button>
+              ))}
+            </div>
           </div>
-        </div>
-      </section>
+        </section>
+      )}
 
       {/* Blog Posts Grid */}
       <section className="py-16">
         <div className="container">
           {isLoading ? (
-            <div className="text-center py-12">Lädt...</div>
-          ) : filteredPosts.length === 0 ? (
-            <div className="text-center py-12 text-muted-foreground">
-              <p className="text-lg mb-4">Noch keine Blogposts vorhanden.</p>
-              <p className="text-sm">Schauen Sie bald wieder vorbei!</p>
+            <div className="text-center py-12 text-muted-foreground" role="status">Artikel werden geladen …</div>
+          ) : isError ? (
+            <div className="text-center py-12" role="alert">
+              <p className="mb-4 text-muted-foreground">Die Artikel konnten nicht geladen werden.</p>
+              <Button variant="outline" onClick={() => void refetch()}>
+                Erneut versuchen
+              </Button>
             </div>
+          ) : !hasPosts ? (
+            <BlogEmptyState />
+          ) : filteredPosts.length === 0 ? (
+            <p className="text-center py-12 text-muted-foreground">
+              In dieser Kategorie gibt es noch keine Artikel.
+            </p>
           ) : (
             <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
               {filteredPosts.map((post) => (
@@ -108,7 +145,8 @@ const BlogPage = () => {
                       <div className="aspect-[16/10] overflow-hidden">
                         <img
                           src={post.featured_image_url}
-                          alt={post.title}
+                          alt=""
+                          loading="lazy"
                           className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
                         />
                       </div>
@@ -123,9 +161,9 @@ const BlogPage = () => {
                           </div>
                         )}
                       </div>
-                      <h3 className="text-xl font-bold mb-3 group-hover:text-primary transition-colors">
+                      <h2 className="text-xl font-bold mb-3 group-hover:text-primary transition-colors">
                         {post.title}
-                      </h3>
+                      </h2>
                       {post.excerpt && (
                         <p className="text-muted-foreground mb-4 line-clamp-3">
                           {post.excerpt}

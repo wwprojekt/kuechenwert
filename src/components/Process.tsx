@@ -19,8 +19,8 @@ const STEPS = [
   },
   {
     icon: Scale,
-    title: "Studios bieten",
-    description: "Geprüfte Studios aus Ihrer Region sehen Ihr Projekt anonymisiert und geben Angebote ab. Ein Angebot kann nur gesenkt werden.",
+    title: "Studios machen Angebote",
+    description: "Geprüfte Studios aus Ihrer Region sehen Ihr Projekt ohne Ihren Namen und geben Angebote ab. Ein abgegebenes Angebot kann nur noch gesenkt werden.",
     duration: "bis 7 Tage",
   },
   {
@@ -72,10 +72,10 @@ const Process = () => {
             </h3>
             <p className="text-base leading-relaxed text-muted-foreground sm:text-lg">
               Ihr Projekt geht nur an Studios, deren Einzugsgebiet Ihre Region abdeckt. Die Studios sehen Maße, Wünsche und
-              Visualisierung – aber nicht, wer Sie sind. So bekommen Sie vergleichbare Angebote statt einer Flut von Anrufen.
+              Visualisierung – aber zunächst nicht, wer Sie sind. So bekommen Sie vergleichbare Angebote statt einer Flut von Anrufen.
             </p>
             <ul className="space-y-3">
-              {["Nur Studios aus Ihrer Region", "Angebote können nur sinken", "Kontaktdaten nur mit Ihrer Einwilligung"].map((item) => (
+              {["Nur Studios aus Ihrer Region", "Angebote können nur sinken", "Ihr Name bleibt zunächst verborgen"].map((item) => (
                 <li key={item} className="flex items-center gap-3">
                   <span className="flex h-6 w-6 items-center justify-center rounded-full bg-primary/10">
                     <CheckCircle2 className="h-4 w-4 text-primary" aria-hidden="true" />
@@ -115,14 +115,14 @@ const Process = () => {
               Persönlicher <span className="text-primary">Service für Sie</span>
             </h3>
             <p className="text-base leading-relaxed text-muted-foreground sm:text-lg">
-              Unser Küchen-Team hilft bei Fachbegriffen, prüft vorhandene Angebote und ist bei Fragen zu Ihrem Projekt für Sie da –
-              von der ersten Idee bis zur Montage.
+              Unser Team beantwortet Ihre Fragen zu Anfrage, Angeboten und Ablauf – telefonisch oder per E-Mail. Ein vorhandenes
+              Studio-Angebot gehen wir vor der Angebotsphase im Telefonat mit Ihnen durch.
             </p>
             <div className="grid grid-cols-3 gap-3 sm:gap-4">
               {[
                 { value: "Persönlich", label: "Betreuung" },
                 { value: "Mo–Fr", label: "10–18 Uhr erreichbar" },
-                { value: "100 %", label: "Kostenlos" },
+                { value: "0 €", label: "Für Sie kostenlos" },
               ].map((s) => (
                 <div key={s.label} className="rounded-lg bg-muted/50 p-3 text-center sm:p-4">
                   <div className="text-lg font-bold text-primary sm:text-2xl">{s.value}</div>

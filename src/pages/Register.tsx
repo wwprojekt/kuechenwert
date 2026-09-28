@@ -25,10 +25,9 @@ const signUpSchema = z.object({
   firstName: z.string().trim().min(1, "Vorname erforderlich").max(100),
   lastName: z.string().trim().min(1, "Nachname erforderlich").max(100),
   phone: z.string().trim()
-    .min(1, "Telefonnummer erforderlich")
-    .regex(/^[+]?[\d\s\-()]{8,20}$/, "Ungültige Telefonnummer"),
+    .refine((value) => value === "" || /^[+]?[\d\s\-()]{8,20}$/.test(value), "Ungültige Telefonnummer"),
   companyName: z.string().trim().optional(),
-  agbAccepted: z.literal(true, { errorMap: () => ({ message: "Sie müssen die AGB und Datenschutzbestimmungen akzeptieren" }) }),
+  agbAccepted: z.literal(true, { errorMap: () => ({ message: "Bitte akzeptieren Sie die AGB." }) }),
 }).refine((data) => data.password === data.passwordConfirm, {
   message: "Passwörter stimmen nicht überein",
   path: ["passwordConfirm"],
@@ -91,7 +90,7 @@ const Register = () => {
         }
       }
 
-      await setEnhancedConversionData({ email: validated.email, firstName: validated.firstName, lastName: validated.lastName, phone: validated.phone });
+      await setEnhancedConversionData({ email: validated.email, firstName: validated.firstName, lastName: validated.lastName, phone: validated.phone || undefined });
       trackUserRegistered('email');
       trackMetaCompleteRegistration({ content_name: 'Nutzer-Registrierung' });
       trackEvent('user_registered', { category: 'business', label: 'seller' });
@@ -122,7 +121,7 @@ const Register = () => {
   return (
     <PageLayout
       title={`Registrieren | ${BRAND.name}`}
-      description={`Erstellen Sie ein kostenloses ${BRAND.name}-Konto und verwalten Sie Ihre Küchen-Anfragen, Studio-Angebote und Auktionen im persönlichen Dashboard.`}
+      description={`Erstellen Sie ein kostenloses ${BRAND.name}-Konto und behalten Sie Ihre Küchen-Anfragen und Studio-Angebote im persönlichen Kundenkonto im Blick.`}
       keywords="registrieren, konto erstellen, küche planen, küche kaufen, küchen angebote, dashboard, küchenwert"
       canonicalPath="/register/privat"
       noIndex={true}
@@ -150,7 +149,7 @@ const Register = () => {
                   Konto erstellen
                 </h1>
                 <p className="text-muted-foreground text-lg">
-                  Anfragen, Studio-Angebote und Auktionen an einem Ort
+                  Anfragen und Studio-Angebote an einem Ort
                 </p>
               </>
             )}
@@ -210,18 +209,18 @@ const Register = () => {
               </p>
 
               <div className="flex flex-col sm:flex-row gap-3 justify-center">
-                <Link to="/formular">
-                  <Button className="gradient-hero hover:gradient-hero-hover shadow-glow-sm">
+                <Button asChild className="gradient-hero hover:gradient-hero-hover shadow-glow-sm">
+                  <Link to="/formular">
                     Kostenlose Angebote erhalten
                     <ArrowRight className="w-4 h-4 ml-2" />
-                  </Button>
-                </Link>
-                <Link to="/login">
-                  <Button variant="outline">
+                  </Link>
+                </Button>
+                <Button asChild variant="outline">
+                  <Link to="/login">
                     Zur Anmeldung
                     <ArrowRight className="w-4 h-4 ml-2" />
-                  </Button>
-                </Link>
+                  </Link>
+                </Button>
               </div>
             </Card>
           ) : (
@@ -357,7 +356,7 @@ const Register = () => {
                   <div className="space-y-2">
                     <Label htmlFor="phone" className="flex items-center gap-2 text-base">
                       <Phone className="w-4 h-4 text-primary" />
-                      Telefon*
+                      Telefon (optional)
                     </Label>
                     <Input
                       id="phone"
@@ -375,43 +374,48 @@ const Register = () => {
                   </div>
 
                   {/* AGB Checkbox */}
-                  <div className="flex items-start space-x-3">
-                    <Checkbox
-                      id="agb"
-                      checked={formData.agbAccepted}
-                      onCheckedChange={(checked) =>
-                        setFormData({ ...formData, agbAccepted: checked === true })
-                      }
-                      className="mt-1"
-                    />
-                    <Label htmlFor="agb" className="text-sm leading-relaxed cursor-pointer">
-                      Ich akzeptiere die{" "}
-                      <a href="/agb" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
-                        AGB
-                      </a>{" "}
-                      und{" "}
+                  <div className="space-y-2">
+                    <div className="flex items-start space-x-3">
+                      <Checkbox
+                        id="agb"
+                        checked={formData.agbAccepted}
+                        onCheckedChange={(checked) =>
+                          setFormData({ ...formData, agbAccepted: checked === true })
+                        }
+                        className="mt-1"
+                      />
+                      <Label htmlFor="agb" className="text-sm leading-relaxed cursor-pointer">
+                        Ich akzeptiere die{" "}
+                        <a href="/agb" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
+                          AGB
+                        </a>
+                        . *
+                      </Label>
+                    </div>
+                    <p className="text-xs text-muted-foreground pl-7">
+                      Hinweise zur Verarbeitung Ihrer Daten finden Sie in der{" "}
                       <a href="/datenschutz" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
-                        Datenschutzbestimmungen
-                      </a>{" "}
-                      *
-                    </Label>
+                        Datenschutzerklärung
+                      </a>
+                      .
+                    </p>
                   </div>
 
                   {/* Benefits */}
-                  <div className="bg-primary/5 rounded-lg p-4 space-y-2">
-                    <div className="flex items-center gap-2 text-sm">
-                      <CheckCircle2 className="w-4 h-4 text-primary" />
-                      <span>Alle Anfragen &amp; Studio-Angebote im Dashboard</span>
-                    </div>
-                    <div className="flex items-center gap-2 text-sm">
-                      <CheckCircle2 className="w-4 h-4 text-primary" />
-                      <span>Reverse-Auktionen live verfolgen &amp; Gebote annehmen</span>
-                    </div>
-                    <div className="flex items-center gap-2 text-sm">
-                      <CheckCircle2 className="w-4 h-4 text-primary" />
-                      <span>Termine, Nachrichten &amp; Dokumente zentral verwalten</span>
-                    </div>
-                  </div>
+                  <ul className="bg-primary/5 rounded-lg p-4 space-y-2">
+                    <li className="flex items-center gap-2 text-sm">
+                      <CheckCircle2 className="w-4 h-4 text-primary" aria-hidden="true" />
+                      <span>Ihre Anfragen und Studio-Angebote im Überblick</span>
+                    </li>
+                    <li className="flex items-center gap-2 text-sm">
+                      <CheckCircle2 className="w-4 h-4 text-primary" aria-hidden="true" />
+                      <span>Angebote vergleichen und das passende annehmen</span>
+                    </li>
+                    <li className="flex items-center gap-2 text-sm">
+                      <CheckCircle2 className="w-4 h-4 text-primary" aria-hidden="true" />
+                      <span>Nachrichten, Dokumente und E-Mail-Einstellungen an einem Ort</span>
+                    </li>
+                  </ul>
 
                   <Button
                     type="submit"
@@ -433,9 +437,9 @@ const Register = () => {
                   </p>
                   <div className="h-px bg-border/50" />
                   <p className="text-sm text-muted-foreground">
-                    Händler?{" "}
+                    Küchenstudio?{" "}
                     <Link to="/register/haendler" className="text-primary hover:underline font-medium">
-                      Zur Händler-Registrierung
+                      Zur Studio-Registrierung
                     </Link>
                   </p>
                 </div>

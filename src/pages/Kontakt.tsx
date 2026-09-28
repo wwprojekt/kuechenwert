@@ -6,139 +6,123 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Phone, Mail, MapPin, Clock, MessageSquare, Send, CheckCircle2 } from "lucide-react";
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
+import { Link } from "react-router-dom";
+import { FunctionsHttpError } from "@supabase/supabase-js";
 import { useToast } from "@/hooks/use-toast";
 import { useSettings } from "@/contexts/SettingsContext";
+import { useSupportPhone } from "@/hooks/useSupportPhone";
 import { supabase } from "@/integrations/supabase/client";
 import { z } from "zod";
-import { handleValidationError, handleApiError } from "@/lib/errorLogService";
-import { trackKontaktformularGesendet, setEnhancedConversionFromForm, generateTransactionId } from "@/lib/gadsConversionService";
-import { getTrackingData } from "@/lib/clickIdService";
+import { handleValidationError } from "@/lib/errorLogService";
 import { trackEvent } from "@/lib/analyticsService";
-import { trackMetaContact, trackMetaLead } from "@/lib/metaPixelService";
+import { trackMetaContact } from "@/lib/metaPixelService";
 import { useTurnstile } from "@/hooks/useTurnstile";
 import { HoneypotField, useHoneypot } from "@/components/ui/HoneypotField";
-import { BRAND } from "@/lib/brand/config";
+import { BRAND } from "@/lib/brand";
 
 const kontaktSchema = z.object({
   name: z.string().trim().min(2, "Bitte geben Sie Ihren Namen ein"),
   email: z.string().trim().email("Bitte geben Sie eine gültige E-Mail-Adresse ein"),
-  phone: z.string().optional(),
+  phone: z.string().trim().optional(),
   subject: z.string().trim().min(2, "Bitte geben Sie einen Betreff ein"),
   message: z.string().trim().min(10, "Die Nachricht muss mindestens 10 Zeichen lang sein"),
 });
 
+const EMPTY_FORM = { name: "", email: "", phone: "", subject: "", message: "" };
+const FORM_FIELDS = ["name", "email", "phone", "subject", "message"];
+const SEND_FAILED_MESSAGE = `Ihre Nachricht konnte nicht gesendet werden. Bitte versuchen Sie es später erneut oder schreiben Sie an ${BRAND.supportEmail}.`;
+
+/**
+ * Fehlertext und betroffenes Feld aus der JSON-Antwort von kw-contact ({ error, code }).
+ * Bei Validierungsfehlern trägt `code` den Feldnamen (z. B. "email").
+ */
+async function readContactError(error: unknown): Promise<{ message: string; field?: string }> {
+  if (error instanceof FunctionsHttpError) {
+    try {
+      const body: unknown = await error.context.json();
+      if (body && typeof body === "object") {
+        const { error: message, code, field } = body as { error?: unknown; code?: unknown; field?: unknown };
+        if (typeof message === "string" && message.trim()) {
+          const target = typeof field === "string" ? field : code;
+          return { message, field: typeof target === "string" && FORM_FIELDS.includes(target) ? target : undefined };
+        }
+      }
+    } catch {
+      // Antwort ohne JSON-Body
+    }
+  }
+  return { message: SEND_FAILED_MESSAGE };
+}
+
 const Kontakt = () => {
   const { toast } = useToast();
   const { settings } = useSettings();
+  const phone = useSupportPhone();
   const siteName = settings?.site_name || BRAND.name;
-  const [formData, setFormData] = useState({
-    name: "",
-    email: "",
-    phone: "",
-    subject: "",
-    message: ""
-  });
+  const [formData, setFormData] = useState(EMPTY_FORM);
+  const [submissionId, setSubmissionId] = useState(() => crypto.randomUUID());
 
   const [isLoading, setIsLoading] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
-  const { turnstileToken, turnstileReady, resetTurnstile, turnstileCallbackRef } = useTurnstile();
-  const [honeypotValue, setHoneypotValue, isHoneypotBot] = useHoneypot();
+  const { resetTurnstile, waitForToken, turnstileCallbackRef } = useTurnstile();
+  const [honeypotValue, setHoneypotValue] = useHoneypot();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setIsLoading(true);
+    if (isLoading) return;
 
-    try {
-      kontaktSchema.parse(formData);
-    } catch (error) {
-      if (error instanceof z.ZodError) {
-        const germanMessage = handleValidationError(error, 'Kontakt');
-        toast({
-          title: "Bitte prüfen Sie Ihre Eingaben",
-          description: germanMessage,
-          variant: "destructive",
-        });
-      }
-      setIsLoading(false);
+    const parsed = kontaktSchema.safeParse(formData);
+    if (!parsed.success) {
+      toast({
+        title: "Bitte prüfen Sie Ihre Eingaben",
+        description: handleValidationError(parsed.error, "Kontakt"),
+        variant: "destructive",
+      });
       return;
     }
 
-    // Bot-Check: Honeypot ausgefüllt → still abbrechen (Bot merkt nichts)
-    if (isHoneypotBot) {
-      setIsSubmitted(true);
-      setIsLoading(false);
-      return; // Fake-Erfolg
-    }
-
+    setIsLoading(true);
     try {
-      const { error } = await supabase.from("contact_messages").insert({
-        name: formData.name.trim(),
-        email: formData.email.trim(),
-        phone: formData.phone.trim() || null,
-        subject: formData.subject.trim(),
-        message: formData.message.trim(),
+      const turnstileToken = await waitForToken(4000);
+      const { error } = await supabase.functions.invoke("kw-contact", {
+        body: {
+          name: parsed.data.name,
+          email: parsed.data.email,
+          phone: parsed.data.phone || undefined,
+          subject: parsed.data.subject,
+          message: parsed.data.message,
+          turnstile_token: turnstileToken,
+          website: honeypotValue,
+          submission_id: submissionId,
+        },
       });
 
-      if (error) throw error;
-
-      // Send email notification to admin + confirmation to customer
-      try {
-        const trackingData = getTrackingData();
-        // Transaction ID für Deduplizierung über alle 3 Tracking-Schichten
-        const transactionId = generateTransactionId('kontakt');
-        (window as any).__lastTransactionId = transactionId;
-        await supabase.functions.invoke("send-lead-notification", {
-          body: {
-            type: "kontakt",
-            name: formData.name.trim(),
-            email: formData.email.trim(),
-            phone: formData.phone.trim() || undefined,
-            subject: formData.subject.trim(),
-            messageText: formData.message.trim(),
-            gclid: trackingData.gclid,
-            gbraid: trackingData.gbraid,
-            wbraid: trackingData.wbraid,
-            ga4ClientId: trackingData.ga4ClientId,
-            transactionId,
-            turnstileToken,
-            honeypot: honeypotValue,
-          },
-        });
-      } catch (emailError) {
-        console.error("Failed to send contact notification:", emailError);
+      if (error) {
+        const { message, field } = await readContactError(error);
+        toast({ title: "Fehler beim Senden", description: message, variant: "destructive" });
+        if (field && FORM_FIELDS.includes(field)) document.getElementById(field)?.focus();
+        return;
       }
 
-      resetTurnstile();
       setIsSubmitted(true);
-
-      // Google Ads: Enhanced Conversions + Kontaktformular gesendet (Primäre Conversion)
-      await setEnhancedConversionFromForm({ email: formData.email, name: formData.name, phone: formData.phone });
-      const txId = (window as any).__lastTransactionId || generateTransactionId('kontakt');
-      await trackKontaktformularGesendet(txId);
-
+      setFormData(EMPTY_FORM);
+      setSubmissionId(crypto.randomUUID());
       trackMetaContact();
-      trackMetaLead({ content_name: 'Kontaktformular', content_category: 'Kontakt' });
-      trackEvent('kontakt_submitted', { category: 'business', label: formData.subject });
-
+      trackEvent("kontakt_submitted", { category: "business" });
       toast({
         title: "Nachricht gesendet!",
-        description: "Wir melden uns schnellstmöglich bei Ihnen.",
+        description: "Wir melden uns werktags so schnell wie möglich bei Ihnen.",
       });
-      setFormData({ name: "", email: "", phone: "", subject: "", message: "" });
-    } catch (error) {
-      const germanMessage = handleApiError(error, 'Kontakt');
-      toast({
-        title: "Fehler beim Senden",
-        description: germanMessage,
-        variant: "destructive",
-      });
+    } catch {
+      toast({ title: "Fehler beim Senden", description: SEND_FAILED_MESSAGE, variant: "destructive" });
     } finally {
+      // Turnstile-Tokens sind einmalig gültig, auch nach einem Fehler.
+      resetTurnstile();
       setIsLoading(false);
     }
   };
 
-  const supportPhone = settings?.support_phone || '';
   const contactEmail = settings?.contact_email || BRAND.supportEmail;
   const companyAddress = settings?.company_address || '';
   const companyCity = settings?.company_city || '';
@@ -153,31 +137,54 @@ const Kontakt = () => {
     {
       icon: Phone,
       title: "Telefon",
-      detail: supportPhone,
-      description: "Mo-Fr: 10:00-18:00 Uhr",
-      action: supportPhone ? `tel:${supportPhone.replace(/\s/g, '')}` : '#'
+      detail: phone.display,
+      description: "Mo–Fr: 10:00–18:00 Uhr",
+      action: phone.href
     },
     {
       icon: Mail,
       title: "E-Mail",
       detail: contactEmail,
-      description: "Antwort innerhalb 24h",
+      description: "Wir antworten werktags",
       action: contactEmail ? `mailto:${contactEmail}` : '#'
     },
     {
       icon: MapPin,
-      title: "Hauptsitz",
-      detail: fullAddress || `${siteName} GmbH`,
-      description: "Besuch nach Terminvereinbarung",
+      title: "Anschrift",
+      detail: fullAddress || BRAND.legalName,
+      description: "Beratung telefonisch oder per E-Mail",
       action: "#"
     },
     {
       icon: Clock,
-      title: "Öffnungszeiten",
-      detail: "Mo-Fr: 10:00-18:00 Uhr",
-      description: "Sa/So: geschlossen",
+      title: "Telefonzeiten",
+      detail: "Mo–Fr: 10:00–18:00 Uhr",
+      description: "Sa/So: nicht besetzt",
       action: "#"
     }
+  ];
+
+  const faqs: { q: string; a: ReactNode }[] = [
+    {
+      q: "Wie schnell erhalte ich eine Antwort?",
+      a: "Wir melden uns werktags so schnell wie möglich. Telefonisch erreichen Sie uns Montag bis Freitag von 10 bis 18 Uhr.",
+    },
+    {
+      q: "Ich bin Küchenstudio – an wen wende ich mich?",
+      a: (
+        <>
+          Wie die Teilnahme funktioniert und was sie kostet, lesen Sie auf der Seite{" "}
+          <Link to="/haendler" className="font-medium underline underline-offset-4">
+            Für Küchenstudios
+          </Link>
+          . Weitere Fragen beantworten wir gern per E-Mail oder Telefon.
+        </>
+      ),
+    },
+    {
+      q: "Kann ich auch am Wochenende Kontakt aufnehmen?",
+      a: "Ja, per Kontaktformular oder E-Mail. Wir antworten dann ab Montag; telefonisch sind wir Montag bis Freitag von 10 bis 18 Uhr erreichbar.",
+    },
   ];
 
   return (
@@ -205,20 +212,18 @@ const Kontakt = () => {
           
           {/* Prominent Contact Info */}
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4 sm:gap-8 mt-8">
-            {supportPhone && (
-              <a 
-                href={`tel:${supportPhone.replace(/\s/g, '')}`} 
-                className="flex items-center gap-3 bg-card/80 dark:bg-card/80 backdrop-blur-sm px-6 py-4 rounded-xl shadow-lg hover:shadow-xl transition-all hover:-translate-y-0.5 border border-border/50"
-              >
-                <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center">
-                  <Phone className="h-6 w-6 text-primary" />
-                </div>
-                <div className="text-left">
-                  <p className="text-xs text-muted-foreground font-medium">Telefon</p>
-                  <p className="text-lg font-bold text-foreground">{supportPhone}</p>
-                </div>
-              </a>
-            )}
+            <a 
+              href={phone.href} 
+              className="flex items-center gap-3 bg-card/80 dark:bg-card/80 backdrop-blur-sm px-6 py-4 rounded-xl shadow-lg hover:shadow-xl transition-all hover:-translate-y-0.5 border border-border/50"
+            >
+              <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center">
+                <Phone className="h-6 w-6 text-primary" />
+              </div>
+              <div className="text-left">
+                <p className="text-xs text-muted-foreground font-medium">Telefon</p>
+                <p className="text-lg font-bold text-foreground">{phone.display}</p>
+              </div>
+            </a>
             {contactEmail && (
               <a 
                 href={`mailto:${contactEmail}`} 
@@ -238,14 +243,15 @@ const Kontakt = () => {
       </PageHero>
 
       {/* Quick Contact Methods */}
-      <section className="py-20">
+      <section aria-labelledby="kontaktwege" className="py-20">
         <div className="container">
+          <h2 id="kontaktwege" className="sr-only">So erreichen Sie uns</h2>
           <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
             {contactMethods.map((method, index) => (
               <Card key={index} className="hover-lift border-2 text-center animate-fade-in" style={{ animationDelay: `${index * 0.1}s` }}>
                 <CardHeader>
                   <div className="h-14 w-14 rounded-xl gradient-hero flex items-center justify-center mb-4 shadow-glow-sm mx-auto">
-                    <method.icon className="h-7 w-7 text-primary-foreground" />
+                    <method.icon className="h-7 w-7 text-primary-foreground" aria-hidden="true" />
                   </div>
                   <CardTitle className="text-lg">{method.title}</CardTitle>
                 </CardHeader>
@@ -272,19 +278,19 @@ const Kontakt = () => {
             <div className="text-center mb-12">
               <h2 className="text-3xl md:text-4xl font-bold mb-4">Schreiben Sie uns</h2>
               <p className="text-lg text-muted-foreground">
-                Füllen Sie das Formular aus und wir melden uns innerhalb von 24 Stunden bei Ihnen.
+                Füllen Sie das Formular aus – wir melden uns werktags so schnell wie möglich bei Ihnen.
               </p>
             </div>
 
             <Card className="border-2">
               {isSubmitted ? (
-                <CardContent className="py-16 text-center">
+                <CardContent className="py-16 text-center" role="status">
                   <div className="mx-auto h-16 w-16 rounded-full bg-emerald-100 flex items-center justify-center mb-6">
-                    <CheckCircle2 className="h-8 w-8 text-emerald-600" />
+                    <CheckCircle2 className="h-8 w-8 text-emerald-600" aria-hidden="true" />
                   </div>
                   <h3 className="text-2xl font-bold mb-3">Vielen Dank für Ihre Nachricht!</h3>
                   <p className="text-muted-foreground mb-6">
-                    Wir haben Ihre Anfrage erhalten und melden uns innerhalb von 24 Stunden bei Ihnen.
+                    Wir haben Ihre Nachricht erhalten und melden uns werktags so schnell wie möglich bei Ihnen.
                   </p>
                   <Button variant="outline" onClick={() => setIsSubmitted(false)}>
                     Weitere Nachricht senden
@@ -373,6 +379,7 @@ const Kontakt = () => {
                     </label>
                     <Textarea
                       id="message"
+                      name="message"
                       placeholder="Beschreiben Sie Ihr Anliegen..."
                       rows={6}
                       value={formData.message}
@@ -386,6 +393,13 @@ const Kontakt = () => {
                     <Send className="h-5 w-5 mr-2" />
                     {isLoading ? "Wird gesendet..." : "Nachricht senden"}
                   </Button>
+                  <p className="text-xs text-muted-foreground text-center">
+                    Hinweise zur Verarbeitung Ihrer Daten finden Sie in der{" "}
+                    <Link to="/datenschutz" className="text-primary hover:underline">
+                      Datenschutzerklärung
+                    </Link>
+                    .
+                  </p>
                 </form>
               </CardContent>
                 </>
@@ -408,21 +422,8 @@ const Kontakt = () => {
             </div>
             
             <div className="space-y-6">
-              {[
-                {
-                  q: "Wie schnell erhalte ich eine Antwort?",
-                  a: "Wir antworten auf alle Anfragen innerhalb von 24 Stunden, meist sogar deutlich schneller."
-                },
-                {
-                  q: "Muss ich einen Termin vereinbaren?",
-                  a: "Für Besichtigungen empfehlen wir eine Terminvereinbarung, damit wir uns ausreichend Zeit für Sie nehmen können."
-                },
-                {
-                  q: "Kann ich auch am Wochenende Kontakt aufnehmen?",
-                  a: "Ja, über unser Kontaktformular erreichen Sie uns rund um die Uhr. Telefonisch sind wir Samstags von 9-14 Uhr erreichbar."
-                }
-              ].map((faq, index) => (
-                <Card key={index} className="border-primary/20 animate-fade-in" style={{ animationDelay: `${index * 0.1}s` }}>
+              {faqs.map((faq, index) => (
+                <Card key={faq.q} className="border-primary/20 animate-fade-in" style={{ animationDelay: `${index * 0.1}s` }}>
                   <CardHeader>
                     <CardTitle className="text-xl">{faq.q}</CardTitle>
                   </CardHeader>
@@ -445,20 +446,18 @@ const Kontakt = () => {
               Unser Team steht Ihnen mit Rat und Tat zur Seite. Kontaktieren Sie uns noch heute!
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              {supportPhone && (
-                <a href={`tel:${supportPhone.replace(/\s/g, '')}`}>
-                  <Button size="lg" variant="secondary" className="w-full sm:w-auto">
-                    <Phone className="h-5 w-5 mr-2" />
-                    Jetzt anrufen
-                  </Button>
+              <Button asChild size="lg" variant="secondary" className="w-full sm:w-auto">
+                <a href={phone.href}>
+                  <Phone className="h-5 w-5 mr-2" />
+                  Jetzt anrufen
                 </a>
-              )}
-              <a href={`mailto:${contactEmail}`}>
-                <Button size="lg" variant="outline" className="w-full sm:w-auto bg-white/10 border-white/30 hover:bg-white/20 text-white">
+              </Button>
+              <Button asChild size="lg" variant="outline" className="w-full sm:w-auto bg-white/10 border-white/30 hover:bg-white/20 text-white">
+                <a href={`mailto:${contactEmail}`}>
                   <Mail className="h-5 w-5 mr-2" />
                   E-Mail schreiben
-                </Button>
-              </a>
+                </a>
+              </Button>
             </div>
           </div>
         </div>

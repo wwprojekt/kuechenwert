@@ -3,7 +3,6 @@ import { ArrowRight, CheckCircle2, Shield, Clock, Award, BookOpen } from "lucide
 import { Button } from "@/components/ui/button";
 import PageLayout from "@/components/PageLayout";
 import PageHero from "@/components/PageHero";
-import { LandingLeadForm } from "@/components/LandingLeadForm";
 import FAQSection from "@/components/FAQSection";
 import RelatedContent from "@/components/RelatedContent";
 import {
@@ -17,6 +16,35 @@ import { findRatgeberMetaBySlugs } from "@/data/ratgeber/ratgeber-index";
 interface RatgeberTemplateProps {
   config: RatgeberConfig;
 }
+
+const OFFER_BENEFITS = [
+  "Kostenlos & unverbindlich",
+  "Nur geprüfte Küchenstudios",
+  "Angebote bequem auf Ihrer Projektseite vergleichen",
+];
+
+const OfferRequestCard = () => (
+  <div className="rounded-2xl border bg-background p-6 md:p-8 shadow-lg">
+    <h3 className="text-xl font-bold mb-2">Küchenangebote vergleichen</h3>
+    <p className="text-muted-foreground mb-6 leading-relaxed">
+      Beschreiben Sie in 2 Minuten Ihre Wunschküche. Passende Küchenstudios aus Ihrer Region schicken Ihnen Angebote.
+    </p>
+    <ul className="space-y-3 mb-6">
+      {OFFER_BENEFITS.map((benefit) => (
+        <li key={benefit} className="flex items-center gap-2 text-sm text-muted-foreground">
+          <CheckCircle2 className="h-5 w-5 text-primary flex-shrink-0" />
+          <span>{benefit}</span>
+        </li>
+      ))}
+    </ul>
+    <Button asChild size="lg" className="w-full gradient-hero hover:gradient-hero-hover h-12 font-semibold">
+      <Link to="/formular">
+        Angebote einholen
+        <ArrowRight className="ml-2 h-5 w-5" />
+      </Link>
+    </Button>
+  </div>
+);
 
 const RatgeberTemplate = ({ config }: RatgeberTemplateProps) => {
   const articleSchema = generateArticleSchema({
@@ -76,13 +104,7 @@ const RatgeberTemplate = ({ config }: RatgeberTemplateProps) => {
               </Button>
             </div>
           </div>
-          <div className="hidden lg:block">
-            <LandingLeadForm defaultManufacturer={config.brandName} />
-          </div>
-        </div>
-        {/* Mobile lead form */}
-        <div className="lg:hidden mt-10">
-          <LandingLeadForm defaultManufacturer={config.brandName} />
+          <OfferRequestCard />
         </div>
       </PageHero>
 
@@ -145,34 +167,34 @@ const RatgeberTemplate = ({ config }: RatgeberTemplateProps) => {
         </section>
       ))}
 
-      {/* Lead Form CTA Block */}
+      {/* Angebots-CTA */}
       <section className="py-16 bg-gradient-to-br from-primary/5 via-primary/10 to-primary/5">
         <div className="container max-w-5xl">
           <div className="grid md:grid-cols-2 gap-10 items-center">
             <div>
               <h2 className="text-xl sm:text-2xl md:text-3xl font-bold mb-4">
-                Kostenlose Fahrzeugbewertung
+                Ihre neue Küche zum fairen Preis
               </h2>
               <p className="text-lg text-muted-foreground mb-6 leading-relaxed">
-                Erhalten Sie in wenigen Minuten eine professionelle Einschätzung zum Wert Ihres Wohnmobils — unverbindlich und komplett kostenlos.
+                Statt einzeln Studios abzuklappern: Beschreiben Sie Ihr Küchenprojekt einmal und vergleichen Sie die Angebote geprüfter Küchenstudios aus Ihrer Region.
               </p>
               <ul className="space-y-3 text-muted-foreground">
                 <li className="flex items-center gap-2">
                   <CheckCircle2 className="h-5 w-5 text-primary flex-shrink-0" />
-                  <span>Ergebnis innerhalb von 24 Stunden</span>
+                  <span>Kein Login nötig</span>
                 </li>
                 <li className="flex items-center gap-2">
                   <CheckCircle2 className="h-5 w-5 text-primary flex-shrink-0" />
-                  <span>Keine versteckten Kosten oder Gebühren</span>
+                  <span>Keine Abnahmepflicht</span>
                 </li>
                 <li className="flex items-center gap-2">
                   <CheckCircle2 className="h-5 w-5 text-primary flex-shrink-0" />
-                  <span>Faire Marktpreise basierend auf Echtdaten</span>
+                  <span>Für Sie kostenlos</span>
                 </li>
               </ul>
             </div>
             <div>
-              <LandingLeadForm defaultManufacturer={config.brandName} />
+              <OfferRequestCard />
             </div>
           </div>
         </div>
@@ -200,7 +222,7 @@ const RatgeberTemplate = ({ config }: RatgeberTemplateProps) => {
               </div>
               <div>
                 <p className="font-semibold">Geprüfter Service</p>
-                <p className="text-sm text-muted-foreground">Verifizierte Händler</p>
+                <p className="text-sm text-muted-foreground">Geprüfte Küchenstudios</p>
               </div>
             </div>
             <div className="flex flex-col items-center text-center gap-3">
@@ -208,8 +230,8 @@ const RatgeberTemplate = ({ config }: RatgeberTemplateProps) => {
                 <Clock className="h-7 w-7 text-primary" />
               </div>
               <div>
-                <p className="font-semibold">24h Bewertung</p>
-                <p className="text-sm text-muted-foreground">Schnelle Bearbeitung</p>
+                <p className="font-semibold">In 2 Minuten</p>
+                <p className="text-sm text-muted-foreground">Projekt beschreiben</p>
               </div>
             </div>
             <div className="flex flex-col items-center text-center gap-3">
@@ -247,7 +269,7 @@ const RatgeberTemplate = ({ config }: RatgeberTemplateProps) => {
             Bereit? {config.primaryCta.text}!
           </h2>
           <p className="text-lg text-muted-foreground mb-8">
-            Kostenlos, unverbindlich und in wenigen Minuten erledigt. Starten Sie jetzt und erhalten Sie den besten Preis für Ihr Fahrzeug.
+            Kostenlos, unverbindlich und in wenigen Minuten erledigt. Starten Sie jetzt und vergleichen Sie Angebote für Ihre neue Küche.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Button

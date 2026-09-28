@@ -81,7 +81,7 @@ export const verkaufenRelatedLinks: RelatedLink[] = [
   },
   {
     title: "Studio-Preis unterbieten",
-    description: "Angebot vom Küchenstudio hochladen — geprüfte Händler unterbieten in 72 Stunden",
+    description: "Angebot vom Küchenstudio hochladen — geprüfte Küchenstudios unterbieten in 72 Stunden",
     href: "/funnel/b",
   },
   {
@@ -117,7 +117,7 @@ export const kaufenRelatedLinks: RelatedLink[] = [
 export const haendlerRelatedLinks: RelatedLink[] = [
   {
     title: "Küchenstudio-Partner werden",
-    description: "Alle Infos zu Lead-Konditionen, Reverse-Auktion und Vermittlungsprozess",
+    description: "Alle Infos zu Projekt-Börse, Kontaktfreischaltung und Provision",
     href: "/haendler",
   },
   {

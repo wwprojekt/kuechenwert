@@ -1,46 +1,45 @@
-import { useState } from "react";
 import PageLayout from "@/components/PageLayout";
 import { generateBreadcrumbSchema, getBreadcrumbsFromPath } from "@/lib/seo";
 import PageHero from "@/components/PageHero";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { CheckCircle2, ArrowRight, Calculator, Info } from "lucide-react";
+import { CheckCircle2, ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { Link } from "react-router-dom";
-import { useCommissionFromTiers } from "@/lib/commissionCalculator";
-import { CommissionTierTable } from "@/components/CommissionTierTable";
+import { StudioPricing } from "@/components/pricing/StudioPricing";
 import { BRAND } from "@/lib/brand";
 
+const customerFreeServices = [
+  "KüchenRechner: Preisspanne als Richtwert mit 4 kurzen Fragen",
+  "Angebote von geprüften Küchenstudios einholen",
+  "Vorhandenes Studio-Angebot unterbieten lassen",
+  "KI-Konfigurator mit Visualisierung im eigenen Raum",
+  "Alle Angebote auf Ihrer persönlichen Projektseite vergleichen",
+  "Persönlicher Support per Telefon und E-Mail",
+  "Keine Abnahmepflicht, keine Gebühren",
+];
+
+const dealerFreeServices = [
+  "Registrierung und Prüfung Ihres Studios",
+  "Projekt-Börse mit Projekten aus Ihrem Einzugsgebiet",
+  "Angebote abgeben und bis zum Ende der Angebotsphase senken",
+  "E-Mail bei neuen Projekten in Ihrer Region",
+  "Export für Planungssoftware (JSON, DXF)",
+];
+
+const dealerPaidServices = [
+  "Kontaktfreischaltung – optional, Preis je nach Budget, vor dem Kauf sichtbar",
+  "Provision – nur, wenn die Kund:in Ihr Angebot annimmt",
+];
+
+const CHECK_ICON_CLASS = "h-5 w-5 text-primary flex-shrink-0 mt-0.5";
+
 const Preise = () => {
-  const [calcAmount, setCalcAmount] = useState(15000);
-  const calcResult = useCommissionFromTiers(calcAmount);
-
-  const customerFreeServices = [
-    "Kostenloser KüchenRechner & Budget-Check",
-    "Angebote von geprüften Küchenstudios (Funnel A)",
-    "Reverse-Auktion: Händler unterbieten Studio-Preise (Funnel B)",
-    "KI-Traumküchen-Planer (Funnel C, demnächst)",
-    "Experten-Check vor jeder Vermittlung",
-    "Keine Abnahmepflicht, ohne Gebühren",
-    "Rechtssichere Vertragsvorlagen inklusive",
-    "Persönlicher Telefon- & E-Mail-Support",
-  ];
-
-  const dealerFreeServices = [
-    "Zugang zu qualifizierten Küchen-Leads (Funnel A)",
-    "Teilnahme an Reverse-Auktionen (Funnel B)",
-    "Benachrichtigungen per E-Mail & Dashboard",
-    "Nachrichten direkt mit den Kund:innen",
-    "Rechtssichere Kaufvertrags-Vorlagen",
-  ];
-
   return (
     <PageLayout
       breadcrumbs={true}
-      title={`Preise & Leistungen – Für Sie kostenlos | ${BRAND.name}`}
-      description={`Transparente Preise bei ${BRAND.name}: Alle Funnels und der KüchenRechner sind für Privatkunden kostenlos. Küchenstudios zahlen eine faire Provision nur bei erfolgreichem Kauf.`}
+      title={`Preise & Leistungen – für Privatkunden kostenlos | ${BRAND.name}`}
+      description={`Preise bei ${BRAND.name}: Für Privatkunden kostenlos. Küchenstudios zahlen eine optionale Kontaktfreischaltung und eine gestaffelte Provision, wenn die Kund:in ihr Angebot annimmt.`}
       keywords="Preise, Kosten, Gebühren, Küche kaufen, Küchen-Provision, Küchenstudio Partner, Küchenwert"
       canonicalPath="/preise"
       structuredData={generateBreadcrumbSchema(getBreadcrumbsFromPath("/preise"))}
@@ -51,30 +50,35 @@ const Preise = () => {
             Preise & Leistungen
           </h1>
           <p className="text-lg sm:text-xl text-muted-foreground max-w-2xl mx-auto">
-            Transparent und fair – für Privatkunden komplett kostenlos, Küchenstudios zahlen nur bei Erfolg
+            Für Privatkunden kostenlos und unverbindlich. Küchenstudios zahlen nur für freiwillige Kontaktfreischaltungen und
+            eine Provision, wenn die Kund:in ihr Angebot annimmt.
           </p>
         </div>
       </PageHero>
 
-      <section className="py-12 sm:py-16 md:py-20">
+      <section aria-labelledby="leistungen" className="py-12 sm:py-16 md:py-20">
         <div className="container px-4 sm:px-6 lg:px-8">
+          <h2 id="leistungen" className="sr-only">Leistungen im Überblick</h2>
           <div className="grid md:grid-cols-2 gap-6 lg:gap-8">
             {/* Fuer Privatkunden */}
             <Card className="border-2 hover:border-primary/20 transition-all duration-300">
               <CardHeader className="border-b bg-muted/30">
                 <CardTitle className="text-xl sm:text-2xl text-center">
-                  Für Privatkunden – 100 % kostenlos
+                  Für Privatkunden – kostenlos
                 </CardTitle>
               </CardHeader>
               <CardContent className="p-6 sm:p-8">
                 <ul className="space-y-3">
-                  {customerFreeServices.map((service, index) => (
-                    <li key={index} className="flex items-start gap-3">
-                      <CheckCircle2 className="h-5 w-5 text-green-500 flex-shrink-0 mt-0.5" />
+                  {customerFreeServices.map((service) => (
+                    <li key={service} className="flex items-start gap-3">
+                      <CheckCircle2 className={CHECK_ICON_CLASS} aria-hidden="true" />
                       <span className="text-sm sm:text-base">{service}</span>
                     </li>
                   ))}
                 </ul>
+                <p className="mt-6 text-sm text-muted-foreground">
+                  Sie entscheiden frei, ob Sie ein Angebot annehmen. Den Kaufvertrag schließen Sie direkt mit dem Küchenstudio.
+                </p>
               </CardContent>
             </Card>
 
@@ -82,19 +86,19 @@ const Preise = () => {
             <Card className="border-2 hover:border-primary/20 transition-all duration-300">
               <CardHeader className="border-b bg-muted/30">
                 <CardTitle className="text-xl sm:text-2xl text-center">
-                  Für Küchenstudios & Händler
+                  Für Küchenstudios
                 </CardTitle>
               </CardHeader>
               <CardContent className="p-6 sm:p-8">
                 <div className="space-y-6">
                   <div>
-                    <h3 className="font-semibold text-muted-foreground mb-4">
-                      Kostenlose Leistungen
-                    </h3>
+                    <h4 className="font-semibold text-muted-foreground mb-4">
+                      Kostenlos
+                    </h4>
                     <ul className="space-y-3">
-                      {dealerFreeServices.map((service, index) => (
-                        <li key={index} className="flex items-start gap-3">
-                          <CheckCircle2 className="h-5 w-5 text-green-500 flex-shrink-0 mt-0.5" />
+                      {dealerFreeServices.map((service) => (
+                        <li key={service} className="flex items-start gap-3">
+                          <CheckCircle2 className={CHECK_ICON_CLASS} aria-hidden="true" />
                           <span className="text-sm sm:text-base">{service}</span>
                         </li>
                       ))}
@@ -102,16 +106,19 @@ const Preise = () => {
                   </div>
                   <Separator />
                   <div>
-                    <h3 className="font-semibold text-muted-foreground mb-2">
-                      Vermittlungsprovision
-                    </h3>
-                    <p className="text-sm text-muted-foreground mb-4">
-                      Nur bei erfolgreichem Kauf – gestaffelt nach Auftragswert:
-                    </p>
-                    <CommissionTierTable variant="full-table" />
-                    <p className="text-xs text-muted-foreground mt-3 flex items-start gap-1.5">
-                      <Info className="w-3.5 h-3.5 flex-shrink-0 mt-0.5" />
-                      Alle Beträge zzgl. MwSt. Volumenrabatte für Partner-Studios möglich.
+                    <h4 className="font-semibold text-muted-foreground mb-4">
+                      Kostenpflichtig
+                    </h4>
+                    <ul className="space-y-3">
+                      {dealerPaidServices.map((service) => (
+                        <li key={service} className="flex items-start gap-3">
+                          <CheckCircle2 className={CHECK_ICON_CLASS} aria-hidden="true" />
+                          <span className="text-sm sm:text-base">{service}</span>
+                        </li>
+                      ))}
+                    </ul>
+                    <p className="mt-4 text-sm text-muted-foreground">
+                      Keine Grundgebühr, keine Mindestabnahme, keine Vertragslaufzeit.
                     </p>
                   </div>
                 </div>
@@ -121,53 +128,18 @@ const Preise = () => {
         </div>
       </section>
 
-      {/* Commission Calculator */}
-      <section className="py-12 sm:py-16 bg-muted/30">
+      <section aria-labelledby="studio-preise" className="py-12 sm:py-16 bg-muted/30">
         <div className="container px-4 sm:px-6 lg:px-8">
-          <div className="max-w-lg mx-auto">
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-lg">
-                  <Calculator className="w-5 h-5 text-primary" />
-                  Provisionsrechner
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div>
-                  <Label htmlFor="calc-amount">Kaufpreis (€)</Label>
-                  <Input
-                    id="calc-amount"
-                    type="number"
-                    min={0}
-                    step={500}
-                    value={calcAmount || ''}
-                    onChange={(e) => setCalcAmount(Number(e.target.value) || 0)}
-                    className="mt-1"
-                  />
-                </div>
-                {calcAmount > 0 && calcResult.commission > 0 && (
-                  <div className="space-y-2 pt-2">
-                    <div className="flex justify-between text-sm">
-                      <span className="text-muted-foreground">Kaufpreis</span>
-                      <span className="font-medium">€{calcAmount.toLocaleString('de-DE', { minimumFractionDigits: 2 })}</span>
-                    </div>
-                    <div className="flex justify-between text-sm">
-                      <span className="text-muted-foreground">
-                        Provision ({calcResult.rate.toLocaleString('de-DE')}%{calcResult.isMinApplied ? ', Mindestprovision' : ''})
-                      </span>
-                      <span className="font-medium">€{calcResult.commission.toLocaleString('de-DE', { minimumFractionDigits: 2 })}</span>
-                    </div>
-                    <Separator />
-                    <div className="flex justify-between font-semibold">
-                      <span>Gesamtkosten (netto)</span>
-                      <span className="text-primary">€{calcResult.totalCost.toLocaleString('de-DE', { minimumFractionDigits: 2 })}</span>
-                    </div>
-                    <p className="text-xs text-muted-foreground">zzgl. MwSt. auf die Provision</p>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
+          <div className="mx-auto mb-8 max-w-2xl text-center">
+            <h2 id="studio-preise" className="text-2xl sm:text-3xl font-bold mb-3">
+              Preise für Küchenstudios
+            </h2>
+            <p className="text-muted-foreground">
+              Registrierung und Angebotsabgabe sind kostenlos. Kosten entstehen nur, wenn Sie einen Kontakt freischalten oder die
+              Kund:in Ihr Angebot annimmt.
+            </p>
           </div>
+          <StudioPricing />
         </div>
       </section>
 
@@ -179,21 +151,21 @@ const Preise = () => {
               Bereit loszulegen?
             </h2>
             <p className="text-muted-foreground mb-8 text-lg">
-              Starten Sie Ihre kostenlose Anfrage – oder werden Sie Partner-Studio und erhalten Sie qualifizierte Leads.
+              Starten Sie Ihre kostenlose Anfrage – oder registrieren Sie Ihr Küchenstudio und sehen Sie Projekte aus Ihrer Region.
             </p>
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-              <Link to="/formular">
-                <Button size="lg" className="gap-2">
+              <Button asChild size="lg" className="gap-2">
+                <Link to="/formular">
                   Kostenlos Angebote erhalten
-                  <ArrowRight className="w-4 h-4" />
-                </Button>
-              </Link>
-              <Link to="/haendler">
-                <Button variant="outline" size="lg" className="gap-2">
+                  <ArrowRight className="w-4 h-4" aria-hidden="true" />
+                </Link>
+              </Button>
+              <Button asChild variant="outline" size="lg" className="gap-2">
+                <Link to="/haendler">
                   Für Küchenstudios
-                  <ArrowRight className="w-4 h-4" />
-                </Button>
-              </Link>
+                  <ArrowRight className="w-4 h-4" aria-hidden="true" />
+                </Link>
+              </Button>
             </div>
           </div>
         </div>

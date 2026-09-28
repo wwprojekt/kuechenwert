@@ -9,9 +9,20 @@ import { trackPhoneClick, trackEmailClick } from "@/lib/gadsConversionService";
 import { trackMetaPhoneClick } from "@/lib/metaPixelService";
 import { BRAND } from "@/lib/brand/config";
 
+const SOCIAL_LINKS = [
+  { key: "facebook_url", label: "Facebook", icon: Facebook },
+  { key: "instagram_url", label: "Instagram", icon: Instagram },
+  { key: "youtube_url", label: "YouTube", icon: Youtube },
+  { key: "linkedin_url", label: "LinkedIn", icon: Linkedin },
+] as const;
+
+// Nicht Teil von SiteSettings: nur vorhanden, wenn get_public_site_settings die Spalten liefert.
+type SocialSettings = Partial<Record<(typeof SOCIAL_LINKS)[number]["key"], string | null>>;
+
 const Footer = () => {
   const currentYear = new Date().getFullYear();
   const { settings } = useSettings();
+  const socialSettings = settings as SocialSettings | null;
   const location = useLocation();
   const [showCookieSettings, setShowCookieSettings] = useState(false);
 
@@ -27,28 +38,17 @@ const Footer = () => {
               </div>
               <div>
                 <p className="text-sm font-semibold text-slate-900 dark:text-slate-100">SSL-Verschlüsselt</p>
-                <p className="text-xs text-slate-500 dark:text-slate-400">Sichere Datenübertragung</p>
+                <p className="text-xs text-slate-600 dark:text-slate-400">Sichere Datenübertragung</p>
               </div>
             </div>
 
             <div className="flex flex-col items-center gap-2 text-center">
-              {settings?.tuv_badge_url ? (
-                <div className="h-14 w-14 rounded-full overflow-hidden flex items-center justify-center bg-white dark:bg-slate-800">
-                  <img
-                    src={settings.tuv_badge_url}
-                    alt="TÜV-Zertifikat"
-                    loading="lazy"
-                    className="h-full w-full object-contain"
-                  />
-                </div>
-              ) : (
-                <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center">
-                  <Award className="h-6 w-6 text-primary" />
-                </div>
-              )}
+              <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center">
+                <Award className="h-6 w-6 text-primary" />
+              </div>
               <div>
                 <p className="text-sm font-semibold text-slate-900 dark:text-slate-100">Geprüfte Küchenstudios</p>
-                <p className="text-xs text-slate-500 dark:text-slate-400">Verifizierte Fachbetriebe</p>
+                <p className="text-xs text-slate-600 dark:text-slate-400">Vor der Freischaltung manuell geprüft</p>
               </div>
             </div>
 
@@ -58,7 +58,7 @@ const Footer = () => {
               </div>
               <div>
                 <p className="text-sm font-semibold text-slate-900 dark:text-slate-100">Preis sofort</p>
-                <p className="text-xs text-slate-500 dark:text-slate-400">Schätzung in wenigen Minuten</p>
+                <p className="text-xs text-slate-600 dark:text-slate-400">Schätzung in wenigen Minuten</p>
               </div>
             </div>
 
@@ -67,8 +67,8 @@ const Footer = () => {
                 <CheckCircle2 className="h-6 w-6 text-primary" />
               </div>
               <div>
-                <p className="text-sm font-semibold text-slate-900 dark:text-slate-100">100% Kostenlos</p>
-                <p className="text-xs text-slate-500 dark:text-slate-400">Keine versteckten Gebühren</p>
+                <p className="text-sm font-semibold text-slate-900 dark:text-slate-100">Kostenlos für Sie</p>
+                <p className="text-xs text-slate-600 dark:text-slate-400">Unverbindlich, ohne versteckte Gebühren</p>
               </div>
             </div>
           </div>
@@ -80,11 +80,11 @@ const Footer = () => {
         <div className="container py-12">
           <div className="flex flex-col lg:flex-row items-center justify-between gap-8">
             <div className="text-center lg:text-left">
-              <h3 className="text-xl font-semibold text-white mb-2">
+              <h2 className="text-xl font-semibold text-white mb-2">
                 Bereit für Ihre Traumküche?
-              </h3>
+              </h2>
               <p className="text-slate-400 text-sm">
-                Raumfoto hochladen, Küche gestalten, Preis sehen – geprüfte Studios bieten um Ihr Projekt.
+                Raumfoto hochladen, Küche gestalten, Preis sehen – auf Wunsch machen Ihnen geprüfte Studios Angebote.
               </p>
             </div>
             <div className="flex flex-col sm:flex-row gap-3 w-full lg:w-auto">
@@ -114,36 +114,25 @@ const Footer = () => {
               <SiteLogo variant="footer" />
               <p className="text-sm text-slate-400 leading-relaxed max-w-sm">
                 {settings?.site_description ||
-                  `${BRAND.name} ist Deutschlands Vergleichsportal für neue Küchen. Angebote einholen, Studio-Preise unterbieten lassen oder mit KI visualisieren — kostenlos und unverbindlich.`}
+                  `${BRAND.name} ist das Vergleichsportal für neue Küchen. Angebote einholen, Studio-Preise unterbieten lassen oder mit KI visualisieren – kostenlos und unverbindlich.`}
               </p>
 
               <div className="flex items-center gap-3">
-                {settings?.facebook_url && (
-                  <a href={settings.facebook_url} target="_blank" rel="noopener noreferrer" className="h-10 w-10 rounded-lg bg-slate-800 hover:bg-primary flex items-center justify-center transition-colors" aria-label="Facebook">
-                    <Facebook className="h-4 w-4 text-slate-300" />
-                  </a>
-                )}
-                {settings?.instagram_url && (
-                  <a href={settings.instagram_url} target="_blank" rel="noopener noreferrer" className="h-10 w-10 rounded-lg bg-slate-800 hover:bg-primary flex items-center justify-center transition-colors" aria-label="Instagram">
-                    <Instagram className="h-4 w-4 text-slate-300" />
-                  </a>
-                )}
-                {settings?.youtube_url && (
-                  <a href={settings.youtube_url} target="_blank" rel="noopener noreferrer" className="h-10 w-10 rounded-lg bg-slate-800 hover:bg-primary flex items-center justify-center transition-colors" aria-label="Youtube">
-                    <Youtube className="h-4 w-4 text-slate-300" />
-                  </a>
-                )}
-                {settings?.linkedin_url && (
-                  <a href={settings.linkedin_url} target="_blank" rel="noopener noreferrer" className="h-10 w-10 rounded-lg bg-slate-800 hover:bg-primary flex items-center justify-center transition-colors" aria-label="LinkedIn">
-                    <Linkedin className="h-4 w-4 text-slate-300" />
-                  </a>
-                )}
+                {SOCIAL_LINKS.map(({ key, label, icon: Icon }) => {
+                  const url = socialSettings?.[key];
+                  if (!url) return null;
+                  return (
+                    <a key={key} href={url} target="_blank" rel="noopener noreferrer" className="h-10 w-10 rounded-lg bg-slate-800 hover:bg-primary flex items-center justify-center transition-colors" aria-label={label}>
+                      <Icon className="h-4 w-4 text-slate-300" aria-hidden="true" />
+                    </a>
+                  );
+                })}
               </div>
             </div>
 
             {/* Services Column */}
             <div>
-              <h3 className="font-semibold text-white mb-5 text-sm">Services</h3>
+              <h2 className="font-semibold text-white mb-5 text-sm">Services</h2>
               <ul className="space-y-3">
                 <li>
                   <Link to="/funnel/c" className="text-sm text-slate-400 hover:text-white transition-colors font-medium">
@@ -180,7 +169,7 @@ const Footer = () => {
 
             {/* Ratgeber Column */}
             <div>
-              <h3 className="font-semibold text-white mb-5 text-sm">Ratgeber</h3>
+              <h2 className="font-semibold text-white mb-5 text-sm">Ratgeber</h2>
               <ul className="space-y-3">
                 <li>
                   <Link to="/ratgeber" className="text-sm text-slate-400 hover:text-white transition-colors">
@@ -207,7 +196,7 @@ const Footer = () => {
 
             {/* Company Column */}
             <div>
-              <h3 className="font-semibold text-white mb-5 text-sm">Unternehmen</h3>
+              <h2 className="font-semibold text-white mb-5 text-sm">Unternehmen</h2>
               <ul className="space-y-3">
                 <li>
                   <Link to="/ueber-uns" className="text-sm text-slate-400 hover:text-white transition-colors">
@@ -234,12 +223,17 @@ const Footer = () => {
                     AGB
                   </Link>
                 </li>
+                <li>
+                  <Link to="/barrierefreiheit" className="text-sm text-slate-400 hover:text-white transition-colors">
+                    Barrierefreiheit
+                  </Link>
+                </li>
               </ul>
             </div>
 
             {/* Contact Column */}
             <div className="lg:col-span-2">
-              <h3 className="font-semibold text-white mb-5 text-sm">Kontakt</h3>
+              <h2 className="font-semibold text-white mb-5 text-sm">Kontakt</h2>
               <ul className="space-y-4">
                 <li>
                   {(() => { const phone = settings?.support_phone || '+49 511 51532476'; return (
@@ -262,7 +256,7 @@ const Footer = () => {
                       </div>
                       <div className="text-sm">
                         <div className="font-medium">{email}</div>
-                        <div className="text-xs text-slate-400">24h Antwortzeit</div>
+                        <div className="text-xs text-slate-400">Wir antworten werktags</div>
                       </div>
                     </a>
                   ); })()}
@@ -292,24 +286,28 @@ const Footer = () => {
       <div className="bg-black">
         <div className="container py-5">
           <div className="flex flex-col md:flex-row justify-between items-center gap-4">
-            <p className="text-sm text-slate-500">
+            <p className="text-sm text-slate-400">
               © {currentYear} {settings?.site_name || BRAND.name}. Eine Marke der {BRAND.legalName}. Alle Rechte vorbehalten.
             </p>
             <div className="flex flex-wrap justify-center gap-6 text-sm">
-              <Link to="/impressum" className="text-slate-500 hover:text-white transition-colors">
+              <Link to="/impressum" className="text-slate-400 hover:text-white transition-colors">
                 Impressum
               </Link>
-              <Link to="/datenschutz" className="text-slate-500 hover:text-white transition-colors">
+              <Link to="/datenschutz" className="text-slate-400 hover:text-white transition-colors">
                 Datenschutz
               </Link>
-              <Link to="/agb" className="text-slate-500 hover:text-white transition-colors">
+              <Link to="/agb" className="text-slate-400 hover:text-white transition-colors">
                 AGB
               </Link>
+              <Link to="/barrierefreiheit" className="text-slate-400 hover:text-white transition-colors">
+                Barrierefreiheit
+              </Link>
               <button
+                type="button"
                 onClick={() => setShowCookieSettings(true)}
-                className="text-slate-500 hover:text-white transition-colors flex items-center gap-1.5"
+                className="text-slate-400 hover:text-white transition-colors flex items-center gap-1.5"
               >
-                <Cookie className="w-3.5 h-3.5" />
+                <Cookie className="w-3.5 h-3.5" aria-hidden="true" />
                 Cookie-Einstellungen
               </button>
             </div>

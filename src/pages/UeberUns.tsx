@@ -47,15 +47,15 @@ const UeberUns = () => {
     },
     {
       icon: Target,
-      title: "Exzellenz",
+      title: "Sorgfalt",
       description:
-        "Wir streben nach höchster Qualität in Vermittlung, Reverse-Auktion und Beratung — damit Sie entspannt entscheiden.",
+        "Wir kümmern uns darum, dass Anfrage, Angebotsvergleich und Beratung reibungslos laufen — damit Sie entspannt entscheiden.",
     },
     {
       icon: Zap,
       title: "Innovation",
       description:
-        "Moderne Technologie (KI-Traumküchen-Planer, echte Marktdaten) trifft auf persönlichen, menschlichen Service.",
+        "Moderne Technologie (KI-Visualisierung im eigenen Raum, sofortige Preisschätzung) trifft auf persönlichen Service.",
     },
   ];
 
@@ -70,7 +70,7 @@ const UeberUns = () => {
       year: "2026",
       title: "Konzeption",
       description:
-        "Entwicklung einer lead-zentrierten Plattform speziell für neue Küchen: Angebotsvermittlung, Reverse-Auktion auf Studio-Preise und KI-Planer für Traumküchen.",
+        "Entwicklung einer Plattform speziell für neue Küchen: Angebote von Küchenstudios, Unterbieten vorhandener Studio-Angebote und KI-Planer für Traumküchen.",
     },
     {
       year: "Apr 2026",
@@ -81,50 +81,50 @@ const UeberUns = () => {
       year: "Sep 2026",
       title: "KI-Konfigurator & Projekt-Börse",
       description:
-        "Kund:innen sehen ihre Traumküche per KI im eigenen Raum und erhalten eine Preisschätzung – geprüfte Studios bieten um das Projekt.",
+        "Kund:innen sehen ihre Traumküche per KI im eigenen Raum und erhalten eine Preisschätzung – geprüfte Studios machen Angebote für das Projekt.",
     },
     {
       year: "Ab 2026",
       title: "Wachstum",
       description:
-        "Kontinuierlicher Ausbau unseres Küchenstudio-Netzwerks deutschlandweit und stetige Verbesserung unserer Funnels.",
+        "Schrittweiser Aufbau unseres Studio-Netzwerks, Region für Region, und stetige Verbesserung unserer Anfragewege.",
     },
   ];
 
   const team = [
     {
-      name: "Branchenübergreifende Expertise",
+      name: "Erfahrung in der Vermittlung",
       description:
-        "Langjährige Erfahrung in digitaler Vermittlung, angewandt auf den Küchenmarkt",
+        "Erfahrung aus dem Betrieb digitaler Vermittlungsplattformen, angewandt auf den Küchenmarkt",
     },
     {
       name: "Persönlicher Kundenservice",
-      description: "Individuelle Betreuung durch engagierte Küchen-Berater:innen",
+      description: "Persönliche Ansprechpartner per Telefon und E-Mail, montags bis freitags",
     },
     {
-      name: "Netzwerk geprüfter Küchenstudios",
+      name: "Geprüfte Küchenstudios",
       description:
-        "Wachsendes Partnernetzwerk aus verifizierten Studios, Fachhändlern und Möbelhäusern in ganz Deutschland",
+        "Jedes Studio wird vor der Freischaltung manuell geprüft – unser Netzwerk wächst regional",
     },
     {
       name: "Digitale Kompetenz",
       description:
-        "Moderne Plattform mit KüchenRechner, Reverse-Auktion und KI-Traumküchen-Planer",
+        "Moderne Plattform mit KüchenRechner, Angebotsvergleich und KI-Konfigurator",
     },
   ];
 
   const achievements = [
-    { number: "Bundesweit", label: "Verfügbar" },
+    { number: "Regional", label: "Wachsendes Studio-Netzwerk" },
     { number: "Sofort", label: "Preis & KI-Vorschau" },
-    { number: "Geprüft", label: "Studio-Netzwerk" },
-    { number: "100 %", label: "Kostenlos für Kund:innen" },
+    { number: "Geprüft", label: "Jedes Studio vor Freischaltung" },
+    { number: "0 €", label: "Für Kund:innen" },
   ];
 
   return (
     <PageLayout
       breadcrumbs={true}
       title="Über uns – Ihr Partner für die neue Traumküche"
-      description={`Erfahren Sie mehr über ${siteName} – die Plattform für Ihre neue Küche. Angebote von geprüften Studios, Reverse-Auktion und KI-Planer. Eine Marke der ${BRAND.legalName}, bundesweit, schnell und fair.`}
+      description={`Erfahren Sie mehr über ${siteName} – die Plattform für Ihre neue Küche: Angebote von geprüften Küchenstudios, Unterbieten vorhandener Angebote und KI-Planer. Ein Angebot der ${BRAND.legalName}.`}
       keywords="über uns, KüchenWert, neue Küche planen, Küchen-Vermittlung, Küchenstudio Vergleich, Traumküche"
       canonicalPath="/ueber-uns"
       structuredData={[
@@ -142,8 +142,7 @@ const UeberUns = () => {
           <p className="text-lg md:text-xl text-muted-foreground mb-8 leading-relaxed">
             {siteName} verbindet Menschen, die eine neue Küche planen, mit geprüften
             Küchenstudios — transparent, kostenlos und mit echtem Wettbewerb um
-            den fairsten Preis. Entstanden aus der Erfahrung mehrerer erfolgreicher
-            Vermittlungsplattformen der {BRAND.legalName}.
+            einen fairen Preis. Ein Angebot der {BRAND.legalName}.
           </p>
         </div>
       </PageHero>
@@ -197,16 +196,16 @@ const UeberUns = () => {
                   >
                     wohnwert24.de
                   </a>{" "}
-                  — haben wir umfangreiche Erfahrung in der digitalen
-                  Vermittlung und Lead-Generierung gesammelt. Diese Expertise
-                  übertragen wir nun auf den Küchen-Markt: Wir bringen
+                  — haben wir Erfahrung in der digitalen Vermittlung
+                  gesammelt. Diese Erfahrung übertragen wir nun auf den
+                  Küchen-Markt: Wir bringen
                   Küchen-Käufer und geprüfte Küchenstudios zusammen — schnell,
                   sicher und kostenlos für Privatkunden.
                 </p>
                 <p>
-                  Unsere Plattform wächst stetig. Wir arbeiten kontinuierlich
-                  daran, unser Händlernetzwerk auszubauen und unseren Service
-                  für Sie zu verbessern. Dabei setzen wir auf modernste
+                  Unser Studio-Netzwerk wächst regional: Schritt für Schritt
+                  gewinnen wir Küchenstudios in weiteren Regionen und
+                  verbessern unseren Service. Dabei setzen wir auf moderne
                   Technologie (inklusive KI-gestützter Küchen-Planung) und
                   persönlichen Kontakt.
                 </p>
@@ -365,19 +364,19 @@ const UeberUns = () => {
                   icon: Shield,
                   title: "Geprüfte Küchenstudios",
                   description:
-                    "Alle Partner durchlaufen unseren Verifizierungsprozess (Gewerbenachweis, USt-ID, Kundenzufriedenheit).",
+                    "Jedes Küchenstudio wird vor der Freischaltung von unserem Team manuell geprüft – erst dann sieht es Projekte.",
                 },
                 {
                   icon: Users,
                   title: "Persönlicher Service",
                   description:
-                    "Individuelle Betreuung bei jeder Küchenplanung — vom ersten Klick bis zum Montagetag.",
+                    "Unser Team beantwortet Ihre Fragen zu Anfrage, Angeboten und Ablauf – telefonisch oder per E-Mail.",
                 },
                 {
                   icon: TrendingUp,
                   title: "Faire Preise",
                   description:
-                    "Durch echten Wettbewerb und unsere Reverse-Auktion sparen Sie bis zu 30 % gegenüber dem Studio-Listenpreis.",
+                    "Mehrere Studios können Ihnen Angebote machen, und abgegebene Angebote können nur noch sinken – so vergleichen Sie echte Angebote statt Listenpreise.",
                 },
               ].map((cert, index) => (
                 <Card
@@ -414,20 +413,17 @@ const UeberUns = () => {
               wie möglich zu machen — kostenlos und unverbindlich.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <Link to="/formular">
-                <Button size="lg" variant="secondary" className="w-full sm:w-auto">
-                  Kostenlose Angebote einholen
-                </Button>
-              </Link>
-              <Link to="/kontakt">
-                <Button
-                  size="lg"
-                  variant="outline"
-                  className="w-full sm:w-auto bg-white/10 border-white/30 hover:bg-white/20 text-white"
-                >
-                  Kontakt aufnehmen
-                </Button>
-              </Link>
+              <Button asChild size="lg" variant="secondary" className="w-full sm:w-auto">
+                <Link to="/formular">Kostenlose Angebote einholen</Link>
+              </Button>
+              <Button
+                asChild
+                size="lg"
+                variant="outline"
+                className="w-full sm:w-auto bg-white/10 border-white/30 hover:bg-white/20 text-white"
+              >
+                <Link to="/kontakt">Kontakt aufnehmen</Link>
+              </Button>
             </div>
           </div>
         </div>

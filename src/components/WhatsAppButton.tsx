@@ -97,7 +97,7 @@ export const WhatsAppButton = () => {
           
           <Button
             onClick={handleWhatsAppClick}
-            className="w-full mt-4 bg-[#25D366] hover:bg-[#20BA5A] text-white"
+            className="w-full mt-4 bg-green-700 hover:bg-green-800 text-white"
             size="sm"
           >
             <MessageCircle className="h-4 w-4 mr-2" />
@@ -108,9 +108,10 @@ export const WhatsAppButton = () => {
       
       <Button
         onClick={() => setIsExpanded(!isExpanded)}
-        className="h-12 w-12 rounded-lg bg-[#25D366] hover:bg-[#20BA5A] text-white shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-110"
+        className="h-12 w-12 rounded-lg bg-green-700 hover:bg-green-800 text-white shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-110"
         size="icon"
-        aria-label="WhatsApp Support"
+        aria-label="WhatsApp-Support"
+        aria-expanded={isExpanded}
       >
         {isExpanded ? (
           <X className="h-5 w-5" />

@@ -19,8 +19,8 @@ const RegisterChoice = () => {
   return (
     <PageLayout
       title={`Registrieren | ${BRAND.name}`}
-      description={`Registrieren Sie sich bei ${BRAND.name} – als Privatkunde oder Küchen-Händler`}
-      keywords="registrieren, konto erstellen, küche planen, küche kaufen, küchen händler registrierung, küchenstudio partner, küchenwert"
+      description={`Registrieren Sie sich bei ${BRAND.name} – als Privatkunde oder als Küchenstudio`}
+      keywords="registrieren, konto erstellen, küche planen, küche kaufen, küchenstudio registrierung, küchenstudio partner, küchenwert"
       canonicalPath="/register"
       noIndex={true}
     >
@@ -61,12 +61,12 @@ const RegisterChoice = () => {
                         Privatkunde
                       </h2>
                       <span className="inline-block text-[10px] md:text-xs font-semibold text-primary bg-primary/10 px-2 py-0.5 md:px-2.5 md:py-1 rounded-full mt-0.5 md:mt-2">
-                        100 % kostenlos
+                        Kostenlos
                       </span>
                     </div>
                   </div>
                   <p className="text-muted-foreground text-xs md:text-base mt-2 md:mt-4 mb-2 md:mb-6 leading-relaxed">
-                    Anfragen stellen, Studio-Angebote vergleichen, Auktionen verfolgen – alles zentral im Dashboard.
+                    Anfragen stellen, Studio-Angebote vergleichen und das passende annehmen – alles in Ihrem Kundenkonto.
                   </p>
                   {/* Vorteile: nur auf Desktop sichtbar */}
                   <div className="hidden md:block space-y-2.5 text-left w-full mb-6">
@@ -76,11 +76,11 @@ const RegisterChoice = () => {
                     </div>
                     <div className="flex items-center gap-2.5 text-sm">
                       <CheckCircle2 className="w-4 h-4 text-primary flex-shrink-0" />
-                      <span>Reverse-Auktionen live verfolgen &amp; bestes Gebot annehmen</span>
+                      <span>Angebote vergleichen &amp; das passende annehmen</span>
                     </div>
                     <div className="flex items-center gap-2.5 text-sm">
                       <CheckCircle2 className="w-4 h-4 text-primary flex-shrink-0" />
-                      <span>Termine, Nachrichten &amp; Dokumente zentral verwalten</span>
+                      <span>Nachrichten &amp; Dokumente an einem Ort</span>
                     </div>
                     <div className="flex items-center gap-2.5 text-sm">
                       <CheckCircle2 className="w-4 h-4 text-primary flex-shrink-0" />
@@ -97,7 +97,7 @@ const RegisterChoice = () => {
               </Card>
             </Link>
 
-            {/* Händler */}
+            {/* Küchenstudio */}
             <Link to="/register/haendler" className="group block">
               <Card className="p-4 md:p-8 shadow-elegant glass h-full transition-all duration-300 hover:-translate-y-1 hover:shadow-xl hover:border-primary/30 cursor-pointer">
                 <div className="flex flex-col items-center text-center h-full">
@@ -108,7 +108,7 @@ const RegisterChoice = () => {
                     </div>
                     <div className="flex flex-col items-start md:items-center">
                       <h2 className="text-lg md:text-2xl font-bold text-foreground">
-                        Händler
+                        Küchenstudio
                       </h2>
                       <span className="inline-block text-[10px] md:text-xs font-medium text-muted-foreground mt-0.5 md:mt-2">
                         Gewerbliche Registrierung
@@ -116,26 +116,26 @@ const RegisterChoice = () => {
                     </div>
                   </div>
                   <p className="text-muted-foreground text-xs md:text-base mt-2 md:mt-4 mb-2 md:mb-6 leading-relaxed">
-                    Ich bin Küchenstudio, Fachhändler oder Möbelhaus und möchte qualifizierte Küchen-Leads erhalten.
+                    Sie sind Küchenstudio, Fachhändler oder Möbelhaus und möchten Angebote für Küchenprojekte aus Ihrer Region abgeben.
                   </p>
                   {/* Vorteile: nur auf Desktop sichtbar */}
                   <div className="hidden md:block space-y-2.5 text-left w-full mb-6">
                     <div className="flex items-center gap-2.5 text-sm">
                       <CheckCircle2 className="w-4 h-4 text-primary flex-shrink-0" />
-                      <span>Qualifizierte Küchen-Leads in Ihrer Region</span>
+                      <span>Küchenprojekte aus Ihrer Region – nach manueller Freischaltung</span>
                     </div>
                     <div className="flex items-center gap-2.5 text-sm">
                       <CheckCircle2 className="w-4 h-4 text-primary flex-shrink-0" />
-                      <span>Bei Reverse-Auktionen gegen andere Studios bieten</span>
+                      <span>Angebote kostenlos abgeben, Provision nur bei Annahme</span>
                     </div>
                     <div className="flex items-center gap-2.5 text-sm">
                       <CheckCircle2 className="w-4 h-4 text-primary flex-shrink-0" />
-                      <span>Händler-Dashboard, Nachrichten &amp; Benachrichtigungen</span>
+                      <span>Kontaktfreischaltung optional – den Preis sehen Sie vorher</span>
                     </div>
                   </div>
                   <div className="mt-auto w-full pt-1 md:pt-0">
                     <div className="w-full h-10 md:h-12 rounded-md bg-foreground flex items-center justify-center text-background text-sm md:text-base font-medium group-hover:bg-foreground/90 transition-all duration-300">
-                      Als Händler registrieren
+                      Als Küchenstudio registrieren
                       <ArrowRight className="w-4 h-4 md:w-5 md:h-5 ml-2 group-hover:translate-x-1 transition-transform duration-300" />
                     </div>
                   </div>
@@ -150,6 +150,12 @@ const RegisterChoice = () => {
               Bereits registriert?{" "}
               <Link to="/login" className="text-primary hover:underline font-medium">
                 Jetzt anmelden
+              </Link>
+            </p>
+            <p className="text-xs md:text-sm text-muted-foreground">
+              Alle Preise für Küchenstudios:{" "}
+              <Link to="/preise" className="text-primary hover:underline">
+                Preise &amp; Leistungen
               </Link>
             </p>
             <p className="text-xs md:text-sm text-muted-foreground">

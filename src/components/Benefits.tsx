@@ -3,7 +3,7 @@ import {
   Shield,
   TrendingDown,
   Users,
-  Award,
+  MapPin,
   Lock,
   Heart,
   ArrowRight,
@@ -17,21 +17,21 @@ import { BRAND } from "@/lib/brand/config";
 const benefits = [
   {
     icon: TrendingDown,
-    title: "Bis zu 30 % sparen",
+    title: "Angebote vergleichen",
     description:
-      "Studios konkurrieren um Ihr Projekt und können ihr Angebot nur senken — faire Marktpreise statt Listenpreis.",
+      "Mehrere Küchenstudios erstellen ein Angebot für Ihr Projekt. Sie vergleichen Preis und Leistung in Ruhe – statt sich auf ein einziges Angebot verlassen zu müssen.",
   },
   {
     icon: Shield,
-    title: "100 % geprüft",
+    title: "Geprüfte Küchenstudios",
     description:
-      "Alle Partner-Studios durchlaufen unser KYC/KYB-Verfahren. Gewerbenachweis, USt-ID und Versicherung — lückenlos geprüft.",
+      "Jedes Küchenstudio wird vor der Freischaltung von unserem Team manuell geprüft – erst dann sieht es Projekte.",
   },
   {
     icon: Users,
-    title: "Persönliche Beratung",
+    title: "Persönlich erreichbar",
     description:
-      "Vor jeder Unterbieten-Auktion prüft unser Team Ihr Angebot kostenlos am Telefon. Keine Bots, keine Callcenter — echte Küchen-Profis.",
+      "Fragen zu Ihrer Anfrage oder zu einem Angebot? Unser Team ist montags bis freitags per Telefon und E-Mail für Sie da.",
   },
   {
     icon: Heart,
@@ -40,16 +40,16 @@ const benefits = [
       "Sie entscheiden frei. Wenn kein Angebot passt, lehnen Sie einfach ab — keine Kosten, keine Gebühren, keine Haken.",
   },
   {
-    icon: Award,
-    title: "Ganz Deutschland",
+    icon: MapPin,
+    title: "Studios aus Ihrer Region",
     description:
-      "Küchenstudios und Fachhändler in allen Bundesländern. Ob Großstadt, Kleinstadt oder ländlich — wir finden Partner in Ihrer Nähe.",
+      "Unser Studio-Netzwerk wächst regional. Bei Ihrer Anfrage prüfen wir, ob Studios in Ihrer Nähe teilnehmen – sonst melden wir uns persönlich.",
   },
   {
     icon: Lock,
-    title: "DSGVO-konform",
+    title: "Anonym starten",
     description:
-      "Studios sehen Ihr Projekt nur anonymisiert. Kontaktdaten erhalten höchstens drei Studios für Rückfragen und das Studio Ihrer Wahl — nur mit Ihrer Einwilligung.",
+      "Studios sehen zuerst nur PLZ-Bereich und Projekt. Ihre Kontaktdaten erhalten höchstens drei Studios für Rückfragen und das Studio, dessen Angebot Sie annehmen.",
   },
 ];
 
@@ -109,15 +109,15 @@ const Benefits = () => {
               <span className="text-primary">geprüften Studios</span>
             </h3>
             <p className="text-base sm:text-lg text-muted-foreground leading-relaxed">
-              Unser Netzwerk umfasst Küchenstudios, Fachhändler und Möbelhäuser in
-              ganz Deutschland. Sie sehen die besten Angebote, vergleichen in Ruhe
-              und entscheiden frei — ohne dass Sie jedes Studio einzeln anrufen
-              müssen.
+              Küchenstudios aus Ihrer Region erstellen Angebote für Ihr Projekt.
+              Sie vergleichen in Ruhe und entscheiden frei — ohne dass Sie jedes
+              Studio einzeln anrufen müssen. Freigeschaltet wird ein Studio erst,
+              nachdem unser Team es manuell geprüft hat.
             </p>
             <div className="grid grid-cols-2 gap-4 sm:gap-6 pt-2 sm:pt-4">
               <div className="space-y-1 sm:space-y-2">
-                <div className="text-2xl sm:text-3xl font-bold text-primary">100 %</div>
-                <div className="text-xs sm:text-sm text-muted-foreground">Geprüfte Partner</div>
+                <div className="text-2xl sm:text-3xl font-bold text-primary">Manuell</div>
+                <div className="text-xs sm:text-sm text-muted-foreground">Geprüfte Küchenstudios</div>
               </div>
               <div className="space-y-1 sm:space-y-2">
                 <div className="text-2xl sm:text-3xl font-bold text-primary">Mo–Fr</div>

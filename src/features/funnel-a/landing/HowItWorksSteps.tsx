@@ -9,7 +9,7 @@ const STEPS: Array<{ icon: LucideIcon; title: string; text: string }> = [
   {
     icon: Store,
     title: "Studios geben Angebote ab",
-    text: "Geprüfte Küchenstudios aus Ihrer Region sehen Ihre Anfrage ohne Namen und Kontaktdaten und schicken Ihnen ihre Angebote.",
+    text: "Geprüfte Küchenstudios aus Ihrer Region sehen Ihre Anfrage zunächst ohne Namen und Kontaktdaten und können 7 Tage lang Angebote abgeben.",
   },
   {
     icon: Scale,

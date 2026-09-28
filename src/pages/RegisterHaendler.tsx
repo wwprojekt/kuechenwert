@@ -1,7 +1,6 @@
 import { useState, useEffect, useRef, useMemo } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
-import { supabase } from "@/integrations/supabase/client";
 import { handleValidationError, handleAuthError } from "@/lib/errorLogService";
 import { trackUserRegistered, setEnhancedConversionData } from "@/lib/gadsConversionService";
 import { trackMetaCompleteRegistration, trackMetaSubmitApplication } from "@/lib/metaPixelService";
@@ -43,7 +42,7 @@ import PageLayout from "@/components/PageLayout";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { EU_COUNTRIES, getLegalFormsByCountry, DEFAULT_COUNTRY, getPhonePlaceholder } from "@/lib/euCountries";
 import { CountryFlag } from "@/components/CountryFlag";
-import { getTranslations, type TranslationKey } from "@/lib/dealerRegistrationTranslations";
+import { getTranslations } from "@/lib/dealerRegistrationTranslations";
 import { optimizeImage } from "@/lib/imageOptimization";
 import { BRAND } from "@/lib/brand";
 
@@ -74,7 +73,7 @@ function createDealerSchema(countryCode: string) {
     passwordConfirm: z.string().min(1, tr.errorPasswordConfirmRequired),
     companyName: z.string().min(2, tr.errorCompanyNameRequired),
     companyAddress: z.string().min(5, tr.errorAddressRequired),
-    companyPostalCode: z.string().regex(/^[A-Za-z0-9\s\-]{3,10}$/, tr.errorPostalCodeInvalid),
+    companyPostalCode: z.string().regex(/^[A-Za-z0-9\s-]{3,10}$/, tr.errorPostalCodeInvalid),
     companyCity: z.string().min(2, tr.errorCityRequired),
     country: z.string().min(2, tr.errorCountryRequired),
     legalForm: z.string().optional(),
@@ -435,9 +434,9 @@ const RegisterHaendler = () => {
 
   return (
     <PageLayout
-      title={`Händler-Registrierung | ${BRAND.name}`}
-      description={`Registrieren Sie sich als Küchen-Händler bei ${BRAND.name} und erhalten Sie qualifizierte Küchen-Leads aus ganz Deutschland.`}
-      keywords="küchen händler registrierung, kitchen dealer registration, küchenankauf partner werden, küchen lead marketplace"
+      title={`Studio-Registrierung | ${BRAND.name}`}
+      description={`Registrieren Sie Ihr Küchenstudio bei ${BRAND.name}: Küchenprojekte aus Ihrer Region, kostenlose Angebotsabgabe, Provision nur bei Annahme Ihres Angebots.`}
+      keywords="küchenstudio registrierung, küchenstudio partner werden, küchenprojekte region"
       canonicalPath="/register/haendler"
       noIndex={true}
     >
@@ -475,11 +474,17 @@ const RegisterHaendler = () => {
             ].map((benefit, idx) => (
               <Card key={idx} className="p-4 text-center animate-fade-in" style={{ animationDelay: `${idx * 0.1}s` }}>
                 <benefit.icon className="w-8 h-8 text-primary mx-auto mb-2" />
-                <h3 className="font-semibold mb-1">{benefit.title}</h3>
+                <h2 className="font-semibold mb-1">{benefit.title}</h2>
                 <p className="text-sm text-muted-foreground">{benefit.desc}</p>
               </Card>
             ))}
           </div>
+          <p className="-mt-4 mb-8 text-center text-sm text-muted-foreground">
+            {tr.benefitPricingHint}{" "}
+            <Link to="/preise" className="text-primary hover:underline font-medium">
+              {tr.benefitPricingLink}
+            </Link>
+          </p>
 
           {/* Form */}
           <Card className="p-8 shadow-elegant animate-slide-up">
@@ -840,26 +845,31 @@ const RegisterHaendler = () => {
               </Alert>
 
               {/* AGB Checkbox */}
-              <div className="flex items-start space-x-3">
-                <Checkbox
-                  id="agb"
-                  checked={formData.agbAccepted}
-                  onCheckedChange={(checked) =>
-                    setFormData({ ...formData, agbAccepted: checked === true })
-                  }
-                  className="mt-1"
-                />
-                <Label htmlFor="agb" className="text-sm leading-relaxed cursor-pointer">
-                  {tr.labelAgb}{" "}
-                  <a href="/agb" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
-                    {tr.labelAgbLink}
-                  </a>{" "}
-                  &{" "}
+              <div className="space-y-2">
+                <div className="flex items-start space-x-3">
+                  <Checkbox
+                    id="agb"
+                    checked={formData.agbAccepted}
+                    onCheckedChange={(checked) =>
+                      setFormData({ ...formData, agbAccepted: checked === true })
+                    }
+                    className="mt-1"
+                  />
+                  <Label htmlFor="agb" className="text-sm leading-relaxed cursor-pointer">
+                    {tr.labelAgb}{" "}
+                    <a href="/agb" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
+                      {tr.labelAgbLink}
+                    </a>
+                    . *
+                  </Label>
+                </div>
+                <p className="text-xs text-muted-foreground pl-7">
+                  {tr.privacyNotice}{" "}
                   <a href="/datenschutz" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
                     {tr.labelPrivacyLink}
-                  </a>{" "}
-                  *
-                </Label>
+                  </a>
+                  .
+                </p>
               </div>
 
               {/* Submit */}

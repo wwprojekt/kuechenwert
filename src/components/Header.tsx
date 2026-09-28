@@ -3,7 +3,6 @@ import {
   Briefcase,
   Building2,
   Calculator,
-  ClipboardList,
   FileText,
   FolderOpen,
   HandCoins,
@@ -13,12 +12,12 @@ import {
   Menu,
   MessageSquare,
   Phone,
+  Settings,
   Sparkles,
   User,
   X,
   type LucideIcon,
 } from "lucide-react";
-import { DarkModeToggle, DarkModeSimpleToggle } from "@/components/DarkModeToggle";
 import { useEffect, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
@@ -79,14 +78,15 @@ const DEALER_ACCOUNT: AccountLink[] = [
   { to: "/dashboard/messages", label: "Nachrichten", icon: MessageSquare },
   { to: "/dashboard/invoices", label: "Rechnungen", icon: FileText },
   { to: "/dashboard/profile", label: "Profil", icon: User },
+  { to: "/dashboard/settings", label: "Einstellungen", icon: Settings },
 ];
 
 const CONSUMER_ACCOUNT: AccountLink[] = [
-  { to: "/dashboard", label: "Übersicht", icon: LayoutDashboard },
-  { to: "/dashboard/listings", label: "Meine Inserate", icon: ClipboardList },
+  { to: "/dashboard", label: "Meine Projekte", icon: FolderOpen },
   { to: "/dashboard/messages", label: "Nachrichten", icon: MessageSquare },
   { to: "/dashboard/documents", label: "Dokumente", icon: FileText },
   { to: "/dashboard/profile", label: "Profil", icon: User },
+  { to: "/dashboard/settings", label: "Einstellungen", icon: Settings },
 ];
 
 const Header = () => {
@@ -162,14 +162,14 @@ const Header = () => {
           <div className="flex items-center gap-4">
             {TOP_NAV.map((item, i) => (
               <span key={item.to} className="flex items-center gap-4">
-                {i > 0 && <span className="text-slate-600">•</span>}
+                {i > 0 && <span className="text-slate-600" aria-hidden="true">•</span>}
                 <Link to={item.to} className="flex items-center gap-1.5 hover:text-white transition-colors">
                   {item.icon && <item.icon className="h-3.5 w-3.5" />}
                   {item.label}
                 </Link>
               </span>
             ))}
-            <span className="text-slate-600">•</span>
+            <span className="text-slate-600" aria-hidden="true">•</span>
             <Link to="/haendler" className="flex items-center gap-1.5 font-semibold text-white hover:text-primary-foreground/80 transition-colors">
               <Building2 className="h-3.5 w-3.5" />
               Für Küchenstudios
@@ -211,7 +211,6 @@ const Header = () => {
               </Link>
             ))}
             <div className="h-6 w-px bg-border/50" />
-            <DarkModeToggle />
             <div className="flex items-center gap-2">
               {user && isDealer && <NotificationCenter />}
               {user ? (
@@ -296,7 +295,7 @@ const Header = () => {
                 <Calculator className="h-4 w-4" />
                 KüchenRechner (Preis-Check)
               </Link>
-              {[{ to: "/kuechenstudios", label: "Küchenstudios & Showrooms" }, ...TOP_NAV].map((item) => (
+              {[{ to: "/kuechenstudios", label: "Küchenstudios" }, ...TOP_NAV].map((item) => (
                 <Link
                   key={item.to}
                   to={item.to}
@@ -305,11 +304,6 @@ const Header = () => {
                   {item.label}
                 </Link>
               ))}
-              <div className="h-px bg-border/50" />
-              <div className="flex items-center justify-between py-1">
-                <span className="text-sm font-medium text-foreground/80">Dark Mode</span>
-                <DarkModeSimpleToggle />
-              </div>
               <div className="h-px bg-border/50" />
               {user ? (
                 <>

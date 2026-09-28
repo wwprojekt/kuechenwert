@@ -1,8 +1,8 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import PageLayout from "@/components/PageLayout";
 import PageHero from "@/components/PageHero";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import {
   Calculator,
   Gauge,
@@ -12,7 +12,7 @@ import {
   ArrowRight,
   ArrowLeft,
   Sparkles,
-  Gavel,
+  TrendingDown,
   CheckCircle2,
 } from "lucide-react";
 import { Link } from "react-router-dom";
@@ -25,21 +25,11 @@ import {
 } from "@/lib/seo";
 
 /**
- * KuechenRechner (Funnel D — der "Zero-Friction Budget-Estimator")
+ * KüchenRechner: grobe Preisspanne für eine neue Küche, ohne Kontaktdaten.
  *
- * Ziel: Besucher, die noch keine konkrete Anfrage stellen wollen, bekommen
- * in ≤ 30 s eine realistische Preisspanne fuer eine neue Kueche. Keine
- * Kontaktdaten noetig. Ergebnis-Screen fuehrt in Funnel A (Angebote einholen)
- * bzw. Funnel B (Studio-Preis unterbieten) weiter.
- *
- * Preismodell (empirisch-konservativ, abgeleitet aus Marktdaten 2024/25):
- *   Basispreis = size.base × equipment.multiplier
- *   Geraete-Aufschlag = appliances.addMin/addMax
- *   Regional-Faktor  = region × 1.0 (lt. PLZ-Gruppe)
- *   Ergebnis = [low, high] in EUR
- *
- * Wir zeigen die Spanne (low–high), nicht einen Punktwert — so bleiben
- * seriös und vermeiden "du bekommst exakt X EUR"-Frust.
+ * Richtwerte nach öffentlich verfügbaren Marktpreisen (Stand 2024/25):
+ *   Spanne = (size.baseMin/baseMax × equipment.multiplier + appliances.addMin/addMax) × region.factor,
+ *   gerundet auf 500 €. Bewusst eine Spanne statt eines Punktwerts.
  */
 
 type SizeSlug = "klein" | "mittel" | "gross" | "xl";
@@ -176,7 +166,7 @@ const REGION_OPTIONS: RegionOption[] = [
   {
     slug: "standard",
     label: "Mittlere Stadt",
-    description: "Stadt bis ~500 k Einwohner — bundesweiter Durchschnitt",
+    description: "Stadt bis ca. 500.000 Einwohner – mittleres Preisniveau",
     factor: 1.0,
   },
   {
@@ -234,56 +224,91 @@ function formatEur(n: number): string {
   return n.toLocaleString("de-DE", { maximumFractionDigits: 0 }) + " €";
 }
 
+const EMPTY_SELECTION: Selection = { size: null, equipment: null, appliances: null, region: null };
+
 const Kuechenrechner = () => {
   const [step, setStep] = useState(0);
-  const [sel, setSel] = useState<Selection>({
-    size: null,
-    equipment: null,
-    appliances: null,
-    region: null,
-  });
+  const [sel, setSel] = useState<Selection>(EMPTY_SELECTION);
+  const advanceTimer = useRef<number | null>(null);
+  const headingRef = useRef<HTMLHeadingElement>(null);
+  const hasNavigated = useRef(false);
 
   const showResult = step === STEPS.length;
   const result = useMemo(() => computePriceRange(sel), [sel]);
 
+  useEffect(
+    () => () => {
+      if (advanceTimer.current !== null) window.clearTimeout(advanceTimer.current);
+    },
+    [],
+  );
+
+  useEffect(() => {
+    // Die gewählte Option verschwindet mit dem Schrittwechsel; ohne neuen Fokus landet er auf <body>.
+    if (hasNavigated.current) headingRef.current?.focus();
+  }, [step]);
+
   const schemas = [
     generateServiceSchema(
-      "KüchenRechner — Preis-Check für neue Küchen",
-      `Kostenloser ${BRAND.name}-KüchenRechner: Realistische Preisspanne für eine neue Küche anhand Größe, Ausstattung, Geräte-Level und Region. In 30 Sekunden, ohne Kontaktdaten.`,
+      "KüchenRechner – Preis-Check für neue Küchen",
+      `Kostenloser ${BRAND.name}-KüchenRechner: Richtwert für die Kosten einer neuen Küche anhand von Größe, Ausstattung, Geräten und Region – auf Basis öffentlich verfügbarer Marktpreise, ohne Kontaktdaten.`,
     ),
     generateBreadcrumbSchema(getBreadcrumbsFromPath("/kuechenrechner")),
   ];
 
+  function cancelAdvance() {
+    if (advanceTimer.current === null) return;
+    window.clearTimeout(advanceTimer.current);
+    advanceTimer.current = null;
+  }
+
+  function goToStep(next: number) {
+    hasNavigated.current = true;
+    setStep(next);
+  }
+
   function choose<K extends keyof Selection>(key: K, val: Selection[K]) {
+    // Weitere Taps während des Übergangs würden sonst einen Schritt überspringen.
+    if (advanceTimer.current !== null) return;
     setSel((prev) => ({ ...prev, [key]: val }));
-    // Auto-advance nach kurzem Delay (wie in Funnel A).
-    setTimeout(() => setStep((s) => Math.min(STEPS.length, s + 1)), 250);
+    advanceTimer.current = window.setTimeout(() => {
+      advanceTimer.current = null;
+      goToStep(Math.min(STEPS.length, step + 1));
+    }, 250);
+  }
+
+  function back() {
+    cancelAdvance();
+    goToStep(Math.max(0, step - 1));
   }
 
   function reset() {
-    setSel({ size: null, equipment: null, appliances: null, region: null });
-    setStep(0);
+    cancelAdvance();
+    setSel(EMPTY_SELECTION);
+    goToStep(0);
   }
 
   return (
     <PageLayout
       breadcrumbs
-      title={`KüchenRechner — Was kostet meine Traumküche? | ${BRAND.name}`}
-      description="Kostenloser KüchenRechner: Beantworten Sie 4 Fragen zu Größe, Ausstattung, Geräten und Region — wir zeigen Ihnen in 30 Sekunden eine realistische Preisspanne für Ihre neue Küche. Ohne Kontaktdaten."
+      title={`KüchenRechner – Was kostet eine neue Küche? | ${BRAND.name}`}
+      description="Kostenloser KüchenRechner: Beantworten Sie 4 Fragen zu Größe, Ausstattung, Geräten und Region und erhalten Sie einen Richtwert für die Kosten Ihrer neuen Küche. Ohne Kontaktdaten."
       keywords="küchenrechner, küchen preis, küche kosten, was kostet küche, küchen budget, preisvergleich küche, küchenplaner preis"
       canonicalPath="/kuechenrechner"
       structuredData={schemas}
     >
-      <PageHero
-        badge={
-          <>
-            <Calculator className="w-4 h-4 mr-2 text-primary" />
-            <span>KüchenRechner · kostenlos · ohne Kontaktdaten</span>
-          </>
-        }
-        title="Was kostet meine neue Küche?"
-        subtitle="4 Fragen, 30 Sekunden, realistische Preisspanne — ohne dass Sie Ihre Daten hinterlassen müssen."
-      />
+      <PageHero size="md">
+        <div className="mx-auto max-w-3xl text-center">
+          <p className="mb-4 inline-flex items-center rounded-full bg-primary/10 px-4 py-2 text-sm font-medium text-primary">
+            <Calculator className="mr-2 h-4 w-4" aria-hidden="true" />
+            KüchenRechner · kostenlos · ohne Kontaktdaten
+          </p>
+          <h1 className="mb-4 text-4xl font-bold md:text-5xl">Was kostet meine neue Küche?</h1>
+          <p className="text-lg text-muted-foreground">
+            4 Fragen, ein Richtwert – ohne dass Sie Ihre Daten hinterlassen müssen.
+          </p>
+        </div>
+      </PageHero>
 
       <section className="py-10 md:py-16">
         <div className="container max-w-4xl px-4 sm:px-6 lg:px-8">
@@ -308,9 +333,13 @@ const Kuechenrechner = () => {
           {!showResult && (
             <Card className="border-2">
               <CardHeader>
-                <CardTitle className="text-xl md:text-2xl">
+                <h2
+                  ref={headingRef}
+                  tabIndex={-1}
+                  className="text-xl md:text-2xl font-semibold leading-none tracking-tight outline-none"
+                >
                   {STEPS[step].title}
-                </CardTitle>
+                </h2>
                 <p className="text-muted-foreground">{STEPS[step].subtitle}</p>
               </CardHeader>
               <CardContent>
@@ -367,7 +396,7 @@ const Kuechenrechner = () => {
                   <div className="mt-6 flex justify-start">
                     <Button
                       variant="ghost"
-                      onClick={() => setStep((s) => Math.max(0, s - 1))}
+                      onClick={back}
                       className="gap-2"
                     >
                       <ArrowLeft className="h-4 w-4" />
@@ -385,12 +414,16 @@ const Kuechenrechner = () => {
                 <div className="mx-auto mb-4 h-16 w-16 rounded-full bg-primary/10 flex items-center justify-center">
                   <Sparkles className="h-8 w-8 text-primary" />
                 </div>
-                <CardTitle className="text-2xl md:text-3xl">
-                  Ihre realistische Preisspanne
-                </CardTitle>
+                <h2
+                  ref={headingRef}
+                  tabIndex={-1}
+                  className="text-2xl md:text-3xl font-semibold leading-none tracking-tight outline-none"
+                >
+                  Ihr Richtwert
+                </h2>
                 <p className="text-muted-foreground mt-2 max-w-xl mx-auto">
-                  Basierend auf Ihren Angaben und aktuellen Marktdaten aus unserem
-                  Küchenstudio-Netzwerk (Stand 2026).
+                  Richtwerte auf Basis öffentlich verfügbarer Marktpreise (Stand 2024/25), keine
+                  verbindliche Preisauskunft.
                 </p>
               </CardHeader>
               <CardContent>
@@ -399,8 +432,7 @@ const Kuechenrechner = () => {
                     {formatEur(result.low)} – {formatEur(result.high)}
                   </div>
                   <p className="mt-3 text-sm text-muted-foreground">
-                    Brutto inkl. MwSt., typische Preise für eine komplette Küche
-                    mit Planung, Lieferung und Montage.
+                    Brutto inkl. MwSt., für eine komplette Küche mit Planung, Lieferung und Montage.
                   </p>
                 </div>
 
@@ -428,29 +460,24 @@ const Kuechenrechner = () => {
                 </div>
 
                 <div className="rounded-lg bg-amber-50 border border-amber-200 p-4 mb-6 text-sm text-amber-900">
-                  <strong>Hinweis:</strong> Preisspannen sind Richtwerte. Der finale
-                  Preis hängt von Grundriss, Sonderwünschen und Konditionen Ihres
-                  Küchenstudios ab. Nutzen Sie unsere Funnel A/B, um konkrete
-                  Angebote einzuholen oder Studio-Preise zu unterbieten.
+                  <strong>Hinweis:</strong> Der endgültige Preis hängt von Grundriss,
+                  Sonderwünschen und den Konditionen des Küchenstudios ab. Konkrete Preise
+                  erhalten Sie mit Angeboten von Küchenstudios aus Ihrer Region.
                 </div>
 
                 <div className="grid gap-3 sm:grid-cols-2">
-                  <Link to="/formular">
-                    <Button size="lg" className="gradient-hero w-full h-14 font-semibold group">
+                  <Button asChild size="lg" className="gradient-hero w-full h-14 font-semibold group">
+                    <Link to="/formular">
                       Konkrete Angebote erhalten
-                      <ArrowRight className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-smooth" />
-                    </Button>
-                  </Link>
-                  <Link to="/funnel/b">
-                    <Button
-                      size="lg"
-                      variant="outline"
-                      className="w-full h-14 font-semibold border-2"
-                    >
-                      <Gavel className="mr-2 h-4 w-4" />
-                      Vorhandenes Angebot unterbieten
-                    </Button>
-                  </Link>
+                      <ArrowRight className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-smooth" aria-hidden="true" />
+                    </Link>
+                  </Button>
+                  <Button asChild size="lg" variant="outline" className="w-full h-14 font-semibold border-2">
+                    <Link to="/funnel/b">
+                      <TrendingDown className="mr-2 h-4 w-4" aria-hidden="true" />
+                      Vorhandenes Angebot unterbieten lassen
+                    </Link>
+                  </Button>
                 </div>
 
                 <div className="mt-6 text-center">
@@ -467,8 +494,8 @@ const Kuechenrechner = () => {
           <div className="mt-10 grid sm:grid-cols-3 gap-4 text-sm">
             {[
               "Keine Kontaktdaten nötig",
-              "Basierend auf echten Marktdaten",
-              "In 30 Sekunden fertig",
+              "Richtwerte nach öffentlichen Marktpreisen",
+              "4 kurze Fragen",
             ].map((t) => (
               <div
                 key={t}

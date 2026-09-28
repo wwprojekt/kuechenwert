@@ -14,7 +14,7 @@ const BENEFITS = [
     icon: Sparkles,
     title: "Projekte statt Adressen",
     description:
-      "Jedes Projekt kommt mit Raumfoto, Wandmaßen, Grundriss, Wunschkonfiguration, KI-Visualisierung und Preisschätzung – Sie kalkulieren sofort.",
+      "Je nach Anfrageweg mit Wunschkonfiguration, Budget-Rahmen, Wandmaßen, Grundriss, Raumfoto und KI-Visualisierung – Sie kalkulieren ohne langes Nachfragen.",
   },
   {
     icon: MapPinned,
@@ -29,9 +29,9 @@ const BENEFITS = [
   },
   {
     icon: Handshake,
-    title: "Zahlen bei Erfolg",
+    title: "Transparente Kosten",
     description:
-      "Registrierung und Angebote sind kostenlos. Die Provision fällt nur an, wenn die Kund:in Ihr Angebot annimmt.",
+      "Registrierung und Angebotsabgabe sind kostenlos. Eine Kontaktfreischaltung ist optional und kostenpflichtig, den Preis sehen Sie vorher. Provision fällt nur an, wenn die Kund:in Ihr Angebot annimmt.",
   },
 ];
 
@@ -49,7 +49,7 @@ const SERVICES = [
   {
     title: "Kontakt freischalten",
     description: "Sie möchten vor der Entscheidung beraten? Schalten Sie die Kontaktdaten frei – höchstens drei Studios pro Projekt.",
-    features: ["Preis je nach Projektwert, vor dem Kauf sichtbar", "Einwilligung der Kund:in liegt vor", "Kontakt jederzeit im Dashboard abrufbar"],
+    features: ["Optional und kostenpflichtig – Preis je nach Budget, vor dem Kauf sichtbar", "Kund:in wurde bei der Anfrage darüber informiert", "Kontakt jederzeit im Dashboard abrufbar"],
   },
   {
     title: "Export für Ihre Planungssoftware",
@@ -59,17 +59,17 @@ const SERVICES = [
 ];
 
 const STATS = [
-  { number: "Deutschlandweit", label: "Kundenprojekte" },
+  { number: "Regional", label: "Projekte aus Ihrem Einzugsgebiet" },
   { number: "Mit KI-Bild", label: "Raumfoto & Maße" },
   { number: "Kostenlos", label: "Registrierung & Angebote" },
-  { number: "Nur bei Zuschlag", label: "Provision" },
+  { number: "Nur bei Annahme", label: "Provision" },
 ];
 
 const PROCESS = [
   {
     step: "1",
     title: "Kostenlos registrieren",
-    description: "Online-Registrierung mit Gewerbenachweis und USt-ID – Freischaltung innerhalb von 1–2 Werktagen.",
+    description: "Online-Registrierung mit Ihren Firmendaten. Unser Team prüft jedes Studio manuell und fordert bei Bedarf Nachweise wie einen Gewerbenachweis an.",
   },
   {
     step: "2",
@@ -83,8 +83,8 @@ const PROCESS = [
   },
   {
     step: "4",
-    title: "Zuschlag erhalten",
-    description: "Die Kund:in wählt Ihr Angebot – Sie erhalten alle Kontaktdaten und vereinbaren Aufmaß und Detailplanung.",
+    title: "Auftrag erhalten",
+    description: "Die Kund:in nimmt Ihr Angebot an – Sie erhalten alle Kontaktdaten und vereinbaren Aufmaß und Detailplanung. Erst dann fällt die Provision an.",
   },
 ];
 
@@ -114,7 +114,7 @@ const Haendler = () => {
     <PageLayout
       breadcrumbs={true}
       title="Für Küchenstudios – Kundenprojekte mit Maßen & KI-Visualisierung"
-      description="Als geprüftes Partner-Studio erhalten Sie Küchenprojekte aus Ihrer Region – mit Raumfoto, Maßen, Wunschkonfiguration und Preisschätzung. Angebot abgeben, Zuschlag erhalten, Provision nur bei Erfolg."
+      description="Als geprüftes Partner-Studio erhalten Sie Küchenprojekte aus Ihrer Region – mit Wunschkonfiguration, Maßen und Preisschätzung. Angebot kostenlos abgeben, Provision nur, wenn die Kund:in Ihr Angebot annimmt."
       keywords="Küchenstudio Partner, Küchen Leads, Küchenprojekte, Küchenhändler Kunden gewinnen, Küchen Anfragen, B2B Küchen-Plattform"
       canonicalPath="/haendler"
       structuredData={serviceSchema}
@@ -127,7 +127,7 @@ const Haendler = () => {
             </h1>
             <p className="mb-8 text-lg leading-relaxed text-muted-foreground md:text-xl">
               Kund:innen planen bei {siteName} ihre Küche mit Raumfoto, Maßen und KI-Visualisierung. Sie sehen das Projekt,
-              geben Ihr Angebot ab und gewinnen den Auftrag – Provision nur bei Zuschlag.
+              geben Ihr Angebot ab und gewinnen im besten Fall den Auftrag – Provision nur, wenn die Kund:in Ihr Angebot annimmt.
             </p>
             <div className="flex flex-col gap-4 sm:flex-row">
               <Button asChild size="lg" className="gradient-hero shadow-lg hover:gradient-hero-hover hover:shadow-glow">
@@ -293,17 +293,22 @@ const Haendler = () => {
 
             <h3 className="mb-4 mt-8 text-2xl font-bold">Wie läuft ein Projekt ab?</h3>
             <p className="mb-6 leading-relaxed text-muted-foreground">
-              Sobald eine Kund:in ihr Projekt absendet, erscheint es anonymisiert in der Projekt-Börse aller Studios, deren
-              Einzugsgebiet die PLZ abdeckt. Sie sehen Maße, Grundriss, Konfiguration, Raumfoto und Visualisierung und geben Ihr
-              Angebot ab. Die Angebotsphase dauert 7 Tage, beim Unterbieten eines vorhandenen Angebots 72 Stunden. Danach wählt die
-              Kund:in – mit dem Zuschlag erhalten Sie alle Kontaktdaten.
+              Sobald eine Kund:in ihr Projekt absendet, erscheint es ohne Namen und Kontaktdaten in der Projekt-Börse aller
+              freigeschalteten Studios, deren Einzugsgebiet die PLZ abdeckt. Sie sehen – je nach Anfrageweg – Maße, Grundriss,
+              Konfiguration, Raumfoto und Visualisierung und geben Ihr Angebot ab. Die Angebotsphase dauert 7 Tage, beim Unterbieten
+              eines vorhandenen Angebots 72 Stunden. Danach entscheidet die Kund:in – nimmt sie Ihr Angebot an, erhalten Sie alle
+              Kontaktdaten.
             </p>
 
             <h3 className="mb-4 mt-8 text-2xl font-bold">Was kostet die Teilnahme?</h3>
             <p className="mb-6 leading-relaxed text-muted-foreground">
               Registrierung, Projekt-Börse und Angebotsabgabe sind kostenlos. Kosten entstehen nur in zwei Fällen: wenn Sie freiwillig
-              einen Kontakt vorab freischalten (Preis je nach Projektwert, vor dem Kauf angezeigt) und als Provision, wenn die Kund:in
-              Ihr Angebot annimmt. Die Provision ist nach Auftragswert gestaffelt und in Ihrem Dashboard einsehbar.
+              einen Kontakt vorab freischalten (Preis je nach Budget, vor dem Kauf angezeigt) und als Provision, wenn die Kund:in
+              Ihr Angebot annimmt. Die Provision ist nach Auftragswert gestaffelt – alle Preise finden Sie auf unserer{" "}
+              <Link to="/preise" className="font-medium text-primary underline-offset-4 hover:underline">
+                Preisseite
+              </Link>
+              .
             </p>
 
             <h3 className="mb-4 mt-8 text-2xl font-bold">Kann ich Projekte in meine Planungssoftware übernehmen?</h3>
@@ -325,7 +330,7 @@ const Haendler = () => {
         <div className="container">
           <div className="mx-auto max-w-3xl text-center">
             <h2 className="mb-6 text-2xl font-bold sm:text-3xl md:text-4xl">Jetzt kostenlos registrieren</h2>
-            <p className="mb-8 text-xl opacity-95">Registrierung in 2 Minuten – nach der Freischaltung sehen Sie sofort alle Projekte in Ihrer Region.</p>
+            <p className="mb-8 text-xl opacity-95">Registrierung in wenigen Minuten – nach Prüfung und Freischaltung sehen Sie alle offenen Projekte in Ihrer Region.</p>
             <div className="flex flex-col justify-center gap-4 sm:flex-row">
               <Button asChild size="lg" variant="secondary">
                 <Link to="/register/haendler">Jetzt registrieren</Link>

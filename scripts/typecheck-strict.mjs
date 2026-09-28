@@ -12,13 +12,16 @@ import fs from "node:fs";
 import path from "node:path";
 
 const config = JSON.parse(fs.readFileSync("tsconfig.strict.json", "utf8"));
+// "**/" steht für beliebig viele Verzeichnisse; erst danach einzelne "*" ersetzen,
+// sonst würde "**" nur eine Ebene tief greifen.
 const patterns = config.include.map((p) =>
   new RegExp(
     "^" +
       p
         .replace(/[.+^${}()|[\]\\]/g, "\\$&")
-        .replace(/\*\*\/\*/g, "(?:.*/)?[^/]*")
-        .replace(/\*/g, "[^/]*") +
+        .replace(/\*\*\//g, "\u0000")
+        .replace(/\*/g, "[^/]*")
+        .replace(/\u0000/g, "(?:.*/)?") +
       "$",
   ),
 );

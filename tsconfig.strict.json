@@ -10,6 +10,7 @@
   },
   "include": [
     "src/vite-env.d.ts",
+    "src/test/jest-dom.d.ts",
     "src/features/**/*",
     "src/pages/projekt/**/*",
     "src/pages/funnel/FunnelA.tsx",

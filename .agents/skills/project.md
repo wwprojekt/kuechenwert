@@ -82,6 +82,7 @@
   - Frontend: Caravan-Code entfernt (tsc projektweit fehlerfrei), ehrliche Texte ohne unbelegte Claims, Preise live aus der DB, Kontakt über `kw-contact`, `/barrierefreiheit`.
   - SEO/Infra: Prerendering im Docker-Build, echte 404, 301 für Altlinks, CSP ohne Inline-Skripte, HSTS `includeSubDomains`, Real-IP hinter Cloudflare, Sitemap nur mit indexierbaren Seiten, Service Worker v8.
   - CI: ESLint und alle Vitest-Tests vor jedem Deploy, Actions auf Commit-SHAs gepinnt, Dependabot; `AGENTS.md` auf KüchenWert-Stand.
+- [x] **Funnel B mit Unterlagen (28.09.2026)**: Angebot und Unterlagen sind jetzt Schritt 1 (Angebot, Planung, Fotos; mehrere Dateien, PDF oder Bild, bis 10 × 20 MB), die Detailschritte lassen sich überspringen. Nachreichen über den Projektlink (`kw-project` upload-files/attach-files, Admin-Mail `lead_files_added`). Studios sehen Unterlagen nur nach Freigabe durch das Team (ggf. geschwärzte Fassung, Admin → Anfragen → Ausschreibung) oder nach Kontaktkauf/Zuschlag (Migration `20260928214801`, Einwilligung `kw-unterbieten-2026-09-28b`).
 
 ### Offene Aufgaben
 - [x] Security-Sweep abgeschlossen (27.09.2026): Alle 42 Functions mit `checkServiceRoleOrAdmin` laufen mit dem gehärteten `_shared/auth.ts`; die 38 offenen per MCP-Shim auf Commit `39e2cfe` (Raw-Import aus dem öffentlichen Repo, siehe AGENTS.md). Vorher geprüft: keine davon per Cron oder DB-Trigger aufgerufen. `node scripts/redeploy-secure-functions.mjs --probe-only` bestätigt 42/42 mit 401 bei gefälschtem Token.

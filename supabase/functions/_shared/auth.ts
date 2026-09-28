@@ -47,6 +47,22 @@ async function isGenuineServiceRoleJwt(token: string, supabaseUrl: string): Prom
   }
 }
 
+function timingSafeEqual(a: string, b: string): boolean {
+  if (!a || a.length !== b.length) return false;
+  let diff = 0;
+  for (let i = 0; i < a.length; i++) diff |= a.charCodeAt(i) ^ b.charCodeAt(i);
+  return diff === 0;
+}
+
+/**
+ * Zeitgesteuerter Aufruf aus pg_cron: Header x-kw-cron-secret mit dem Wert aus
+ * vault.decrypted_secrets (name kw_cron_secret) bzw. der Env KW_CRON_SECRET.
+ */
+export function isCronRequest(req: Request): boolean {
+  const secret = Deno.env.get('KW_CRON_SECRET') ?? '';
+  return timingSafeEqual(secret, req.headers.get('x-kw-cron-secret') ?? '');
+}
+
 function getProjectRefFromSupabaseUrl(url: string): string | null {
   try {
     const host = new URL(url).hostname;
@@ -71,7 +87,7 @@ export async function checkServiceRoleOrAdmin(
   const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
 
   // ─── Method 1: Direct string comparison with constant-time-safe check ───
-  if (serviceRoleKey && token === serviceRoleKey) {
+  if (serviceRoleKey && timingSafeEqual(serviceRoleKey, token)) {
     return { authorized: true };
   }
 
@@ -123,4 +139,17 @@ export async function checkServiceRoleOrAdmin(
       }
     ),
   };
+}
+
+/**
+ * Für zeitgesteuerte Functions (Mahnlauf, Zahlungserinnerung, geplante Mails):
+ * pg_cron mit Cron-Geheimnis, service_role oder Admin. Nur dort einsetzen,
+ * damit das Cron-Geheimnis keine allgemeinen Admin-Rechte verleiht.
+ */
+export async function checkCronOrServiceRoleOrAdmin(
+  req: Request,
+  corsHeaders: Record<string, string> = {}
+): Promise<{ authorized: true } | { authorized: false; response: Response }> {
+  if (isCronRequest(req)) return { authorized: true };
+  return checkServiceRoleOrAdmin(req, corsHeaders);
 }

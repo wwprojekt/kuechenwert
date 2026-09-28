@@ -1,7 +1,7 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.100.1';
 import { buildEmailLayout, paragraph, greeting, button, infoBox, detailRow, amountDisplay, customerBadge } from '../_shared/email-builder.ts';
-import { checkServiceRoleOrAdmin } from '../_shared/auth.ts';
+import { checkCronOrServiceRoleOrAdmin } from '../_shared/auth.ts';
 import { describeInvoice } from '../_shared/invoice-labels.ts';
 
 const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY");
@@ -26,7 +26,7 @@ const handler = async (req: Request): Promise<Response> => {
     });
   }
 
-  const authCheck = await checkServiceRoleOrAdmin(req);
+  const authCheck = await checkCronOrServiceRoleOrAdmin(req);
   if (!authCheck.authorized) return authCheck.response;
 
   try {

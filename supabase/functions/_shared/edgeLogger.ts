@@ -22,6 +22,9 @@ type ErrorSeverity = 'low' | 'medium' | 'high' | 'critical';
 type ErrorCategory =
   | 'email'
   | 'notification'
+  | 'marketplace'
+  | 'privacy'
+  | 'maintenance'
   | 'kaufchance'
   | 'auction'
   | 'invoice'

@@ -1,7 +1,7 @@
 import { createClient, type SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2.100.1';
 import { buildEmailLayout, paragraph, infoBox, detailRow, amountDisplay, warningBox, customerBadge } from '../_shared/email-builder.ts';
 import { getCorsHeaders, handleCorsPreflightRequest } from '../_shared/cors.ts';
-import { checkServiceRoleOrAdmin } from '../_shared/auth.ts';
+import { checkCronOrServiceRoleOrAdmin } from '../_shared/auth.ts';
 import { BRAND } from '../_shared/brand-config.ts';
 import { formatIban, issuerProfile } from '../_shared/issuer-profile.ts';
 
@@ -11,7 +11,7 @@ Deno.serve(async (req) => {
   }
 
   // ─── Auth check: must be service_role (cron/internal) or authenticated admin ───
-  const authResult = await checkServiceRoleOrAdmin(req, getCorsHeaders(req));
+  const authResult = await checkCronOrServiceRoleOrAdmin(req, getCorsHeaders(req));
   if (!authResult.authorized) {
     return authResult.response;
   }

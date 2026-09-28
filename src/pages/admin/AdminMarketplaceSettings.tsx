@@ -30,7 +30,7 @@ const FIELDS: Array<{ key: keyof FormValues; label: string; unit: string; hint: 
   { key: "tenderDays", label: "Angebotsphase (Anfrage, Traumküche)", unit: "Tage", hint: "So lange können Studios Angebote abgeben." },
   { key: "underbidDays", label: "Angebotsphase „Unterbieten“", unit: "Tage", hint: "Für Kund:innen mit vorhandenem Studio-Angebot." },
   { key: "decisionDays", label: "Entscheidungsfrist für Kund:innen", unit: "Tage", hint: "Danach läuft die Ausschreibung ohne Zuschlag ab." },
-  { key: "maxContacts", label: "Kontaktkäufe je Projekt", unit: "Studios", hint: "0 schaltet den direkten Kontaktkauf ab." },
+  { key: "maxContacts", label: "Kontaktkäufe je Projekt", unit: "Studios", hint: "0 schaltet den Kontaktkauf ab. AGB und Datenschutzerklärung nennen höchstens drei – bei Erhöhung dort anpassen." },
   { key: "contactPriceEur", label: "Kontaktpreis ohne passende Preisregel", unit: "€ netto", hint: "Gilt nur, wenn keine Regel aus der Preisliste greift." },
   { key: "radiusKm", label: "Standard-Umkreis neuer Studios", unit: "km", hint: "Studios passen ihn im Portal selbst an." },
   { key: "minOfferPercent", label: "Mindestangebot", unit: "% der Schätzung", hint: "Schützt vor unrealistischen Lockangeboten." },

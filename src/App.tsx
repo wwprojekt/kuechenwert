@@ -59,6 +59,7 @@ const Impressum = lazyRetry(() => import("./pages/Impressum"));
 const Datenschutz = lazyRetry(() => import("./pages/Datenschutz"));
 const AGB = lazyRetry(() => import("./pages/AGB"));
 const Abmelden = lazyRetry(() => import("./pages/Abmelden"));
+const Konditionen = lazyRetry(() => import("./pages/Konditionen"));
 const FAQ = lazyRetry(() => import("./pages/FAQ"));
 const Preise = lazyRetry(() => import("./pages/Preise"));
 
@@ -223,6 +224,7 @@ const App = () => (
               <Route path="/datenschutz" element={<Datenschutz />} />
               <Route path="/agb" element={<AGB />} />
               <Route path="/abmelden" element={<Abmelden />} />
+              <Route path="/konditionen" element={<Konditionen />} />
               <Route path="/faq" element={<FAQ />} />
               <Route path="/preise" element={<Preise />} />
               <Route path="/blog" element={<Blog />} />

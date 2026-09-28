@@ -55,9 +55,6 @@ const RENDER_STATUS_LABEL: Record<
   failed: { label: "Failed", variant: "destructive" },
 };
 
-const STORAGE_PUBLIC_BASE =
-  "https://gzqayoalwtmypndrmqes.supabase.co/storage/v1/object/public/planner-renders/";
-
 type SessionRow = {
   id: string;
   session_token: string;
@@ -83,6 +80,9 @@ type RenderRow = {
   prompt: string | null;
   status: string;
   image_path: string | null;
+  storage_bucket: string | null;
+  /** Signierte URL (1 h); beide Planer-Buckets sind privat. */
+  image_url: string | null;
   model_slug: string | null;
   generation_ms: number | null;
   cost_cents: number | null;
@@ -125,9 +125,22 @@ function formatDateTime(iso: string | null): string {
   });
 }
 
-function storageUrl(path: string | null): string | null {
-  if (!path) return null;
-  return path.startsWith("http") ? path : STORAGE_PUBLIC_BASE + path;
+/** Signierte URLs je Bucket in einem Aufruf pro Bucket (Admins dürfen beide Planer-Buckets lesen). */
+async function signRenderUrls(rows: Array<{ image_path: string | null; storage_bucket: string | null }>) {
+  const byBucket = new Map<string, string[]>();
+  for (const r of rows) {
+    if (!r.image_path) continue;
+    const bucket = r.storage_bucket || "planner-media";
+    byBucket.set(bucket, [...(byBucket.get(bucket) ?? []), r.image_path]);
+  }
+  const urls = new Map<string, string>();
+  for (const [bucket, paths] of byBucket) {
+    const { data } = await supabase.storage.from(bucket).createSignedUrls([...new Set(paths)], 3600);
+    for (const entry of data ?? []) {
+      if (entry.path && entry.signedUrl) urls.set(`${bucket}/${entry.path}`, entry.signedUrl);
+    }
+  }
+  return urls;
 }
 
 export default function AdminPlannerSessions() {
@@ -158,12 +171,17 @@ export default function AdminPlannerSessions() {
       const rendersQuery = supabase
         .from("planner_renders")
         .select(
-          "id, session_id, version, prompt, status, image_path, model_slug, generation_ms, cost_cents, error_message, created_at"
+          "id, session_id, version, prompt, status, image_path, storage_bucket, model_slug, generation_ms, cost_cents, error_message, created_at"
         )
         .in("session_id", sessionIds.length ? sessionIds : ["__none__"])
         .order("version", { ascending: true });
-      const { data: renders, error: rErr } = await rendersQuery;
+      const { data: renderRows, error: rErr } = await rendersQuery;
       if (rErr) throw rErr;
+      const signed = await signRenderUrls(renderRows ?? []);
+      const renders: RenderRow[] = (renderRows ?? []).map((r) => ({
+        ...r,
+        image_url: r.image_path ? signed.get(`${r.storage_bucket || "planner-media"}/${r.image_path}`) ?? null : null,
+      }));
 
       // 3. Leads
       const { data: leads, error: lErr } = leadIds.length
@@ -178,10 +196,10 @@ export default function AdminPlannerSessions() {
 
       const renderById = new Map<string, RenderRow>();
       const rendersBySession = new Map<string, RenderRow[]>();
-      (renders ?? []).forEach((r) => {
-        renderById.set(r.id, r as RenderRow);
+      renders.forEach((r) => {
+        renderById.set(r.id, r);
         const arr = rendersBySession.get(r.session_id) ?? [];
-        arr.push(r as RenderRow);
+        arr.push(r);
         rendersBySession.set(r.session_id, arr);
       });
       const leadById = new Map<string, LeadLite>();
@@ -351,7 +369,7 @@ export default function AdminPlannerSessions() {
                   label: s.status,
                   variant: "outline" as const,
                 };
-                const thumb = storageUrl(s.current_render?.image_path ?? null);
+                const thumb = s.current_render?.image_url ?? null;
                 const specStyle =
                   typeof s.spec?.kitchen_style === "string"
                     ? (s.spec.kitchen_style as string)
@@ -447,9 +465,9 @@ function SessionDetail({ session }: { session: SessionWithRel }) {
 
       <div className="grid md:grid-cols-2 gap-6">
         <div className="space-y-4">
-          {current && storageUrl(current.image_path) ? (
+          {current?.image_url ? (
             <img
-              src={storageUrl(current.image_path) as string}
+              src={current.image_url}
               alt={`Aktuelles Rendering v${current.version}`}
               className="w-full rounded-lg border object-cover aspect-[3/2]"
             />
@@ -550,7 +568,7 @@ function SessionDetail({ session }: { session: SessionWithRel }) {
               .slice()
               .reverse()
               .map((r) => {
-                const url = storageUrl(r.image_path);
+                const url = r.image_url;
                 return (
                   <div key={r.id} className="relative">
                     {url ? (

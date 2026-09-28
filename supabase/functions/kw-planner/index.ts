@@ -153,8 +153,8 @@ async function ensureSession(
   return data as Session;
 }
 
-async function signedUrl(sb: SupabaseClient, path: string, ttl = SIGNED_URL_TTL): Promise<string | null> {
-  const { data } = await sb.storage.from(BUCKET).createSignedUrl(path, ttl);
+async function signedUrl(sb: SupabaseClient, path: string, ttl = SIGNED_URL_TTL, bucket = BUCKET): Promise<string | null> {
+  const { data } = await sb.storage.from(bucket).createSignedUrl(path, ttl);
   return data?.signedUrl ?? null;
 }
 
@@ -224,9 +224,7 @@ async function actionSession(req: Request, sb: SupabaseClient, body: Record<stri
       created_at: r.created_at,
       image_url:
         r.status === "success" && r.image_path
-          ? r.storage_bucket === BUCKET
-            ? await signedUrl(sb, r.image_path)
-            : sb.storage.from(r.storage_bucket).getPublicUrl(r.image_path).data.publicUrl
+          ? await signedUrl(sb, r.image_path, SIGNED_URL_TTL, r.storage_bucket || BUCKET)
           : null,
     })),
   );

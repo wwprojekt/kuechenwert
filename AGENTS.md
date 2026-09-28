@@ -259,7 +259,7 @@ Note: Supabase serves storage via its own Cloudflare with Bot Management (`Set-C
 - nginx takes the client IP from `CF-Connecting-IP` for Cloudflare ranges (`docker/nginx.conf`); keep the ranges current.
 
 ## Dev Environment Notes
-- `.env` with `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` is needed for a working local build (not present in every environment).
+- Without `.env`, `src/integrations/supabase/client.ts` falls back to the **production** project (URL and publishable key are public). `npm run dev`, local builds and `npm run test:e2e` then talk to production: never submit forms or run write tests there. For write tests set `VITE_SUPABASE_URL` / `VITE_SUPABASE_PUBLISHABLE_KEY` in `.env.local` to another project.
 - Build `dist/` and serve with `npx serve dist -l 8012 --single` for SPA routing; this does not reproduce the nginx allowlist, redirects or headers.
 - Agent-proxy paths break SPA asset loading.
 

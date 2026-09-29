@@ -2,17 +2,19 @@
  * Google-Ads-Sollzustand für KüchenWert (Konto 760-376-7237): Such-Kampagnen,
  * Anzeigengruppen, Keywords, Anzeigen, Ausschlüsse und Assets.
  *
- * kw-google-ads (action "campaigns") legt Fehlendes an, neue Kampagnen immer
- * pausiert; Vorhandenes bleibt unverändert. Kampagnen und Anzeigengruppen
- * werden über ihren Namen gefunden: Namen nur hier ändern, nicht im
- * Google-Ads-Konto.
+ * kw-google-ads (action "campaigns") gleicht das Konto mit diesem Plan ab:
+ * Fehlendes wird angelegt (neue Kampagnen pausiert), Anzeigen mit anderem
+ * Text werden ersetzt, Keywords, Ausschlüsse und Asset-Verknüpfungen, die hier
+ * nicht (mehr) stehen, entfernt. Kampagnen und Anzeigengruppen werden über
+ * ihren Namen gefunden und nie gelöscht: Namen nur hier ändern.
  *
  * Datengrundlage: Keyword-Planer (Deutschland, 29.09.2026). Anzeigentexte
  * sagen nur, was Landingpages und FAQ (src/data/faq.ts) belegen; keine
- * Markennamen Dritter in Anzeigentexten.
+ * Markennamen Dritter in Anzeigentexten. Bilder liegen unter public/ads/
+ * (ohne Text, Logos oder Collagen, wie Google es für Bild-Assets verlangt).
  *
  * Reines Datenmodul ohne Deno-APIs: src/lib/__tests__/google-ads-plan.test.ts
- * prüft es mit validatePlan().
+ * prüft es mit validatePlan() und die Bilddateien mit ihren Maßen.
  */
 
 export type MatchType = "EXACT" | "PHRASE" | "BROAD";
@@ -44,6 +46,25 @@ export interface SitelinkPlan {
   path: string;
 }
 
+export interface ImagePlan {
+  /** Datei unter public/ads/; zugleich Asset-Name „KüchenWert | <file>“ in Google Ads. */
+  file: string;
+  format: "landscape" | "square" | "logo";
+}
+
+export type Weekday = "MONDAY" | "TUESDAY" | "WEDNESDAY" | "THURSDAY" | "FRIDAY" | "SATURDAY" | "SUNDAY";
+
+export interface CallPlan {
+  /** Nationale Schreibweise; das Land steht in countryCode. */
+  phone: string;
+  countryCode: string;
+  /** Eigene Anruf-Conversion (kw-google-ads setup), damit Anrufe sekundär gezählt werden. */
+  conversionActionName: string;
+  days: Weekday[];
+  startHour: number;
+  endHour: number;
+}
+
 export type BiddingPlan =
   | { type: "MAXIMIZE_CLICKS"; cpcCeilingEur: number }
   | { type: "TARGET_IMPRESSION_SHARE"; cpcCeilingEur: number; absoluteTopShare: number };
@@ -59,6 +80,10 @@ export interface CampaignPlan {
   observeAudiences: boolean;
   negatives: Keyword[];
   sitelinks: string[];
+  /** Ersetzen für diese Kampagne die Callouts auf Kontoebene. */
+  callouts: string[];
+  /** Dateien aus AccountPlan.images (Bild-Assets gibt es nur auf Kampagnen- oder Anzeigengruppenebene). */
+  images: string[];
   adGroups: AdGroupPlan[];
 }
 
@@ -69,9 +94,14 @@ export interface AccountPlan {
   languageConstants: string[];
   sharedNegativeList: { name: string; keywords: Keyword[] };
   audienceUserInterestIds: string[];
+  /** Kontoebene: für Kampagnen ohne eigene Callouts. */
   callouts: string[];
   snippets: Array<{ header: string; values: string[] }>;
   sitelinks: SitelinkPlan[];
+  businessName: string;
+  logo: string;
+  images: ImagePlan[];
+  call: CallPlan;
   campaigns: CampaignPlan[];
 }
 
@@ -149,11 +179,13 @@ const SHARED_NEGATIVES: Keyword[] = [
 const HEADLINE_FREE = "Kostenlos & unverbindlich";
 const HEADLINE_BRAND_COMPARE = "KüchenWert – Küche vergleichen";
 const HEADLINE_PLANNER_BRAND = "KüchenWert Küchenplaner";
+const HEADLINE_CALCULATOR_BRAND = "KüchenWert KüchenRechner";
+const OFFERS = "Angebote geprüfter Studios";
 
 const ANGEBOTE: CampaignPlan = {
   key: "angebote",
   name: "Search | Küchenangebote | DE",
-  dailyBudgetEur: 30,
+  dailyBudgetEur: 50,
   bidding: { type: "MAXIMIZE_CLICKS", cpcCeilingEur: 3.5 },
   useSharedNegatives: true,
   observeAudiences: true,
@@ -161,7 +193,29 @@ const ANGEBOTE: CampaignPlan = {
     ...OWN_BRAND,
     ...bs("konfigurator", "konfigurieren", "3d", "kosten", "kostet", "rechner"),
   ],
-  sitelinks: ["planer", "unterbieten", "rechner", "studios", "faq", "ueber-uns"],
+  sitelinks: ["planer", "rechner", "unterbieten", "studios", "kontakt", "faq", "so-gehts", "ueber-uns"],
+  callouts: [
+    HEADLINE_FREE,
+    "Geprüfte Küchenstudios",
+    "Studios aus Ihrer Region",
+    "Nach Preis sortiert",
+    "Preise können nur sinken",
+    "Anfrage in ca. 3 Minuten",
+    "7 Tage Angebotsphase",
+    "Ohne Namen an Studios",
+    "Kein Kaufzwang",
+    "Keine bezahlten Plätze",
+  ],
+  images: [
+    "studio-beratung-quer.jpg",
+    "planung-quer.jpg",
+    "paar-kueche-quer.jpg",
+    "kueche-insel-quer.jpg",
+    "studio-beratung-quadrat.jpg",
+    "planung-quadrat.jpg",
+    "paar-kueche-quadrat.jpg",
+    "kueche-insel-quadrat.jpg",
+  ],
   adGroups: [
     {
       name: "Küchenangebote vergleichen",
@@ -182,28 +236,64 @@ const ANGEBOTE: CampaignPlan = {
       ad: {
         headlines: [
           "Küchenangebote vergleichen",
-          "Angebote geprüfter Studios",
+          "Küchenangebote einholen",
+          OFFERS,
           HEADLINE_FREE,
           "Küchenangebote aus der Region",
           "In ca. 3 Min. zur Anfrage",
           "Angebote werden nur günstiger",
-          "Kein Kaufzwang",
-          "Ohne Namen an Studios",
+          "Küchenpreise vergleichen",
           "7 Tage Angebote sammeln",
-          "Ihre Wunschküche beschreiben",
           "Einmal anfragen, vergleichen",
           "Nach Preis sortiert",
+          "Ohne Namen an Studios",
+          "Kein Kaufzwang",
           HEADLINE_BRAND_COMPARE,
-          "Neue Küche? Angebote holen",
-          "Einbauküche im Preisvergleich",
+          "Jetzt Küchenangebote holen",
         ],
         descriptions: [
           "Wunschküche in ca. 3 Minuten beschreiben – geprüfte Studios der Region senden Angebote.",
-          "Kostenlos und unverbindlich: Angebote nach Preis vergleichen und in Ruhe entscheiden.",
+          "Küchenangebote vergleichen, kostenlos und unverbindlich – nach Preis sortiert.",
           "Ihr Projekt geht ohne Namen an geprüfte Studios. Abgegebene Angebote können nur sinken.",
           "Nicht jedes Studio einzeln anfragen: einmal beschreiben, 7 Tage lang Angebote erhalten.",
         ],
         path1: "angebote",
+        path2: "vergleichen",
+      },
+    },
+    {
+      name: "Küchenpreise vergleichen",
+      finalPath: "/formular",
+      keywords: [
+        ...ep("küchenpreise vergleichen", "küchen preise vergleichen", "küche preisvergleich", "preisvergleich küchen"),
+        ...ep("küchen preisvergleich", "küchenvergleich", "küchen vergleich", "küchen vergleichen"),
+        ...ps("einbauküche preisvergleich", "preisvergleich einbauküche"),
+      ],
+      ad: {
+        headlines: [
+          "Küchenpreise vergleichen",
+          "Küchen-Preisvergleich",
+          "Küchen vergleichen",
+          "Einbauküche im Preisvergleich",
+          OFFERS,
+          HEADLINE_FREE,
+          "Nach Preis sortiert",
+          "Angebote werden nur günstiger",
+          "Echte Studio-Angebote",
+          "Einmal anfragen, vergleichen",
+          "In ca. 3 Min. zur Anfrage",
+          "Studios aus Ihrer Region",
+          "Ohne Namen an Studios",
+          "Kein Kaufzwang",
+          HEADLINE_BRAND_COMPARE,
+        ],
+        descriptions: [
+          "Küchenpreise vergleichen mit echten Angeboten geprüfter Studios aus Ihrer Region.",
+          "Wunschküche in ca. 3 Min. beschreiben – 7 Tage lang Angebote, nach Preis sortiert.",
+          "Abgegebene Angebote können nur sinken. Ihr Projekt geht ohne Namen an die Studios.",
+          "Kostenlos und unverbindlich: Preise vergleichen, bestes Angebot wählen, kein Kaufzwang.",
+        ],
+        path1: "küchenpreise",
         path2: "vergleichen",
       },
     },
@@ -230,24 +320,24 @@ const ANGEBOTE: CampaignPlan = {
       ad: {
         headlines: [
           "Neue Küche kaufen",
-          "Vor dem Küchenkauf vergleichen",
-          "Angebote geprüfter Studios",
+          "Küche kaufen? Erst vergleichen",
+          "Einbauküche vom Küchenstudio",
+          OFFERS,
           HEADLINE_FREE,
-          "Einbauküche mit Geräten",
           "Küche nach Maß vom Studio",
+          "Einbauküche mit Geräten",
           "Studios aus Ihrer Region",
-          "Kein Kaufzwang",
           "Angebote werden nur günstiger",
           "In ca. 3 Min. zur Anfrage",
           "L-, U- oder Inselküche",
+          "Küchenpreise vergleichen",
+          "Kein Kaufzwang",
           "Ohne Namen an Studios",
           HEADLINE_BRAND_COMPARE,
-          "Nach Preis sortiert",
-          "Einmal anfragen, vergleichen",
         ],
         descriptions: [
           "Vor dem Küchenkauf Angebote geprüfter Studios aus Ihrer Region kostenlos vergleichen.",
-          "Wunschküche in ca. 3 Minuten beschreiben. Studios senden Angebote, Sie entscheiden.",
+          "Neue Küche kaufen: Wunschküche in ca. 3 Min. beschreiben, Studios senden Angebote.",
           "Einbauküche mit oder ohne Geräte: Angebote nach Preis sortiert, ohne Kaufzwang.",
           "Ihr Projekt geht ohne Namen an Studios. Abgegebene Angebote können nur noch sinken.",
         ],
@@ -269,30 +359,31 @@ const ANGEBOTE: CampaignPlan = {
         ),
         ...es("küchenplanung zu hause", "küchenplaner in der nähe"),
         ...ps("küchenstudios", "küchenfachhändler", "küchenfachgeschäft", "küchenstudio in meiner nähe"),
+        ...ps("küchenberatung kostenlos", "kostenlose küchenberatung"),
       ],
       ad: {
         headlines: [
           "Küchenstudios in Ihrer Region",
+          "Küchenstudio in Ihrer Nähe",
           "Geprüfte Küchenstudios",
+          "Beratung & Planung vom Studio",
           "Angebote mehrerer Studios",
           HEADLINE_FREE,
+          "Küche planen lassen",
           "Einmal anfragen, vergleichen",
           "Studios vorab geprüft",
-          "Planung & Angebot vom Studio",
           "Ohne Namen an Studios",
           "Kein Kaufzwang",
           "Angebote werden nur günstiger",
-          "Wunschküche beschreiben",
           "In ca. 3 Min. zur Anfrage",
-          "KüchenWert vermittelt Studios",
           "Nicht jedes Studio abklappern",
-          "Nach Preis sortiert",
+          "KüchenWert vermittelt Studios",
         ],
         descriptions: [
           "Geprüfte Küchenstudios aus Ihrer Region machen Ihnen Angebote – kostenlos & unverbindlich.",
-          "Nicht jedes Studio einzeln anfragen: Wunschküche einmal beschreiben, Angebote vergleichen.",
+          "Nicht jedes Küchenstudio einzeln anfragen: Wunschküche einmal beschreiben, vergleichen.",
           "Jedes Studio wird vor der Freischaltung manuell geprüft. Ihr Projekt geht ohne Namen raus.",
-          "Bestes Angebot wählen, Aufmaß mit dem Studio – den Kaufvertrag schließen Sie erst danach.",
+          "Bestes Angebot wählen, Aufmaß und Beratung mit dem Studio – erst danach unterschreiben.",
         ],
         path1: "küchenstudio",
         path2: "region",
@@ -328,8 +419,9 @@ const ANGEBOTE: CampaignPlan = {
       ad: {
         headlines: [
           "Markenküchen im Vergleich",
+          "Preise für Markenküchen",
           "Markenküche: Preis prüfen",
-          "Angebote geprüfter Studios",
+          OFFERS,
           HEADLINE_FREE,
           "Marke im Studio-Angebot",
           "Preise mehrerer Studios",
@@ -341,10 +433,9 @@ const ANGEBOTE: CampaignPlan = {
           "Studios aus Ihrer Region",
           HEADLINE_BRAND_COMPARE,
           "In ca. 3 Min. zur Anfrage",
-          "Wunschküche beschreiben",
         ],
         descriptions: [
-          "Was kostet Ihre Markenküche? Angebote geprüfter Studios kostenlos vergleichen.",
+          "Was kostet Ihre Markenküche? Preise im Angebot geprüfter Studios kostenlos vergleichen.",
           "Welche Marken ein Studio anbietet, sehen Sie im Angebot. Nach Preis sortiert.",
           "Wunschküche in ca. 3 Minuten beschreiben – Studios aus Ihrer Region senden Angebote.",
           "Abgegebene Angebote können nur noch sinken. Ihr Projekt geht ohne Namen an die Studios.",
@@ -367,7 +458,6 @@ const ANGEBOTE: CampaignPlan = {
           "rabatt küchen",
           "rabatt auf küchen",
           "küchenstudio preise",
-          "küchen preisvergleich",
           "küchenangebot zweite meinung",
           "küchenangebot unterbieten",
           "küchenangebot günstiger",
@@ -377,24 +467,24 @@ const ANGEBOTE: CampaignPlan = {
       ad: {
         headlines: [
           "Küchenangebot unterbieten",
+          "Küchenangebot prüfen lassen",
           "Angebot 72 Std. unterbieten",
           "Schon ein Küchenangebot?",
+          "Küchenangebot zu teuer?",
           "Studios können unterbieten",
           HEADLINE_FREE,
           "Angebot hochladen, abwarten",
-          "Küche zu teuer? Vergleichen",
+          "Mit Angebots-Check am Telefon",
           "Geprüfte Studios der Region",
           "Anonym an andere Studios",
           "Bestes Angebot annehmen",
-          "Oder alle ablehnen",
           "Zweites Angebot für Ihre Küche",
-          "Küchenpreis prüfen",
           "Kein Kaufzwang",
           "Gleiche Küche, besserer Preis?",
         ],
         descriptions: [
-          "Studio-Angebot hochladen: geprüfte Studios aus Ihrer Region können 72 Std. unterbieten.",
-          "Ihr Angebot geht ohne Ihren Namen und ohne Studionamen raus. Kostenlos & unverbindlich.",
+          "Küchenangebot hochladen: geprüfte Studios aus Ihrer Region können es 72 Std. unterbieten.",
+          "Kurzer Angebots-Check am Telefon, dann geht Ihr Angebot ohne Namen an andere Studios.",
           "Günstigeres Angebot für dieselbe oder eine vergleichbare Ausstattung? Sie entscheiden.",
           "Bestes Angebot annehmen oder alle ablehnen – kein Kaufzwang, keine Kosten für Sie.",
         ],
@@ -408,7 +498,7 @@ const ANGEBOTE: CampaignPlan = {
 const PLANER: CampaignPlan = {
   key: "planer",
   name: "Search | Küchenplaner | DE",
-  dailyBudgetEur: 20,
+  dailyBudgetEur: 50,
   bidding: { type: "MAXIMIZE_CLICKS", cpcCeilingEur: 2.5 },
   useSharedNegatives: true,
   observeAudiences: true,
@@ -419,7 +509,30 @@ const PLANER: CampaignPlan = {
     ...bs("angebote", "händler", "fachhändler", "küchenbauer", "kosten", "kostet", "rechner"),
     ...ps("in der nähe", "zu hause", "vor ort"),
   ],
-  sitelinks: ["angebote", "rechner", "unterbieten", "studios", "faq", "ueber-uns"],
+  sitelinks: ["angebote", "rechner", "unterbieten", "studios", "kontakt", "faq", "so-gehts", "ueber-uns"],
+  callouts: [
+    HEADLINE_FREE,
+    "KI-Bild im eigenen Raum",
+    "Preisschätzung live",
+    "Varianten per Klick",
+    "Auch ohne Raumfoto",
+    "6 Küchenformen",
+    "Stil, Fronten & Geräte",
+    "Budget im Blick",
+    "Geprüfte Küchenstudios",
+    "Kein Kaufzwang",
+  ],
+  images: [
+    "ki-vorschau-quer.jpg",
+    "kueche-insel-quer.jpg",
+    "showroom-quer.jpg",
+    "paar-kueche-quer.jpg",
+    "ki-vorschau-quadrat.jpg",
+    "kueche-insel-quadrat.jpg",
+    "showroom-quadrat.jpg",
+    "stil-dunkel-quadrat.jpg",
+    "stil-industrial-quadrat.jpg",
+  ],
   adGroups: [
     {
       name: "Küchenplaner online",
@@ -439,26 +552,26 @@ const PLANER: CampaignPlan = {
       ad: {
         headlines: [
           "Küchenplaner online",
-          "KI-Küchenplaner kostenlos",
+          "Online-Küchenplaner mit KI",
+          "Küchenkonfigurator mit KI",
+          "Küche online konfigurieren",
           "Küche im eigenen Raum sehen",
           "Foto hochladen, Küche planen",
-          "Mit Preisschätzung sofort",
+          "Preisschätzung live",
           "Fotorealistisch per KI",
           "Varianten mit einem Klick",
           HEADLINE_FREE,
           "Stil, Fronten, Geräte wählen",
-          "Angebote geprüfter Studios",
-          "Planen, sehen, vergleichen",
-          "Küchenkonfigurator mit KI",
           "Auch ohne Raumfoto",
+          OFFERS,
           HEADLINE_PLANNER_BRAND,
-          "Traumküche in Ihrem Foto",
+          "Jetzt Küche online planen",
         ],
         descriptions: [
-          "Foto Ihres Raums hochladen, Küche konfigurieren und per KI sehen, wie sie aussieht.",
-          "Mit Preisschätzung, die sich bei jeder Auswahl anpasst. Kostenlos und unverbindlich.",
+          "Küchenplaner online: Raumfoto hochladen, Küche konfigurieren und per KI im Raum sehen.",
+          "Küchenkonfigurator mit Preisschätzung, die sich bei jeder Auswahl anpasst. Kostenlos.",
           "Wände, Fenster und Boden bleiben erhalten – die KI setzt Ihre Wunschküche in Ihr Foto.",
-          "Auf Wunsch Angebote geprüfter Küchenstudios aus Ihrer Region. Kein Kaufzwang.",
+          "Auf Wunsch Angebote geprüfter Studios aus Ihrer Region. Unverbindlich, kein Kaufzwang.",
         ],
         path1: "küchenplaner",
         path2: "ki",
@@ -485,24 +598,24 @@ const PLANER: CampaignPlan = {
         headlines: [
           "Küche online planen",
           "Küche planen mit KI",
+          "Neue Küche selbst planen",
+          "Küchenplanung online",
+          "Einbauküche planen & sehen",
           "Küche im eigenen Raum sehen",
           "Foto hochladen, Küche planen",
-          "Mit Preisschätzung sofort",
+          "Preisschätzung live",
           HEADLINE_FREE,
-          "Neue Küche selbst gestalten",
-          "Stil, Fronten, Geräte wählen",
           "Fotorealistisch per KI",
           "Varianten mit einem Klick",
-          "Angebote geprüfter Studios",
-          "Planen, sehen, vergleichen",
+          OFFERS,
           "Auch ohne Raumfoto",
-          "Ihre Traumküche planen",
+          "Stil, Fronten, Geräte wählen",
           HEADLINE_PLANNER_BRAND,
         ],
         descriptions: [
-          "Küche planen und im eigenen Raum sehen: Foto hochladen, Stil wählen, KI-Bild erhalten.",
+          "Küche online planen und im Raum sehen: Foto hochladen, Stil wählen, KI-Bild erhalten.",
           "Preisschätzung aus Laufmetern, Fronten und Geräten – live bei jeder Auswahl. Kostenlos.",
-          "Fertig geplant? Geprüfte Studios aus Ihrer Region machen Ihnen auf Wunsch Angebote.",
+          "Küche selbst planen, dann auf Wunsch Angebote geprüfter Studios aus Ihrer Region erhalten.",
           "Wände, Fenster und Boden bleiben erhalten, nur die Küche ist neu. Varianten per Klick.",
         ],
         path1: "küche",
@@ -530,25 +643,25 @@ const PLANER: CampaignPlan = {
       ad: {
         headlines: [
           "Küchenplaner kostenlos",
-          "Kostenlos Küche planen",
           "Kostenloser KI-Küchenplaner",
+          "Küche kostenlos planen",
+          "Küchenplanung kostenlos",
           "Komplett kostenlos für Sie",
           "Küche im eigenen Raum sehen",
           "Foto hochladen, Küche planen",
-          "Mit Preisschätzung sofort",
+          "Preisschätzung live",
           "Fotorealistisch per KI",
           "Ohne versteckte Gebühren",
           "Varianten mit einem Klick",
           "Stil, Fronten, Geräte wählen",
           "Auch ohne Raumfoto",
-          "Angebote geprüfter Studios",
-          HEADLINE_FREE,
+          OFFERS,
           HEADLINE_PLANNER_BRAND,
         ],
         descriptions: [
           "Kostenloser Küchenplaner mit KI: Raumfoto hochladen und Ihre neue Küche darin sehen.",
           "Konfigurator, KI-Visualisierung und Preisschätzung sind für Sie komplett kostenlos.",
-          "Stil, Fronten, Arbeitsplatte, Griffe und Geräte wählen – der Preis passt sich live an.",
+          "Küche kostenlos planen: Stil, Fronten, Arbeitsplatte und Geräte wählen, Preis live sehen.",
           "Auf Wunsch Angebote geprüfter Studios aus Ihrer Region. Unverbindlich, kein Kaufzwang.",
         ],
         path1: "küchenplaner",
@@ -559,7 +672,7 @@ const PLANER: CampaignPlan = {
       name: "Küche planen mit Preis",
       finalPath: "/funnel/c",
       keywords: [
-        ...ep("küche online planen mit preis", "küchenplaner mit preis"),
+        ...ep("küche online planen mit preis", "küchenplaner mit preis", "küchenkonfigurator mit preis"),
         ...ps(
           "küche planen online mit preis",
           "küche planen mit preis",
@@ -568,28 +681,30 @@ const PLANER: CampaignPlan = {
           "günstige küche planen",
           "küchenplaner preis",
           "küche konfigurieren preis",
+          "küchen konfigurator mit preis",
+          "küchenplaner mit preisberechnung",
         ),
       ],
       ad: {
         headlines: [
           "Küche planen mit Preis",
           "Küchenplaner mit Preis",
+          "Küchenkonfigurator mit Preis",
           "Preisschätzung live",
           "Preis bei jeder Auswahl",
+          "Budget im Blick behalten",
           "Küche im eigenen Raum sehen",
           "Foto hochladen, Küche planen",
           HEADLINE_FREE,
           "Mit regionalem Preisfaktor",
           "Lieferung & Montage wählbar",
+          "Preis mit Einzelpositionen",
+          OFFERS,
           "Fotorealistisch per KI",
-          "Angebote geprüfter Studios",
-          "Preis kennen vor dem Studio",
-          "Budget im Blick behalten",
-          "Stil, Fronten, Geräte wählen",
           HEADLINE_PLANNER_BRAND,
         ],
         descriptions: [
-          "Küche online planen und sofort sehen, was sie etwa kostet – mit regionalem Preisfaktor.",
+          "Küche online planen mit Preis: sofort sehen, was sie etwa kostet – mit regionalem Faktor.",
           "Die Schätzung passt sich bei jeder Auswahl an: Fronten, Arbeitsplatte, Geräte, Montage.",
           "Per KI sehen, wie die Küche in Ihrem Raum aussieht. Kostenlos und unverbindlich.",
           "Auf Wunsch machen geprüfte Studios Angebote – verbindlich erst nach dem Aufmaß vor Ort.",
@@ -631,25 +746,25 @@ const PLANER: CampaignPlan = {
       ad: {
         headlines: [
           "L-, U- oder Inselküche planen",
+          "L-Küche planen",
+          "U-Küche planen",
+          "Küche mit Insel planen",
           "Küchenform im Raum testen",
+          "Kochinsel oder Küchenzeile?",
           "Küche im eigenen Raum sehen",
           "Foto hochladen, Form wählen",
-          "Mit Preisschätzung sofort",
-          "Kochinsel oder Küchenzeile?",
+          "Preisschätzung live",
+          "6 Küchenformen zur Auswahl",
           "Fotorealistisch per KI",
           HEADLINE_FREE,
-          "Varianten mit einem Klick",
-          "6 Küchenformen zur Auswahl",
           "Wandmaße angeben, planen",
-          "Angebote geprüfter Studios",
-          "Stil, Fronten, Geräte wählen",
-          "Ihre Traumküche planen",
+          OFFERS,
           HEADLINE_PLANNER_BRAND,
         ],
         descriptions: [
-          "L-, U-, G-Küche, Zeile oder Kochinsel: Form wählen und per KI im eigenen Raum sehen.",
+          "L-Küche, U-Küche, G-Küche, Zeile oder Kochinsel: Form wählen und per KI im Raum sehen.",
           "Raumfoto hochladen, Wandmaße angeben – die KI zeigt Ihre neue Küche fotorealistisch.",
-          "Mit Preisschätzung, die sich bei jeder Auswahl anpasst. Kostenlos und unverbindlich.",
+          "Inselküche oder Eckküche planen, mit Preisschätzung bei jeder Auswahl. Kostenlos.",
           "Auf Wunsch Angebote geprüfter Küchenstudios aus Ihrer Region. Kein Kaufzwang.",
         ],
         path1: "küchenform",
@@ -677,24 +792,24 @@ const PLANER: CampaignPlan = {
           "KI-Küchenplaner",
           "Küche per KI visualisieren",
           "Traumküche im eigenen Raum",
+          "Küchenplaner mit KI",
+          "Traumküche planen mit KI",
           "Foto hochladen, KI-Bild sehen",
           "Fotorealistisch per KI",
           "Wände & Fenster bleiben",
           "KI-Bild meist unter 1 Min.",
           "Varianten mit einem Klick",
-          "Mit Preisschätzung sofort",
+          "Preisschätzung live",
           HEADLINE_FREE,
-          "Stil, Fronten, Geräte wählen",
           "Auch ohne Raumfoto",
-          "Angebote geprüfter Studios",
           "Sehen, bevor Sie kaufen",
           HEADLINE_PLANNER_BRAND,
         ],
         descriptions: [
-          "Laden Sie ein Raumfoto hoch: Die KI setzt Ihre Wunschküche fotorealistisch hinein.",
-          "Wände, Fenster und Boden bleiben erhalten. Neue Varianten erzeugen Sie mit einem Klick.",
+          "KI-Küchenplaner: Raumfoto hochladen, die KI setzt Ihre Wunschküche fotorealistisch hinein.",
+          "Küche visualisieren: Wände, Fenster und Boden bleiben erhalten, Varianten per Klick.",
           "Mit Preisschätzung zur Orientierung – kostenlos und unverbindlich, ohne Kaufzwang.",
-          "Gefällt Ihnen die Küche? Geprüfte Studios aus Ihrer Region machen auf Wunsch Angebote.",
+          "Gefällt Ihnen die Traumküche? Geprüfte Studios der Region machen auf Wunsch Angebote.",
         ],
         path1: "traumküche",
         path2: "ki",
@@ -706,7 +821,7 @@ const PLANER: CampaignPlan = {
 const KOSTEN: CampaignPlan = {
   key: "kosten",
   name: "Search | Küchenkosten | DE",
-  dailyBudgetEur: 10,
+  dailyBudgetEur: 50,
   bidding: { type: "MAXIMIZE_CLICKS", cpcCeilingEur: 1.5 },
   useSharedNegatives: true,
   observeAudiences: true,
@@ -714,10 +829,32 @@ const KOSTEN: CampaignPlan = {
     ...OWN_BRAND,
     ...MANUFACTURERS,
     ...bs("planen", "planer", "planung", "küchenplaner", "küchenplanung", "konfigurator", "konfigurieren"),
-    ...bs("kaufen", "angebot", "angebote", "küchenstudio", "studio"),
+    ...bs("kaufen", "angebot", "angebote", "küchenstudio", "studio", "vergleichen", "vergleich", "preisvergleich"),
     ...ps("in der nähe"),
   ],
-  sitelinks: ["angebote", "planer", "unterbieten", "studios", "faq"],
+  sitelinks: ["angebote", "planer", "unterbieten", "studios", "kontakt", "faq", "so-gehts", "ueber-uns"],
+  callouts: [
+    HEADLINE_FREE,
+    "Budget-Check in 30 Sek.",
+    "Nur 4 kurze Fragen",
+    "Ohne Kontaktdaten",
+    "Preisspanne sofort",
+    "Richtwert nach Marktpreis",
+    "Region fließt mit ein",
+    "Danach Angebote holen",
+    "Geprüfte Küchenstudios",
+    "Kein Kaufzwang",
+  ],
+  images: [
+    "planung-quer.jpg",
+    "kueche-insel-quer.jpg",
+    "ki-vorschau-quer.jpg",
+    "paar-kueche-quer.jpg",
+    "planung-quadrat.jpg",
+    "kueche-insel-quadrat.jpg",
+    "ki-vorschau-quadrat.jpg",
+    "paar-kueche-quadrat.jpg",
+  ],
   adGroups: [
     {
       name: "Was kostet eine Küche",
@@ -737,34 +874,72 @@ const KOSTEN: CampaignPlan = {
           "kosten neue küche",
           "küche kosten faustregel",
           "küche kosten rechner",
+          "was darf eine küche kosten",
+          "wie viel darf eine küche kosten",
         ),
       ],
       ad: {
         headlines: [
           "Was kostet eine neue Küche?",
-          "Küchenkosten in 4 Fragen",
-          "Richtwert ohne Kontaktdaten",
+          "Küche Kosten: Richtwert",
+          "Neue Küche: Kosten prüfen",
+          "Budget-Check in 4 Fragen",
           "KüchenRechner kostenlos",
-          "Küche kosten: Richtwert",
+          "Budget in 30 Sek. checken",
+          "Richtwert ohne Kontaktdaten",
           "Preisspanne für Ihre Küche",
           "Größe, Ausstattung, Geräte",
           "Region fließt mit ein",
           HEADLINE_FREE,
-          "Danach Angebote vergleichen",
-          "Budget für die Küche planen",
-          "In 4 Fragen zum Richtwert",
           "Marktpreise als Grundlage",
-          "KüchenWert KüchenRechner",
-          "Einbauküche: Kosten prüfen",
+          "Danach Angebote vergleichen",
+          "Was darf eine Küche kosten?",
+          HEADLINE_CALCULATOR_BRAND,
         ],
         descriptions: [
-          "4 kurze Fragen zu Größe, Ausstattung, Geräten und Region – und Sie sehen eine Preisspanne.",
-          "Ohne Kontaktdaten: Richtwert auf Basis öffentlich verfügbarer Marktpreise. Kostenlos.",
+          "Was kostet eine Küche? 4 Fragen zu Größe, Ausstattung, Geräten und Region, dann Richtwert.",
+          "Budget-Check ohne Kontaktdaten: Richtwert auf Basis öffentlich verfügbarer Marktpreise.",
           "Danach auf Wunsch Angebote geprüfter Küchenstudios aus Ihrer Region vergleichen.",
           "Ein Richtwert zur Orientierung – verbindlich ist erst das Studio-Angebot nach Aufmaß.",
         ],
         path1: "küchenrechner",
         path2: "kosten",
+      },
+    },
+    {
+      name: "KüchenRechner & Budget-Check",
+      finalPath: "/kuechenrechner",
+      keywords: [
+        ...ep("küchenrechner", "küche preis rechner", "küchen preisrechner", "küche budget", "budget küche"),
+        ...ps("küchen rechner", "küchenkostenrechner", "küche preis berechnen", "küchenkosten berechnen"),
+        ...ps("küche kosten berechnen"),
+      ],
+      ad: {
+        headlines: [
+          "KüchenRechner kostenlos",
+          "KüchenRechner: Budget-Check",
+          "Küchen-Preisrechner",
+          "Küchenkosten berechnen",
+          "Budget-Check in 4 Fragen",
+          "Budget in 30 Sek. checken",
+          "Küche: Budget prüfen",
+          "Richtwert ohne Kontaktdaten",
+          "Preisspanne sofort sehen",
+          "Größe, Ausstattung, Geräte",
+          "Region fließt mit ein",
+          "Marktpreise als Grundlage",
+          HEADLINE_FREE,
+          "Danach Angebote vergleichen",
+          HEADLINE_CALCULATOR_BRAND,
+        ],
+        descriptions: [
+          "Der KüchenRechner zeigt nach 4 Fragen eine Preisspanne für Ihre neue Küche – kostenlos.",
+          "Budget-Check ohne Kontaktdaten: Größe, Ausstattung, Geräte und Region angeben, fertig.",
+          "Richtwerte auf Basis öffentlich verfügbarer Marktpreise, inklusive Lieferung und Montage.",
+          "Danach auf Wunsch Angebote geprüfter Studios aus Ihrer Region vergleichen.",
+        ],
+        path1: "küchenrechner",
+        path2: "budget",
       },
     },
     {
@@ -792,25 +967,25 @@ const KOSTEN: CampaignPlan = {
       ad: {
         headlines: [
           "Einbauküche: Was kostet sie?",
-          "Küchenpreis kostenlos schätzen",
-          "Richtwert in 4 Fragen",
-          "Ohne Kontaktdaten",
+          "Einbauküche Kosten prüfen",
+          "Küchenpreise kostenlos prüfen",
+          "Küchenpreis schätzen lassen",
+          "Budget-Check in 4 Fragen",
+          "Richtwert ohne Kontaktdaten",
           "Preisspanne für Ihre Küche",
           "Mit oder ohne Geräte",
           "Größe, Ausstattung, Region",
           "KüchenRechner kostenlos",
           HEADLINE_FREE,
           "Danach Angebote vergleichen",
-          "Budget für die Küche planen",
           "Marktpreise als Grundlage",
           "L-, U- oder Inselküche",
-          "KüchenWert KüchenRechner",
-          "Kosten vorab einschätzen",
+          HEADLINE_CALCULATOR_BRAND,
         ],
         descriptions: [
           "Was kostet eine Einbauküche? 4 Fragen zu Größe, Ausstattung, Geräten und Region.",
-          "Sie sehen eine Preisspanne – ohne Kontaktdaten, auf Basis öffentlicher Marktpreise.",
-          "Mit Geräten, mit Insel, groß oder klein: der KüchenRechner gibt Ihnen einen Richtwert.",
+          "Küchenpreise einschätzen: Preisspanne ohne Kontaktdaten, nach öffentlichen Marktpreisen.",
+          "Mit Geräten, mit Insel, groß oder klein: Der KüchenRechner gibt Ihnen einen Richtwert.",
           "Danach auf Wunsch Angebote geprüfter Studios vergleichen. Kostenlos und unverbindlich.",
         ],
         path1: "einbauküche",
@@ -823,12 +998,35 @@ const KOSTEN: CampaignPlan = {
 const MARKE: CampaignPlan = {
   key: "marke",
   name: "Search | Marke KüchenWert | DE",
-  dailyBudgetEur: 5,
+  dailyBudgetEur: 50,
   bidding: { type: "TARGET_IMPRESSION_SHARE", cpcCeilingEur: 1, absoluteTopShare: 0.95 },
   useSharedNegatives: true,
   observeAudiences: false,
-  negatives: [...bs("berechnen", "tabelle", "prozent"), ...ps("wert berechnen")],
-  sitelinks: ["angebote", "planer", "unterbieten", "rechner", "faq"],
+  // „küchenwert rechner“/„… berechnen“ meint den Restwert einer gebrauchten Küche, nicht uns.
+  negatives: [...bs("berechnen", "rechner", "tabelle", "prozent"), ...ps("wert berechnen")],
+  sitelinks: ["angebote", "planer", "rechner", "unterbieten", "studios", "kontakt", "faq", "ueber-uns"],
+  callouts: [
+    HEADLINE_FREE,
+    "KI-Küchenplaner",
+    "KüchenRechner",
+    "Budget-Check",
+    "Preisvergleich",
+    "Angebot unterbieten",
+    "Geprüfte Küchenstudios",
+    "Ohne Namen an Studios",
+    "Kein Kaufzwang",
+    "Keine bezahlten Plätze",
+  ],
+  images: [
+    "kueche-insel-quer.jpg",
+    "ki-vorschau-quer.jpg",
+    "studio-beratung-quer.jpg",
+    "paar-kueche-quer.jpg",
+    "kueche-insel-quadrat.jpg",
+    "ki-vorschau-quadrat.jpg",
+    "studio-beratung-quadrat.jpg",
+    "paar-kueche-quadrat.jpg",
+  ],
   adGroups: [
     {
       name: "KüchenWert",
@@ -840,26 +1038,26 @@ const MARKE: CampaignPlan = {
       ad: {
         headlines: [
           "KüchenWert – Offizielle Seite",
+          HEADLINE_BRAND_COMPARE,
           "Traumküche mit KI planen",
           "Küchenangebote vergleichen",
-          "Angebote geprüfter Studios",
+          "Küchenpreise vergleichen",
+          "KüchenRechner & Budget-Check",
+          OFFERS,
           HEADLINE_FREE,
           "Küche im eigenen Raum sehen",
-          "Mit Preisschätzung sofort",
+          "Preisschätzung live",
           "Studio-Angebot unterbieten",
-          "KüchenRechner kostenlos",
-          "Kein Kaufzwang",
-          "Ohne Namen an Studios",
           "Angebote werden nur günstiger",
+          "Ohne Namen an Studios",
           "kuechenwert24.de",
-          "Planen, sehen, vergleichen",
-          "Studios aus Ihrer Region",
+          "Kein Kaufzwang",
         ],
         descriptions: [
           "Küche per KI im eigenen Raum planen, Preis sehen, Angebote geprüfter Studios vergleichen.",
-          "Kostenlos und unverbindlich für Sie – wir finanzieren uns über die teilnehmenden Studios.",
+          "KüchenRechner: Budget-Check in 4 Fragen, ohne Kontaktdaten. Kostenlos und unverbindlich.",
           "Schon ein Angebot? Andere geprüfte Studios können es 72 Stunden lang unterbieten.",
-          "Nur einen Richtwert? Der KüchenRechner zeigt ihn nach 4 Fragen – ohne Kontaktdaten.",
+          "Kostenlos für Sie – wir finanzieren uns über die teilnehmenden Küchenstudios.",
         ],
       },
     },
@@ -868,7 +1066,17 @@ const MARKE: CampaignPlan = {
 
 export const KW_ADS_PLAN: AccountPlan = {
   site: "https://kuechenwert24.de",
-  allowedPaths: ["/", "/formular", "/funnel/b", "/funnel/c", "/kuechenrechner", "/kuechenstudios", "/faq", "/ueber-uns"],
+  allowedPaths: [
+    "/",
+    "/formular",
+    "/funnel/b",
+    "/funnel/c",
+    "/kuechenrechner",
+    "/kuechenstudios",
+    "/kontakt",
+    "/faq",
+    "/ueber-uns",
+  ],
   geoTargetConstants: ["geoTargetConstants/2276"],
   languageConstants: ["languageConstants/1001"],
   sharedNegativeList: { name: "Negativ | KüchenWert Allgemein", keywords: SHARED_NEGATIVES },
@@ -890,36 +1098,46 @@ export const KW_ADS_PLAN: AccountPlan = {
     { header: "Typen", values: ["L-Küche", "U-Küche", "G-Küche", "Küche mit Kochinsel", "Küchenzeile", "Zweizeilige Küche"] },
     {
       header: "Dienstleistungen",
-      values: ["KI-Küchenplaner", "Preisschätzung", "Angebotsvergleich", "Angebot unterbieten", "KüchenRechner"],
+      values: [
+        "KI-Küchenplaner",
+        "KüchenRechner",
+        "Budget-Check",
+        "Preisvergleich",
+        "Angebotsvergleich",
+        "Angebot unterbieten",
+        "Preisschätzung",
+        "Küchenberatung",
+      ],
     },
+    { header: "Stile", values: ["Modern", "Grifflos", "Landhaus", "Skandinavisch", "Industrial", "Klassisch"] },
   ],
   sitelinks: [
     {
       key: "angebote",
-      text: "Küchenangebote einholen",
-      description1: "Geprüfte Studios der Region",
-      description2: "Wunschküche in ca. 3 Minuten",
+      text: "Küchenpreise vergleichen",
+      description1: "Angebote geprüfter Studios",
+      description2: "Anfrage in ca. 3 Minuten",
       path: "/formular",
     },
     {
       key: "planer",
       text: "Traumküche mit KI planen",
       description1: "Küche im eigenen Raum sehen",
-      description2: "Mit Preisschätzung sofort",
+      description2: "Mit Preisschätzung live",
       path: "/funnel/c",
     },
     {
       key: "unterbieten",
       text: "Angebot unterbieten",
       description1: "Schon ein Studio-Angebot?",
-      description2: "72 Stunden unterbieten lassen",
+      description2: "Studios können 72 Std. unterbieten",
       path: "/funnel/b",
     },
     {
       key: "rechner",
-      text: "Was kostet meine Küche?",
-      description1: "Richtwert in 4 Fragen",
-      description2: "Ohne Kontaktdaten",
+      text: "Küchen-Budget-Check",
+      description1: "KüchenRechner mit 4 Fragen",
+      description2: "Richtwert ohne Kontaktdaten",
       path: "/kuechenrechner",
     },
     {
@@ -930,11 +1148,25 @@ export const KW_ADS_PLAN: AccountPlan = {
       path: "/kuechenstudios",
     },
     {
+      key: "kontakt",
+      text: "Kostenlose Beratung",
+      description1: "Telefon Mo–Fr 10–18 Uhr",
+      description2: "Oder per E-Mail und Formular",
+      path: "/kontakt",
+    },
+    {
       key: "faq",
       text: "Häufige Fragen",
       description1: "Ablauf, Kosten, Datenschutz",
       description2: "Alles zur Angebotsphase",
       path: "/faq",
+    },
+    {
+      key: "so-gehts",
+      text: "So funktioniert es",
+      description1: "3 Wege zur neuen Küche",
+      description2: "Kostenlos und unverbindlich",
+      path: "/",
     },
     {
       key: "ueber-uns",
@@ -944,6 +1176,34 @@ export const KW_ADS_PLAN: AccountPlan = {
       path: "/ueber-uns",
     },
   ],
+  businessName: "KüchenWert",
+  logo: "logo.png",
+  images: [
+    { file: "logo.png", format: "logo" },
+    { file: "kueche-insel-quer.jpg", format: "landscape" },
+    { file: "ki-vorschau-quer.jpg", format: "landscape" },
+    { file: "showroom-quer.jpg", format: "landscape" },
+    { file: "paar-kueche-quer.jpg", format: "landscape" },
+    { file: "planung-quer.jpg", format: "landscape" },
+    { file: "studio-beratung-quer.jpg", format: "landscape" },
+    { file: "kueche-insel-quadrat.jpg", format: "square" },
+    { file: "ki-vorschau-quadrat.jpg", format: "square" },
+    { file: "showroom-quadrat.jpg", format: "square" },
+    { file: "paar-kueche-quadrat.jpg", format: "square" },
+    { file: "planung-quadrat.jpg", format: "square" },
+    { file: "studio-beratung-quadrat.jpg", format: "square" },
+    { file: "stil-dunkel-quadrat.jpg", format: "square" },
+    { file: "stil-industrial-quadrat.jpg", format: "square" },
+  ],
+  // Telefonzeiten wie auf /kontakt (Mo–Fr 10–18 Uhr); außerhalb erscheint kein Anruf-Button.
+  call: {
+    phone: "0511 51532476",
+    countryCode: "DE",
+    conversionActionName: "Anruf über Anzeige",
+    days: ["MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY"],
+    startHour: 10,
+    endHour: 18,
+  },
   campaigns: [ANGEBOTE, PLANER, KOSTEN, MARKE],
 };
 
@@ -958,10 +1218,20 @@ const SITELINK_TEXT_MAX = 25;
 const SITELINK_DESCRIPTION_MAX = 35;
 const CALLOUT_MAX = 25;
 const SNIPPET_VALUE_MAX = 25;
+const BUSINESS_NAME_MAX = 25;
 const KEYWORD_MAX = 80;
 const KEYWORD_WORDS_MAX = 10;
+const IMAGES_PER_CAMPAIGN_MAX = 20;
 /** Google-Vorgaben für deutsche Snippet-Überschriften (Auswahl). */
 const SNIPPET_HEADERS = new Set(["Typen", "Dienstleistungen", "Marken", "Modelle", "Stile", "Ausstattung"]);
+
+/** Seitenverhältnis und Mindestgröße (Pixel) je Bildformat, laut Google-Vorgaben für Such-Bild-Assets und Logos. */
+export const IMAGE_SPECS: Record<ImagePlan["format"], { ratio: number; minWidth: number; minHeight: number }> = {
+  landscape: { ratio: 1.91, minWidth: 600, minHeight: 314 },
+  square: { ratio: 1, minWidth: 300, minHeight: 300 },
+  logo: { ratio: 1, minWidth: 128, minHeight: 128 },
+};
+export const IMAGE_MAX_BYTES = 5_120 * 1024;
 
 const length = (s: string) => [...s].length;
 export const words = (s: string) => s.toLowerCase().split(/\s+/).filter(Boolean);
@@ -978,6 +1248,12 @@ export function negativeBlocks(negative: Keyword, query: string): boolean {
   return false;
 }
 
+/** Ob Maße zum Format passen (1 % Toleranz beim Seitenverhältnis). */
+export function imageFits(format: ImagePlan["format"], width: number, height: number): boolean {
+  const spec = IMAGE_SPECS[format];
+  return width >= spec.minWidth && height >= spec.minHeight && Math.abs(width / height / spec.ratio - 1) <= 0.01;
+}
+
 function checkTexts(where: string, texts: string[], max: number, min: number, most: number, errors: string[]) {
   if (texts.length < min || texts.length > most) errors.push(`${where}: ${texts.length} Einträge, erlaubt ${min}–${most}`);
   const seen = new Set<string>();
@@ -990,10 +1266,39 @@ function checkTexts(where: string, texts: string[], max: number, min: number, mo
   }
 }
 
+function checkAssets(plan: AccountPlan, errors: string[]) {
+  const images = new Map(plan.images.map((i) => [i.file, i]));
+  if (images.size !== plan.images.length) errors.push("Bilder: Datei doppelt");
+  for (const i of plan.images) {
+    if (!/^[a-z0-9-]+\.(jpg|png)$/.test(i.file)) errors.push(`Bild „${i.file}“: Dateiname ungültig`);
+  }
+  if (images.get(plan.logo)?.format !== "logo") errors.push(`Logo „${plan.logo}“ fehlt oder ist kein Logo`);
+  if (length(plan.businessName) > BUSINESS_NAME_MAX || !plan.businessName.trim()) errors.push("Firmenname ungültig");
+
+  const c = plan.call;
+  const days = new Set(c.days);
+  if (!/^0[1-9][0-9 ]{5,14}$/.test(c.phone) || !/^[A-Z]{2}$/.test(c.countryCode)) errors.push("Anruf: Nummer ungültig");
+  if (days.size === 0 || days.size !== c.days.length) errors.push("Anruf: Wochentage leer oder doppelt");
+  if (!(Number.isInteger(c.startHour) && Number.isInteger(c.endHour) && c.startHour >= 0 && c.endHour <= 24 && c.startHour < c.endHour)) {
+    errors.push("Anruf: Uhrzeiten ungültig");
+  }
+
+  for (const camp of plan.campaigns) {
+    checkTexts(`${camp.name} Callouts`, camp.callouts, CALLOUT_MAX, 2, 20, errors);
+    const own = camp.images.map((f) => images.get(f));
+    if (own.some((i) => !i || i.format === "logo")) errors.push(`${camp.name}: unbekanntes Bild`);
+    if (new Set(camp.images).size !== camp.images.length || camp.images.length > IMAGES_PER_CAMPAIGN_MAX) {
+      errors.push(`${camp.name}: Bilder doppelt oder mehr als ${IMAGES_PER_CAMPAIGN_MAX}`);
+    }
+    const formats = new Set(own.map((i) => i?.format));
+    if (!formats.has("square") || !formats.has("landscape")) errors.push(`${camp.name}: je ein quadratisches und ein Querformat-Bild nötig`);
+  }
+}
+
 export function validatePlan(plan: AccountPlan): string[] {
   const errors: string[] = [];
   const allowed = new Set(plan.allowedPaths);
-  const sitelinkKeys = new Set(plan.sitelinks.map((s) => s.key));
+  const sitelinks = new Map(plan.sitelinks.map((s) => [s.key, s]));
   const shared = plan.sharedNegativeList.keywords;
 
   checkTexts("Callouts", plan.callouts, CALLOUT_MAX, 2, 20, errors);
@@ -1001,6 +1306,7 @@ export function validatePlan(plan: AccountPlan): string[] {
     if (!SNIPPET_HEADERS.has(s.header)) errors.push(`Snippet: Überschrift „${s.header}“ nicht erlaubt`);
     checkTexts(`Snippet ${s.header}`, s.values, SNIPPET_VALUE_MAX, 3, 10, errors);
   }
+  if (sitelinks.size !== plan.sitelinks.length) errors.push("Sitelinks: Schlüssel doppelt");
   for (const s of plan.sitelinks) {
     if (length(s.text) > SITELINK_TEXT_MAX) errors.push(`Sitelink „${s.text}“ zu lang`);
     for (const d of [s.description1, s.description2]) {
@@ -1008,6 +1314,7 @@ export function validatePlan(plan: AccountPlan): string[] {
     }
     if (!allowed.has(s.path)) errors.push(`Sitelink „${s.text}“: Pfad ${s.path} nicht erlaubt`);
   }
+  checkAssets(plan, errors);
 
   const keywordOwner = new Map<string, string>();
   const campaignNames = new Set<string>();
@@ -1015,8 +1322,17 @@ export function validatePlan(plan: AccountPlan): string[] {
     if (campaignNames.has(c.name)) errors.push(`Kampagne „${c.name}“ doppelt`);
     campaignNames.add(c.name);
     if (!(c.dailyBudgetEur > 0) || !(c.bidding.cpcCeilingEur > 0)) errors.push(`${c.name}: Budget/CPC-Deckel fehlt`);
-    if (c.sitelinks.length < 4) errors.push(`${c.name}: mindestens 4 Sitelinks`);
-    for (const key of c.sitelinks) if (!sitelinkKeys.has(key)) errors.push(`${c.name}: Sitelink „${key}“ unbekannt`);
+    if (c.sitelinks.length < 4 || c.sitelinks.length > 20) errors.push(`${c.name}: 4 bis 20 Sitelinks`);
+    const sitelinkPaths = new Set<string>();
+    for (const key of c.sitelinks) {
+      const s = sitelinks.get(key);
+      if (!s) {
+        errors.push(`${c.name}: Sitelink „${key}“ unbekannt`);
+        continue;
+      }
+      if (sitelinkPaths.has(s.path)) errors.push(`${c.name}: zwei Sitelinks auf ${s.path}`);
+      sitelinkPaths.add(s.path);
+    }
 
     const negatives = [...c.negatives, ...(c.useSharedNegatives ? shared : [])];
     const agNames = new Set<string>();

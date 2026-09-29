@@ -6,7 +6,9 @@
  * 3. Offline-Conversions „Kontakt freigeschaltet“ und „Auftrag vergeben“
  *    (Import per API, Wert = echter Umsatz, siehe conversions.ts), sekundär
  *    bis zum Umstieg auf wertbasierte Gebote.
- * 4. Kontoweites finales URL-Suffix mit UTM-Parametern (src/lib/utm.ts
+ * 4. Anruf-Conversion für das Anruf-Asset aus dem Kampagnenplan (Anrufe ab
+ *    60 Sekunden, sekundär: ein Anruf ist noch keine Anfrage).
+ * 5. Kontoweites finales URL-Suffix mit UTM-Parametern (src/lib/utm.ts
  *    speichert sie an Sitzung und Lead).
  *
  * Bereits vorhandene Einstellungen, die bewusst getunt werden dürfen
@@ -15,6 +17,7 @@
 
 import type { SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2.100.1";
 import type { UploadKind } from "../_shared/google-ads-conversions.ts";
+import { KW_ADS_PLAN } from "../_shared/google-ads-plan.ts";
 import {
   KW_GADS_MANAGER_ID,
   describeGoogleAdsError,
@@ -45,7 +48,7 @@ const DEFAULT_KITCHEN_LEAD_VALUE = 9;
 type StepStatus = "ok" | "changed" | "planned" | "differs" | "error";
 
 export interface SetupStep {
-  key: "manager_link" | "kitchen_lead_action" | "contact_action" | "order_action" | "final_url_suffix";
+  key: "manager_link" | "kitchen_lead_action" | "contact_action" | "order_action" | "call_action" | "final_url_suffix";
   status: StepStatus;
   detail: string;
 }
@@ -73,7 +76,7 @@ interface EnforcedSettings {
 
 interface ConversionActionSpec {
   name: string;
-  type: "WEBPAGE" | "UPLOAD_CLICKS";
+  type: "WEBPAGE" | "UPLOAD_CLICKS" | "AD_CALL";
   enforced: EnforcedSettings;
   createOnly: Record<string, unknown>;
 }
@@ -202,6 +205,16 @@ function offlineActionSpec(kind: UploadKind): ConversionActionSpec {
   };
 }
 
+const CALL_ACTION: ConversionActionSpec = {
+  name: KW_ADS_PLAN.call.conversionActionName,
+  type: "AD_CALL",
+  enforced: { status: "ENABLED", category: "PHONE_CALL_LEAD", countingType: "ONE_PER_CLICK", primaryForGoal: false },
+  createOnly: {
+    phoneCallDurationSeconds: "60",
+    valueSettings: { defaultValue: 1, defaultCurrencyCode: "EUR", alwaysUseDefaultValue: true },
+  },
+};
+
 async function ensureFinalUrlSuffix(client: GoogleAdsClient, dryRun: boolean): Promise<StepResult> {
   const rows = await client.search("SELECT customer.final_url_suffix FROM customer");
   const current = String((rows[0]?.customer as { finalUrlSuffix?: string } | undefined)?.finalUrlSuffix ?? "");
@@ -252,6 +265,7 @@ export async function runSetup(client: GoogleAdsClient, sb: SupabaseClient, dryR
   });
   await step("contact_action", async () => (await ensureConversionAction(client, offlineActionSpec("contact"), dryRun)).step);
   await step("order_action", async () => (await ensureConversionAction(client, offlineActionSpec("order"), dryRun)).step);
+  await step("call_action", async () => (await ensureConversionAction(client, CALL_ACTION, dryRun)).step);
   await step("final_url_suffix", () => ensureFinalUrlSuffix(client, dryRun));
 
   return { ok: steps.every((s) => s.status !== "error"), dryRun, steps, tracking };

@@ -12,7 +12,7 @@
  *   { "action": "keyword-metrics", "keywords": [...] }
  *     Keyword-Planer, nur lesend (research.ts).
  *   { "action": "campaigns", "mode": "plan" | "validate" | "apply" }
- *     Such-Kampagnen aus _shared/google-ads-plan.ts anlegen (campaigns.ts).
+ *     Konto mit dem Kampagnenplan _shared/google-ads-plan.ts abgleichen (campaigns.ts).
  *   { "action": "campaign-settings", "key", "status"?, "dailyBudgetEur"?, "bidding"?, … }
  *     Start/Pause, Budget, Gebotsleiter einer Plan-Kampagne.
  *   { "action": "upload-conversions", "dryRun"?, "probe"? }

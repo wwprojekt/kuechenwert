@@ -17,7 +17,9 @@
  *     Start/Pause, Budget, Gebotsleiter einer Plan-Kampagne.
  *
  * Aufruf: Admin im Browser, service_role oder pg_net mit x-kw-cron-secret
- * (Agenten, siehe AGENTS.md → Google Tracking).
+ * (Agenten, siehe AGENTS.md → Google Tracking). Fehler von Google kommen als
+ * { ok: false } mit HTTP 200: kw_health_snapshot zählt jede pg_net-Antwort
+ * ab 400 als http_failed, Agenten-Aufrufe sollen keinen Betriebsalarm auslösen.
  */
 
 import { checkCronOrServiceRoleOrAdmin } from "../_shared/auth.ts";
@@ -97,6 +99,6 @@ serve(async (req) => {
     return jsonResponse(req, await handler!(client, body));
   } catch (err) {
     if (err instanceof HttpError) throw err;
-    return jsonResponse(req, { ok: false, error: describeGoogleAdsError(err) }, 502);
+    return jsonResponse(req, { ok: false, error: describeGoogleAdsError(err) });
   }
 });

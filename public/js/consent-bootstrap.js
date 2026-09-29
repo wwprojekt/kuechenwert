@@ -1,5 +1,6 @@
 // Google Consent Mode v2: Standardwerte setzen, bevor irgendein Google-Tag lädt.
-// Wird in index.html als erstes Skript synchron (ohne defer/async) geladen.
+// Wird in index.html am Ende von <body> synchron (ohne defer/async) direkt vor
+// tracking-loader.js geladen, der Google-Tags erst danach einbindet.
 // Ausgelagert statt inline, damit die CSP ohne 'unsafe-inline' auskommt.
 (function () {
   window.dataLayer = window.dataLayer || [];

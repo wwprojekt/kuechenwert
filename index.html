@@ -46,10 +46,6 @@
          keine Anfrage an Google-Server. vite.config.ts lädt die Schnitte 400/600/800
          per <link rel=preload> vor und setzt font-display: optional. -->
 
-    <!-- Google Consent Mode v2: Standardwerte vor jedem Google-Tag. Externe
-         Datei statt Inline-Skript, damit die CSP ohne 'unsafe-inline' auskommt. -->
-    <script src="/js/consent-bootstrap.js"></script>
-
     <!-- Primary Meta Tags. Tags mit data-rh="true" sind Rückfallwerte, die
          react-helmet-async durch die Werte der jeweiligen Seite ersetzt
          (PageLayout, FunnelSeo), statt sie zu verdoppeln. Tags ohne data-rh
@@ -87,11 +83,15 @@
     <script type="module" src="/src/main.tsx"></script>
 
     <!-- ═══════════════════════════════════════════════════════════════════
-         DEFERRED THIRD-PARTY SCRIPTS — loaded AFTER first paint
-         These scripts are non-essential for initial page rendering.
-         Loading them after the app improves FCP/LCP by 1-3 seconds on mobile.
-         Der Loader lädt gtag, Meta Pixel und UET erst nach Einwilligung.
+         Consent und Tracking am Ende von <body>: Synchrone Skripte im <head>
+         hielten den ersten Paint auf, hier läuft der Inhalt davor schon.
+         Reihenfolge nicht ändern: consent-bootstrap.js setzt die Standardwerte
+         von Google Consent Mode v2, bevor tracking-loader.js ein Google-Tag
+         lädt (erst nach Einwilligung); beide laufen vor dem App-Bundle
+         (type="module" ist deferred). Externe Dateien statt Inline-Skript,
+         damit die CSP ohne 'unsafe-inline' auskommt.
          ═══════════════════════════════════════════════════════════════════ -->
+    <script src="/js/consent-bootstrap.js"></script>
     <script src="/js/tracking-loader.js"></script>
   </body>
 </html>

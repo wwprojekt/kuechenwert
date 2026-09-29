@@ -17,7 +17,11 @@
 
 import heroKitchen from "@/assets/hero-kitchen.webp";
 import kitchenBefore from "@/assets/kitchen-before.webp";
+import kitchenBefore800 from "@/assets/kitchen-before-800.webp";
+import kitchenBefore1200 from "@/assets/kitchen-before-1200.webp";
 import kitchenAfter from "@/assets/kitchen-after.webp";
+import kitchenAfter800 from "@/assets/kitchen-after-800.webp";
+import kitchenAfter1200 from "@/assets/kitchen-after-1200.webp";
 import heroLifestyle from "@/assets/couple-kitchen.webp";
 import studioConsultant from "@/assets/studio-consultant.webp";
 import kitchenConsultation from "@/assets/kitchen-consultation.webp";
@@ -51,6 +55,9 @@ export const BRAND_IMAGES = {
   /** Echtes KI-Beispiel: Raumfoto vorher und Nano-Banana-Edit nachher. */
   kitchenBefore,
   kitchenAfter,
+  /** Handys laden 800 bzw. 1200 px statt 1600 px (Startseiten-Hero, LCP). */
+  kitchenBeforeSrcSet: `${kitchenBefore800} 800w, ${kitchenBefore1200} 1200w, ${kitchenBefore} 1600w`,
+  kitchenAfterSrcSet: `${kitchenAfter800} 800w, ${kitchenAfter1200} 1200w, ${kitchenAfter} 1600w`,
   heroLifestyle,
   studioConsultant,
   kitchenConsultation,

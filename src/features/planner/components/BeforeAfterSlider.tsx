@@ -5,6 +5,9 @@ import { cn } from "@/lib/utils";
 export function BeforeAfterSlider({
   before,
   after,
+  beforeSrcSet,
+  afterSrcSet,
+  sizes,
   beforeLabel = "Vorher",
   afterLabel = "Nachher",
   className,
@@ -13,6 +16,10 @@ export function BeforeAfterSlider({
 }: {
   before: string;
   after: string;
+  beforeSrcSet?: string;
+  afterSrcSet?: string;
+  /** Anzeigebreite für srcSet, sonst lädt der Browser die größte Variante. */
+  sizes?: string;
   beforeLabel?: string;
   afterLabel?: string;
   className?: string;
@@ -27,6 +34,8 @@ export function BeforeAfterSlider({
     <div className={cn("relative overflow-hidden rounded-2xl bg-muted select-none", className)}>
       <img
         src={after}
+        srcSet={afterSrcSet}
+        sizes={afterSrcSet ? sizes : undefined}
         alt={afterLabel}
         className="block h-full w-full object-cover"
         draggable={false}
@@ -36,6 +45,8 @@ export function BeforeAfterSlider({
       />
       <img
         src={before}
+        srcSet={beforeSrcSet}
+        sizes={beforeSrcSet ? sizes : undefined}
         alt={beforeLabel}
         className="absolute inset-0 h-full w-full object-cover"
         style={{ clipPath: `inset(0 ${100 - pos}% 0 0)` }}

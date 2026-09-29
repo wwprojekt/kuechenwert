@@ -150,6 +150,9 @@ const Hero = () => {
             <BeforeAfterSlider
               before={BRAND_IMAGES.kitchenBefore}
               after={BRAND_IMAGES.kitchenAfter}
+              beforeSrcSet={BRAND_IMAGES.kitchenBeforeSrcSet}
+              afterSrcSet={BRAND_IMAGES.kitchenAfterSrcSet}
+              sizes="(min-width: 1024px) 624px, (min-width: 640px) 576px, calc(100vw - 2rem)"
               beforeLabel="Ihr Raum heute"
               afterLabel="KI-Vorschau"
               initial={42}

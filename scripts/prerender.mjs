@@ -9,7 +9,9 @@
  * erhalten; nginx liefert sie für alle übrigen Routen und für 404 aus
  * (docker/default.conf). Beim Laden rendert React neu (createRoot), zeigt aber
  * bis dahin das HTML innerhalb von [data-kw-route] (src/lib/initialRouteHtml.ts),
- * so bleibt die Seite ab dem ersten Paint sichtbar.
+ * so bleibt die Seite ab dem ersten Paint sichtbar. Das App-Bundle startet auf
+ * diesen Seiten erst nach dem ersten Paint (scripts/defer-app-start.mjs,
+ * public/js/app-boot.js).
  *
  * Im Prerender-Modus lädt die App weder Tracking noch Cookie-Banner noch
  * Service Worker: Ein Init-Skript setzt window.__KW_PRERENDER__ (src/main.tsx,
@@ -28,10 +30,12 @@
  * bleibt es dort bei der SPA-Shell.
  */
 
+import { createHash } from "node:crypto";
 import { createServer } from "node:http";
 import fs from "node:fs/promises";
 import { existsSync } from "node:fs";
 import path from "node:path";
+import { deferAppStart } from "./defer-app-start.mjs";
 
 const ROUTES = [
   "/",
@@ -229,7 +233,7 @@ async function resetRoute(route, shell) {
   else await fs.rm(targetFile(route), { force: true });
 }
 
-async function renderRoute(browser, localOrigin, route, userAgent, shellScriptSources) {
+async function renderRoute(browser, localOrigin, route, userAgent, shellScriptSources, bootSrc) {
   const started = Date.now();
   const context = await browser.newContext({
     userAgent,
@@ -276,6 +280,13 @@ async function renderRoute(browser, localOrigin, route, userAgent, shellScriptSo
     const head = inspectHead(html);
     const problems = validate(html, head);
     if (problems.length > 0) throw new Error(problems.join(", "));
+    if (bootSrc) {
+      try {
+        html = deferAppStart(html, bootSrc);
+      } catch (error) {
+        warn(`${route}: App startet nicht verzögert (${error.message})`);
+      }
+    }
 
     const target = targetFile(route);
     await fs.mkdir(path.dirname(target), { recursive: true });
@@ -323,6 +334,11 @@ async function main() {
   const shell = await fs.readFile(existsSync(spaFile) ? spaFile : indexFile, "utf8");
   await fs.writeFile(spaFile, shell);
   const shellScriptSources = [...shell.matchAll(/<script\b[^>]*\ssrc="([^"]+)"/g)].map((m) => m[1]);
+  const bootFile = path.join(DIST, "js", "app-boot.js");
+  const bootSrc = existsSync(bootFile)
+    ? `/js/app-boot.js?v=${createHash("sha256").update(await fs.readFile(bootFile)).digest("hex").slice(0, 10)}`
+    : null;
+  if (!bootSrc) warn(`${bootFile} fehlt, die App startet ohne Verzögerung.`);
 
   const chromePath = findChrome();
   if (!chromePath) {
@@ -350,7 +366,7 @@ async function main() {
       `Chrome/${browser.version()} Safari/537.36 KWPrerenderBot/1.0`;
     const results = [];
     for (const route of ROUTES) {
-      const result = await renderRoute(browser, localOrigin, route, userAgent, shellScriptSources);
+      const result = await renderRoute(browser, localOrigin, route, userAgent, shellScriptSources, bootSrc);
       if (!result.ok) await resetRoute(route, shell).catch((error) => warn(`${route}: ${error.message}`));
       results.push(result);
     }

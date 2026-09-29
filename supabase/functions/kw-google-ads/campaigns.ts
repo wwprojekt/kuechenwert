@@ -16,7 +16,9 @@
  * folgenden), „brand“ (Firmenname und Logo, brauchen die Überprüfung des
  * Werbetreibenden) und „images“ (Bild-Assets, erst ab 60 Tagen Kontoalter
  * mit Search-Ausgaben). Lehnt Google ein Paket ab, laufen die anderen
- * trotzdem; ein späterer Lauf holt es nach.
+ * trotzdem. "batches": ["brand", "images"] beschränkt validate/apply auf
+ * diese Pakete; so holt der Cron kw-gads-assets-catchup sie täglich nach,
+ * sobald Google sie zulässt, ohne Änderungen am Hauptpaket.
  *
  *   { action: "campaign-settings", key, status?, dailyBudgetEur?, bidding?, cpcCeilingEur?, targetCpaEur?, dryRun? }
  *     Start/Pause, Tagesbudget und Gebotsleiter (MAXIMIZE_CLICKS mit CPC-Deckel →
@@ -643,10 +645,15 @@ export async function runCampaigns(client: GoogleAdsClient, body: Obj) {
   const planErrors = validatePlan(KW_ADS_PLAN);
   if (planErrors.length) return { ok: false, mode, planErrors };
 
+  const all = ["main", "brand", "images"] as const;
+  const selected = Array.isArray(body.batches) ? all.filter((k) => (body.batches as unknown[]).includes(k)) : [...all];
+  if (selected.length === 0) throw new HttpError(400, `batches: ${all.join(", ")}`, "invalid_input");
+  const names = mode === "plan" ? [...all] : selected;
+
   const live = await loadLive(client, KW_ADS_PLAN);
-  const uploads = mode === "plan" ? new Map<string, ImageUpload>() : await loadUploads(KW_ADS_PLAN, live);
+  const needsImages = names.some((k) => k !== "main");
+  const uploads = mode === "plan" || !needsImages ? new Map<string, ImageUpload>() : await loadUploads(KW_ADS_PLAN, live);
   const planned = planOperations(KW_ADS_PLAN, live, client.customerId, uploads);
-  const names = ["main", "brand", "images"] as const;
   const total = names.reduce((n, k) => n + planned.batches[k].operations.length, 0);
   const base = { mode, operations: total, created: planned.created, warnings: planned.warnings };
   if (mode === "plan" || total === 0) {

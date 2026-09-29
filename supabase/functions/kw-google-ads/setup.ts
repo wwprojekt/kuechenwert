@@ -3,7 +3,10 @@
  * 1. Konto hängt unter dem Verwaltungskonto (Einladung + Annahme per API).
  * 2. Webseiten-Conversion „Küchenanfrage“ (Lead-Formular, eine pro Klick,
  *    primär). Ihr send_to gehört in Admin → Tracking (KUECHEN_LEAD).
- * 3. Kontoweites finales URL-Suffix mit UTM-Parametern (src/lib/utm.ts
+ * 3. Offline-Conversions „Kontakt freigeschaltet“ und „Auftrag vergeben“
+ *    (Import per API, Wert = echter Umsatz, siehe conversions.ts), sekundär
+ *    bis zum Umstieg auf wertbasierte Gebote.
+ * 4. Kontoweites finales URL-Suffix mit UTM-Parametern (src/lib/utm.ts
  *    speichert sie an Sitzung und Lead).
  *
  * Bereits vorhandene Einstellungen, die bewusst getunt werden dürfen
@@ -11,6 +14,7 @@
  */
 
 import type { SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2.100.1";
+import type { UploadKind } from "../_shared/google-ads-conversions.ts";
 import {
   KW_GADS_MANAGER_ID,
   describeGoogleAdsError,
@@ -23,13 +27,25 @@ export const KW_FINAL_URL_SUFFIX =
   "utm_source=google&utm_medium=cpc&utm_campaign={campaignid}&utm_content={adgroupid}&utm_term={keyword}";
 export const SITE_SETTINGS_ID = "00000000-0000-0000-0000-000000000000";
 
+/**
+ * Sekundär, solange die Gebote auf Klicks bzw. Anzahl Conversions laufen:
+ * sonst zählte eine mehrfach gekaufte Anfrage mehrfach. Beim Umstieg auf
+ * „Conversion-Wert maximieren“ auf true setzen und „Küchenanfrage“ sekundär.
+ */
+const OFFLINE_ACTIONS_PRIMARY = false;
+
+export const OFFLINE_ACTION_NAMES: Record<UploadKind, string> = {
+  contact: "Kontakt freigeschaltet",
+  order: "Auftrag vergeben",
+};
+
 /** Fallback, falls tracking_config keinen Wert für KUECHEN_LEAD hat (wie DEFAULT_TRACKING_CONFIG). */
 const DEFAULT_KITCHEN_LEAD_VALUE = 9;
 
 type StepStatus = "ok" | "changed" | "planned" | "differs" | "error";
 
 export interface SetupStep {
-  key: "manager_link" | "kitchen_lead_action" | "final_url_suffix";
+  key: "manager_link" | "kitchen_lead_action" | "contact_action" | "order_action" | "final_url_suffix";
   status: StepStatus;
   detail: string;
 }
@@ -46,6 +62,30 @@ interface ConversionActionRow {
   primaryForGoal?: boolean;
   tagSnippets?: unknown;
 }
+
+/** Durchgesetzte Einstellungen; alles andere nur beim Anlegen. */
+interface EnforcedSettings {
+  status: "ENABLED";
+  category: string;
+  countingType: string;
+  primaryForGoal: boolean;
+}
+
+interface ConversionActionSpec {
+  name: string;
+  type: "WEBPAGE" | "UPLOAD_CLICKS";
+  enforced: EnforcedSettings;
+  createOnly: Record<string, unknown>;
+}
+
+const UPDATE_MASKS: Record<keyof EnforcedSettings, string> = {
+  status: "status",
+  category: "category",
+  countingType: "counting_type",
+  primaryForGoal: "primary_for_goal",
+};
+
+const DATA_DRIVEN = { attributionModel: "GOOGLE_SEARCH_ATTRIBUTION_DATA_DRIVEN" };
 
 async function ensureManagerLink(client: GoogleAdsClient, dryRun: boolean): Promise<StepResult> {
   const clientId = client.customerId;
@@ -87,15 +127,52 @@ async function ensureManagerLink(client: GoogleAdsClient, dryRun: boolean): Prom
   return { status: "changed", detail: `Konto mit dem Verwaltungskonto ${managerId} verknüpft.` };
 }
 
-async function findKitchenLeadAction(client: GoogleAdsClient): Promise<ConversionActionRow | undefined> {
+async function findConversionAction(client: GoogleAdsClient, name: string): Promise<ConversionActionRow | undefined> {
   const rows = await client.search(
     `SELECT conversion_action.resource_name, conversion_action.id, conversion_action.status,
        conversion_action.type, conversion_action.category, conversion_action.counting_type,
        conversion_action.primary_for_goal, conversion_action.tag_snippets
      FROM conversion_action
-     WHERE conversion_action.name = '${KITCHEN_LEAD_ACTION_NAME}' AND conversion_action.status != 'REMOVED'`,
+     WHERE conversion_action.name = '${name}' AND conversion_action.status != 'REMOVED'`,
   );
   return rows[0]?.conversionAction as ConversionActionRow | undefined;
+}
+
+async function ensureConversionAction(
+  client: GoogleAdsClient,
+  spec: ConversionActionSpec,
+  dryRun: boolean,
+): Promise<{ step: StepResult; action?: ConversionActionRow }> {
+  const label = `Conversion „${spec.name}“`;
+  const existing = await findConversionAction(client, spec.name);
+
+  if (!existing) {
+    await client.mutate("conversionActions", {
+      operations: [{ create: { name: spec.name, type: spec.type, ...spec.enforced, ...spec.createOnly } }],
+      validateOnly: dryRun,
+    });
+    if (dryRun) return { step: { status: "planned", detail: `${label} anlegen (von Google geprüft).` } };
+    const created = await findConversionAction(client, spec.name);
+    return { step: { status: "changed", detail: `${label} angelegt (ID ${created?.id ?? "?"}).` }, action: created };
+  }
+
+  if (existing.type !== spec.type) {
+    throw new Error(`${label} existiert als ${existing.type}, erwartet ${spec.type}. Bitte in Google Ads prüfen.`);
+  }
+  const keys = Object.keys(spec.enforced) as Array<keyof EnforcedSettings>;
+  const diff = keys.filter((k) => (existing[k] ?? (k === "primaryForGoal" ? false : undefined)) !== spec.enforced[k]);
+  if (diff.length === 0) return { step: { status: "ok", detail: `${label} vorhanden (ID ${existing.id}).` }, action: existing };
+
+  const update: Record<string, unknown> = { resourceName: existing.resourceName };
+  for (const k of diff) update[k] = spec.enforced[k];
+  await client.mutate("conversionActions", {
+    operations: [{ update, updateMask: diff.map((k) => UPDATE_MASKS[k]).join(",") }],
+    validateOnly: dryRun,
+  });
+  return {
+    step: { status: dryRun ? "planned" : "changed", detail: `${label}: ${diff.join(", ")} ${dryRun ? "wird korrigiert" : "korrigiert"}.` },
+    action: existing,
+  };
 }
 
 async function kitchenLeadValue(sb: SupabaseClient): Promise<number> {
@@ -105,80 +182,23 @@ async function kitchenLeadValue(sb: SupabaseClient): Promise<number> {
   return Number.isFinite(value) && value > 0 ? value : DEFAULT_KITCHEN_LEAD_VALUE;
 }
 
-const REQUIRED_ACTION_SETTINGS = {
-  status: "ENABLED",
-  category: "SUBMIT_LEAD_FORM",
-  countingType: "ONE_PER_CLICK",
-  primaryForGoal: true,
-} as const;
-
-const UPDATE_MASKS: Record<keyof typeof REQUIRED_ACTION_SETTINGS, string> = {
-  status: "status",
-  category: "category",
-  countingType: "counting_type",
-  primaryForGoal: "primary_for_goal",
-};
-
-async function ensureKitchenLeadAction(
-  client: GoogleAdsClient,
-  sb: SupabaseClient,
-  dryRun: boolean,
-): Promise<{ step: StepResult; sendTo: { conversionId: string; label: string } | null }> {
-  const existing = await findKitchenLeadAction(client);
-
-  if (!existing) {
-    await client.mutate("conversionActions", {
-      operations: [
-        {
-          create: {
-            name: KITCHEN_LEAD_ACTION_NAME,
-            type: "WEBPAGE",
-            ...REQUIRED_ACTION_SETTINGS,
-            clickThroughLookbackWindowDays: 90,
-            viewThroughLookbackWindowDays: 1,
-            valueSettings: {
-              defaultValue: await kitchenLeadValue(sb),
-              defaultCurrencyCode: "EUR",
-              alwaysUseDefaultValue: false,
-            },
-            attributionModelSettings: { attributionModel: "GOOGLE_SEARCH_ATTRIBUTION_DATA_DRIVEN" },
-          },
-        },
-      ],
-      validateOnly: dryRun,
-    });
-    if (dryRun) {
-      return { step: { status: "planned", detail: `Conversion „${KITCHEN_LEAD_ACTION_NAME}“ anlegen (von Google geprüft).` }, sendTo: null };
-    }
-    const created = await findKitchenLeadAction(client);
-    return {
-      step: { status: "changed", detail: `Conversion „${KITCHEN_LEAD_ACTION_NAME}“ angelegt (ID ${created?.id ?? "?"}).` },
-      sendTo: sendToFromTagSnippets(created?.tagSnippets),
-    };
-  }
-
-  if (existing.type !== "WEBPAGE") {
-    throw new Error(`„${KITCHEN_LEAD_ACTION_NAME}“ existiert als ${existing.type}, erwartet WEBPAGE. Bitte in Google Ads prüfen.`);
-  }
-  const sendTo = sendToFromTagSnippets(existing.tagSnippets);
-  const keys = Object.keys(REQUIRED_ACTION_SETTINGS) as Array<keyof typeof REQUIRED_ACTION_SETTINGS>;
-  const diff = keys.filter((k) => existing[k] !== REQUIRED_ACTION_SETTINGS[k]);
-  if (diff.length === 0) {
-    return { step: { status: "ok", detail: `Conversion „${KITCHEN_LEAD_ACTION_NAME}“ vorhanden (ID ${existing.id}).` }, sendTo };
-  }
-
-  const update: Record<string, unknown> = { resourceName: existing.resourceName };
-  for (const k of diff) update[k] = REQUIRED_ACTION_SETTINGS[k];
-  await client.mutate("conversionActions", {
-    operations: [{ update, updateMask: diff.map((k) => UPDATE_MASKS[k]).join(",") }],
-    validateOnly: dryRun,
-  });
+function offlineActionSpec(kind: UploadKind): ConversionActionSpec {
   return {
-    step: {
-      status: dryRun ? "planned" : "changed",
-      detail: `Conversion „${KITCHEN_LEAD_ACTION_NAME}“: ${diff.join(", ")} ${dryRun ? "wird korrigiert" : "korrigiert"}.`,
+    name: OFFLINE_ACTION_NAMES[kind],
+    type: "UPLOAD_CLICKS",
+    // MANY_PER_CLICK: ONE_PER_CLICK lässt Google mit gbraid/wbraid (iOS) nicht zu;
+    // Doppelte verhindert die Order-ID je Rechnung.
+    enforced: {
+      status: "ENABLED",
+      category: kind === "contact" ? "QUALIFIED_LEAD" : "CONVERTED_LEAD",
+      countingType: "MANY_PER_CLICK",
+      primaryForGoal: OFFLINE_ACTIONS_PRIMARY,
     },
-    sendTo,
+    createOnly: {
+      clickThroughLookbackWindowDays: 90,
+      valueSettings: { defaultValue: 1, defaultCurrencyCode: "EUR", alwaysUseDefaultValue: false },
+      attributionModelSettings: DATA_DRIVEN,
+    },
   };
 }
 
@@ -212,10 +232,26 @@ export async function runSetup(client: GoogleAdsClient, sb: SupabaseClient, dryR
 
   await step("manager_link", () => ensureManagerLink(client, dryRun));
   await step("kitchen_lead_action", async () => {
-    const result = await ensureKitchenLeadAction(client, sb, dryRun);
-    tracking = result.sendTo;
+    const result = await ensureConversionAction(
+      client,
+      {
+        name: KITCHEN_LEAD_ACTION_NAME,
+        type: "WEBPAGE",
+        enforced: { status: "ENABLED", category: "SUBMIT_LEAD_FORM", countingType: "ONE_PER_CLICK", primaryForGoal: true },
+        createOnly: {
+          clickThroughLookbackWindowDays: 90,
+          viewThroughLookbackWindowDays: 1,
+          valueSettings: { defaultValue: await kitchenLeadValue(sb), defaultCurrencyCode: "EUR", alwaysUseDefaultValue: false },
+          attributionModelSettings: DATA_DRIVEN,
+        },
+      },
+      dryRun,
+    );
+    tracking = sendToFromTagSnippets(result.action?.tagSnippets);
     return result.step;
   });
+  await step("contact_action", async () => (await ensureConversionAction(client, offlineActionSpec("contact"), dryRun)).step);
+  await step("order_action", async () => (await ensureConversionAction(client, offlineActionSpec("order"), dryRun)).step);
   await step("final_url_suffix", () => ensureFinalUrlSuffix(client, dryRun));
 
   return { ok: steps.every((s) => s.status !== "error"), dryRun, steps, tracking };

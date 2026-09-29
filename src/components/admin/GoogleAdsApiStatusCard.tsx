@@ -38,6 +38,7 @@ interface GoogleAdsStatus {
   managerLinks?: Array<{ managerId: string; status: string }>;
   conversionActions?: GoogleAdsConversionAction[];
   tracking?: { enabled: boolean; configured: string | null; expected: string | null; matches: boolean };
+  valueUploads?: { uploaded: number; open: number; failed: number } | null;
 }
 
 const formatCustomerId = (id?: string) => (id ?? "").replace(/^(\d{3})(\d{3})(\d{4})$/, "$1-$2-$3");
@@ -207,6 +208,8 @@ export default function GoogleAdsApiStatusCard({ onApplyTracking }: GoogleAdsApi
               API {status?.apiVersion} · Login {formatCustomerId(status?.loginCustomerId)} · Zugangsdaten aus{" "}
               {credentialSources} · Auto-Tagging {account.autoTagging ? "an" : "aus"} · URL-Suffix{" "}
               {account.finalUrlSuffixOk ? "gesetzt" : "fehlt oder weicht ab"}
+              {status?.valueUploads &&
+                ` · Umsatzmeldungen: ${status.valueUploads.uploaded} gemeldet, ${status.valueUploads.open} offen, ${status.valueUploads.failed} gescheitert`}
             </p>
           </>
         )}

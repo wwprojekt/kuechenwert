@@ -1,7 +1,8 @@
 /**
  * Diagnose für Admin → Tracking: Herkunft der Zugangsdaten (nie Werte), Konto,
- * Verknüpfung mit dem Verwaltungskonto, Conversion-Aktionen und ob die in
- * tracking_config eingetragene Conversion zu „Küchenanfrage“ passt.
+ * Verknüpfung mit dem Verwaltungskonto, Conversion-Aktionen, ob die in
+ * tracking_config eingetragene Conversion zu „Küchenanfrage“ passt, und der
+ * Stand der Umsatzmeldungen (kw_gads_conversion_uploads).
  * Fehler kommen als { ok: false, error } mit HTTP 200, damit die UI sie zeigt.
  */
 
@@ -45,6 +46,22 @@ async function loadKitchenLeadTracking(sb: SupabaseClient) {
   };
 }
 
+async function loadValueUploads(sb: SupabaseClient) {
+  const count = async (statuses: string[]) => {
+    const { count: n, error } = await sb
+      .from("kw_gads_conversion_uploads")
+      .select("invoice_id", { count: "exact", head: true })
+      .in("status", statuses);
+    return error ? null : n ?? 0;
+  };
+  const [uploaded, open, failed] = await Promise.all([
+    count(["uploaded", "retracted"]),
+    count(["pending", "failed", "retract_pending"]),
+    count(["rejected", "retract_failed"]),
+  ]);
+  return uploaded === null || open === null || failed === null ? null : { uploaded, open, failed };
+}
+
 export async function runStatus(sb: SupabaseClient) {
   const { sources, credentials } = await loadGoogleAdsCredentials();
   const base = { apiVersion: GADS_API_VERSION, managerId: KW_GADS_MANAGER_ID, credentials: sources };
@@ -57,10 +74,11 @@ export async function runStatus(sb: SupabaseClient) {
   const ids = { customerId: client.customerId, loginCustomerId: client.loginCustomerId };
   try {
     const customerRows = await client.search(CUSTOMER_QUERY);
-    const [linkRows, actionRows, tracking] = await Promise.all([
+    const [linkRows, actionRows, tracking, valueUploads] = await Promise.all([
       client.search(MANAGER_LINKS_QUERY),
       client.search(CONVERSION_ACTIONS_QUERY),
       loadKitchenLeadTracking(sb),
+      loadValueUploads(sb),
     ]);
 
     const c = (customerRows[0]?.customer ?? {}) as Record<string, unknown>;
@@ -105,6 +123,7 @@ export async function runStatus(sb: SupabaseClient) {
       }),
       conversionActions,
       tracking: { ...tracking, expected, matches: expected !== null && tracking.configured === expected },
+      valueUploads,
     };
   } catch (err) {
     return { ...base, ...ids, ok: false, error: describeGoogleAdsError(err) };

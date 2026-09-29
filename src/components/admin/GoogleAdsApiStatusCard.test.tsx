@@ -38,6 +38,7 @@ const status = {
     },
   ],
   tracking: { enabled: false, configured: null, expected: "AW-111222333/AbC-d_1", matches: false },
+  valueUploads: { uploaded: 12, open: 2, failed: 1 },
 };
 
 describe("GoogleAdsApiStatusCard", () => {
@@ -54,6 +55,7 @@ describe("GoogleAdsApiStatusCard", () => {
     expect(guard.invokeWithAuth).toHaveBeenCalledWith("kw-google-ads", { body: { action: "status" } });
     expect(screen.getByText("974-650-8145")).toBeInTheDocument();
     expect(screen.getByText(/richtig: AW-111222333\/AbC-d_1/)).toBeInTheDocument();
+    expect(screen.getByText(/Umsatzmeldungen: 12 gemeldet, 2 offen, 1 gescheitert/)).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: "Werte übernehmen" }));
     expect(onApply).toHaveBeenCalledWith("AW-111222333", "AbC-d_1");

@@ -15,6 +15,8 @@
  *     Such-Kampagnen aus _shared/google-ads-plan.ts anlegen (campaigns.ts).
  *   { "action": "campaign-settings", "key", "status"?, "dailyBudgetEur"?, "bidding"?, … }
  *     Start/Pause, Budget, Gebotsleiter einer Plan-Kampagne.
+ *   { "action": "upload-conversions", "dryRun"? }
+ *     Echte Umsätze als Offline-Conversions melden (conversions.ts, Cron stündlich).
  *
  * Aufruf: Admin im Browser, service_role oder pg_net mit x-kw-cron-secret
  * (Agenten, siehe AGENTS.md → Google Tracking). Fehler von Google kommen als
@@ -31,6 +33,7 @@ import {
 } from "../_shared/google-ads.ts";
 import { HttpError, jsonResponse, readJson, serve, serviceClient } from "../_shared/kw-http.ts";
 import { runCampaignSettings, runCampaigns } from "./campaigns.ts";
+import { runUploadConversions } from "./conversions.ts";
 import { keywordIdeas, keywordMetrics } from "./research.ts";
 import { runSetup } from "./setup.ts";
 import { runStatus } from "./status.ts";
@@ -88,14 +91,17 @@ serve(async (req) => {
 
   if (body.action === "status") return jsonResponse(req, await runStatus(sb));
   const handler = body.action && Object.hasOwn(CLIENT_ACTIONS, body.action) ? CLIENT_ACTIONS[body.action] : undefined;
-  if (!handler && body.action !== "setup") throw new HttpError(400, "Unbekannte Aktion.", "unknown_action");
+  const withDatabase = body.action === "setup" || body.action === "upload-conversions";
+  if (!handler && !withDatabase) throw new HttpError(400, "Unbekannte Aktion.", "unknown_action");
 
   const { credentials } = await loadGoogleAdsCredentials();
   if (!credentials) throw new HttpError(503, "Google-Ads-Zugangsdaten fehlen (Vault gads_*).", "gads_unconfigured");
   const client = createGoogleAdsClient(credentials);
+  const dryRun = body.dryRun === true;
 
-  if (body.action === "setup") return jsonResponse(req, await runSetup(client, sb, body.dryRun === true));
   try {
+    if (body.action === "setup") return jsonResponse(req, await runSetup(client, sb, dryRun));
+    if (body.action === "upload-conversions") return jsonResponse(req, await runUploadConversions(client, sb, dryRun));
     return jsonResponse(req, await handler!(client, body));
   } catch (err) {
     if (err instanceof HttpError) throw err;

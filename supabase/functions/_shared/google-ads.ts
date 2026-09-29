@@ -139,41 +139,55 @@ export function describeGoogleAdsError(err: unknown): string {
   return err instanceof Error ? err.message : String(err);
 }
 
+/** Felder, deren Index in einem Batch die betroffene Operation bzw. Conversion bezeichnet. */
+const BATCH_FIELDS = new Set(["mutate_operations", "operations", "conversions", "conversion_adjustments"]);
+
+function failureDetails(error: { details?: unknown }): { details: GoogleAdsErrorDetail[]; requestId?: string } {
+  const failure = (Array.isArray(error.details) ? error.details : []).find(
+    (d: { "@type"?: string }) => typeof d?.["@type"] === "string" && d["@type"].endsWith("GoogleAdsFailure"),
+  ) as { errors?: Array<Record<string, unknown>>; requestId?: string } | undefined;
+  const details = (failure?.errors ?? []).map((e): GoogleAdsErrorDetail => {
+    const [kind, code] = Object.entries((e.errorCode ?? {}) as Record<string, unknown>)[0] ?? ["unknown", "UNKNOWN"];
+    const path = (e.location as { fieldPathElements?: Array<{ fieldName?: string; index?: number }> } | undefined)
+      ?.fieldPathElements ?? [];
+    const field = path
+      .filter((p) => p.fieldName)
+      .map((p) => (p.index === undefined ? p.fieldName : `${p.fieldName}[${p.index}]`))
+      .join(".");
+    const operationIndex = path.find((p) => p.fieldName && BATCH_FIELDS.has(p.fieldName))?.index;
+    const trigger = (e.trigger as { stringValue?: string } | undefined)?.stringValue;
+    const topics = ((e.details as { policyFindingDetails?: { policyTopicEntries?: Array<{ topic?: string }> } } | undefined)
+      ?.policyFindingDetails?.policyTopicEntries ?? [])
+      .map((t) => t.topic)
+      .filter((t): t is string => Boolean(t));
+    return {
+      kind,
+      code: String(code),
+      message: String(e.message ?? ""),
+      field: field || undefined,
+      operationIndex,
+      trigger,
+      policyTopics: topics.length ? topics : undefined,
+    };
+  });
+  return { details, requestId: failure?.requestId };
+}
+
 function parseApiError(status: number, text: string): GoogleAdsApiError {
   try {
     const parsed = JSON.parse(text);
     const error = (Array.isArray(parsed) ? parsed[0]?.error : parsed?.error) ?? {};
-    const failure = (error.details ?? []).find(
-      (d: { "@type"?: string }) => typeof d?.["@type"] === "string" && d["@type"].endsWith("GoogleAdsFailure"),
-    );
-    const details: GoogleAdsErrorDetail[] = (failure?.errors ?? []).map((e: Record<string, unknown>) => {
-      const [kind, code] = Object.entries((e.errorCode ?? {}) as Record<string, unknown>)[0] ?? ["unknown", "UNKNOWN"];
-      const path = (e.location as { fieldPathElements?: Array<{ fieldName?: string; index?: number }> } | undefined)
-        ?.fieldPathElements ?? [];
-      const field = path
-        .filter((p) => p.fieldName)
-        .map((p) => (p.index === undefined ? p.fieldName : `${p.fieldName}[${p.index}]`))
-        .join(".");
-      const operationIndex = path.find((p) => p.fieldName === "mutate_operations" || p.fieldName === "operations")?.index;
-      const trigger = (e.trigger as { stringValue?: string } | undefined)?.stringValue;
-      const topics = ((e.details as { policyFindingDetails?: { policyTopicEntries?: Array<{ topic?: string }> } } | undefined)
-        ?.policyFindingDetails?.policyTopicEntries ?? [])
-        .map((t) => t.topic)
-        .filter((t): t is string => Boolean(t));
-      return {
-        kind,
-        code: String(code),
-        message: String(e.message ?? ""),
-        field: field || undefined,
-        operationIndex,
-        trigger,
-        policyTopics: topics.length ? topics : undefined,
-      };
-    });
-    return new GoogleAdsApiError(String(error.message ?? `HTTP ${status}`), status, details, failure?.requestId);
+    const { details, requestId } = failureDetails(error);
+    return new GoogleAdsApiError(String(error.message ?? `HTTP ${status}`), status, details, requestId);
   } catch {
     return new GoogleAdsApiError(`HTTP ${status}: ${text.slice(0, 300)}`, status);
   }
+}
+
+/** Einzelfehler aus partialFailureError einer erfolgreichen (HTTP 200) Batch-Antwort. */
+export function partialFailureDetails(body: Record<string, unknown>): GoogleAdsErrorDetail[] {
+  const error = body.partialFailureError;
+  return error && typeof error === "object" ? failureDetails(error as { details?: unknown }).details : [];
 }
 
 let tokenCache: { refreshToken: string; token: string; expiresAt: number } | null = null;

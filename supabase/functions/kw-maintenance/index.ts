@@ -9,10 +9,11 @@
  *     kw_maintenance_jobs).
  *   { "task": "health" }     stündlich: Outbox, Cron, HTTP-Aufrufe, offene
  *     Anfragen, blockierte Rechnungen, kritische Fehler, KI-Tageslimit,
- *     fehlschlagende Visualisierungen und der Google-Ads-API-Zugang (hält
+ *     fehlschlagende Visualisierungen und Google Ads: API-Zugang (hält
  *     nebenbei den Refresh-Token aktiv, den Google nach 6 Monaten ohne
- *     Nutzung verfallen lässt). Hinweis-Mail an das Admin-Postfach, je
- *     Befund höchstens alle 12 Stunden.
+ *     Nutzung verfallen lässt), abgelehnte Anzeigen, Kosten ohne
+ *     Conversion. Hinweis-Mail an das Admin-Postfach, je Befund höchstens
+ *     alle 12 Stunden.
  *   { "task": "price-calibration" } täglich 03:40 und aus dem Admin: gleicht
  *     die Preis-Engine mit den Studio-Angeboten ab (kitchen_price_calibration).
  */
@@ -23,7 +24,7 @@ import { BRAND } from "../_shared/brand-config.ts";
 import { logEdgeError } from "../_shared/edgeLogger.ts";
 import { buildEmailLayout, button, list, paragraph } from "../_shared/email-builder.ts";
 import { estimateFunnelA, sanitizeFunnelAAnswers } from "../_shared/funnel-a-catalog.ts";
-import { googleAdsReachable } from "../_shared/google-ads.ts";
+import { googleAdsHealth } from "../_shared/google-ads.ts";
 import { sanitizeConfig, sanitizeRoom } from "../_shared/kitchen-catalog.ts";
 import { estimateKitchenPrice } from "../_shared/kitchen-pricing.ts";
 import { HttpError, escapeHtml, jsonResponse, readJson, serve, serviceClient } from "../_shared/kw-http.ts";
@@ -190,6 +191,8 @@ const FINDINGS: Array<{ key: string; text: (n: number) => string; link: string }
   { key: "render_cap_near", text: (n) => `${n} KI-Visualisierungen in 24 Stunden – über 80 % des Tageslimits. Danach sehen Besucher keine Visualisierung mehr; Limit unter „KI & Preis-Engine“ prüfen.`, link: "/admin/ki" },
   { key: "renders_failing", text: (n) => `${n} KI-Visualisierungen sind in den letzten 2 Stunden fehlgeschlagen (fal.ai-Guthaben, API-Schlüssel und Modellstatus prüfen).`, link: "/admin/ki" },
   { key: "gads_api_failing", text: () => "Google Ads lehnt den API-Zugriff ab (Zugangsdaten gads_* im Supabase Vault prüfen, z. B. widerrufener Refresh-Token; Diagnose unter Einstellungen → Tracking). Die Conversion-Messung im Browser läuft unabhängig davon weiter.", link: "/admin/settings" },
+  { key: "gads_ads_disapproved", text: (n) => `${n} Google-Ads-Anzeigen sind abgelehnt und laufen nicht. Grund in Google Ads unter Anzeigen prüfen; die Texte stehen im Kampagnenplan (google-ads-plan.ts).`, link: "/admin/settings" },
+  { key: "gads_spend_no_conversions", text: (n) => `${n} € Google-Ads-Kosten in 7 Tagen ohne eine einzige Küchenanfrage. Conversion-Tracking prüfen (Einstellungen → Tracking → Live-Diagnose) und Suchbegriffe ansehen.`, link: "/admin/settings" },
 ];
 
 async function firstAlertInWindow(sb: SupabaseClient, key: string): Promise<boolean> {
@@ -206,7 +209,13 @@ async function firstAlertInWindow(sb: SupabaseClient, key: string): Promise<bool
 async function runHealth(sb: SupabaseClient) {
   const { data, error } = await sb.rpc("kw_health_snapshot");
   if (error) throw error;
-  const snapshot: Snapshot = { ...((data ?? {}) as Snapshot), gads_api_failing: (await googleAdsReachable()) === false ? 1 : 0 };
+  const gads = await googleAdsHealth();
+  const snapshot: Snapshot = {
+    ...((data ?? {}) as Snapshot),
+    gads_api_failing: gads.reachable === false ? 1 : 0,
+    gads_ads_disapproved: gads.disapprovedAds,
+    gads_spend_no_conversions: gads.spendWithoutConversionsEur,
+  };
   const active = FINDINGS.filter((f) => Number(snapshot[f.key] ?? 0) > 0);
 
   const toReport: typeof active = [];

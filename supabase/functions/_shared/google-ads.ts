@@ -313,19 +313,51 @@ export function sendToFromTagSnippets(snippets: unknown): { conversionId: string
 }
 
 /**
- * Für den Health-Check: true = erreichbar, false = Zugriff abgelehnt oder
- * Zugangsdaten unvollständig, null = nicht eingerichtet oder vorübergehender
- * Fehler (5xx, Quota, Netz), der keinen Alarm auslösen soll.
+ * Ab diesen Kosten in 7 Tagen ohne Conversion ist ein Zufall praktisch
+ * ausgeschlossen (bei ~2 € CPC und ~3 % Conversion-Rate wären ~4 zu erwarten).
  */
-export async function googleAdsReachable(): Promise<boolean | null> {
+const NO_CONVERSION_SPEND_ALERT_EUR = 250;
+
+export interface GoogleAdsHealth {
+  /**
+   * true = erreichbar, false = Zugriff abgelehnt oder Zugangsdaten
+   * unvollständig, null = nicht eingerichtet oder vorübergehender Fehler
+   * (5xx, Quota, Netz), der keinen Alarm auslösen soll.
+   */
+  reachable: boolean | null;
+  /** Abgelehnte Anzeigen in aktiven Kampagnen und Anzeigengruppen. */
+  disapprovedAds: number;
+  /** Kosten der letzten 7 Tage in €, falls es darin keine Conversion gab und die Schwelle erreicht ist, sonst 0. */
+  spendWithoutConversionsEur: number;
+}
+
+export async function googleAdsHealth(): Promise<GoogleAdsHealth> {
+  const quiet = { disapprovedAds: 0, spendWithoutConversionsEur: 0 };
   const { sources, credentials } = await loadGoogleAdsCredentials();
-  if (!credentials) return Object.values(sources).every((s) => s === "missing") ? null : false;
+  if (!credentials) {
+    return { reachable: Object.values(sources).every((s) => s === "missing") ? null : false, ...quiet };
+  }
+  const client = createGoogleAdsClient(credentials);
   try {
-    await createGoogleAdsClient(credentials).search("SELECT customer.id FROM customer");
-    return true;
+    const [totals] = await client.search(
+      "SELECT metrics.cost_micros, metrics.conversions FROM customer WHERE segments.date DURING LAST_7_DAYS",
+    );
+    const disapproved = await client.search(
+      `SELECT ad_group_ad.resource_name FROM ad_group_ad
+       WHERE ad_group_ad.policy_summary.approval_status = 'DISAPPROVED' AND ad_group_ad.status = 'ENABLED'
+       AND ad_group.status = 'ENABLED' AND campaign.status = 'ENABLED'`,
+    );
+    const metrics = (totals?.metrics ?? {}) as { costMicros?: string; conversions?: number };
+    const cost = Number(metrics.costMicros ?? 0) / 1e6;
+    const noConversions = Number(metrics.conversions ?? 0) === 0;
+    return {
+      reachable: true,
+      disapprovedAds: disapproved.length,
+      spendWithoutConversionsEur: noConversions && cost >= NO_CONVERSION_SPEND_ALERT_EUR ? Math.round(cost) : 0,
+    };
   } catch (err) {
     console.error("[google-ads] Health-Check fehlgeschlagen:", describeGoogleAdsError(err));
-    if (err instanceof GoogleAdsApiError && err.status >= 400 && err.status < 500 && err.status !== 429) return false;
-    return null;
+    const denied = err instanceof GoogleAdsApiError && err.status >= 400 && err.status < 500 && err.status !== 429;
+    return { reachable: denied ? false : null, ...quiet };
   }
 }

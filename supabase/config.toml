@@ -87,6 +87,9 @@ verify_jwt = false
 [functions.resend-confirmation-email]
 verify_jwt = false
 
+[functions.kw-google-ads]
+verify_jwt = false
+
 # --- E-Mail ---
 [functions.send-admin-email]
 verify_jwt = false

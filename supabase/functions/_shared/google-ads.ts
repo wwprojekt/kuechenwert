@@ -331,6 +331,8 @@ export function sendToFromTagSnippets(snippets: unknown): { conversionId: string
  * ausgeschlossen (bei ~2 € CPC und ~3 % Conversion-Rate wären ~4 zu erwarten).
  */
 const NO_CONVERSION_SPEND_ALERT_EUR = 250;
+/** Zeitzone des KüchenWert-Kontos; GAQL-Datumsangaben (start_date_time, YESTERDAY) beziehen sich darauf. */
+const KW_GADS_TIME_ZONE = "Europe/Berlin";
 
 export interface GoogleAdsHealth {
   /**
@@ -343,10 +345,17 @@ export interface GoogleAdsHealth {
   disapprovedAds: number;
   /** Kosten der letzten 7 Tage in €, falls es darin keine Conversion gab und die Schwelle erreicht ist, sonst 0. */
   spendWithoutConversionsEur: number;
+  /**
+   * Zahl der aktiven, schon vor gestern gestarteten Kampagnen, wenn sie gestern
+   * zusammen keine Impression hatten (Zahlung, Kontosperre, Richtlinien,
+   * Ausrichtung), sonst 0. Einzelne Kampagnen ohne Impression (etwa Marke)
+   * sind normal.
+   */
+  campaignsWithoutDelivery: number;
 }
 
 export async function googleAdsHealth(): Promise<GoogleAdsHealth> {
-  const quiet = { disapprovedAds: 0, spendWithoutConversionsEur: 0 };
+  const quiet = { disapprovedAds: 0, spendWithoutConversionsEur: 0, campaignsWithoutDelivery: 0 };
   const { sources, credentials } = await loadGoogleAdsCredentials();
   if (!credentials) {
     return { reachable: Object.values(sources).every((s) => s === "missing") ? null : false, ...quiet };
@@ -361,13 +370,26 @@ export async function googleAdsHealth(): Promise<GoogleAdsHealth> {
        WHERE ad_group_ad.policy_summary.approval_status = 'DISAPPROVED' AND ad_group_ad.status = 'ENABLED'
        AND ad_group.status = 'ENABLED' AND campaign.status = 'ENABLED'`,
     );
+    // Nur Kampagnen, die schon vor gestern 00:00 (Kontozeitzone) liefen: Am Starttag ist null normal.
+    const yesterdayDate = new Intl.DateTimeFormat("en-CA", {
+      timeZone: KW_GADS_TIME_ZONE,
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+    }).format(new Date(Date.now() - 86_400_000));
+    const yesterday = await client.search(
+      `SELECT campaign.resource_name, metrics.impressions FROM campaign WHERE campaign.status = 'ENABLED'
+       AND campaign.start_date_time < '${yesterdayDate} 00:00:00' AND segments.date DURING YESTERDAY`,
+    );
     const metrics = (totals?.metrics ?? {}) as { costMicros?: string; conversions?: number };
     const cost = Number(metrics.costMicros ?? 0) / 1e6;
     const noConversions = Number(metrics.conversions ?? 0) === 0;
+    const impressions = yesterday.reduce((n, r) => n + Number((r.metrics as { impressions?: string } | undefined)?.impressions ?? 0), 0);
     return {
       reachable: true,
       disapprovedAds: disapproved.length,
       spendWithoutConversionsEur: noConversions && cost >= NO_CONVERSION_SPEND_ALERT_EUR ? Math.round(cost) : 0,
+      campaignsWithoutDelivery: yesterday.length > 0 && impressions === 0 ? yesterday.length : 0,
     };
   } catch (err) {
     console.error("[google-ads] Health-Check fehlgeschlagen:", describeGoogleAdsError(err));

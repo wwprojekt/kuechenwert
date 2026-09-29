@@ -193,6 +193,7 @@ const FINDINGS: Array<{ key: string; text: (n: number) => string; link: string }
   { key: "renders_failing", text: (n) => `${n} KI-Visualisierungen sind in den letzten 2 Stunden fehlgeschlagen (fal.ai-Guthaben, API-Schlüssel und Modellstatus prüfen).`, link: "/admin/ki" },
   { key: "gads_api_failing", text: () => "Google Ads lehnt den API-Zugriff ab (Zugangsdaten gads_* im Supabase Vault prüfen, z. B. widerrufener Refresh-Token; Diagnose unter Einstellungen → Tracking). Die Conversion-Messung im Browser läuft unabhängig davon weiter.", link: "/admin/settings" },
   { key: "gads_ads_disapproved", text: (n) => `${n} Google-Ads-Anzeigen sind abgelehnt und laufen nicht. Grund in Google Ads unter Anzeigen prüfen; die Texte stehen im Kampagnenplan (google-ads-plan.ts).`, link: "/admin/settings" },
+  { key: "gads_no_delivery", text: (n) => `Keine der ${n} aktiven Google-Ads-Kampagnen hatte gestern eine einzige Impression (erwartet nur, wenn sie gestern pausiert waren). In Google Ads Zahlung, Kontostatus und Richtlinienhinweise prüfen.`, link: "/admin/settings" },
   { key: "gads_spend_no_conversions", text: (n) => `${n} € Google-Ads-Kosten in 7 Tagen ohne eine einzige Küchenanfrage. Conversion-Tracking prüfen (Einstellungen → Tracking → Live-Diagnose) und Suchbegriffe ansehen.`, link: "/admin/settings" },
   { key: "gads_uploads_rejected", text: (n) => `${n} Rückmeldungen an Google Ads (geprüfte Anfragen oder Umsätze) sind in 24 Stunden endgültig gescheitert (Upload abgewiesen oder Rückzug nicht möglich). Grund steht in kw_gads_conversion_uploads.last_error; bis dahin lernen die Gebote mit unvollständigen Daten.`, link: "/admin/settings" },
 ];
@@ -221,6 +222,7 @@ async function runHealth(sb: SupabaseClient) {
     ...((data ?? {}) as Snapshot),
     gads_api_failing: gads.reachable === false ? 1 : 0,
     gads_ads_disapproved: gads.disapprovedAds,
+    gads_no_delivery: gads.campaignsWithoutDelivery,
     gads_spend_no_conversions: gads.spendWithoutConversionsEur,
     gads_uploads_rejected: rejectedUploads ?? 0,
   };

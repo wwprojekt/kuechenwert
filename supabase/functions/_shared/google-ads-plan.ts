@@ -69,6 +69,7 @@ export interface CallPlan {
 }
 
 export type BiddingPlan =
+  | { type: "MAXIMIZE_CONVERSIONS"; targetCpaEur?: number }
   | { type: "MAXIMIZE_CLICKS"; cpcCeilingEur: number }
   | { type: "TARGET_IMPRESSION_SHARE"; cpcCeilingEur: number; absoluteTopShare: number };
 
@@ -195,7 +196,7 @@ const ANGEBOTE: CampaignPlan = {
   key: "angebote",
   name: "Search | Küchenangebote | DE",
   dailyBudgetEur: 50,
-  bidding: { type: "MAXIMIZE_CLICKS", cpcCeilingEur: 3.5 },
+  bidding: { type: "MAXIMIZE_CONVERSIONS" },
   useSharedNegatives: true,
   observeAudiences: true,
   negatives: [
@@ -529,7 +530,7 @@ const PLANER: CampaignPlan = {
   key: "planer",
   name: "Search | Küchenplaner | DE",
   dailyBudgetEur: 50,
-  bidding: { type: "MAXIMIZE_CLICKS", cpcCeilingEur: 2.5 },
+  bidding: { type: "MAXIMIZE_CONVERSIONS" },
   useSharedNegatives: true,
   observeAudiences: true,
   negatives: [
@@ -855,7 +856,7 @@ const KOSTEN: CampaignPlan = {
   key: "kosten",
   name: "Search | Küchenkosten | DE",
   dailyBudgetEur: 50,
-  bidding: { type: "MAXIMIZE_CLICKS", cpcCeilingEur: 1.5 },
+  bidding: { type: "MAXIMIZE_CONVERSIONS" },
   useSharedNegatives: true,
   observeAudiences: true,
   negatives: [
@@ -1112,7 +1113,7 @@ const WETTBEWERBER: CampaignPlan = {
   key: "wettbewerber",
   name: "Search | Wettbewerber | DE",
   dailyBudgetEur: 10,
-  bidding: { type: "MAXIMIZE_CLICKS", cpcCeilingEur: 2 },
+  bidding: { type: "MAXIMIZE_CONVERSIONS" },
   useSharedNegatives: false,
   observeAudiences: true,
   negatives: [],
@@ -1463,7 +1464,8 @@ export function validatePlan(plan: AccountPlan): string[] {
   for (const c of plan.campaigns) {
     if (campaignNames.has(c.name)) errors.push(`Kampagne „${c.name}“ doppelt`);
     campaignNames.add(c.name);
-    if (!(c.dailyBudgetEur > 0) || !(c.bidding.cpcCeilingEur > 0)) errors.push(`${c.name}: Budget/CPC-Deckel fehlt`);
+    const cpcOk = c.bidding.type === "MAXIMIZE_CONVERSIONS" ? (c.bidding.targetCpaEur ?? 1) > 0 : c.bidding.cpcCeilingEur > 0;
+    if (!(c.dailyBudgetEur > 0) || !cpcOk) errors.push(`${c.name}: Budget/CPC-Deckel fehlt`);
     if (c.sitelinks.length < 4 || c.sitelinks.length > 20) errors.push(`${c.name}: 4 bis 20 Sitelinks`);
     const sitelinkPaths = new Set<string>();
     for (const key of c.sitelinks) {

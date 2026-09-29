@@ -256,17 +256,22 @@ async function loadLive(client: GoogleAdsClient, plan: AccountPlan): Promise<Liv
   return live;
 }
 
+function biddingResource(b: CampaignPlan["bidding"]): Obj {
+  if (b.type === "MAXIMIZE_CONVERSIONS") {
+    return { maximizeConversions: b.targetCpaEur ? { targetCpaMicros: micros(b.targetCpaEur) } : {} };
+  }
+  if (b.type === "MAXIMIZE_CLICKS") return { targetSpend: { cpcBidCeilingMicros: micros(b.cpcCeilingEur) } };
+  return {
+    targetImpressionShare: {
+      location: "ABSOLUTE_TOP_OF_PAGE",
+      locationFractionMicros: String(Math.round(b.absoluteTopShare * 1_000_000)),
+      cpcBidCeilingMicros: micros(b.cpcCeilingEur),
+    },
+  };
+}
+
 function campaignResource(c: CampaignPlan, resourceName: string, budget: string): Obj {
-  const bidding =
-    c.bidding.type === "MAXIMIZE_CLICKS"
-      ? { targetSpend: { cpcBidCeilingMicros: micros(c.bidding.cpcCeilingEur) } }
-      : {
-          targetImpressionShare: {
-            location: "ABSOLUTE_TOP_OF_PAGE",
-            locationFractionMicros: String(Math.round(c.bidding.absoluteTopShare * 1_000_000)),
-            cpcBidCeilingMicros: micros(c.bidding.cpcCeilingEur),
-          },
-        };
+  const bidding = biddingResource(c.bidding);
   return {
     resourceName,
     name: c.name,
@@ -717,7 +722,8 @@ export async function runCampaignSettings(client: GoogleAdsClient, body: Obj) {
   if (bidding !== undefined) {
     if (!BIDDING_TYPES.has(String(bidding))) throw new HttpError(400, "bidding: MAXIMIZE_CLICKS oder MAXIMIZE_CONVERSIONS.", "invalid_input");
     if (bidding === "MAXIMIZE_CLICKS") {
-      const eur = eurInRange(body.cpcCeilingEur ?? plan.bidding.cpcCeilingEur, 0.1, 50, "cpcCeilingEur");
+      const planCeiling = "cpcCeilingEur" in plan.bidding ? plan.bidding.cpcCeilingEur : undefined;
+      const eur = eurInRange(body.cpcCeilingEur ?? planCeiling, 0.1, 50, "cpcCeilingEur");
       operations.push({
         campaignOperation: {
           update: { resourceName: campaignRn, targetSpend: { cpcBidCeilingMicros: micros(eur) } },

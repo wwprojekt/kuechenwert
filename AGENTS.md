@@ -124,6 +124,7 @@ Before every commit:
 - Form controls: borders and the off-track of switches use `--input` (≥ 3:1, WCAG 1.4.11); `--border` is only for decorative lines and cards. Unselected checkboxes/radios/indicators use `border-input`.
 - Links inside running text use `.link-inline` (underlined, WCAG 1.4.1); standalone links and navigation don't need it.
 - Shapes: buttons and form fields `rounded-xl` (Button, Input, Select, Textarea, `.btn-*`, `.input-field`), cards and dialogs `rounded-2xl`, menus/popovers `rounded-xl`, badges and chips `rounded-full`. CTAs are flat `bg-primary` (no `gradient-hero` on buttons; the gradient stays on decorative icon tiles). Funnel helpers: `.btn-primary`, `.btn-secondary`, `.btn-ghost`, `.helper-text`, `.card-clickable` (+ `.is-selected`).
+- Floating buttons (WhatsApp bottom left, scroll-to-top bottom right; both `h-12 rounded-xl` at `bottom-[calc(2rem+env(safe-area-inset-bottom))]`): below `2xl` the footer bottom bar keeps `pb-[calc(6rem+env(safe-area-inset-bottom))]`, otherwise they cover Impressum and Barrierefreiheit at the end of the page. New fixed elements at the bottom need the same clearance.
 - Before shipping UI changes, check mobile overflow (390 px) – a `flex` paragraph with text and links once made the Funnel C contact step 446 px wide.
 
 ### Funnels & Leads

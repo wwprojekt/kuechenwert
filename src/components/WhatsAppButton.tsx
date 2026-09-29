@@ -108,7 +108,7 @@ export const WhatsAppButton = () => {
       
       <Button
         onClick={() => setIsExpanded(!isExpanded)}
-        className="h-12 w-12 rounded-lg bg-green-700 hover:bg-green-800 text-white shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-110"
+        className="h-12 w-12 rounded-xl bg-green-700 hover:bg-green-800 text-white shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-110"
         size="icon"
         aria-label="WhatsApp-Support"
         aria-expanded={isExpanded}

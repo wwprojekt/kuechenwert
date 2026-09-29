@@ -282,9 +282,10 @@ const Footer = () => {
         </div>
       </div>
 
-      {/* Bottom Bar */}
+      {/* Bottom Bar. Der untere Abstand hält die Zone der schwebenden Buttons
+          (WhatsApp, nach oben) frei; erst ab 2xl liegen sie neben dem Container. */}
       <div className="border-t border-white/10 bg-secondary-dark">
-        <div className="container py-5">
+        <div className="container pt-5 pb-[calc(6rem+env(safe-area-inset-bottom))] 2xl:pb-5">
           <div className="flex flex-col md:flex-row justify-between items-center gap-4">
             <p className="text-sm text-white/70">
               © {currentYear} {settings?.site_name || BRAND.name}. Eine Marke der {BRAND.legalName}. Alle Rechte vorbehalten.

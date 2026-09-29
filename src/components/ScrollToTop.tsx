@@ -30,7 +30,7 @@ const ScrollToTop = () => {
 
   return (
     <div
-      className={`fixed bottom-8 right-4 sm:right-8 z-50 transition-all duration-300 ${
+      className={`fixed bottom-[calc(2rem+env(safe-area-inset-bottom))] right-4 sm:bottom-8 sm:right-8 z-50 transition-all duration-300 ${
         isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-16 pointer-events-none"
       }`}
     >

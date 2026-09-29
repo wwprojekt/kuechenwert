@@ -8,6 +8,9 @@
  *    bis zum Umstieg auf wertbasierte Gebote.
  * 4. Kontoweites finales URL-Suffix mit UTM-Parametern (src/lib/utm.ts
  *    speichert sie an Sitzung und Lead).
+ * 5. Anruf-Ziele zählen nicht für Gebote: Auch von Google automatisch
+ *    erstellte Anruf-Assets nutzen die Konto-Anruf-Conversion, und eine
+ *    telefonische Anfrage trägt keine Klick-ID für die Umsatz-Rückmeldung.
  *
  * Bereits vorhandene Einstellungen, die bewusst getunt werden dürfen
  * (Lookback, Standardwert, ein anderes URL-Suffix), bleiben unangetastet.
@@ -45,7 +48,7 @@ const DEFAULT_KITCHEN_LEAD_VALUE = 9;
 type StepStatus = "ok" | "changed" | "planned" | "differs" | "error";
 
 export interface SetupStep {
-  key: "manager_link" | "kitchen_lead_action" | "contact_action" | "order_action" | "final_url_suffix";
+  key: "manager_link" | "kitchen_lead_action" | "contact_action" | "order_action" | "final_url_suffix" | "call_goal";
   status: StepStatus;
   detail: string;
 }
@@ -218,6 +221,25 @@ async function ensureFinalUrlSuffix(client: GoogleAdsClient, dryRun: boolean): P
   return { status: dryRun ? "planned" : "changed", detail: `Finales URL-Suffix: ${KW_FINAL_URL_SUFFIX}` };
 }
 
+async function ensureCallGoalNotBiddable(client: GoogleAdsClient, dryRun: boolean): Promise<StepResult> {
+  const rows = await client.search(
+    `SELECT customer_conversion_goal.resource_name, customer_conversion_goal.biddable
+     FROM customer_conversion_goal WHERE customer_conversion_goal.category = 'PHONE_CALL_LEAD'`,
+  );
+  const biddable = rows
+    .map((r) => r.customerConversionGoal as { resourceName?: string; biddable?: boolean } | undefined)
+    .filter((g): g is { resourceName: string; biddable: boolean } => !!g?.resourceName && g.biddable === true);
+  if (biddable.length === 0) return { status: "ok", detail: "Anruf-Ziele zählen nicht für Gebote." };
+  await client.mutate("customerConversionGoals", {
+    operations: biddable.map((g) => ({ update: { resourceName: g.resourceName, biddable: false }, updateMask: "biddable" })),
+    validateOnly: dryRun,
+  });
+  return {
+    status: dryRun ? "planned" : "changed",
+    detail: `Anruf-Ziel ${dryRun ? "wird" : "wurde"} aus den Geboten genommen (${biddable.length}).`,
+  };
+}
+
 export async function runSetup(client: GoogleAdsClient, sb: SupabaseClient, dryRun: boolean) {
   const steps: SetupStep[] = [];
   let tracking: { conversionId: string; label: string } | null = null;
@@ -253,6 +275,7 @@ export async function runSetup(client: GoogleAdsClient, sb: SupabaseClient, dryR
   await step("contact_action", async () => (await ensureConversionAction(client, offlineActionSpec("contact"), dryRun)).step);
   await step("order_action", async () => (await ensureConversionAction(client, offlineActionSpec("order"), dryRun)).step);
   await step("final_url_suffix", () => ensureFinalUrlSuffix(client, dryRun));
+  await step("call_goal", () => ensureCallGoalNotBiddable(client, dryRun));
 
   return { ok: steps.every((s) => s.status !== "error"), dryRun, steps, tracking };
 }

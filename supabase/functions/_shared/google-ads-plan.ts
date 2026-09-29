@@ -134,6 +134,12 @@ const SHARED_NEGATIVES: Keyword[] = [
   ...bs("sconto", "hardeck", "biller", "plana", "küchenatlas", "küchentreff", "küchentester", "reddy", "tchibo"),
   ...bs("rieger", "weko", "ehrmann", "löchle", "respekta", "vicco", "kiveda", "küchenquelle", "preisbombe", "bombe"),
   ...ps("möbel boss", "mann mobilia", "möbel kraft", "möbel martin", "küchen aktuell", "küchen quelle"),
+  // Studio- und Möbelhausketten (navigational; „küchenstudio marquardt“ allein 14.800 Suchen/Monat)
+  ...bs("marquardt", "xxxl", "ostermann", "inhofer", "zurbrüggen", "hofmeister", "schulenburg", "dodenhof", "tejo"),
+  ...bs("musterhaus", "pesch"),
+  // Finanzierung (bieten wir nicht an)
+  ...bs("finanzierung", "finanzieren", "ratenkauf"),
+  ...ps("auf raten", "0 prozent"),
   // Jobs und Ausbildung
   ...bs("job", "jobs", "stellenangebot", "stellenangebote", "stellen", "gehalt", "verdienst", "ausbildung"),
   ...bs("weiterbildung", "umschulung", "beruf", "karriere", "bewerbung", "praktikum", "lehre", "quereinsteiger"),
@@ -195,6 +201,8 @@ const ANGEBOTE: CampaignPlan = {
   negatives: [
     ...OWN_BRAND,
     ...bs("konfigurator", "konfigurieren", "3d", "kosten", "kostet", "rechner"),
+    // Schnäppchensuche („günstige küche kaufen“ je 12.100/Monat) sucht Küchenzeilen, keine Studio-Angebote.
+    ...bs("günstig", "günstige", "günstigen", "günstiges"),
   ],
   sitelinks: ["planer", "rechner", "unterbieten", "studios", "kontakt", "faq", "so-gehts", "ueber-uns"],
   callouts: [
@@ -305,6 +313,7 @@ const ANGEBOTE: CampaignPlan = {
       finalPath: "/formular",
       keywords: [
         ...ep("küche kaufen", "küchen kaufen", "einbauküche kaufen", "neue küche kaufen", "küche nach maß"),
+        ...es("neue küche"),
         ...ps(
           "küche mit elektrogeräten kaufen",
           "einbauküche mit elektrogeräten",
@@ -395,7 +404,24 @@ const ANGEBOTE: CampaignPlan = {
     {
       name: "Markenküchen Preise",
       finalPath: "/formular",
-      keywords: ps(
+      keywords: [
+        // Exakt fängt umgestellte Wortfolgen („küche nobilia preise“) ab, die Wortgruppen nicht erreichen.
+        ...es(
+          "nobilia küchen preise",
+          "nolte küchen preise",
+          "häcker küchen preise",
+          "schüller küchen preise",
+          "bulthaup küchen preise",
+          "küche nobilia preise",
+          "preise nobilia küchen",
+          "küche nolte preis",
+          "preis nolte küche",
+          "küche häcker preis",
+          "küche schüller preis",
+          "siematic küche preis",
+          "nobilia küche angebot",
+        ),
+        ...ps(
         "nobilia küche preise",
         "nobilia küchen preise",
         "nobilia küche kaufen",
@@ -418,7 +444,8 @@ const ANGEBOTE: CampaignPlan = {
         "poggenpohl küche preis",
         "burger küchen preise",
         "bauformat küchen preise",
-      ),
+        ),
+      ],
       ad: {
         headlines: [
           "Markenküchen im Vergleich",
@@ -550,6 +577,7 @@ const PLANER: CampaignPlan = {
           "küchenplaner app",
           "3d küchenplaner",
           "küchenplaner 3d",
+          "küche selbst zusammenstellen",
         ),
       ],
       ad: {
@@ -595,6 +623,7 @@ const PLANER: CampaignPlan = {
           "küche gestalten",
           "küche designen",
           "küche erstellen",
+          "küche neu planen",
         ),
       ],
       ad: {
@@ -686,6 +715,7 @@ const PLANER: CampaignPlan = {
           "küche konfigurieren preis",
           "küchen konfigurator mit preis",
           "küchenplaner mit preisberechnung",
+          "küchenplanung mit preis",
         ),
       ],
       ad: {
@@ -833,6 +863,8 @@ const KOSTEN: CampaignPlan = {
     ...MANUFACTURERS,
     ...bs("planen", "planer", "planung", "küchenplaner", "küchenplanung", "konfigurator", "konfigurieren"),
     ...bs("kaufen", "angebot", "angebote", "küchenstudio", "studio", "vergleichen", "vergleich", "preisvergleich"),
+    // Nur Aufbau- oder Montagekosten, keine neue Küche
+    ...bs("montage", "aufbau", "aufbauen", "einbauen"),
     ...ps("in der nähe"),
   ],
   sitelinks: ["angebote", "planer", "unterbieten", "studios", "kontakt", "faq", "so-gehts", "ueber-uns"],
@@ -965,6 +997,7 @@ const KOSTEN: CampaignPlan = {
           "küche mit insel kosten",
           "küche preis pro meter",
           "küche vom schreiner kosten",
+          "schreinerküche kosten",
         ),
       ],
       ad: {

@@ -15,7 +15,8 @@
  * Kampagnen, Anzeigengruppen und Listen werden nie gelöscht.
  *
  * Drei Pakete, jedes ein atomarer Mutate: „main“ (alles außer den beiden
- * folgenden), „brand“ (Firmenname und Logo, brauchen die Überprüfung des
+ * folgenden; neue Remarketing-Listen legt ein eigener Mutate davor an, weil
+ * Google für Nutzerlisten keine temporären IDs kennt), „brand“ (Firmenname und Logo, brauchen die Überprüfung des
  * Werbetreibenden) und „images“ (Bild-Assets, erst ab 60 Tagen Kontoalter
  * mit Search-Ausgaben). Lehnt Google ein Paket ab, laufen die anderen
  * trotzdem. "batches": ["brand", "images"] beschränkt validate/apply auf
@@ -333,14 +334,13 @@ const liveRuleItems = (operands: unknown) =>
       return item.name === "url__" && rule.operator === "CONTAINS" ? str(rule.value) : `${str(item.name)}:${str(rule.operator)}:${str(rule.value)}`;
     });
 
-const urlRule = (values: string[]) => ({
-  ruleType: "OR_OF_ANDS",
-  ruleItemGroups: values.map((value) => ({ ruleItems: [{ name: "url__", stringRuleItem: { operator: "CONTAINS", value } }] })),
+/** Eine Seite je Operand: Google lehnt mehrere Regelgruppen in einem Operanden ab (TOO_MANY). */
+const urlOperand = (value: string) => ({
+  rule: { ruleItemGroups: [{ ruleItems: [{ name: "url__", stringRuleItem: { operator: "CONTAINS", value } }] }] },
 });
 
-function userListResource(l: RemarketingListPlan, resourceName: string): Obj {
+function userListResource(l: RemarketingListPlan): Obj {
   return {
-    resourceName,
     name: l.name,
     description: l.description,
     membershipStatus: "OPEN",
@@ -348,9 +348,9 @@ function userListResource(l: RemarketingListPlan, resourceName: string): Obj {
     ruleBasedUserList: {
       prepopulationStatus: "REQUESTED",
       flexibleRuleUserList: {
-        inclusiveRuleOperator: "AND",
-        inclusiveOperands: [{ rule: urlRule(l.visited) }],
-        exclusiveOperands: l.notVisited.length ? [{ rule: urlRule(l.notVisited) }] : [],
+        inclusiveRuleOperator: "OR",
+        inclusiveOperands: l.visited.map(urlOperand),
+        exclusiveOperands: l.notVisited.map(urlOperand),
       },
     },
   };
@@ -384,7 +384,8 @@ export interface ImageUpload {
 }
 
 interface Planned {
-  batches: { main: Batch; brand: Batch; images: Batch };
+  /** lists: neue Remarketing-Listen, laufen vor main (ihre IDs taugen nicht als temporäre Verweise). */
+  batches: { lists: Batch; main: Batch; brand: Batch; images: Batch };
   created: string[];
   warnings: string[];
 }
@@ -400,7 +401,8 @@ function planOperations(
   const main = new Batch();
   const brand = new Batch();
   const images = new Batch();
-  const out: Planned = { batches: { main, brand, images }, created: [], warnings: [] };
+  const lists = new Batch();
+  const out: Planned = { batches: { lists, main, brand, images }, created: [], warnings: [] };
   const url = (path: string) => `${plan.site}${path}`;
   const keyword = (k: Keyword) => ({ text: k.text, matchType: k.match });
   const customerLinked = (asset: string, field: string) =>
@@ -514,15 +516,14 @@ function planOperations(
     }
   }
 
-  // Remarketing-Listen: anlegen bzw. Mitgliedsdauer angleichen
-  const userListRns: string[] = [];
+  // Remarketing-Listen: anlegen (Paket lists) bzw. Mitgliedsdauer angleichen
+  const userListRns: Array<string | undefined> = [];
   for (const l of plan.remarketingLists) {
     const existing = live.userLists.get(l.name);
     if (!existing) {
-      const rn = temp("userLists");
-      main.add("remarketingLists", `Remarketing „${l.name}“`, { userListOperation: { create: userListResource(l, rn) } });
+      lists.add("remarketingLists", `Remarketing „${l.name}“`, { userListOperation: { create: userListResource(l) } });
       out.created.push(`Remarketing-Liste „${l.name}“`);
-      userListRns.push(rn);
+      userListRns.push(undefined);
       continue;
     }
     if (existing.rules !== ruleSignature(l.visited, l.notVisited)) {
@@ -588,6 +589,7 @@ function planOperations(
       }
       plan.remarketingLists.forEach((l, i) => {
         const listRn = userListRns[i];
+        if (!listRn) return;
         wantedUserLinks.add(`${campRn}|${listRn}`);
         if (!live.campaignUserLists.has(`${campRn}|${listRn}`)) {
           main.add("remarketingLinks", `${c.name}: Remarketing „${l.name}“`, {
@@ -746,12 +748,16 @@ function describeFailure(err: unknown, labels: string[]) {
 
 async function runBatch(client: GoogleAdsClient, batch: Batch, mode: "validate" | "apply") {
   const summary = { operations: batch.operations.length, counts: batch.counts, removals: batch.removals };
-  if (batch.operations.length === 0) return { ok: true, ...summary };
+  if (batch.operations.length === 0) return { ok: true, ...summary, response: undefined };
   try {
-    await client.mutate("googleAds", { mutateOperations: batch.operations, partialFailure: false, validateOnly: mode === "validate" });
-    return { ok: true, ...summary, applied: mode === "apply" };
+    const response: unknown = await client.mutate("googleAds", {
+      mutateOperations: batch.operations,
+      partialFailure: false,
+      validateOnly: mode === "validate",
+    });
+    return { ok: true, ...summary, applied: mode === "apply", response };
   } catch (err) {
-    return { ok: false, ...summary, ...describeFailure(err, batch.labels) };
+    return { ok: false, ...summary, ...describeFailure(err, batch.labels), response: undefined };
   }
 }
 
@@ -768,11 +774,17 @@ export async function runCampaigns(client: GoogleAdsClient, body: Obj) {
   const live = await loadLive(client, KW_ADS_PLAN);
   const needsImages = names.some((k) => k !== "main");
   const uploads = mode === "plan" || !needsImages ? new Map<string, ImageUpload>() : await loadUploads(KW_ADS_PLAN, live);
-  const planned = planOperations(KW_ADS_PLAN, live, client.customerId, uploads);
-  const total = names.reduce((n, k) => n + planned.batches[k].operations.length, 0);
-  const base = { mode, operations: total, created: planned.created, warnings: planned.warnings };
+  let planned = planOperations(KW_ADS_PLAN, live, client.customerId, uploads);
+  // Neue Remarketing-Listen gehören zu „main“ und laufen davor.
+  const steps: Array<keyof Planned["batches"]> = names.includes("main") ? ["lists", ...names] : [...names];
+  const total = steps.reduce((n, k) => n + planned.batches[k].operations.length, 0);
+  const warnings = [...planned.warnings];
+  if (steps.includes("lists") && planned.batches.lists.operations.length) {
+    warnings.push("Neue Remarketing-Listen werden zuerst angelegt, ihre Kampagnen-Verknüpfungen plant apply direkt danach.");
+  }
+  const base = { mode, operations: total, created: planned.created, warnings };
   if (mode === "plan" || total === 0) {
-    const batches = Object.fromEntries(names.map((k) => {
+    const batches = Object.fromEntries(steps.map((k) => {
       const b = planned.batches[k];
       return [k, { operations: b.operations.length, counts: b.counts, removals: b.removals }];
     }));
@@ -780,12 +792,32 @@ export async function runCampaigns(client: GoogleAdsClient, body: Obj) {
   }
   const batches: Record<string, unknown> = {};
   let ok = true;
-  for (const k of names) {
-    const result = await runBatch(client, planned.batches[k], mode);
+  for (const k of steps) {
+    const { response, ...result } = await runBatch(client, planned.batches[k], mode);
     batches[k] = result;
     ok &&= result.ok;
+    if (k === "lists" && mode === "apply" && result.ok && result.operations > 0) {
+      registerCreatedLists(planned.batches.lists, response, live);
+      planned = planOperations(KW_ADS_PLAN, live, client.customerId, uploads);
+    }
   }
   return { ok, ...base, batches };
+}
+
+/** Ressourcennamen aus der Mutate-Antwort, damit die Verknüpfung nicht auf die Suche wartet. */
+function registerCreatedLists(batch: Batch, response: unknown, live: LiveState) {
+  const results = arr(obj(response).mutateOperationResponses);
+  batch.operations.forEach((op, i) => {
+    const create = obj(obj(op.userListOperation).create);
+    const plan = KW_ADS_PLAN.remarketingLists.find((l) => l.name === create.name);
+    const resourceName = str(obj(obj(results[i]).userListResult).resourceName);
+    if (!plan || !resourceName) return;
+    live.userLists.set(plan.name, {
+      resourceName,
+      lifespanDays: plan.lifespanDays,
+      rules: ruleSignature(plan.visited, plan.notVisited),
+    });
+  });
 }
 
 const BIDDING_TYPES = new Set(["MAXIMIZE_CLICKS", "MAXIMIZE_CONVERSIONS"]);

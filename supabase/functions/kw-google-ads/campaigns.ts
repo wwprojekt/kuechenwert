@@ -351,6 +351,11 @@ const urlOperand = (value: string, days: number) => ({
   lookbackWindowDays: String(days),
 });
 
+/** Blattfelder: Eine Maske auf flexible_rule_user_list selbst lehnt Google ab (FIELD_HAS_SUBFIELDS). */
+const FLEXIBLE_RULE_MASK = ["inclusive_rule_operator", "inclusive_operands", "exclusive_operands"]
+  .map((f) => `rule_based_user_list.flexible_rule_user_list.${f}`)
+  .join(",");
+
 const flexibleRules = (l: RemarketingListPlan) => ({
   inclusiveRuleOperator: "OR",
   inclusiveOperands: l.visited.map((v) => urlOperand(v, l.lifespanDays)),
@@ -540,7 +545,7 @@ function planOperations(
       main.add("remarketingLists", `Remarketing „${l.name}“: Regeln angleichen`, {
         userListOperation: {
           update: { resourceName: existing.resourceName, ruleBasedUserList: { flexibleRuleUserList: flexibleRules(l) } },
-          updateMask: "rule_based_user_list.flexible_rule_user_list",
+          updateMask: FLEXIBLE_RULE_MASK,
         },
       });
     }

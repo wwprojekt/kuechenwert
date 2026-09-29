@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useReducer, useRef } from "react";
+import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from "react";
 import {
   defaultConfig,
   defaultRoom,
@@ -12,6 +12,7 @@ import {
   type RoomInput,
 } from "./core";
 import { loadSession, renderStatus, type PlannerPhoto, type PlannerRender, type PlannerSessionRender } from "./api";
+import { roomWallIssues } from "./estimate-gate";
 import { usePriceModel } from "./price-model";
 import { plannerRenderKey } from "./render-key";
 
@@ -28,6 +29,8 @@ export const PLANNER_STEPS: Array<{ id: PlannerStep; label: string }> = [
 
 export interface PlannerState {
   step: PlannerStep;
+  /** Weitester bisher erreichter Schritt (Index in PLANNER_STEPS). */
+  furthestIndex: number;
   sessionToken: string | null;
   config: PlannerConfig;
   room: RoomInput;
@@ -58,9 +61,14 @@ type Action =
 
 const STORAGE_KEY = "kw_planner_v2";
 
+export function stepIndex(step: unknown): number {
+  return Math.max(0, PLANNER_STEPS.findIndex((s) => s.id === step));
+}
+
 function initialState(): PlannerState {
   return {
     step: "raum",
+    furthestIndex: 0,
     sessionToken: null,
     config: defaultConfig(),
     room: defaultRoom("l"),
@@ -76,7 +84,7 @@ function initialState(): PlannerState {
 function reducer(state: PlannerState, action: Action): PlannerState {
   switch (action.type) {
     case "step":
-      return { ...state, step: action.step };
+      return { ...state, step: action.step, furthestIndex: Math.max(state.furthestIndex, stepIndex(action.step)) };
     case "config":
       return { ...state, config: { ...state.config, ...action.patch } };
     case "form": {
@@ -131,8 +139,10 @@ function readStorage(): Partial<PlannerState> | null {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) return null;
     const parsed = JSON.parse(raw) as Partial<PlannerState>;
+    const furthest = Number.isInteger(parsed.furthestIndex) ? Number(parsed.furthestIndex) : 0;
     return {
       ...parsed,
+      furthestIndex: Math.min(PLANNER_STEPS.length - 1, Math.max(furthest, stepIndex(parsed.step))),
       config: sanitizeConfig(parsed.config),
       room: sanitizeRoom(parsed.room),
       photos: [],
@@ -165,6 +175,12 @@ export function clearPlannerStorage() {
 
 function fromSessionRender({ spec, ...render }: PlannerSessionRender): PlannerRender {
   return { ...render, config_key: spec?.config ? plannerRenderKey(spec.config, spec.room, spec.photo_path) : null };
+}
+
+function useLastValid<T>(value: T, valid: boolean): T {
+  const [last, setLast] = useState(value);
+  if (valid && value !== last) setLast(value);
+  return valid ? value : last;
 }
 
 export function usePlanner() {
@@ -209,15 +225,17 @@ export function usePlanner() {
   }, [state.sessionToken]);
 
   const { card, calibration, rateCardVersion } = usePriceModel();
+  // Während eine Wandlänge getippt wird (0, 3, 35 …), gilt der letzte vollständige Raum.
+  const pricedRoom = useLastValid(state.room, Object.keys(roomWallIssues(state.room)).length === 0);
   const estimate: KitchenEstimate = useMemo(
     () =>
-      estimateKitchenPrice(state.config, state.room, {
+      estimateKitchenPrice(state.config, pricedRoom, {
         card,
         calibration,
         rateCardVersion,
         postalCode: state.postalCode || null,
       }),
-    [state.config, state.room, state.postalCode, card, calibration, rateCardVersion],
+    [state.config, pricedRoom, state.postalCode, card, calibration, rateCardVersion],
   );
 
   const actions = useMemo(

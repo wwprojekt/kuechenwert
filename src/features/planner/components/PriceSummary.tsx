@@ -1,4 +1,4 @@
-import { ChevronDown, Info } from "lucide-react";
+import { Calculator, ChevronDown, Info, Target } from "lucide-react";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
 import type { EstimateGroup, KitchenEstimate } from "../core";
@@ -24,16 +24,40 @@ export function PriceRange({ estimate, className }: { estimate: Pick<KitchenEsti
   );
 }
 
+function PendingEstimate({ compact }: { compact: boolean }) {
+  return (
+    <div className={cn("rounded-2xl border bg-card p-4 shadow-sm", !compact && "sm:p-5")}>
+      <div className="flex items-start gap-3">
+        <span className="flex h-10 w-10 flex-none items-center justify-center rounded-xl bg-primary/10 text-primary">
+          <Calculator className="h-5 w-5" aria-hidden="true" />
+        </span>
+        <div className="min-w-0">
+          <p className="text-xs font-bold uppercase tracking-wider text-primary">Ihre Preisschätzung</p>
+          <p className="mt-1 font-bold text-foreground">Folgt nach diesem Schritt</p>
+        </div>
+      </div>
+      <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
+        Wir berechnen sie aus Küchenform und Maßen – ungefähre Werte genügen. Danach passt sie sich jeder Auswahl an.
+      </p>
+    </div>
+  );
+}
+
 export function PriceSummary({
   estimate,
+  note,
   compact = false,
   defaultOpen = false,
 }: {
-  estimate: KitchenEstimate;
+  /** null: Form und Maße stehen noch nicht fest, es gibt noch keine Schätzung. */
+  estimate: KitchenEstimate | null;
+  note?: string | null;
   compact?: boolean;
   defaultOpen?: boolean;
 }) {
   const [open, setOpen] = useState(defaultOpen);
+  if (!estimate) return <PendingEstimate compact={compact} />;
+
   const groups = (Object.keys(GROUP_LABEL) as EstimateGroup[])
     .map((g) => {
       const lines = estimate.lines.filter((l) => l.group === g);
@@ -48,7 +72,7 @@ export function PriceSummary({
 
   return (
     <div className="rounded-2xl border bg-card shadow-sm">
-      <div className={cn("p-4", !compact && "sm:p-5")}>
+      <div className={cn("p-4 motion-safe:animate-in motion-safe:fade-in-0 motion-safe:duration-500", !compact && "sm:p-5")}>
         <p className="text-xs font-bold uppercase tracking-wider text-primary">Geschätzter Marktpreis</p>
         <p className={cn("mt-1 font-extrabold text-foreground", compact ? "text-xl" : "text-2xl sm:text-[1.7rem]")}>
           <PriceRange estimate={estimate} />
@@ -56,6 +80,12 @@ export function PriceSummary({
         <p className="mt-1 text-xs text-muted-foreground">
           Mittelwert ca. <span className="font-semibold text-foreground">{euro(estimate.mid)}</span> · inkl. MwSt.
         </p>
+        {note && (
+          <p className="mt-3 flex items-start gap-1.5 text-xs leading-relaxed text-muted-foreground">
+            <Target className="mt-px h-3.5 w-3.5 flex-none text-primary" aria-hidden="true" />
+            {note}
+          </p>
+        )}
       </div>
 
       <button

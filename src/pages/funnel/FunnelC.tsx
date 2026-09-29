@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
 import { FunnelSeo } from "@/components/funnel/funnel-seo";
@@ -15,9 +15,17 @@ import {
   type RenderFeedback,
 } from "@/features/planner/api";
 import { KITCHEN_FORMS, STYLES } from "@/features/planner/core";
+import { estimateNote, estimateVisible, roomWallIssues } from "@/features/planner/estimate-gate";
 import { PlannerShell } from "@/features/planner/PlannerShell";
 import { plannerRenderKey } from "@/features/planner/render-key";
-import { PLANNER_STEPS, clearPlannerStorage, usePlanner, useRenderPolling, type PlannerStep } from "@/features/planner/state";
+import {
+  PLANNER_STEPS,
+  clearPlannerStorage,
+  stepIndex,
+  usePlanner,
+  useRenderPolling,
+  type PlannerStep,
+} from "@/features/planner/state";
 import { AppliancesStep } from "@/features/planner/steps/AppliancesStep";
 import { ContactStep, type ContactValues } from "@/features/planner/steps/ContactStep";
 import { EquipmentStep } from "@/features/planner/steps/EquipmentStep";
@@ -45,7 +53,8 @@ export default function FunnelC() {
   const [genError, setGenError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
-  const [maxVisited, setMaxVisited] = useState(() => PLANNER_STEPS.findIndex((s) => s.id === state.step));
+  const [showWallErrors, setShowWallErrors] = useState(false);
+  const wallIssues = useMemo(() => roomWallIssues(state.room), [state.room]);
   const { waitForToken, resetTurnstile, turnstileCallbackRef } = useTurnstile();
 
   const rendersRef = useRef(state.renders);
@@ -120,8 +129,6 @@ export default function FunnelC() {
       return;
     }
     if (urlStep === stepRef.current) return;
-    const target = PLANNER_STEPS.findIndex((s) => s.id === urlStep);
-    setMaxVisited((m) => Math.max(m, target));
     setPlannerStep(urlStep);
     window.scrollTo({ top: 0, behavior: "smooth" });
   }, [urlStep, searchParams, setSearchParams, setPlannerStep]);
@@ -129,11 +136,20 @@ export default function FunnelC() {
   const goTo = useCallback(
     (step: PlannerStep) => {
       if (step === state.step) return;
+      // Ohne gültige Maße gibt es keine belastbare Schätzung und keine brauchbare Anfrage.
+      const firstIssue = Object.keys(wallIssues)[0];
+      if (state.step === "raum" && stepIndex(step) > 0 && firstIssue) {
+        setShowWallErrors(true);
+        const field = document.getElementById(`wall-${firstIssue}`);
+        field?.focus({ preventScroll: true });
+        field?.scrollIntoView({ block: "center", behavior: "smooth" });
+        return;
+      }
       const params = new URLSearchParams(searchParams);
       params.set("schritt", step);
       setSearchParams(params);
     },
-    [searchParams, setSearchParams, state.step],
+    [searchParams, setSearchParams, state.step, wallIssues],
   );
 
   const next = () => goTo(PLANNER_STEPS[Math.min(index + 1, PLANNER_STEPS.length - 1)]!.id);
@@ -316,8 +332,9 @@ export default function FunnelC() {
       />
       <PlannerShell
         step={state.step}
-        maxVisitedIndex={Math.max(maxVisited, index)}
-        estimate={estimate}
+        maxVisitedIndex={Math.max(state.furthestIndex, index)}
+        estimate={estimateVisible(state.furthestIndex) ? estimate : null}
+        estimateNote={estimateNote(state.furthestIndex)}
         onStep={goTo}
         onBack={back}
         onNext={next}
@@ -330,6 +347,8 @@ export default function FunnelC() {
             photos={state.photos}
             selectedPhotoPath={state.selectedPhotoPath}
             postalCode={state.postalCode}
+            wallIssues={wallIssues}
+            showAllWallErrors={showWallErrors}
             onForm={planner.setForm}
             onWall={planner.setWall}
             onRoom={planner.patchRoom}

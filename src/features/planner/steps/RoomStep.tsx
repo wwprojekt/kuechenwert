@@ -1,7 +1,9 @@
 import { Lightbulb, Ruler } from "lucide-react";
+import { useState } from "react";
 import { KitchenFormPlan } from "@/components/kitchen/KitchenFormPlan";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { cn } from "@/lib/utils";
 import { KITCHEN_FORMS, formById, type KitchenFormId, type RoomInput } from "../core";
 import type { PlannerPhoto } from "../api";
 import { ChoiceGrid, Section } from "../components/choices";
@@ -13,6 +15,8 @@ export function RoomStep({
   photos,
   selectedPhotoPath,
   postalCode,
+  wallIssues,
+  showAllWallErrors,
   onForm,
   onWall,
   onRoom,
@@ -25,6 +29,9 @@ export function RoomStep({
   photos: PlannerPhoto[];
   selectedPhotoPath: string | null;
   postalCode: string;
+  wallIssues: Record<string, string>;
+  /** Nach einem Weiter-Versuch mit unvollständigen Maßen alle Fehler zeigen. */
+  showAllWallErrors: boolean;
   onForm: (form: KitchenFormId) => void;
   onWall: (key: string, cm: number) => void;
   onRoom: (patch: Partial<RoomInput>) => void;
@@ -34,6 +41,8 @@ export function RoomStep({
   onSelectPhoto: (path: string) => void;
 }) {
   const walls = formById(room.form)?.walls ?? [];
+  // Fehler erst nach Verlassen des Feldes zeigen, aber sofort ausblenden, sobald der Wert passt.
+  const [flagged, setFlagged] = useState<Record<string, boolean>>({});
 
   return (
     <div className="space-y-9">
@@ -76,28 +85,41 @@ export function RoomStep({
         <div className="grid gap-6 lg:grid-cols-[1fr_1.1fr]">
           <div className="space-y-4">
             <div className="grid grid-cols-2 gap-3">
-              {walls.map((w) => (
-                <div key={`${room.form}-${w.key}`} className="space-y-1.5">
-                  <Label htmlFor={`wall-${w.key}`}>{w.label}</Label>
-                  <div className="relative">
-                    <Input
-                      id={`wall-${w.key}`}
-                      inputMode="numeric"
-                      value={room.walls[w.key] ? String(room.walls[w.key]) : ""}
-                      placeholder={w.optional ? "0" : String(w.defaultCm)}
-                      onChange={(e) => {
-                        const cm = Number(e.target.value.replace(/\D/g, "").slice(0, 4));
-                        onWall(w.key, Number.isFinite(cm) ? cm : 0);
-                      }}
-                      className="h-11 pr-11 text-base tabular-nums"
-                      aria-describedby={`wall-${w.key}-unit`}
-                    />
-                    <span id={`wall-${w.key}-unit`} className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">
-                      cm
-                    </span>
+              {walls.map((w) => {
+                const error = showAllWallErrors || flagged[w.key] ? wallIssues[w.key] : undefined;
+                return (
+                  <div key={`${room.form}-${w.key}`} className="space-y-1.5">
+                    <Label htmlFor={`wall-${w.key}`}>{w.label}</Label>
+                    <div className="relative">
+                      <Input
+                        id={`wall-${w.key}`}
+                        inputMode="numeric"
+                        value={room.walls[w.key] ? String(room.walls[w.key]) : ""}
+                        placeholder={w.optional ? "0" : `z. B. ${w.defaultCm}`}
+                        onChange={(e) => {
+                          const cm = Number(e.target.value.replace(/\D/g, "").slice(0, 4));
+                          onWall(w.key, Number.isFinite(cm) ? cm : 0);
+                        }}
+                        onBlur={() => setFlagged((f) => ({ ...f, [w.key]: !!wallIssues[w.key] }))}
+                        className={cn(
+                          "h-11 pr-11 text-base tabular-nums",
+                          error && "border-destructive focus-visible:ring-destructive",
+                        )}
+                        aria-invalid={error ? true : undefined}
+                        aria-describedby={cn(`wall-${w.key}-unit`, error && `wall-${w.key}-error`)}
+                      />
+                      <span id={`wall-${w.key}-unit`} className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">
+                        cm
+                      </span>
+                    </div>
+                    {error && (
+                      <p id={`wall-${w.key}-error`} className="text-xs font-medium text-destructive">
+                        {error}
+                      </p>
+                    )}
                   </div>
-                </div>
-              ))}
+                );
+              })}
               <div className="space-y-1.5">
                 <Label htmlFor="ceiling">Raumhöhe</Label>
                 <div className="relative">
@@ -105,7 +127,7 @@ export function RoomStep({
                     id="ceiling"
                     inputMode="numeric"
                     value={room.ceilingHeightCm ? String(room.ceilingHeightCm) : ""}
-                    placeholder="250"
+                    placeholder="z. B. 250"
                     onChange={(e) => {
                       const cm = Number(e.target.value.replace(/\D/g, "").slice(0, 3));
                       onRoom({ ceilingHeightCm: cm || null });

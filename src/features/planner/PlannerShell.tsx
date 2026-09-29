@@ -13,6 +13,7 @@ export function PlannerShell({
   step,
   maxVisitedIndex,
   estimate,
+  estimateNote,
   onStep,
   onBack,
   onNext,
@@ -22,7 +23,8 @@ export function PlannerShell({
 }: {
   step: PlannerStep;
   maxVisitedIndex: number;
-  estimate: KitchenEstimate;
+  estimate: KitchenEstimate | null;
+  estimateNote?: string | null;
   onStep: (step: PlannerStep) => void;
   onBack: () => void;
   onNext: () => void;
@@ -116,7 +118,7 @@ export function PlannerShell({
           {showSummary && (
             <aside className="hidden lg:block">
               <div className="sticky top-32 space-y-4">
-                <PriceSummary estimate={estimate} />
+                <PriceSummary estimate={estimate} note={estimateNote} />
                 <Button size="lg" className="h-12 w-full text-base font-semibold" onClick={onNext}>
                   {nextLabel} <ArrowRight className="ml-2 h-5 w-5" />
                 </Button>
@@ -157,10 +159,19 @@ export function PlannerShell({
               </Button>
             )}
             <div className="min-w-0 flex-1">
-              <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Geschätzt</p>
-              <p className="truncate text-[15px] font-extrabold text-foreground min-[380px]:text-base">
-                <PriceRange estimate={estimate} />
-              </p>
+              {estimate ? (
+                <>
+                  <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Geschätzt</p>
+                  <p className="truncate text-[15px] font-extrabold text-foreground min-[380px]:text-base">
+                    <PriceRange estimate={estimate} />
+                  </p>
+                </>
+              ) : (
+                <>
+                  <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Preisschätzung</p>
+                  <p className="truncate text-sm font-semibold text-muted-foreground">folgt nach diesem Schritt</p>
+                </>
+              )}
             </div>
             <Button size="lg" className="h-12 flex-none px-4 font-semibold min-[380px]:px-5" onClick={onNext}>
               Weiter <ArrowRight className="ml-1.5 h-4 w-4" />

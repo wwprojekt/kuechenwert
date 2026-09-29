@@ -143,15 +143,19 @@
 
   // Google-Tag und Meta-Pixel werden erst nach Einwilligung geladen
   // (Basic Consent Mode): vorher geht keine Anfrage an Google oder Meta.
+  // GA4 nur mit Statistik-, Google Ads nur mit Marketing-Einwilligung.
   function applyTracking() {
     var b = window.__TRACKING_BOOT__;
     var marketing = hasMarketingConsent();
-    if (marketing || hasAnalyticsConsent()) {
+    var analytics = hasAnalyticsConsent();
+    if (marketing || analytics) {
+      var ga4 = analytics ? b.ga4 : '';
+      var gads = marketing ? b.gads : '';
       var gtagLoaded = !!document.querySelector('script[data-tracking-loader="1"]');
-      if (!gtagLoaded || (b.ga4 && b.loaded.ga4 !== b.ga4)) {
-        loadGtagJs(b.ga4, b.gads, b.gtm);
+      if (!gtagLoaded || (ga4 && b.loaded.ga4 !== ga4)) {
+        loadGtagJs(ga4, gads, b.gtm);
       } else {
-        configureGtag(b.ga4, b.gads, true, true);
+        configureGtag(ga4, gads, true, true);
       }
     }
     if (marketing) loadFbq(b.fb);

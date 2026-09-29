@@ -11,8 +11,12 @@
  * Conversion-Strategie:
  * - PRIMÄRE Conversions: Jede Lead-Erfassung mit Kontaktdaten (für Gebotsoptimierung)
  * - Alles andere nur als GA4-/Bing-Event (Beobachtung, Zielgruppen)
+ *
+ * Conversions und Enhanced-Conversion-Daten gehen nur mit Marketing-
+ * Einwilligung an Google Ads (Basic Consent Mode, TDDDG § 25).
  */
 
+import { hasMarketingConsent } from '@/components/CookieBanner';
 import { logger } from '@/lib/logger';
 import {
   getConversionLabel,
@@ -101,7 +105,7 @@ function sendConversion(label: string, value: number, transactionId?: string): P
     // Timeout-Fallback: Nach 1s trotzdem weiter navigieren
     const timeout = setTimeout(resolve, 1000);
     const conversionId = getGoogleAdsId();
-    if (!isGoogleAdsEnabled() || !conversionId || !label) {
+    if (!isGoogleAdsEnabled() || !conversionId || !label || !hasMarketingConsent()) {
       clearTimeout(timeout);
       resolve();
       return;
@@ -453,7 +457,7 @@ export async function setEnhancedConversionData(userData: {
   country?: string;
 }): Promise<void> {
   try {
-    if (typeof window === 'undefined') return;
+    if (typeof window === 'undefined' || !hasMarketingConsent()) return;
 
     const enhancedData: Record<string, unknown> = {};
 

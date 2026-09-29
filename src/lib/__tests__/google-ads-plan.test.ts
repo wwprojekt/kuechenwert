@@ -4,6 +4,8 @@ import { describe, expect, it } from "vitest";
 import {
   IMAGE_MAX_BYTES,
   KW_ADS_PLAN,
+  REMARKETING_PREFIX,
+  THANK_YOU_PATH,
   imageFits,
   negativeBlocks,
   validatePlan,
@@ -64,8 +66,22 @@ describe("Google-Ads-Plan", () => {
     const route = conf.match(/location ~ \^\/\(\?:(kuechenstudios\|[^$]+)\)\$ \{/);
     expect(route).not.toBeNull();
     const publicRoute = new RegExp(`^/(?:${route![1]})$`);
-    for (const path of KW_ADS_PLAN.allowedPaths.filter((p) => p !== "/")) {
+    for (const path of [...KW_ADS_PLAN.allowedPaths.filter((p) => p !== "/"), THANK_YOU_PATH]) {
       expect(publicRoute.test(path), path).toBe(true);
     }
+  });
+
+  it("prüft Remarketing-Listen auf Präfix, Mitgliedsdauer und vorhandene Seiten", () => {
+    const broken = structuredClone(KW_ADS_PLAN);
+    broken.remarketingLists.push(
+      { name: "Fremde Liste", description: "", lifespanDays: 30, visited: ["kuechenwert24.de/formular"], notVisited: [] },
+      { name: `${REMARKETING_PREFIX}Zu lang`, description: "", lifespanDays: 600, visited: ["kuechenwert24.de/gibtsnicht"], notVisited: [] },
+      { name: `${REMARKETING_PREFIX}Fremde Domain`, description: "", lifespanDays: 30, visited: ["example.com/formular"], notVisited: [] },
+    );
+    const errors = validatePlan(broken);
+    expect(errors.some((e) => e.includes("Fremde Liste") && e.includes("ohne"))).toBe(true);
+    expect(errors.some((e) => e.includes("600"))).toBe(true);
+    expect(errors.some((e) => e.includes("/gibtsnicht"))).toBe(true);
+    expect(errors.some((e) => e.includes("example.com"))).toBe(true);
   });
 });

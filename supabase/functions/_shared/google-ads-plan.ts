@@ -91,6 +91,26 @@ export interface CampaignPlan {
   adGroups: AdGroupPlan[];
 }
 
+export const REMARKETING_PREFIX = "KüchenWert | ";
+/** Danke-Seite aller Funnels (kein Anzeigenziel, daher nicht in allowedPaths). */
+export const THANK_YOU_PATH = "/funnel/danke";
+
+/**
+ * Remarketing-Liste aus den Seitenaufrufen des Google-Tags. Befüllt wird sie nur
+ * mit Marketing-Einwilligung (tracking-loader.js). Der Name ist der Schlüssel:
+ * Regeln einer bestehenden Liste werden nicht umgeschrieben, sondern gemeldet.
+ */
+export interface RemarketingListPlan {
+  name: string;
+  description: string;
+  /** Mitgliedsdauer in Tagen, höchstens 540. */
+  lifespanDays: number;
+  /** Seiten-URL enthält einen dieser Werte (oder). */
+  visited: string[];
+  /** Ausgenommen, wer eine Seite mit einem dieser Werte aufgerufen hat. */
+  notVisited: string[];
+}
+
 export interface AccountPlan {
   site: string;
   allowedPaths: string[];
@@ -98,6 +118,8 @@ export interface AccountPlan {
   languageConstants: string[];
   sharedNegativeList: { name: string; keywords: Keyword[] };
   audienceUserInterestIds: string[];
+  /** Hängen zur Beobachtung an allen Kampagnen mit observeAudiences. */
+  remarketingLists: RemarketingListPlan[];
   /** Kontoebene: für Kampagnen ohne eigene Callouts. */
   callouts: string[];
   snippets: Array<{ header: string; values: string[] }>;
@@ -1227,6 +1249,45 @@ export const KW_ADS_PLAN: AccountPlan = {
   // In-Market: Kitchen & Dining Room, Kitchen & Bathroom Cabinets, Kitchen &
   // Bathroom Counters, Home Improvement, Home Furnishings, Moving & Relocation
   audienceUserInterestIds: ["80249", "80266", "80267", "80241", "80240", "80403"],
+  // Alle Funnels enden auf /funnel/danke. Küchen entstehen über Monate, daher
+  // 90 Tage für Besucher ohne Anfrage.
+  remarketingLists: [
+    {
+      name: "KüchenWert | Alle Besucher | 540 Tage",
+      description: "Alle Seitenaufrufe von kuechenwert24.de",
+      lifespanDays: 540,
+      visited: ["kuechenwert24.de"],
+      notVisited: [],
+    },
+    {
+      name: "KüchenWert | Planer ohne Anfrage | 90 Tage",
+      description: "Küchenplaner (Funnel C) geöffnet, keine Anfrage gesendet",
+      lifespanDays: 90,
+      visited: ["kuechenwert24.de/funnel/c"],
+      notVisited: ["kuechenwert24.de/funnel/danke"],
+    },
+    {
+      name: "KüchenWert | Formular ohne Anfrage | 90 Tage",
+      description: "Anfrageformular (Funnel A oder B) geöffnet, keine Anfrage gesendet",
+      lifespanDays: 90,
+      visited: ["kuechenwert24.de/formular", "kuechenwert24.de/funnel/b"],
+      notVisited: ["kuechenwert24.de/funnel/danke"],
+    },
+    {
+      name: "KüchenWert | KüchenRechner ohne Anfrage | 90 Tage",
+      description: "KüchenRechner genutzt, keine Anfrage gesendet",
+      lifespanDays: 90,
+      visited: ["kuechenwert24.de/kuechenrechner"],
+      notVisited: ["kuechenwert24.de/funnel/danke"],
+    },
+    {
+      name: "KüchenWert | Anfrage gesendet | 540 Tage",
+      description: "Danke-Seite nach einer Anfrage erreicht",
+      lifespanDays: 540,
+      visited: ["kuechenwert24.de/funnel/danke"],
+      notVisited: [],
+    },
+  ],
   callouts: [
     HEADLINE_FREE,
     "Geprüfte Küchenstudios",
@@ -1519,5 +1580,29 @@ export function validatePlan(plan: AccountPlan): string[] {
     seenShared.add(id);
     if (n.text !== n.text.toLowerCase()) errors.push(`Liste: Ausschluss „${n.text}“ nicht kleingeschrieben`);
   }
+  checkRemarketingLists(plan, errors);
   return errors;
+}
+
+/** Nur Seiten, die es gibt; Namen mit Präfix, damit der Abgleich fremde Listen nie anfasst. */
+function checkRemarketingLists(plan: AccountPlan, errors: string[]) {
+  const host = new URL(plan.site).host;
+  const names = new Set<string>();
+  for (const l of plan.remarketingLists) {
+    if (!l.name.startsWith(REMARKETING_PREFIX)) errors.push(`Remarketing „${l.name}“: Name ohne „${REMARKETING_PREFIX}“`);
+    if (names.has(l.name)) errors.push(`Remarketing „${l.name}“: Name doppelt`);
+    names.add(l.name);
+    if (l.name.length > 255 || l.description.length > 255) errors.push(`Remarketing „${l.name}“: Name oder Beschreibung zu lang`);
+    if (!Number.isInteger(l.lifespanDays) || l.lifespanDays < 1 || l.lifespanDays > 540) {
+      errors.push(`Remarketing „${l.name}“: Mitgliedsdauer ${l.lifespanDays} außerhalb 1–540 Tage`);
+    }
+    if (l.visited.length === 0) errors.push(`Remarketing „${l.name}“: keine Seite`);
+    for (const value of [...l.visited, ...l.notVisited]) {
+      if (!value.startsWith(host)) errors.push(`Remarketing „${l.name}“: „${value}“ gehört nicht zu ${host}`);
+      const path = value.slice(host.length) || "/";
+      if (path !== "/" && !plan.allowedPaths.includes(path) && path !== THANK_YOU_PATH) {
+        errors.push(`Remarketing „${l.name}“: Pfad ${path} gibt es nicht`);
+      }
+    }
+  }
 }

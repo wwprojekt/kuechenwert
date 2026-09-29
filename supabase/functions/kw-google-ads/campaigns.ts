@@ -10,7 +10,9 @@
  * entfernt. Keywords, Ausschlüsse und Asset-Verknüpfungen (Sitelinks,
  * Callouts, Snippets, Anruf, Firmenname, Logo, Bilder), die nicht im Plan
  * stehen, werden entfernt; automatisch erstellte Verknüpfungen bleiben.
- * Kampagnen und Anzeigengruppen werden nie gelöscht.
+ * Remarketing-Listen (Präfix „KüchenWert | “) hängen zur Beobachtung an den
+ * Kampagnen mit observeAudiences; fremde Listen bleiben unberührt.
+ * Kampagnen, Anzeigengruppen und Listen werden nie gelöscht.
  *
  * Drei Pakete, jedes ein atomarer Mutate: „main“ (alles außer den beiden
  * folgenden), „brand“ (Firmenname und Logo, brauchen die Überprüfung des
@@ -34,11 +36,13 @@ import {
 import {
   KW_ADS_PLAN,
   IMAGE_MAX_BYTES,
+  REMARKETING_PREFIX,
   imageFits,
   validatePlan,
   type AccountPlan,
   type CampaignPlan,
   type Keyword,
+  type RemarketingListPlan,
 } from "../_shared/google-ads-plan.ts";
 import { imageInfo } from "../_shared/image-size.ts";
 import { HttpError } from "../_shared/kw-http.ts";
@@ -89,6 +93,10 @@ interface LiveState {
   businessNameAsset?: string;
   campaignLinks: Map<string, AssetLink[]>;
   customerLinks: AssetLink[];
+  /** Eigene Remarketing-Listen (REMARKETING_PREFIX) nach Name. */
+  userLists: Map<string, { resourceName: string; lifespanDays: number; rules: string }>;
+  /** `${campaign}|${userList}` → Kriterium. */
+  campaignUserLists: Map<string, string>;
 }
 
 function liveQueries(plan: AccountPlan) {
@@ -107,7 +115,12 @@ function liveQueries(plan: AccountPlan) {
     criteria: `SELECT campaign.resource_name, campaign_criterion.resource_name, campaign_criterion.type,
       campaign_criterion.negative, campaign_criterion.keyword.text, campaign_criterion.keyword.match_type,
       campaign_criterion.location.geo_target_constant, campaign_criterion.language.language_constant,
-      campaign_criterion.user_interest.user_interest_category FROM campaign_criterion WHERE campaign.status != 'REMOVED'`,
+      campaign_criterion.user_interest.user_interest_category, campaign_criterion.user_list.user_list
+      FROM campaign_criterion WHERE campaign.status != 'REMOVED'`,
+    userLists: `SELECT user_list.resource_name, user_list.name, user_list.membership_life_span,
+      user_list.rule_based_user_list.flexible_rule_user_list.inclusive_operands,
+      user_list.rule_based_user_list.flexible_rule_user_list.exclusive_operands FROM user_list
+      WHERE user_list.type = 'RULE_BASED'`,
     sharedSets: `SELECT shared_set.resource_name, shared_set.name FROM shared_set
       WHERE shared_set.type = 'NEGATIVE_KEYWORDS' AND shared_set.status = 'ENABLED'`,
     sharedCriteria: `SELECT shared_set.resource_name, shared_criterion.resource_name, shared_criterion.keyword.text,
@@ -172,7 +185,19 @@ async function loadLive(client: GoogleAdsClient, plan: AccountPlan): Promise<Liv
     businessNameAsset: str(obj(rows.businessName[0]?.asset).resourceName) || undefined,
     campaignLinks: new Map(),
     customerLinks: [],
+    userLists: new Map(),
+    campaignUserLists: new Map(),
   };
+  for (const r of rows.userLists) {
+    const u = obj(r.userList);
+    if (!str(u.name).startsWith(REMARKETING_PREFIX)) continue;
+    const flexible = obj(obj(u.ruleBasedUserList).flexibleRuleUserList);
+    live.userLists.set(str(u.name), {
+      resourceName: str(u.resourceName),
+      lifespanDays: Number(u.membershipLifeSpan ?? 0),
+      rules: ruleSignature(liveRuleItems(flexible.inclusiveOperands), liveRuleItems(flexible.exclusiveOperands)),
+    });
+  }
   for (const r of rows.adGroups) {
     live.adGroups.set(`${str(obj(r.campaign).resourceName)}|${str(obj(r.adGroup).name)}`, str(obj(r.adGroup).resourceName));
   }
@@ -208,6 +233,9 @@ async function loadLive(client: GoogleAdsClient, plan: AccountPlan): Promise<Liv
     if (c.type === "LANGUAGE") live.campaignCriteria.add(`${camp}|lang|${str(obj(c.language).languageConstant)}`);
     if (c.type === "USER_INTEREST") {
       live.campaignCriteria.add(`${camp}|ui|${str(obj(c.userInterest).userInterestCategory)}`);
+    }
+    if (c.type === "USER_LIST" && c.negative !== true) {
+      live.campaignUserLists.set(`${camp}|${str(obj(c.userList).userList)}`, str(c.resourceName));
     }
   }
   for (const r of rows.sharedSets) live.sharedSets.set(str(obj(r.sharedSet).name), str(obj(r.sharedSet).resourceName));
@@ -290,6 +318,41 @@ function campaignResource(c: CampaignPlan, resourceName: string, budget: string)
       : {}),
     containsEuPoliticalAdvertising: "DOES_NOT_CONTAIN_EU_POLITICAL_ADVERTISING",
     ...bidding,
+  };
+}
+
+const ruleSignature = (visited: string[], notVisited: string[]) => JSON.stringify([[...visited].sort(), [...notVisited].sort()]);
+/** URL-Regeln einer Liste wie im Plan: CONTAINS-Werte, andere Regeln mit Operator. */
+const liveRuleItems = (operands: unknown) =>
+  arr(operands)
+    .flatMap((o) => arr(obj(obj(o).rule).ruleItemGroups))
+    .flatMap((g) => arr(obj(g).ruleItems))
+    .map((i) => {
+      const item = obj(i);
+      const rule = obj(item.stringRuleItem);
+      return item.name === "url__" && rule.operator === "CONTAINS" ? str(rule.value) : `${str(item.name)}:${str(rule.operator)}:${str(rule.value)}`;
+    });
+
+const urlRule = (values: string[]) => ({
+  ruleType: "OR_OF_ANDS",
+  ruleItemGroups: values.map((value) => ({ ruleItems: [{ name: "url__", stringRuleItem: { operator: "CONTAINS", value } }] })),
+});
+
+function userListResource(l: RemarketingListPlan, resourceName: string): Obj {
+  return {
+    resourceName,
+    name: l.name,
+    description: l.description,
+    membershipStatus: "OPEN",
+    membershipLifeSpan: String(l.lifespanDays),
+    ruleBasedUserList: {
+      prepopulationStatus: "REQUESTED",
+      flexibleRuleUserList: {
+        inclusiveRuleOperator: "AND",
+        inclusiveOperands: [{ rule: urlRule(l.visited) }],
+        exclusiveOperands: l.notVisited.length ? [{ rule: urlRule(l.notVisited) }] : [],
+      },
+    },
   };
 }
 
@@ -451,6 +514,35 @@ function planOperations(
     }
   }
 
+  // Remarketing-Listen: anlegen bzw. Mitgliedsdauer angleichen
+  const userListRns: string[] = [];
+  for (const l of plan.remarketingLists) {
+    const existing = live.userLists.get(l.name);
+    if (!existing) {
+      const rn = temp("userLists");
+      main.add("remarketingLists", `Remarketing „${l.name}“`, { userListOperation: { create: userListResource(l, rn) } });
+      out.created.push(`Remarketing-Liste „${l.name}“`);
+      userListRns.push(rn);
+      continue;
+    }
+    if (existing.rules !== ruleSignature(l.visited, l.notVisited)) {
+      out.warnings.push(
+        `Remarketing „${l.name}“: Regeln im Konto weichen vom Plan ab. Zum Ändern die Liste im Plan umbenennen; ` +
+          "dann entsteht eine neue, und die alte wird von den Kampagnen gelöst.",
+      );
+    }
+    if (existing.lifespanDays !== l.lifespanDays) {
+      main.add("remarketingLists", `Remarketing „${l.name}“: ${l.lifespanDays} Tage`, {
+        userListOperation: {
+          update: { resourceName: existing.resourceName, membershipLifeSpan: String(l.lifespanDays) },
+          updateMask: "membership_life_span",
+        },
+      });
+    }
+    userListRns.push(existing.resourceName);
+  }
+  const wantedUserLinks = new Set<string>();
+
   for (const c of plan.campaigns) {
     let campRn = live.campaigns.get(c.name);
     const isNew = !campRn;
@@ -494,6 +586,15 @@ function planOperations(
           });
         }
       }
+      plan.remarketingLists.forEach((l, i) => {
+        const listRn = userListRns[i];
+        wantedUserLinks.add(`${campRn}|${listRn}`);
+        if (!live.campaignUserLists.has(`${campRn}|${listRn}`)) {
+          main.add("remarketingLinks", `${c.name}: Remarketing „${l.name}“`, {
+            campaignCriterionOperation: { create: { campaign: campRn, userList: { userList: listRn } } },
+          });
+        }
+      });
     }
     const wantedNegatives = new Set(c.negatives.map((n) => `${campRn}|${kwKey(n)}`));
     for (const n of c.negatives) {
@@ -595,6 +696,15 @@ function planOperations(
         });
       }
     }
+  }
+
+  const ownLists = new Map([...live.userLists].map(([name, l]) => [l.resourceName, name]));
+  for (const [key, rn] of live.campaignUserLists) {
+    const listRn = key.slice(key.indexOf("|") + 1);
+    if (!ownLists.has(listRn) || wantedUserLinks.has(key)) continue;
+    main.remove("remarketingLinks", `Remarketing „${ownLists.get(listRn)}“ von ${key.split("|")[0]} lösen`, {
+      campaignCriterionOperation: { remove: rn },
+    });
   }
   return out;
 }

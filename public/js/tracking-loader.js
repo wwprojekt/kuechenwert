@@ -44,8 +44,10 @@
       window.__TRACKING_BOOT__.loaded.ga4 = ga4Id;
     }
     if (gadsId && window.__TRACKING_BOOT__.loaded.gads !== gadsId) {
+      // Seitenaufruf an Google Ads für die Remarketing-Listen (google-ads-plan.ts);
+      // spätere SPA-Wechsel meldet analyticsService.ts. Nur mit Marketing-Einwilligung.
       gtag('config', gadsId, {
-        send_page_view: false,
+        send_page_view: true,
         allow_enhanced_conversions: allowEnhanced !== false,
       });
       window.__TRACKING_BOOT__.loaded.gads = gadsId;

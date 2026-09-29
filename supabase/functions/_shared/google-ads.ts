@@ -204,10 +204,12 @@ export interface GoogleAdsClient {
   readonly customerId: string;
   readonly loginCustomerId: string;
   search(query: string, opts?: GadsCallOptions): Promise<GadsRow[]>;
-  /** POST customers/{id}/{resource}:mutate, z. B. resource = "conversionActions". */
+  /** POST customers/{id}/{resource}:mutate, z. B. resource = "conversionActions" oder "googleAds". */
   mutate(resource: string, body: Record<string, unknown>, opts?: GadsCallOptions): Promise<GadsRow>;
   /** POST customers/{id}:mutate (CustomerService, eine Operation). */
   mutateCustomer(body: Record<string, unknown>, opts?: GadsCallOptions): Promise<GadsRow>;
+  /** POST customers/{id}:{method}, z. B. generateKeywordIdeas. */
+  callCustomer(method: string, body: Record<string, unknown>, opts?: GadsCallOptions): Promise<GadsRow>;
 }
 
 const digits = (s: string | undefined) => (s ?? "").replace(/\D/g, "");
@@ -268,6 +270,10 @@ export function createGoogleAdsClient(creds: GoogleAdsCredentials): GoogleAdsCli
     async mutateCustomer(body, opts = {}) {
       const target = targetOf(opts);
       return (await call(`customers/${target}:mutate`, body, target, opts)) as GadsRow;
+    },
+    async callCustomer(method, body, opts = {}) {
+      const target = targetOf(opts);
+      return (await call(`customers/${target}:${method}`, body, target, opts)) as GadsRow;
     },
   };
 }

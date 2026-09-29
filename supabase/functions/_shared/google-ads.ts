@@ -104,7 +104,14 @@ export interface GoogleAdsErrorDetail {
   /** Fehlercode, z. B. USER_PERMISSION_DENIED */
   code: string;
   message: string;
+  /** Feldpfad mit Indizes, z. B. mutate_operations[12].ad_group_ad_operation… */
   field?: string;
+  /** Index der betroffenen Operation eines Batch-Mutates. */
+  operationIndex?: number;
+  /** Auslösender Wert, z. B. der beanstandete Anzeigentext. */
+  trigger?: string;
+  /** Richtlinien-Themen bei Policy-Befunden. */
+  policyTopics?: string[];
 }
 
 export class GoogleAdsApiError extends Error {
@@ -141,11 +148,27 @@ function parseApiError(status: number, text: string): GoogleAdsApiError {
     );
     const details: GoogleAdsErrorDetail[] = (failure?.errors ?? []).map((e: Record<string, unknown>) => {
       const [kind, code] = Object.entries((e.errorCode ?? {}) as Record<string, unknown>)[0] ?? ["unknown", "UNKNOWN"];
-      const field = ((e.location as { fieldPathElements?: Array<{ fieldName?: string }> } | undefined)?.fieldPathElements ?? [])
-        .map((p) => p.fieldName)
-        .filter(Boolean)
+      const path = (e.location as { fieldPathElements?: Array<{ fieldName?: string; index?: number }> } | undefined)
+        ?.fieldPathElements ?? [];
+      const field = path
+        .filter((p) => p.fieldName)
+        .map((p) => (p.index === undefined ? p.fieldName : `${p.fieldName}[${p.index}]`))
         .join(".");
-      return { kind, code: String(code), message: String(e.message ?? ""), field: field || undefined };
+      const operationIndex = path.find((p) => p.fieldName === "mutate_operations" || p.fieldName === "operations")?.index;
+      const trigger = (e.trigger as { stringValue?: string } | undefined)?.stringValue;
+      const topics = ((e.details as { policyFindingDetails?: { policyTopicEntries?: Array<{ topic?: string }> } } | undefined)
+        ?.policyFindingDetails?.policyTopicEntries ?? [])
+        .map((t) => t.topic)
+        .filter((t): t is string => Boolean(t));
+      return {
+        kind,
+        code: String(code),
+        message: String(e.message ?? ""),
+        field: field || undefined,
+        operationIndex,
+        trigger,
+        policyTopics: topics.length ? topics : undefined,
+      };
     });
     return new GoogleAdsApiError(String(error.message ?? `HTTP ${status}`), status, details, failure?.requestId);
   } catch {

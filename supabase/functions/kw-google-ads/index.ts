@@ -11,6 +11,10 @@
  *   { "action": "keyword-ideas", "seeds": [...], "url"?, "limit"? }
  *   { "action": "keyword-metrics", "keywords": [...] }
  *     Keyword-Planer, nur lesend (research.ts).
+ *   { "action": "campaigns", "mode": "plan" | "validate" | "apply" }
+ *     Such-Kampagnen aus _shared/google-ads-plan.ts anlegen (campaigns.ts).
+ *   { "action": "campaign-settings", "key", "status"?, "dailyBudgetEur"?, "bidding"?, … }
+ *     Start/Pause, Budget, Gebotsleiter einer Plan-Kampagne.
  *
  * Aufruf: Admin im Browser, service_role oder pg_net mit x-kw-cron-secret
  * (Agenten, siehe AGENTS.md → Google Tracking).
@@ -24,6 +28,7 @@ import {
   type GoogleAdsClient,
 } from "../_shared/google-ads.ts";
 import { HttpError, jsonResponse, readJson, serve, serviceClient } from "../_shared/kw-http.ts";
+import { runCampaignSettings, runCampaigns } from "./campaigns.ts";
 import { keywordIdeas, keywordMetrics } from "./research.ts";
 import { runSetup } from "./setup.ts";
 import { runStatus } from "./status.ts";
@@ -69,6 +74,8 @@ const CLIENT_ACTIONS: Record<string, (client: GoogleAdsClient, body: Body) => Pr
   gaql: runGaql,
   "keyword-ideas": keywordIdeas,
   "keyword-metrics": keywordMetrics,
+  campaigns: runCampaigns,
+  "campaign-settings": runCampaignSettings,
 };
 
 serve(async (req) => {

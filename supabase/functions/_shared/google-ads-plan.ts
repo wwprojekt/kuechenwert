@@ -1100,6 +1100,113 @@ const MARKE: CampaignPlan = {
   ],
 };
 
+/**
+ * Test ab 29.09.2026 (Betreiber-Entscheidung): Suchen nach Vermittlungsportalen
+ * und Online-Küchenhändlern. Nur exakte Keywords, eigenes kleines Budget, keine
+ * fremden Marken im Anzeigentext (EuGH „Google France“/„Interflora“). Ohne
+ * gemeinsame Ausschlussliste, weil diese die Namen für die Hauptkampagnen
+ * ausschließt; exakte Keywords brauchen sie nicht. Nie Studio-Ketten oder
+ * -Verbünde (mögliche Partner). Auswertung: project.md.
+ */
+const WETTBEWERBER: CampaignPlan = {
+  key: "wettbewerber",
+  name: "Search | Wettbewerber | DE",
+  dailyBudgetEur: 10,
+  bidding: { type: "MAXIMIZE_CLICKS", cpcCeilingEur: 2 },
+  useSharedNegatives: false,
+  observeAudiences: true,
+  negatives: [],
+  sitelinks: ["angebote", "planer", "rechner", "unterbieten", "studios", "kontakt", "faq", "ueber-uns"],
+  callouts: [
+    HEADLINE_FREE,
+    "Geprüfte Küchenstudios",
+    "Studios aus Ihrer Region",
+    "Ohne Namen an Studios",
+    "Keine bezahlten Plätze",
+    "Nach Preis sortiert",
+    "Preise können nur sinken",
+    "KI-Bild im eigenen Raum",
+    "Preisschätzung live",
+    "Kein Kaufzwang",
+  ],
+  images: [
+    "studio-beratung-quer.jpg",
+    "planung-quer.jpg",
+    "ki-vorschau-quer.jpg",
+    "kueche-insel-quer.jpg",
+    "studio-beratung-quadrat.jpg",
+    "planung-quadrat.jpg",
+    "ki-vorschau-quadrat.jpg",
+    "kueche-insel-quadrat.jpg",
+  ],
+  adGroups: [
+    {
+      name: "Vergleichsportale",
+      finalPath: "/formular",
+      keywords: es("aroundhome", "aroundhome erfahrungen", "aroundhome küche", "küchentester", "küchenportal", "küchen portal"),
+      ad: {
+        headlines: [
+          "Küchenangebote vergleichen",
+          "Küchen-Vergleich mit Studios",
+          "Geprüfte Studios der Region",
+          HEADLINE_FREE,
+          "Ohne Namen an Studios",
+          "Keine bezahlten Plätze",
+          "Angebote nach Preis sortiert",
+          "Angebote werden nur günstiger",
+          "In ca. 3 Min. zur Anfrage",
+          "7 Tage Angebote sammeln",
+          "Kein Kaufzwang",
+          "Küchenstudios vergleichen",
+          "Mit KI-Küchenplaner",
+          HEADLINE_BRAND_COMPARE,
+          "Einmal anfragen, vergleichen",
+        ],
+        descriptions: [
+          "Angebote geprüfter Studios aus Ihrer Region vergleichen – kostenlos und unverbindlich.",
+          "Ihr Projekt geht ohne Namen an die Studios. Abgegebene Angebote können nur sinken.",
+          "Keine bezahlten Plätze: Angebote erscheinen nach Preis sortiert. Sie entscheiden in Ruhe.",
+          "Wunschküche in ca. 3 Minuten beschreiben, 7 Tage lang Angebote erhalten. Kein Kaufzwang.",
+        ],
+        path1: "küchen",
+        path2: "vergleich",
+      },
+    },
+    {
+      name: "Online-Küchenhändler",
+      finalPath: "/funnel/c",
+      keywords: es("küchenatlas", "küchen atlas", "küchenquelle", "küchen quelle"),
+      ad: {
+        headlines: [
+          "Küche online planen mit Preis",
+          "Küchenplaner mit Preis",
+          "Preisschätzung live",
+          "Küche im eigenen Raum sehen",
+          "Foto hochladen, Küche planen",
+          HEADLINE_FREE,
+          OFFERS,
+          "Studios aus Ihrer Region",
+          "Aufmaß vor Ort vom Studio",
+          "Lieferung & Montage wählbar",
+          "Fotorealistisch per KI",
+          "Preis mit Einzelpositionen",
+          "Kein Kaufzwang",
+          "Online planen, vor Ort kaufen",
+          HEADLINE_PLANNER_BRAND,
+        ],
+        descriptions: [
+          "Küche online planen und sofort den Preis sehen – dann Angebote geprüfter Studios vor Ort.",
+          "Raumfoto hochladen: Die KI zeigt Ihre neue Küche im eigenen Raum. Kostenlos.",
+          "Die Schätzung passt sich bei jeder Auswahl an: Fronten, Arbeitsplatte, Geräte, Montage.",
+          "Verbindlich erst nach dem Aufmaß vor Ort – bis dahin unverbindlich, kein Kaufzwang.",
+        ],
+        path1: "küche",
+        path2: "online-planen",
+      },
+    },
+  ],
+};
+
 export const KW_ADS_PLAN: AccountPlan = {
   site: "https://kuechenwert24.de",
   allowedPaths: [
@@ -1239,7 +1346,7 @@ export const KW_ADS_PLAN: AccountPlan = {
     startHour: 10,
     endHour: 18,
   },
-  campaigns: [ANGEBOTE, PLANER, KOSTEN, MARKE],
+  campaigns: [ANGEBOTE, PLANER, KOSTEN, MARKE, WETTBEWERBER],
 };
 
 // ---------------------------------------------------------------------------

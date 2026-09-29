@@ -18,6 +18,8 @@
  *   { "action": "upload-conversions", "dryRun"?, "probe"? }
  *     Echte Umsätze als Offline-Conversions melden (conversions.ts, Cron stündlich);
  *     probe prüft nur das Upload-Format bei Google, ohne Daten.
+ *   { "action": "search-terms-report", "dryRun"?, "force"? }
+ *     Wochenbericht der Suchbegriffe per Mail (search-terms.ts, Cron montags).
  *
  * Aufruf: Admin im Browser, service_role oder pg_net mit x-kw-cron-secret
  * (Agenten, siehe AGENTS.md → Google Tracking). Fehler von Google kommen als
@@ -36,6 +38,7 @@ import { HttpError, jsonResponse, readJson, serve, serviceClient } from "../_sha
 import { runCampaignSettings, runCampaigns } from "./campaigns.ts";
 import { probeUploads, runUploadConversions } from "./conversions.ts";
 import { keywordIdeas, keywordMetrics } from "./research.ts";
+import { runSearchTermsReport } from "./search-terms.ts";
 import { runSetup } from "./setup.ts";
 import { runStatus } from "./status.ts";
 
@@ -92,7 +95,7 @@ serve(async (req) => {
 
   if (body.action === "status") return jsonResponse(req, await runStatus(sb));
   const handler = body.action && Object.hasOwn(CLIENT_ACTIONS, body.action) ? CLIENT_ACTIONS[body.action] : undefined;
-  const withDatabase = body.action === "setup" || body.action === "upload-conversions";
+  const withDatabase = body.action === "setup" || body.action === "upload-conversions" || body.action === "search-terms-report";
   if (!handler && !withDatabase) throw new HttpError(400, "Unbekannte Aktion.", "unknown_action");
 
   const { credentials } = await loadGoogleAdsCredentials();
@@ -104,6 +107,9 @@ serve(async (req) => {
     if (body.action === "setup") return jsonResponse(req, await runSetup(client, sb, dryRun));
     if (body.action === "upload-conversions") {
       return jsonResponse(req, body.probe === true ? await probeUploads(client) : await runUploadConversions(client, sb, dryRun));
+    }
+    if (body.action === "search-terms-report") {
+      return jsonResponse(req, await runSearchTermsReport(client, sb, { dryRun, force: body.force === true }));
     }
     return jsonResponse(req, await handler!(client, body));
   } catch (err) {

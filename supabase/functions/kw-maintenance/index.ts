@@ -23,7 +23,8 @@ import { expireTrainingSamples } from "../_shared/ai-training.ts";
 import { checkCronOrServiceRoleOrAdmin } from "../_shared/auth.ts";
 import { BRAND } from "../_shared/brand-config.ts";
 import { logEdgeError } from "../_shared/edgeLogger.ts";
-import { buildEmailLayout, button, list, paragraph } from "../_shared/email-builder.ts";
+import { sendAdminEmail } from "../_shared/admin-mail.ts";
+import { button, list, paragraph } from "../_shared/email-builder.ts";
 import { estimateFunnelA, sanitizeFunnelAAnswers } from "../_shared/funnel-a-catalog.ts";
 import { googleAdsHealth } from "../_shared/google-ads.ts";
 import { sanitizeConfig, sanitizeRoom } from "../_shared/kitchen-catalog.ts";
@@ -32,7 +33,6 @@ import { HttpError, escapeHtml, jsonResponse, readJson, serve, serviceClient } f
 import { computeCalibration, type CalibrationObservation } from "../_shared/price-calibration.ts";
 import { loadRateCard } from "../_shared/rate-card.ts";
 
-const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY") ?? "";
 const ALERT_WINDOW_SECONDS = 12 * 60 * 60;
 
 type StorageFile = { bucket: string | null; path: string | null };
@@ -232,54 +232,15 @@ async function runHealth(sb: SupabaseClient) {
   }
   if (toReport.length === 0) return { task: "health", snapshot, alerted: [] };
 
-  const { data: settings } = await sb
-    .from("site_settings")
-    .select("site_name, site_description, contact_email, support_phone, lead_forward_email")
-    .limit(1)
-    .maybeSingle();
-  const to = settings?.lead_forward_email || settings?.contact_email || BRAND.supportEmail;
-  const layoutSettings = {
-    site_name: settings?.site_name || BRAND.name,
-    site_description: settings?.site_description || BRAND.tagline,
-    contact_email: settings?.contact_email || BRAND.supportEmail,
-    support_phone: settings?.support_phone || "",
-  };
-  const subject = `Betriebshinweis: ${toReport.length === 1 ? "1 Befund" : `${toReport.length} Befunde`} – ${layoutSettings.site_name}`;
-  const html = buildEmailLayout(
-    layoutSettings,
-    "Betriebshinweis",
-    paragraph("Die stündliche Prüfung hat Folgendes gefunden:") +
+  await sendAdminEmail(sb, {
+    emailType: "ops_health_alert",
+    subject: (site) => `Betriebshinweis: ${toReport.length === 1 ? "1 Befund" : `${toReport.length} Befunde`} – ${site}`,
+    title: "Betriebshinweis",
+    contentHtml:
+      paragraph("Die stündliche Prüfung hat Folgendes gefunden:") +
       list(toReport.map((f) => escapeHtml(f.text(Number(snapshot[f.key]))))) +
       button("Zur Übersicht", `${BRAND.baseUrl}${toReport[0].link}`) +
       paragraph("Derselbe Befund wird frühestens nach 12 Stunden erneut gemeldet."),
-  );
-
-  if (!RESEND_API_KEY) throw new HttpError(503, "RESEND_API_KEY fehlt.", "mail_unconfigured");
-  const resp = await fetch("https://api.resend.com/emails", {
-    method: "POST",
-    headers: { Authorization: `Bearer ${RESEND_API_KEY}`, "Content-Type": "application/json" },
-    body: JSON.stringify({ from: `${BRAND.name} <${BRAND.noReplyEmail}>`, to: [to], subject, html }),
-  });
-  const text = await resp.text();
-  if (!resp.ok) throw new Error(`Resend ${resp.status}: ${text.slice(0, 300)}`);
-  let resendId: string | null = null;
-  try {
-    resendId = JSON.parse(text)?.id ?? null;
-  } catch {
-    /* Antwort ohne JSON-Body */
-  }
-  await sb.from("admin_emails").insert({
-    sender_email: BRAND.noReplyEmail,
-    sender_name: BRAND.name,
-    recipient_email: to,
-    subject,
-    body_html: html,
-    body_text: "",
-    email_type: "ops_health_alert",
-    direction: "outbound",
-    status: "sent",
-    resend_id: resendId,
-    is_read: false,
   });
 
   return { task: "health", snapshot, alerted: toReport.map((f) => f.key) };

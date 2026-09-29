@@ -54,12 +54,15 @@ export interface ImagePlan {
 
 export type Weekday = "MONDAY" | "TUESDAY" | "WEDNESDAY" | "THURSDAY" | "FRIDAY" | "SATURDAY" | "SUNDAY";
 
+/**
+ * Anruf-Asset ohne Conversion-Zählung: Anrufe erscheinen als eigene Kennzahl.
+ * Eine telefonisch angelegte Anfrage trägt keine Klick-ID, ihr Umsatz lässt
+ * sich keinem Klick zuordnen; primäres Ziel bleibt „Küchenanfrage“.
+ */
 export interface CallPlan {
   /** Nationale Schreibweise; das Land steht in countryCode. */
   phone: string;
   countryCode: string;
-  /** Eigene Anruf-Conversion (kw-google-ads setup), damit Anrufe sekundär gezählt werden. */
-  conversionActionName: string;
   days: Weekday[];
   startHour: number;
   endHour: number;
@@ -1199,7 +1202,6 @@ export const KW_ADS_PLAN: AccountPlan = {
   call: {
     phone: "0511 51532476",
     countryCode: "DE",
-    conversionActionName: "Anruf über Anzeige",
     days: ["MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY"],
     startHour: 10,
     endHour: 18,

@@ -85,7 +85,6 @@ interface LiveState {
   imageAssets: Map<string, string>;
   callAssets: Map<string, string>;
   businessNameAsset?: string;
-  callConversionActions: Map<string, string>;
   campaignLinks: Map<string, AssetLink[]>;
   customerLinks: AssetLink[];
 }
@@ -117,12 +116,11 @@ function liveQueries(plan: AccountPlan) {
     assets: `SELECT asset.resource_name, asset.type, asset.name, asset.final_urls, asset.sitelink_asset.link_text,
       asset.sitelink_asset.description1, asset.sitelink_asset.description2, asset.callout_asset.callout_text,
       asset.structured_snippet_asset.header, asset.structured_snippet_asset.values, asset.call_asset.country_code,
-      asset.call_asset.phone_number, asset.call_asset.call_conversion_action, asset.call_asset.ad_schedule_targets
+      asset.call_asset.phone_number, asset.call_asset.call_conversion_reporting_state,
+      asset.call_asset.ad_schedule_targets
       FROM asset WHERE asset.type IN ('SITELINK', 'CALLOUT', 'STRUCTURED_SNIPPET', 'IMAGE', 'CALL')`,
     businessName: `SELECT asset.resource_name FROM asset
       WHERE asset.type = 'TEXT' AND asset.text_asset.text = ${gaqlString(plan.businessName)}`,
-    callActions: `SELECT conversion_action.resource_name, conversion_action.name FROM conversion_action
-      WHERE conversion_action.type = 'AD_CALL' AND conversion_action.status = 'ENABLED'`,
     campaignAssets: `SELECT campaign.resource_name, campaign_asset.resource_name, campaign_asset.asset,
       campaign_asset.field_type, campaign_asset.source FROM campaign_asset WHERE campaign_asset.status != 'REMOVED'`,
     customerAssets: `SELECT customer_asset.resource_name, customer_asset.asset, customer_asset.field_type,
@@ -140,8 +138,9 @@ const phoneDigits = (phone: string, countryCode: string) => {
 };
 const scheduleKey = (targets: Array<{ day: string; start: number; end: number }>) =>
   targets.map((t) => `${t.day}@${t.start}-${t.end}`).sort().join(",");
-const callKey = (country: string, phone: string, action: string, schedule: string) =>
-  `${country}|${phoneDigits(phone, country)}|${action}|${schedule}`;
+const callKey = (country: string, phone: string, reporting: string, schedule: string) =>
+  `${country}|${phoneDigits(phone, country)}|${reporting}|${schedule}`;
+const CALL_REPORTING = "DISABLED";
 
 async function loadLive(client: GoogleAdsClient, plan: AccountPlan): Promise<LiveState> {
   const campaignRows = await client.search(
@@ -169,9 +168,6 @@ async function loadLive(client: GoogleAdsClient, plan: AccountPlan): Promise<Liv
     imageAssets: new Map(),
     callAssets: new Map(),
     businessNameAsset: str(obj(rows.businessName[0]?.asset).resourceName) || undefined,
-    callConversionActions: new Map(
-      rows.callActions.map((r) => [str(obj(r.conversionAction).name), str(obj(r.conversionAction).resourceName)]),
-    ),
     campaignLinks: new Map(),
     customerLinks: [],
   };
@@ -239,7 +235,7 @@ async function loadLive(client: GoogleAdsClient, plan: AccountPlan): Promise<Liv
         const s = obj(t);
         return { day: str(s.dayOfWeek), start: Number(s.startHour ?? 0), end: Number(s.endHour ?? 0) };
       });
-      live.callAssets.set(callKey(str(c.countryCode), str(c.phoneNumber), str(c.callConversionAction), scheduleKey(schedule)), rn);
+      live.callAssets.set(callKey(str(c.countryCode), str(c.phoneNumber), str(c.callConversionReportingState), scheduleKey(schedule)), rn);
     }
   }
   for (const r of rows.campaignAssets) {
@@ -396,30 +392,23 @@ function planOperations(
     linkCustomer(main, rn, "STRUCTURED_SNIPPET", `Snippet „${s.header}“`);
   }
   const call = plan.call;
-  const callAction = live.callConversionActions.get(call.conversionActionName);
-  if (!callAction) {
-    out.warnings.push(`Anruf-Asset übersprungen: Conversion „${call.conversionActionName}“ fehlt – erst action "setup" ausführen.`);
-    for (const l of live.customerLinks) if (l.fieldType === "CALL") wantedCustomer.get("CALL")!.add(l.asset);
-  } else {
-    const schedule = call.days.map((day) => ({ day, start: call.startHour, end: call.endHour }));
-    const rn = assetOnce(main, live.callAssets.get(callKey(call.countryCode, call.phone, callAction, scheduleKey(schedule))),
-      `Anruf ${call.phone}`, {
-        callAsset: {
-          countryCode: call.countryCode,
-          phoneNumber: call.phone,
-          callConversionReportingState: "USE_RESOURCE_LEVEL_CALL_CONVERSION_ACTION",
-          callConversionAction: callAction,
-          adScheduleTargets: call.days.map((day) => ({
-            dayOfWeek: day,
-            startHour: call.startHour,
-            startMinute: "ZERO",
-            endHour: call.endHour,
-            endMinute: "ZERO",
-          })),
-        },
-      });
-    linkCustomer(main, rn, "CALL", `Anruf ${call.phone}`);
-  }
+  const schedule = call.days.map((day) => ({ day, start: call.startHour, end: call.endHour }));
+  const callRn = assetOnce(main, live.callAssets.get(callKey(call.countryCode, call.phone, CALL_REPORTING, scheduleKey(schedule))),
+    `Anruf ${call.phone}`, {
+      callAsset: {
+        countryCode: call.countryCode,
+        phoneNumber: call.phone,
+        callConversionReportingState: CALL_REPORTING,
+        adScheduleTargets: call.days.map((day) => ({
+          dayOfWeek: day,
+          startHour: call.startHour,
+          startMinute: "ZERO",
+          endHour: call.endHour,
+          endMinute: "ZERO",
+        })),
+      },
+    });
+  linkCustomer(main, callRn, "CALL", `Anruf ${call.phone}`);
   const nameRn = assetOnce(brand, live.businessNameAsset, `Firmenname „${plan.businessName}“`, {
     textAsset: { text: plan.businessName },
   });

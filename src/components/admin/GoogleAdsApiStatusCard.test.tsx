@@ -55,7 +55,7 @@ describe("GoogleAdsApiStatusCard", () => {
     expect(guard.invokeWithAuth).toHaveBeenCalledWith("kw-google-ads", { body: { action: "status" } });
     expect(screen.getByText("974-650-8145")).toBeInTheDocument();
     expect(screen.getByText(/richtig: AW-111222333\/AbC-d_1/)).toBeInTheDocument();
-    expect(screen.getByText(/Umsatzmeldungen: 12 gemeldet, 2 offen, 1 gescheitert/)).toBeInTheDocument();
+    expect(screen.getByText(/Rückmeldungen an Google: 12 gemeldet, 2 offen, 1 gescheitert/)).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: "Werte übernehmen" }));
     expect(onApply).toHaveBeenCalledWith("AW-111222333", "AbC-d_1");

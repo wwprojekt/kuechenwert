@@ -209,7 +209,7 @@ export default function GoogleAdsApiStatusCard({ onApplyTracking }: GoogleAdsApi
               {credentialSources} · Auto-Tagging {account.autoTagging ? "an" : "aus"} · URL-Suffix{" "}
               {account.finalUrlSuffixOk ? "gesetzt" : "fehlt oder weicht ab"}
               {status?.valueUploads &&
-                ` · Umsatzmeldungen: ${status.valueUploads.uploaded} gemeldet, ${status.valueUploads.open} offen, ${status.valueUploads.failed} gescheitert`}
+                ` · Rückmeldungen an Google: ${status.valueUploads.uploaded} gemeldet, ${status.valueUploads.open} offen, ${status.valueUploads.failed} gescheitert`}
             </p>
           </>
         )}

@@ -6,7 +6,8 @@
  * Docs: https://developers.google.com/google-ads/api/docs/conversions/upload-clicks
  */
 
-export type UploadKind = "contact" | "order";
+/** qualified: veröffentlichte Anfrage; contact/order: Rechnung für Kontakt bzw. Provision. */
+export type UploadKind = "qualified" | "contact" | "order";
 export type UploadOutcome = "done" | "retry" | "final";
 
 /** Gilt als erledigt: Google kennt die Conversion bzw. den Rückzug schon. */

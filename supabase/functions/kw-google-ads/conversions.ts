@@ -1,13 +1,15 @@
 /**
- * Meldet echte Marktplatz-Umsätze als Offline-Conversions an Google Ads:
+ * Meldet geprüfte Anfragen und echte Marktplatz-Umsätze als Offline-Conversions
+ * an Google Ads:
  *   { action: "upload-conversions", dryRun?: true }
  *
- * Warteschlange kw_gads_conversion_uploads (Migration
- * kw_google_ads_conversion_uploads, Cron stündlich): je Rechnung einer
- * Anfrage mit Google-Klick eine Zeile. Der Lauf sammelt neue Umsätze, liest
- * die Klick-IDs frisch am Lead (Löschung/Widerruf leert sie), meldet an
- * „Kontakt freigeschaltet“ bzw. „Auftrag vergeben“ und zieht Conversions
- * stornierter Rechnungen zurück. Gehashte Kontaktdaten nur, wenn das Konto
+ * Warteschlange kw_gads_conversion_uploads (Migrationen
+ * kw_google_ads_conversion_uploads und kw_gads_published_requests, Cron
+ * stündlich): je veröffentlichter Anfrage und je Rechnung einer Anfrage mit
+ * Google-Klick eine Zeile (source_id). Der Lauf sammelt Neues, liest die
+ * Klick-IDs frisch am Lead (Löschung/Widerruf leert sie), meldet an „Anfrage
+ * veröffentlicht“, „Kontakt freigeschaltet“ bzw. „Auftrag vergeben“ und zieht
+ * Meldungen abgelehnter Anfragen und stornierter Rechnungen zurück. Gehashte Kontaktdaten nur, wenn das Konto
  * die Kundendaten-Bedingungen akzeptiert und Enhanced Conversions für Leads
  * aktiviert hat. dryRun: Google prüft nur (validateOnly), nichts wird verbucht.
  *
@@ -38,7 +40,7 @@ import { OFFLINE_ACTION_NAMES } from "./setup.ts";
 const BATCH_SIZE = 200;
 
 interface QueueRow {
-  invoice_id: string;
+  source_id: string;
   lead_id: string;
   kind: UploadKind;
   order_id: string;
@@ -59,7 +61,7 @@ interface LeadRow {
 }
 
 interface ResultRow {
-  invoice_id: string;
+  source_id: string;
   status: string;
   attempts: number;
   next_attempt_at: string | null;
@@ -86,7 +88,8 @@ async function uploadActions(client: GoogleAdsClient): Promise<Partial<Record<Up
       return [a.name ?? "", a.resourceName ?? ""] as const;
     }),
   );
-  return { contact: byName.get(OFFLINE_ACTION_NAMES.contact), order: byName.get(OFFLINE_ACTION_NAMES.order) };
+  const kinds = Object.keys(OFFLINE_ACTION_NAMES) as UploadKind[];
+  return Object.fromEntries(kinds.map((k) => [k, byName.get(OFFLINE_ACTION_NAMES[k])]).filter(([, rn]) => rn));
 }
 
 async function userIdentifiersAccepted(client: GoogleAdsClient): Promise<boolean> {
@@ -102,7 +105,7 @@ async function userIdentifiersAccepted(client: GoogleAdsClient): Promise<boolean
 function afterFailure(row: QueueRow, detail: GoogleAdsErrorDetail, kind: "upload" | "retract", tally: Tally): ResultRow {
   const attempts = row.attempts + 1;
   const outcome = classifyUploadError(detail.code);
-  const base = { invoice_id: row.invoice_id, attempts, last_error: describe(detail), next_attempt_at: null };
+  const base = { source_id: row.source_id, attempts, last_error: describe(detail), next_attempt_at: null };
   if (outcome === "done") {
     tally[kind === "upload" ? "uploaded" : "retracted"]++;
     return { ...base, status: kind === "upload" ? "uploaded" : "retracted", last_error: null };
@@ -148,7 +151,7 @@ async function sendBatch(
     if (failure) return afterFailure(item.row, failure, kind, tally);
     tally[kind === "upload" ? "uploaded" : "retracted"]++;
     return {
-      invoice_id: item.row.invoice_id,
+      source_id: item.row.source_id,
       status: kind === "upload" ? "uploaded" : "retracted",
       attempts: item.row.attempts + 1,
       next_attempt_at: null,
@@ -185,10 +188,10 @@ export async function probeUploads(client: GoogleAdsClient) {
 
 export async function runUploadConversions(client: GoogleAdsClient, sb: SupabaseClient, dryRun: boolean) {
   const { error: collectError } = await sb.rpc("kw_gads_collect_conversions");
-  dbError("Umsätze sammeln", collectError);
+  dbError("Anfragen und Umsätze sammeln", collectError);
   const { data, error } = await sb
     .from("kw_gads_conversion_uploads")
-    .select("invoice_id, lead_id, kind, order_id, value_eur, conversion_at, status, attempts")
+    .select("source_id, lead_id, kind, order_id, value_eur, conversion_at, status, attempts")
     .in("status", ["pending", "failed", "retract_pending"])
     .lte("next_attempt_at", new Date().toISOString())
     .order("conversion_at")
@@ -198,8 +201,10 @@ export async function runUploadConversions(client: GoogleAdsClient, sb: Supabase
   if (due.length === 0) return { ok: true, dryRun, due: 0 };
 
   const actions = await uploadActions(client);
-  if (!actions.contact || !actions.order) {
-    return { ok: false, dryRun, due: due.length, error: 'Offline-Conversions fehlen in Google Ads – erst action "setup" ausführen.' };
+  const missing = [...new Set(due.map((r) => r.kind))].filter((k) => !actions[k]);
+  if (missing.length) {
+    const names = missing.map((k) => `„${OFFLINE_ACTION_NAMES[k]}“`).join(", ");
+    return { ok: false, dryRun, due: due.length, error: `Conversion ${names} fehlt in Google Ads – erst action "setup" ausführen.` };
   }
   const withIdentifiers = await userIdentifiersAccepted(client);
   const tally: Tally = { uploaded: 0, retracted: 0, skipped: 0, rejected: 0, retractExpired: 0, retractFailed: 0, retrying: 0 };
@@ -237,7 +242,7 @@ export async function runUploadConversions(client: GoogleAdsClient, sb: Supabase
     } else {
       tally.skipped++;
       results.push({
-        invoice_id: row.invoice_id,
+        source_id: row.source_id,
         status: "skipped",
         attempts: row.attempts,
         next_attempt_at: null,

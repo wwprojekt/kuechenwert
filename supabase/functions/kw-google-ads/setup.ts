@@ -3,14 +3,16 @@
  * 1. Konto hängt unter dem Verwaltungskonto (Einladung + Annahme per API).
  * 2. Webseiten-Conversion „Küchenanfrage“ (Lead-Formular, eine pro Klick,
  *    primär). Ihr send_to gehört in Admin → Tracking (KUECHEN_LEAD).
- * 3. Offline-Conversions „Kontakt freigeschaltet“ und „Auftrag vergeben“
- *    (Import per API, Wert = echter Umsatz, siehe conversions.ts), sekundär
- *    bis zum Umstieg auf wertbasierte Gebote.
+ * 3. Offline-Conversions (Import per API, siehe conversions.ts): „Anfrage
+ *    veröffentlicht“ (vom Admin geprüft, Wert = Kontaktpreis), „Kontakt
+ *    freigeschaltet“ und „Auftrag vergeben“ (Wert = echter Umsatz). Welche
+ *    Stufe für Gebote zählt, steuern die Phasen-Schalter unten.
  * 4. Kontoweites finales URL-Suffix mit UTM-Parametern (src/lib/utm.ts
  *    speichert sie an Sitzung und Lead).
- * 5. Anruf-Ziele zählen nicht für Gebote: Auch von Google automatisch
- *    erstellte Anruf-Assets nutzen die Konto-Anruf-Conversion, und eine
- *    telefonische Anfrage trägt keine Klick-ID für die Umsatz-Rückmeldung.
+ * 5. Das Kontoziel der primären Stufe zählt für Gebote. Anruf-Ziele zählen
+ *    nicht: Auch von Google automatisch erstellte Anruf-Assets nutzen die
+ *    Konto-Anruf-Conversion, und eine telefonische Anfrage trägt keine
+ *    Klick-ID für die Umsatz-Rückmeldung.
  *
  * Bereits vorhandene Einstellungen, die bewusst getunt werden dürfen
  * (Lookback, Standardwert, ein anderes URL-Suffix), bleiben unangetastet.
@@ -31,13 +33,20 @@ export const KW_FINAL_URL_SUFFIX =
 export const SITE_SETTINGS_ID = "00000000-0000-0000-0000-000000000000";
 
 /**
- * Sekundär, solange die Gebote auf Klicks bzw. Anzahl Conversions laufen:
- * sonst zählte eine mehrfach gekaufte Anfrage mehrfach. Beim Umstieg auf
- * „Conversion-Wert maximieren“ auf true setzen und „Küchenanfrage“ sekundär.
+ * Gebotsleiter (AGENTS.md → Bidding ladder), genau eine Stufe ist primär:
+ * Phase 1: „Küchenanfrage“ (jedes Formular).
+ * Phase 2 (QUALIFIED_LEADS_PRIMARY, ab ~30 veröffentlichten Anfragen im Monat):
+ *   „Anfrage veröffentlicht“, Spam und Fehlanfragen zählen dann nicht mehr.
+ * Phase 3 (OFFLINE_ACTIONS_PRIMARY, ab ~30 Umsätzen im Monat, mit
+ *   „Conversion-Wert maximieren“): „Kontakt freigeschaltet“ und „Auftrag vergeben“.
+ * Nach einer Änderung setup ausführen.
  */
+const QUALIFIED_LEADS_PRIMARY = false;
 const OFFLINE_ACTIONS_PRIMARY = false;
+const KITCHEN_LEAD_PRIMARY = !QUALIFIED_LEADS_PRIMARY && !OFFLINE_ACTIONS_PRIMARY;
 
 export const OFFLINE_ACTION_NAMES: Record<UploadKind, string> = {
+  qualified: "Anfrage veröffentlicht",
   contact: "Kontakt freigeschaltet",
   order: "Auftrag vergeben",
 };
@@ -48,7 +57,14 @@ const DEFAULT_KITCHEN_LEAD_VALUE = 9;
 type StepStatus = "ok" | "changed" | "planned" | "differs" | "error";
 
 export interface SetupStep {
-  key: "manager_link" | "kitchen_lead_action" | "contact_action" | "order_action" | "final_url_suffix" | "call_goal";
+  key:
+    | "manager_link"
+    | "kitchen_lead_action"
+    | "qualified_action"
+    | "contact_action"
+    | "order_action"
+    | "final_url_suffix"
+    | "bidding_goals";
   status: StepStatus;
   detail: string;
 }
@@ -190,12 +206,12 @@ function offlineActionSpec(kind: UploadKind): ConversionActionSpec {
     name: OFFLINE_ACTION_NAMES[kind],
     type: "UPLOAD_CLICKS",
     // MANY_PER_CLICK: ONE_PER_CLICK lässt Google mit gbraid/wbraid (iOS) nicht zu;
-    // Doppelte verhindert die Order-ID je Rechnung.
+    // Doppelte verhindert die Order-ID je Anfrage bzw. Rechnung.
     enforced: {
       status: "ENABLED",
-      category: kind === "contact" ? "QUALIFIED_LEAD" : "CONVERTED_LEAD",
+      category: kind === "qualified" ? "QUALIFIED_LEAD" : "CONVERTED_LEAD",
       countingType: "MANY_PER_CLICK",
-      primaryForGoal: OFFLINE_ACTIONS_PRIMARY,
+      primaryForGoal: kind === "qualified" ? QUALIFIED_LEADS_PRIMARY && !OFFLINE_ACTIONS_PRIMARY : OFFLINE_ACTIONS_PRIMARY,
     },
     createOnly: {
       clickThroughLookbackWindowDays: 90,
@@ -221,22 +237,46 @@ async function ensureFinalUrlSuffix(client: GoogleAdsClient, dryRun: boolean): P
   return { status: dryRun ? "planned" : "changed", detail: `Finales URL-Suffix: ${KW_FINAL_URL_SUFFIX}` };
 }
 
-async function ensureCallGoalNotBiddable(client: GoogleAdsClient, dryRun: boolean): Promise<StepResult> {
-  const rows = await client.search(
-    `SELECT customer_conversion_goal.resource_name, customer_conversion_goal.biddable
-     FROM customer_conversion_goal WHERE customer_conversion_goal.category = 'PHONE_CALL_LEAD'`,
+/**
+ * Primär allein reicht nicht: Gebote nutzen eine Aktion nur, wenn auch ihr
+ * Kontoziel (Kategorie + Herkunft) zählt. Das Ziel jeder primären Stufe zählt
+ * deshalb, Anruf-Ziele nie; alle übrigen Ziele bleiben, wie sie sind.
+ */
+async function ensureBiddingGoals(client: GoogleAdsClient, dryRun: boolean): Promise<StepResult> {
+  const primaryNames = new Set([
+    ...(KITCHEN_LEAD_PRIMARY ? [KITCHEN_LEAD_ACTION_NAME] : []),
+    ...(Object.keys(OFFLINE_ACTION_NAMES) as UploadKind[])
+      .filter((kind) => offlineActionSpec(kind).enforced.primaryForGoal)
+      .map((kind) => OFFLINE_ACTION_NAMES[kind]),
+  ]);
+  const actionRows = await client.search(
+    `SELECT conversion_action.name, conversion_action.category, conversion_action.origin
+     FROM conversion_action WHERE conversion_action.status = 'ENABLED'`,
   );
-  const biddable = rows
-    .map((r) => r.customerConversionGoal as { resourceName?: string; biddable?: boolean } | undefined)
-    .filter((g): g is { resourceName: string; biddable: boolean } => !!g?.resourceName && g.biddable === true);
-  if (biddable.length === 0) return { status: "ok", detail: "Anruf-Ziele zählen nicht für Gebote." };
+  const primaryGoals = new Set(
+    actionRows
+      .map((r) => (r.conversionAction ?? {}) as { name?: string; category?: string; origin?: string })
+      .filter((a) => primaryNames.has(a.name ?? ""))
+      .map((a) => `${a.category}/${a.origin}`),
+  );
+  const goalRows = await client.search(
+    `SELECT customer_conversion_goal.resource_name, customer_conversion_goal.category,
+       customer_conversion_goal.origin, customer_conversion_goal.biddable FROM customer_conversion_goal`,
+  );
+  const changes = goalRows.flatMap((r) => {
+    const g = (r.customerConversionGoal ?? {}) as { resourceName?: string; category?: string; origin?: string; biddable?: boolean };
+    const wanted = g.category === "PHONE_CALL_LEAD" ? false : primaryGoals.has(`${g.category}/${g.origin}`) ? true : undefined;
+    if (!g.resourceName || wanted === undefined || (g.biddable === true) === wanted) return [];
+    return [{ resourceName: g.resourceName, biddable: wanted, label: `${g.category}/${g.origin}` }];
+  });
+  if (changes.length === 0) return { status: "ok", detail: "Gebote zählen die Ziele der primären Stufe, Anruf-Ziele nicht." };
   await client.mutate("customerConversionGoals", {
-    operations: biddable.map((g) => ({ update: { resourceName: g.resourceName, biddable: false }, updateMask: "biddable" })),
+    operations: changes.map((c) => ({ update: { resourceName: c.resourceName, biddable: c.biddable }, updateMask: "biddable" })),
     validateOnly: dryRun,
   });
   return {
     status: dryRun ? "planned" : "changed",
-    detail: `Anruf-Ziel ${dryRun ? "wird" : "wurde"} aus den Geboten genommen (${biddable.length}).`,
+    detail: changes.map((c) => `${c.label} ${c.biddable ? "zählt" : "zählt nicht"} für Gebote`).join("; "),
   };
 }
 
@@ -259,7 +299,12 @@ export async function runSetup(client: GoogleAdsClient, sb: SupabaseClient, dryR
       {
         name: KITCHEN_LEAD_ACTION_NAME,
         type: "WEBPAGE",
-        enforced: { status: "ENABLED", category: "SUBMIT_LEAD_FORM", countingType: "ONE_PER_CLICK", primaryForGoal: true },
+        enforced: {
+          status: "ENABLED",
+          category: "SUBMIT_LEAD_FORM",
+          countingType: "ONE_PER_CLICK",
+          primaryForGoal: KITCHEN_LEAD_PRIMARY,
+        },
         createOnly: {
           clickThroughLookbackWindowDays: 90,
           viewThroughLookbackWindowDays: 1,
@@ -272,10 +317,11 @@ export async function runSetup(client: GoogleAdsClient, sb: SupabaseClient, dryR
     tracking = sendToFromTagSnippets(result.action?.tagSnippets);
     return result.step;
   });
+  await step("qualified_action", async () => (await ensureConversionAction(client, offlineActionSpec("qualified"), dryRun)).step);
   await step("contact_action", async () => (await ensureConversionAction(client, offlineActionSpec("contact"), dryRun)).step);
   await step("order_action", async () => (await ensureConversionAction(client, offlineActionSpec("order"), dryRun)).step);
   await step("final_url_suffix", () => ensureFinalUrlSuffix(client, dryRun));
-  await step("call_goal", () => ensureCallGoalNotBiddable(client, dryRun));
+  await step("bidding_goals", () => ensureBiddingGoals(client, dryRun));
 
   return { ok: steps.every((s) => s.status !== "error"), dryRun, steps, tracking };
 }

@@ -2,7 +2,7 @@
  * Diagnose für Admin → Tracking: Herkunft der Zugangsdaten (nie Werte), Konto,
  * Verknüpfung mit dem Verwaltungskonto, Conversion-Aktionen, ob die in
  * tracking_config eingetragene Conversion zu „Küchenanfrage“ passt, und der
- * Stand der Umsatzmeldungen (kw_gads_conversion_uploads).
+ * Stand der Rückmeldungen an Google (kw_gads_conversion_uploads).
  * Fehler kommen als { ok: false, error } mit HTTP 200, damit die UI sie zeigt.
  */
 
@@ -50,7 +50,7 @@ async function loadValueUploads(sb: SupabaseClient) {
   const count = async (statuses: string[]) => {
     const { count: n, error } = await sb
       .from("kw_gads_conversion_uploads")
-      .select("invoice_id", { count: "exact", head: true })
+      .select("source_id", { count: "exact", head: true })
       .in("status", statuses);
     return error ? null : n ?? 0;
   };

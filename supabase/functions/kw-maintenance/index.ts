@@ -194,7 +194,7 @@ const FINDINGS: Array<{ key: string; text: (n: number) => string; link: string }
   { key: "gads_api_failing", text: () => "Google Ads lehnt den API-Zugriff ab (Zugangsdaten gads_* im Supabase Vault prüfen, z. B. widerrufener Refresh-Token; Diagnose unter Einstellungen → Tracking). Die Conversion-Messung im Browser läuft unabhängig davon weiter.", link: "/admin/settings" },
   { key: "gads_ads_disapproved", text: (n) => `${n} Google-Ads-Anzeigen sind abgelehnt und laufen nicht. Grund in Google Ads unter Anzeigen prüfen; die Texte stehen im Kampagnenplan (google-ads-plan.ts).`, link: "/admin/settings" },
   { key: "gads_spend_no_conversions", text: (n) => `${n} € Google-Ads-Kosten in 7 Tagen ohne eine einzige Küchenanfrage. Conversion-Tracking prüfen (Einstellungen → Tracking → Live-Diagnose) und Suchbegriffe ansehen.`, link: "/admin/settings" },
-  { key: "gads_uploads_rejected", text: (n) => `${n} Umsatzmeldungen an Google Ads sind in 24 Stunden endgültig gescheitert (Upload abgewiesen oder Storno nicht zurückziehbar). Grund steht in kw_gads_conversion_uploads.last_error; bis dahin lernen die Gebote mit unvollständigen Werten.`, link: "/admin/settings" },
+  { key: "gads_uploads_rejected", text: (n) => `${n} Rückmeldungen an Google Ads (geprüfte Anfragen oder Umsätze) sind in 24 Stunden endgültig gescheitert (Upload abgewiesen oder Rückzug nicht möglich). Grund steht in kw_gads_conversion_uploads.last_error; bis dahin lernen die Gebote mit unvollständigen Daten.`, link: "/admin/settings" },
 ];
 
 async function firstAlertInWindow(sb: SupabaseClient, key: string): Promise<boolean> {
@@ -214,7 +214,7 @@ async function runHealth(sb: SupabaseClient) {
   const gads = await googleAdsHealth();
   const { count: rejectedUploads } = await sb
     .from("kw_gads_conversion_uploads")
-    .select("invoice_id", { count: "exact", head: true })
+    .select("source_id", { count: "exact", head: true })
     .in("status", ["rejected", "retract_failed"])
     .gte("updated_at", new Date(Date.now() - 86_400_000).toISOString());
   const snapshot: Snapshot = {

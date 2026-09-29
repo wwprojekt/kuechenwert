@@ -7,8 +7,9 @@
  * und schreibt das HTML nach dist/<route>/index.html (Startseite:
  * dist/index.html). Die unveränderte SPA-Shell bleibt als dist/spa.html
  * erhalten; nginx liefert sie für alle übrigen Routen und für 404 aus
- * (docker/default.conf). React rendert beim Laden neu (createRoot), das
- * statische HTML ist für Crawler und den ersten Paint.
+ * (docker/default.conf). Beim Laden rendert React neu (createRoot), zeigt aber
+ * bis dahin das HTML innerhalb von [data-kw-route] (src/lib/initialRouteHtml.ts),
+ * so bleibt die Seite ab dem ersten Paint sichtbar.
  *
  * Im Prerender-Modus lädt die App weder Tracking noch Cookie-Banner noch
  * Service Worker: Ein Init-Skript setzt window.__KW_PRERENDER__ (src/main.tsx,

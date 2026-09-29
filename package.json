@@ -6,7 +6,7 @@
   "packageManager": "pnpm@12.6.0",
   "scripts": {
     "dev": "vite",
-    "build": "vite build && node scripts/optimize-images.mjs",
+    "build": "vite build && node scripts/optimize-images.mjs && node scripts/check-entry-chunks.mjs",
     "build:no-optimize": "vite build",
     "build:dev": "vite build --mode development",
     "lint": "eslint .",

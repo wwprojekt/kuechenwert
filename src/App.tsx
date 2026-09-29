@@ -11,6 +11,7 @@ import { ErrorBoundary } from "./components/ErrorBoundary";
 import { WhatsAppButton } from "./components/WhatsAppButton";
 import { RedirectKeepingQuery } from "./components/RedirectKeepingQuery";
 import CookieBanner from "./components/CookieBanner";
+import RouteFallback from "./components/RouteFallback";
 import ScrollRestoration from "./components/ScrollRestoration";
 import { SessionExpiredProvider } from "./components/SessionExpiredDialog";
 import { usePageTracking } from "./hooks/useAnalytics";
@@ -110,17 +111,6 @@ const SmartDashboard = lazyRetry(() => import("./components/SmartDashboard").the
 // Not Found
 const NotFound = lazyRetry(() => import("./pages/NotFound"));
 
-// ---------------------------------------------------------------------------
-// Loading fallback for lazy-loaded pages
-// ---------------------------------------------------------------------------
-function PageLoader() {
-  return (
-    <div className="flex items-center justify-center min-h-[60vh]">
-      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
-    </div>
-  );
-}
-
 // Component to track page views, set user properties & clear chunk reload flag
 function PageTracker() {
   usePageTracking();
@@ -159,7 +149,9 @@ const App = () => (
             <ScrollRestoration />
             <PageTracker />
             <PageTransition>
-            <Suspense fallback={<PageLoader />}>
+            {/* data-kw-route: Grenze des vorgerenderten Seiteninhalts, siehe lib/initialRouteHtml */}
+            <div data-kw-route className="contents">
+            <Suspense fallback={<RouteFallback />}>
             <Routes>
               <Route path="/" element={<Index />} />
               <Route path="/login" element={<Login />} />
@@ -247,6 +239,7 @@ const App = () => (
               <Route path="*" element={<NotFound />} />
             </Routes>
             </Suspense>
+            </div>
           </PageTransition>
           <WhatsAppButton />
           <CookieBanner />

@@ -43,7 +43,8 @@
     <!-- Preconnect fuer Unsplash faellt weg, weil der Hero jetzt lokal kommt. -->
 
     <!-- Fira Sans kommt als eigenes Asset aus dem Bundle (@fontsource, src/main.tsx):
-         keine Anfrage an Google-Server, font-display: swap. -->
+         keine Anfrage an Google-Server. vite.config.ts lädt die Schnitte 400/600/800
+         per <link rel=preload> vor und setzt font-display: optional. -->
 
     <!-- Google Consent Mode v2: Standardwerte vor jedem Google-Tag. Externe
          Datei statt Inline-Skript, damit die CSP ohne 'unsafe-inline' auskommt. -->

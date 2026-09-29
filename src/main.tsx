@@ -9,16 +9,14 @@ import { AuthProvider } from "./contexts/AuthContext";
 import { SettingsProvider } from "./contexts/SettingsContext";
 import { ErrorBoundary } from "./components/ErrorBoundary";
 import App from "./App.tsx";
+import { captureInitialRouteHtml } from "./lib/initialRouteHtml";
+// Nur Latin (enthält Umlaute, ß, €, Anführungszeichen und Gedankenstriche);
+// Latin-Extended kostete fünf weitere Schriftdateien auf jeder Seite.
 import "@fontsource/fira-sans/latin-400.css";
 import "@fontsource/fira-sans/latin-500.css";
 import "@fontsource/fira-sans/latin-600.css";
 import "@fontsource/fira-sans/latin-700.css";
 import "@fontsource/fira-sans/latin-800.css";
-import "@fontsource/fira-sans/latin-ext-400.css";
-import "@fontsource/fira-sans/latin-ext-500.css";
-import "@fontsource/fira-sans/latin-ext-600.css";
-import "@fontsource/fira-sans/latin-ext-700.css";
-import "@fontsource/fira-sans/latin-ext-800.css";
 import "./index.css";
 
 // Globale deutsche Fehlermeldungen für alle Zod-Validierungen setzen
@@ -64,16 +62,37 @@ window.addEventListener("vite:preloadError", () => {
   window.location.reload();
 });
 
-createRoot(document.getElementById("root")!).render(
-  <StrictMode>
-    <ErrorBoundary>
-      <HelmetProvider>
-        <SettingsProvider>
-          <AuthProvider>
-            <App />
-          </AuthProvider>
-        </SettingsProvider>
-      </HelmetProvider>
-    </ErrorBoundary>
-  </StrictMode>
-);
+const rootElement = document.getElementById("root")!;
+
+function mount() {
+  createRoot(rootElement).render(
+    <StrictMode>
+      <ErrorBoundary>
+        <HelmetProvider>
+          <SettingsProvider>
+            <AuthProvider>
+              <App />
+            </AuthProvider>
+          </SettingsProvider>
+        </HelmetProvider>
+      </ErrorBoundary>
+    </StrictMode>
+  );
+}
+
+// Vorgerenderte Seite: erst zeichnen lassen, dann die App einhängen. Sonst
+// ersetzt createRoot das HTML, bevor der Browser es je gezeigt hat, und der
+// erste Bildaufbau wartet auf alle Chunks (Handy-LCP über 6 s). Der Timeout
+// greift in Hintergrund-Tabs, die keine Frames zeichnen.
+if (!isPrerender && captureInitialRouteHtml(rootElement)) {
+  let mounted = false;
+  const mountOnce = () => {
+    if (mounted) return;
+    mounted = true;
+    mount();
+  };
+  requestAnimationFrame(() => setTimeout(mountOnce, 0));
+  setTimeout(mountOnce, 100);
+} else {
+  mount();
+}

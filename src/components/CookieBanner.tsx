@@ -289,17 +289,23 @@ const CookieBanner = () => {
                   <h2 id="cookie-banner-title" className="font-semibold text-foreground text-base sm:text-lg">
                     Datenschutz & Cookies
                   </h2>
-                  <p className="text-xs sm:text-sm text-muted-foreground mt-1 max-w-2xl">
-                    Notwendige Cookies sind immer aktiv. Statistik (Google Analytics) und Marketing (Google Ads, Meta)
-                    nutzen wir nur mit Ihrer Einwilligung – jederzeit widerrufbar über „Cookie-Einstellungen“ im Footer.
-                    Mehr in der{' '}
-                    <a
-                      href="/datenschutz"
-                      className="link-inline"
-                    >
-                      Datenschutzerklärung
-                    </a>.
-                  </p>
+                  {/* Zwei kurze Absätze statt einem: Der Banner erscheint nach dem Laden, und
+                      ein einzelner großer Textblock würde Googles LCP-Messung auf ihn verschieben. */}
+                  <div className="text-xs sm:text-sm text-muted-foreground mt-1 max-w-2xl space-y-1">
+                    <p>
+                      Notwendige Cookies sind immer aktiv. Statistik (Google Analytics) und Marketing (Google Ads, Meta)
+                      nutzen wir nur mit Ihrer Einwilligung.
+                    </p>
+                    <p>
+                      Sie ist jederzeit widerrufbar über „Cookie-Einstellungen“ im Footer. Mehr in der{' '}
+                      <a
+                        href="/datenschutz"
+                        className="link-inline"
+                      >
+                        Datenschutzerklärung
+                      </a>.
+                    </p>
+                  </div>
                 </div>
               </div>
             </div>

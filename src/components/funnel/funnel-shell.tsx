@@ -1,20 +1,10 @@
-import * as AlertDialogPrimitive from "@radix-ui/react-alert-dialog";
-import { ArrowLeft, ArrowRight, BadgeEuro, Clock3, Phone, ShieldCheck } from "lucide-react";
-import { useEffect, useRef, useState, type MouseEvent, type ReactNode } from "react";
-import { Link, useNavigate } from "react-router-dom";
-import { SiteLogo } from "@/components/SiteLogo";
-import {
-  AlertDialog,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
-import { useSupportPhone } from "@/hooks/useSupportPhone";
+import { AlertCircle, ArrowLeft, ArrowRight, BadgeEuro, Clock3, ShieldCheck } from "lucide-react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
+import { FunnelFooter } from "@/components/funnel/funnel-footer";
+import { FOCUS_RING, FunnelHeader } from "@/components/funnel/funnel-header";
+import { FunnelProgress } from "@/components/funnel/funnel-progress";
+import { useVirtualKeyboardOpen } from "@/hooks/useVirtualKeyboardOpen";
 import { cn } from "@/lib/utils";
-
-export const FOCUS_RING =
-  "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2";
 
 interface FunnelShellProps {
   children: ReactNode;
@@ -30,38 +20,11 @@ interface FunnelShellProps {
   /** Ohne onNext bringt der Schritt seinen eigenen Absende-Button mit (Kontakt). */
   onNext?: () => void;
   canProceed?: boolean;
+  /** Hinweis, wenn „Weiter“ ohne Pflichtantwort geklickt wird. */
+  blockedHint?: string;
+  onBlocked?: () => void;
   nextLabel?: string;
   showExitIntent?: boolean;
-}
-
-function ProgressBar({ current, total }: { current: number; total: number }) {
-  const percentage = Math.min(100, Math.round(((current + 1) / total) * 100));
-  return (
-    <div className="w-full">
-      <div className="mb-2 flex items-center justify-between">
-        <span className="text-[11px] font-semibold uppercase tracking-[0.14em] text-ink-muted">
-          Ihre Küchenanfrage
-        </span>
-        <span className="text-xs font-medium tabular-nums text-ink-muted">
-          Schritt {current + 1} <span className="text-ink-muted">/ {total}</span>
-        </span>
-      </div>
-      <div
-        role="progressbar"
-        aria-valuenow={current + 1}
-        aria-valuemin={1}
-        aria-valuemax={total}
-        aria-valuetext={`Schritt ${current + 1} von ${total}`}
-        aria-label="Fortschritt"
-        className="h-[3px] w-full overflow-hidden rounded-full bg-border"
-      >
-        <div
-          className="h-full rounded-full bg-brand-500 transition-all duration-500 ease-out motion-reduce:transition-none"
-          style={{ width: `${percentage}%` }}
-        />
-      </div>
-    </div>
-  );
 }
 
 const TRUST_ITEMS = [
@@ -80,66 +43,6 @@ function FunnelTrustStrip() {
         </li>
       ))}
     </ul>
-  );
-}
-
-function ExitIntentDialog({
-  open,
-  onOpenChange,
-  onLeave,
-}: {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  onLeave: () => void;
-}) {
-  return (
-    <AlertDialog open={open} onOpenChange={onOpenChange}>
-      <AlertDialogContent className="w-[calc(100%-2rem)] max-w-sm rounded-2xl sm:rounded-2xl">
-        <AlertDialogHeader>
-          <AlertDialogTitle className="font-display text-xl font-bold tracking-tight-2">
-            Anfrage unterbrechen?
-          </AlertDialogTitle>
-          <AlertDialogDescription className="leading-relaxed">
-            Kein Problem: Ihre Angaben bleiben in diesem Browser-Tab gespeichert. Solange Sie ihn nicht
-            schließen, können Sie später genau hier weitermachen.
-          </AlertDialogDescription>
-        </AlertDialogHeader>
-        <div className="mt-2 flex flex-col gap-2">
-          <AlertDialogPrimitive.Cancel className={cn("btn-primary w-full", FOCUS_RING)}>
-            Weiter ausfüllen
-          </AlertDialogPrimitive.Cancel>
-          <AlertDialogPrimitive.Action onClick={onLeave} className={cn("btn-ghost w-full text-ink-muted", FOCUS_RING)}>
-            Zur Startseite
-          </AlertDialogPrimitive.Action>
-        </div>
-      </AlertDialogContent>
-    </AlertDialog>
-  );
-}
-
-/** Schlanker Funnel-Header: Logo und Support-Telefon (Funnel A und B). */
-export function FunnelHeader({ onLogoClick }: { onLogoClick?: (event: MouseEvent<HTMLAnchorElement>) => void }) {
-  const phone = useSupportPhone();
-  return (
-    <header className="sticky top-0 z-30 border-b border-border bg-card/95 backdrop-blur">
-      <div className="section-container flex h-14 items-center justify-between sm:h-16">
-        <Link to="/" onClick={onLogoClick} className={cn("rounded-lg transition-opacity hover:opacity-90", FOCUS_RING)}>
-          <SiteLogo variant="icon-text-compact" asLink={false} iconSize="h-8 w-8 sm:h-9 sm:w-9" />
-        </Link>
-        <a
-          href={phone.href}
-          className={cn(
-            "inline-flex min-h-11 items-center gap-2 rounded-lg px-2.5 text-xs font-semibold text-brand-700 transition-colors hover:bg-brand-50 sm:text-sm",
-            FOCUS_RING,
-          )}
-        >
-          <Phone className="h-4 w-4" aria-hidden="true" />
-          <span className="hidden sm:inline">Fragen? </span>
-          <span className="hidden min-[380px]:inline">{phone.display}</span>
-          <span className="sr-only min-[380px]:hidden">Anrufen: {phone.display}</span>
-        </a>
-      </div>
-    </header>
   );
 }
 
@@ -162,19 +65,18 @@ function BackButton({ hidden, onClick, className }: { hidden: boolean; onClick: 
   );
 }
 
-function NextButton({
-  onClick,
-  disabled,
-  label,
-  className,
-}: {
-  onClick: () => void;
-  disabled: boolean;
-  label: string;
-  className?: string;
-}) {
+function BlockedHint({ text, className }: { text: string; className?: string }) {
   return (
-    <button type="button" onClick={onClick} disabled={disabled} className={cn("btn-primary gap-1.5", FOCUS_RING, className)}>
+    <p role="alert" className={cn("items-center justify-center gap-2 text-sm font-medium text-destructive", className)}>
+      <AlertCircle className="h-4 w-4 flex-none" aria-hidden="true" />
+      {text}
+    </p>
+  );
+}
+
+function NextButton({ onClick, label, className }: { onClick: () => void; label: string; className?: string }) {
+  return (
+    <button type="button" onClick={onClick} className={cn("btn-primary gap-1.5", FOCUS_RING, className)}>
       {label}
       <ArrowRight className="h-4 w-4" aria-hidden="true" />
     </button>
@@ -191,13 +93,15 @@ export function FunnelShell({
   onBack,
   onNext,
   canProceed = true,
+  blockedHint = "Bitte wählen Sie eine Antwort aus.",
+  onBlocked,
   nextLabel = "Weiter",
   showExitIntent = true,
 }: FunnelShellProps) {
-  const navigate = useNavigate();
-  const [exitDialogOpen, setExitDialogOpen] = useState(false);
   const guardExit = showExitIntent && currentStep > 0;
   const isFirst = currentStep === 0;
+  const keyboardOpen = useVirtualKeyboardOpen();
+  const [blocked, setBlocked] = useState(false);
   const sectionRef = useRef<HTMLElement>(null);
   const headingRef = useRef<HTMLHeadingElement>(null);
   const shownStep = useRef(currentStep);
@@ -208,32 +112,35 @@ export function FunnelShell({
   useEffect(() => {
     if (shownStep.current === currentStep) return;
     shownStep.current = currentStep;
+    setBlocked(false);
     const active = document.activeElement;
     const target = active instanceof HTMLElement && sectionRef.current?.contains(active) ? active : headingRef.current;
     const frame = window.requestAnimationFrame(() => target?.focus({ preventScroll: true }));
     return () => window.cancelAnimationFrame(frame);
   }, [currentStep]);
 
-  const handleLogoClick = (event: MouseEvent<HTMLAnchorElement>) => {
-    if (!guardExit) return;
-    event.preventDefault();
-    setExitDialogOpen(true);
-  };
-
   useEffect(() => {
-    if (!guardExit) return;
-    const handleBeforeUnload = (event: BeforeUnloadEvent) => event.preventDefault();
-    window.addEventListener("beforeunload", handleBeforeUnload);
-    return () => window.removeEventListener("beforeunload", handleBeforeUnload);
-  }, [guardExit]);
+    if (canProceed) setBlocked(false);
+  }, [canProceed]);
+
+  // Wie bei CaravanWert bleibt „Weiter“ klickbar und sagt, was noch fehlt.
+  const handleNext = () => {
+    if (!onNext) return;
+    if (!canProceed) {
+      setBlocked(true);
+      onBlocked?.();
+      return;
+    }
+    onNext();
+  };
 
   return (
     <div className="flex min-h-screen flex-col bg-surface-soft">
-      <FunnelHeader onLogoClick={handleLogoClick} />
+      <FunnelHeader guardExit={guardExit} guardUnload={guardExit} />
 
-      <main className="flex flex-1 flex-col items-center px-4 py-6 sm:py-10 lg:py-14">
+      <main data-funnel-telemetry="" className="flex flex-1 flex-col items-center px-4 py-6 sm:py-10 lg:py-14">
         <div className="w-full max-w-2xl">
-          <ProgressBar current={currentStep} total={totalSteps} />
+          <FunnelProgress label="Ihre Küchenanfrage" current={currentStep} total={totalSteps} />
           <FunnelTrustStrip />
 
           <section
@@ -259,9 +166,11 @@ export function FunnelShell({
 
             <div className="mt-6 sm:mt-8">{children}</div>
 
+            {blocked && <BlockedHint text={blockedHint} className="mt-6 hidden sm:flex" />}
+
             <div className={cn("mt-8 items-center justify-between gap-4", onNext ? "hidden sm:flex" : "flex")}>
               <BackButton hidden={isFirst} onClick={onBack} />
-              {onNext && <NextButton onClick={onNext} disabled={!canProceed} label={nextLabel} />}
+              {onNext && <NextButton onClick={handleNext} label={nextLabel} />}
             </div>
           </section>
 
@@ -272,16 +181,23 @@ export function FunnelShell({
         </div>
       </main>
 
+      <FunnelFooter />
+
       {onNext && (
-        <div className="sticky bottom-0 z-30 border-t border-border bg-card/95 px-4 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-3 backdrop-blur sm:hidden">
+        <div
+          className={cn(
+            "sticky bottom-0 z-30 border-t border-border bg-card/95 px-4 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-3 backdrop-blur sm:hidden",
+            keyboardOpen && "hidden",
+          )}
+        >
+          {/* Auf dem Handy direkt über „Weiter“, sonst läge der Hinweis unter den Kacheln außer Sicht. */}
+          {blocked && <BlockedHint text={blockedHint} className="mb-2 flex" />}
           <div className="flex items-center justify-between gap-3">
             <BackButton hidden={isFirst} onClick={onBack} className="px-2" />
-            <NextButton onClick={onNext} disabled={!canProceed} label={nextLabel} className="flex-1" />
+            <NextButton onClick={handleNext} label={nextLabel} className="flex-1" />
           </div>
         </div>
       )}
-
-      <ExitIntentDialog open={exitDialogOpen} onOpenChange={setExitDialogOpen} onLeave={() => navigate("/")} />
     </div>
   );
 }

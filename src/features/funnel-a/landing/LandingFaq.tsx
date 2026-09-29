@@ -1,8 +1,10 @@
-import { Link } from "react-router-dom";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { landingFaqItems } from "./faq";
 
-/** Kein FAQPage-Markup: Die Fragen sind auf /faq ausgezeichnet, Google erwartet jede Frage nur einmal pro Website. */
+/**
+ * Kein FAQPage-Markup: Die Fragen sind auf /faq ausgezeichnet, Google erwartet jede Frage nur einmal pro Website.
+ * Kein Link auf /faq: /formular ist Frage 1 von Funnel A und läuft im Fokusmodus ohne Ausgänge.
+ */
 export function LandingFaq() {
   return (
     <section aria-labelledby="formular-faq" className="container max-w-3xl px-4 pb-12 sm:px-6 sm:pb-16">
@@ -19,11 +21,6 @@ export function LandingFaq() {
           </AccordionItem>
         ))}
       </Accordion>
-      <p className="mt-6 text-center text-sm">
-        <Link to="/faq" className="font-semibold text-primary underline-offset-4 hover:underline">
-          Alle Fragen und Antworten
-        </Link>
-      </p>
     </section>
   );
 }

@@ -3455,6 +3455,108 @@ export type Database = {
           },
         ]
       }
+      kw_funnel_events: {
+        Row: {
+          consent_id: string | null
+          created_at: string
+          device_type: string | null
+          error_fields: string[] | null
+          event: string
+          field_name: string | null
+          funnel: string
+          id: number
+          metadata: Json | null
+          session_id: string
+          step: string
+          step_index: number
+          time_on_step_ms: number | null
+          viewport_width: number | null
+        }
+        Insert: {
+          consent_id?: string | null
+          created_at?: string
+          device_type?: string | null
+          error_fields?: string[] | null
+          event: string
+          field_name?: string | null
+          funnel: string
+          id?: never
+          metadata?: Json | null
+          session_id: string
+          step: string
+          step_index: number
+          time_on_step_ms?: number | null
+          viewport_width?: number | null
+        }
+        Update: {
+          consent_id?: string | null
+          created_at?: string
+          device_type?: string | null
+          error_fields?: string[] | null
+          event?: string
+          field_name?: string | null
+          funnel?: string
+          id?: never
+          metadata?: Json | null
+          session_id?: string
+          step?: string
+          step_index?: number
+          time_on_step_ms?: number | null
+          viewport_width?: number | null
+        }
+        Relationships: []
+      }
+      kw_gads_conversion_uploads: {
+        Row: {
+          attempts: number
+          conversion_at: string
+          created_at: string
+          kind: string
+          last_error: string | null
+          lead_id: string
+          next_attempt_at: string
+          order_id: string
+          retracted_at: string | null
+          source_id: string
+          status: string
+          updated_at: string
+          uploaded_at: string | null
+          value_eur: number
+        }
+        Insert: {
+          attempts?: number
+          conversion_at: string
+          created_at?: string
+          kind: string
+          last_error?: string | null
+          lead_id: string
+          next_attempt_at?: string
+          order_id: string
+          retracted_at?: string | null
+          source_id: string
+          status?: string
+          updated_at?: string
+          uploaded_at?: string | null
+          value_eur: number
+        }
+        Update: {
+          attempts?: number
+          conversion_at?: string
+          created_at?: string
+          kind?: string
+          last_error?: string | null
+          lead_id?: string
+          next_attempt_at?: string
+          order_id?: string
+          retracted_at?: string | null
+          source_id?: string
+          status?: string
+          updated_at?: string
+          uploaded_at?: string | null
+          value_eur?: number
+        }
+        Relationships: []
+      }
       kw_marketplace_settings: {
         Row: {
           auto_issue_invoices: boolean
@@ -7107,6 +7209,10 @@ export type Database = {
         Args: { p_accept: boolean; p_complaint_id: string; p_note?: string }
         Returns: Json
       }
+      kw_admin_funnel_stats: {
+        Args: { p_days?: number; p_funnel: string }
+        Returns: Json
+      }
       kw_admin_open_tender: {
         Args: { p_lead_id: string; p_notify_customer?: boolean }
         Returns: string
@@ -7256,6 +7362,12 @@ export type Database = {
       kw_enqueue_order: {
         Args: { p_delay?: string; p_event_type: string; p_payload: Json }
         Returns: undefined
+      }
+      kw_gads_collect_conversions: { Args: never; Returns: number }
+      kw_gads_credentials: { Args: never; Returns: Json }
+      kw_gads_record_upload_results: {
+        Args: { p_results: Json }
+        Returns: number
       }
       kw_health_snapshot: { Args: never; Returns: Json }
       kw_insert_lead_with_consents: {

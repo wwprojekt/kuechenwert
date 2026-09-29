@@ -1,4 +1,4 @@
-import { cloneElement, isValidElement, useState, useMemo, useCallback, useEffect, useId, useRef } from "react";
+import { cloneElement, isValidElement, useState, useMemo, useCallback, useEffect, useId, useRef, type RefObject } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { clsx } from "clsx";
 import { toast } from "sonner";
@@ -7,11 +7,13 @@ import { LEAD_FILE_CATEGORIES, MAX_LEAD_FILES, type LeadFileCategory, type Pendi
 import { LeadFileDrop } from "@/features/funnel-b/LeadFileDrop";
 import { PendingFileList } from "@/features/funnel-b/PendingFileList";
 import { ApiError, errorMessage } from "@/features/marketplace/api-client";
+import { useFunnelTelemetry } from "@/hooks/useFunnelTelemetry";
 import { useTurnstile } from "@/hooks/useTurnstile";
 import { useSupportPhone } from "@/hooks/useSupportPhone";
 import { BRAND } from "@/lib/brand";
 import { getConsentedClickIds } from "@/lib/clickIdService";
 import { trackFunnelStep, trackFunnelSubmitError } from "@/lib/funnelAnalytics";
+import { trackActiveFunnelEvent } from "@/lib/funnelTelemetry";
 import { clearSubmissionId, submissionIdFor } from "@/lib/submissionId";
 import { getEntryPath, getStoredUtm } from "@/lib/utm";
 import {
@@ -159,16 +161,17 @@ const initialData: FunnelBData = {
   consentMarketing: false,
 };
 
+/** key: Schritt in der Funnel-Telemetrie. */
 const STEPS = [
-  { label: "Ihr Angebot", description: "Was kostet Ihr Angebot – und haben Sie Angebot oder Planung zur Hand?" },
-  { label: "Ihre Situation", description: "Wann soll die Küche geliefert oder montiert werden?" },
-  { label: "Korpus & Fronten", description: "Welche Marke, welches Material, welcher Grifftyp?" },
-  { label: "Arbeitsplatte", description: "Material und – falls bekannt – die genaue Bezeichnung." },
-  { label: "Geräte", description: "Welche Geräte sind im Angebot? Marke und Modell, falls bekannt." },
-  { label: "Sanitär & Müllsystem", description: "Spüle, Material, Mülltrennsystem ja/nein." },
-  { label: "Ausstattung & Zubehör", description: "Steckdosen, Beleuchtung, Besteckeinsatz, Sonstiges." },
-  { label: "Lieferung & Zahlung", description: "Liefermodus, Anzahlung, Finanzierungswunsch." },
-  { label: "Ihre Kontaktdaten", description: "Damit wir uns für den Experten-Check melden können." },
+  { key: "angebot", label: "Ihr Angebot", description: "Was kostet Ihr Angebot – und haben Sie Angebot oder Planung zur Hand?" },
+  { key: "situation", label: "Ihre Situation", description: "Wann soll die Küche geliefert oder montiert werden?" },
+  { key: "fronten", label: "Korpus & Fronten", description: "Welche Marke, welches Material, welcher Grifftyp?" },
+  { key: "arbeitsplatte", label: "Arbeitsplatte", description: "Material und – falls bekannt – die genaue Bezeichnung." },
+  { key: "geraete", label: "Geräte", description: "Welche Geräte sind im Angebot? Marke und Modell, falls bekannt." },
+  { key: "sanitaer", label: "Sanitär & Müllsystem", description: "Spüle, Material, Mülltrennsystem ja/nein." },
+  { key: "ausstattung", label: "Ausstattung & Zubehör", description: "Steckdosen, Beleuchtung, Besteckeinsatz, Sonstiges." },
+  { key: "zahlung", label: "Lieferung & Zahlung", description: "Liefermodus, Anzahlung, Finanzierungswunsch." },
+  { key: "kontakt", label: "Ihre Kontaktdaten", description: "Damit wir uns für den Experten-Check melden können." },
 ];
 
 const TOTAL = STEPS.length;
@@ -192,6 +195,77 @@ function isOfferReady(data: FunnelBData): boolean {
   if (!(Number(data.existingOfferPriceEur) > 0)) return false;
   if (data.offerDeliveryMethod === "later") return true;
   return data.offerDeliveryMethod === "now" && data.uploads.length > 0;
+}
+
+interface MissingField {
+  /** Feldschlüssel für die Funnel-Telemetrie. */
+  key: string;
+  label: string;
+  /** Element, das „Jetzt ergänzen“ anspringt. */
+  target: string;
+}
+
+/** Pflichtangaben, die im Schritt noch fehlen (Angebot und Kontakt). */
+function missingFields(step: number, data: FunnelBData): MissingField[] {
+  const missing: MissingField[] = [];
+  if (step === 0) {
+    if (!(Number(data.existingOfferPriceEur) > 0)) {
+      missing.push({ key: "existing_offer_price", label: "Angebotspreis Ihres Küchenstudios", target: "funnel-b-offer-price" });
+    }
+    if (data.offerDeliveryMethod === "") {
+      missing.push({ key: "offer_delivery", label: "Unterlagen jetzt hochladen oder später nachreichen", target: "funnel-b-offer-delivery" });
+    } else if (data.offerDeliveryMethod === "now" && data.uploads.length === 0) {
+      missing.push({ key: "uploads", label: "Mindestens eine Datei hochladen – oder „Später nachreichen“ wählen", target: "funnel-b-offer-delivery" });
+    }
+  }
+  if (step === TOTAL - 1) {
+    if (!/^\d{5}$/.test(data.postalCode)) missing.push({ key: "postal_code", label: "Postleitzahl (5 Ziffern)", target: "funnel-b-postal-code" });
+    if (data.firstName.trim().length <= 1) missing.push({ key: "first_name", label: "Vorname", target: "funnel-b-first-name" });
+    if (data.lastName.trim().length <= 1) missing.push({ key: "last_name", label: "Nachname", target: "funnel-b-last-name" });
+    if (!/\S+@\S+\.\S+/.test(data.email)) missing.push({ key: "email", label: "E-Mail-Adresse", target: "funnel-b-email" });
+    if (data.phone.trim().length < 6) missing.push({ key: "phone", label: "Telefonnummer", target: "funnel-b-phone" });
+    if (!data.consentShare) {
+      missing.push({ key: "consent_share", label: "Einwilligung zur Weitergabe an Küchenstudios", target: "funnel-b-consent-share" });
+    }
+    if (!data.consentCall) {
+      missing.push({ key: "consent_call", label: "Einwilligung zum Rückruf (Experten-Check)", target: "funnel-b-consent-call" });
+    }
+  }
+  return missing;
+}
+
+function focusField(id: string): void {
+  const el = document.getElementById(id);
+  if (!el) return;
+  const target = el.matches("input, button, select, textarea") ? el : el.querySelector<HTMLElement>("input, button, select, textarea");
+  el.scrollIntoView({ block: "center", behavior: "smooth" });
+  target?.focus({ preventScroll: true });
+}
+
+function MissingSummary({ items, summaryRef }: { items: MissingField[]; summaryRef: RefObject<HTMLDivElement> }) {
+  return (
+    <div
+      ref={summaryRef}
+      role="alert"
+      tabIndex={-1}
+      className="mt-6 rounded-xl border border-destructive/30 bg-destructive/5 p-4 text-sm outline-none"
+    >
+      <p className="font-semibold text-destructive">Bitte ergänzen Sie noch:</p>
+      <ul className="mt-2 space-y-1">
+        {items.map((item) => (
+          <li key={item.key}>
+            <button
+              type="button"
+              onClick={() => focusField(item.target)}
+              className="min-h-8 rounded text-left font-medium text-foreground underline underline-offset-2 hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            >
+              {item.label}
+            </button>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
 }
 
 function loadSaved(): Partial<FunnelBData> {
@@ -221,8 +295,10 @@ export default function FunnelBClient() {
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [uploadProgress, setUploadProgress] = useState<{ done: number; total: number } | null>(null);
   const [honeypot, setHoneypot] = useState("");
+  const [showMissing, setShowMissing] = useState(false);
   const { waitForToken, resetTurnstile, turnstileCallbackRef } = useTurnstile();
   const errorRef = useRef<HTMLParagraphElement>(null);
+  const missingRef = useRef<HTMLDivElement>(null);
 
   // Schritt steht in der URL, damit Zurück-Geste und Neuladen im Funnel bleiben.
   // Kontaktdaten erst, wenn das Angebot vollständig ist (Uploads überstehen kein Neuladen).
@@ -247,6 +323,14 @@ export default function FunnelBClient() {
     if (step !== requestedStep) goToStep(step, true);
   }, [step, requestedStep, goToStep]);
 
+  const telemetry = useFunnelTelemetry({
+    funnel: "b",
+    step: STEPS[step].key,
+    stepIndex: step,
+    stepLabel: STEPS[step].label,
+    totalSteps: TOTAL,
+  });
+
   useEffect(() => {
     trackFunnelStep("b", STEPS[step].label, step, TOTAL);
   }, [step]);
@@ -255,6 +339,7 @@ export default function FunnelBClient() {
   useEffect(() => {
     if (shownStep.current === step) return;
     shownStep.current = step;
+    setShowMissing(false);
     window.scrollTo({ top: 0, behavior: "smooth" });
   }, [step]);
 
@@ -276,27 +361,23 @@ export default function FunnelBClient() {
     setData((prev) => ({ ...prev, ...patch }));
   }, []);
 
-  const canProceed = useMemo(() => {
-    switch (step) {
-      case 0:
-        return isOfferReady(data);
-      case 8:
-        return (
-          /^\d{5}$/.test(data.postalCode) &&
-          data.firstName.trim().length > 1 &&
-          data.lastName.trim().length > 1 &&
-          /\S+@\S+\.\S+/.test(data.email) &&
-          data.phone.trim().length >= 6 &&
-          data.consentShare &&
-          data.consentCall
-        );
-      default:
-        return true;
-    }
-  }, [step, data]);
+  const missing = useMemo(() => missingFields(step, data), [step, data]);
+  const hasProgress = step > 0 || Number(data.existingOfferPriceEur) > 0 || data.uploads.length > 0;
 
   const handleNext = useCallback(async () => {
+    if (step === TOTAL - 1) telemetry.submitClicked();
+    // Wie bei CaravanWert: Der Button bleibt klickbar und zeigt, was noch fehlt.
+    if (missing.length > 0) {
+      setShowMissing(true);
+      telemetry.validationFailed(missing.map((m) => m.key));
+      window.requestAnimationFrame(() => {
+        missingRef.current?.scrollIntoView({ block: "center", behavior: "smooth" });
+        missingRef.current?.focus({ preventScroll: true });
+      });
+      return;
+    }
     if (step < TOTAL - 1) {
+      telemetry.next();
       goToStep(step + 1);
       return;
     }
@@ -319,6 +400,7 @@ export default function FunnelBClient() {
         landingPage: getEntryPath() ?? (typeof window !== "undefined" ? window.location.pathname : null),
       });
       clearSubmissionId("b");
+      telemetry.submitSucceeded();
 
       try {
         sessionStorage.removeItem(STORAGE_KEY);
@@ -358,7 +440,9 @@ export default function FunnelBClient() {
       navigate(`/funnel/danke?${thanks.toString()}`, { replace: true });
     } catch (e) {
       console.error("Funnel B submit error", e);
-      trackFunnelSubmitError("b", e instanceof ApiError ? e.code ?? `http_${e.status}` : "network");
+      const reason = e instanceof ApiError ? e.code ?? `http_${e.status}` : "network";
+      trackFunnelSubmitError("b", reason);
+      telemetry.submitFailed(reason);
       resetTurnstile();
       // Prüffehler des Servers (4xx) sind verständlich formuliert; alles andere nicht.
       setSubmitError(
@@ -369,11 +453,17 @@ export default function FunnelBClient() {
       setSubmitting(false);
       setUploadProgress(null);
     }
-  }, [step, data, navigate, goToStep, phone.display, waitForToken, honeypot, resetTurnstile]);
+  }, [step, data, missing, telemetry, navigate, goToStep, phone.display, waitForToken, honeypot, resetTurnstile]);
 
-  const handleBack = useCallback(() => goToStep(Math.max(0, step - 1)), [goToStep, step]);
+  const handleBack = useCallback(() => {
+    telemetry.back();
+    goToStep(Math.max(0, step - 1));
+  }, [goToStep, step, telemetry]);
 
-  const goNext = useCallback(() => goToStep(Math.min(TOTAL - 1, step + 1)), [goToStep, step]);
+  const goNext = useCallback(() => {
+    telemetry.next();
+    goToStep(Math.min(TOTAL - 1, step + 1));
+  }, [goToStep, step, telemetry]);
 
   const sidebar = (
     <>
@@ -403,7 +493,11 @@ export default function FunnelBClient() {
         </div>
         <p className="mt-2 text-ink-muted">
           Rufen Sie uns an:{" "}
-          <a href={phone.href} className="link-inline text-brand-700 decoration-brand-700/70 hover:decoration-brand-700">
+          <a
+            href={phone.href}
+            onClick={() => trackActiveFunnelEvent("help_clicked", { channel: "phone", place: "sidebar" })}
+            className="link-inline text-brand-700 decoration-brand-700/70 hover:decoration-brand-700"
+          >
             {phone.display}
           </a>
         </p>
@@ -420,13 +514,20 @@ export default function FunnelBClient() {
       stepDescription={stepDef.description}
       onBack={handleBack}
       onNext={handleNext}
-      canProceed={canProceed}
       isFinalStep={step === TOTAL - 1}
       isSubmitting={submitting}
+      guardExit={hasProgress}
+      guardUnload={hasProgress}
       sidebar={sidebar}
     >
       {step > 0 && step < TOTAL - 1 && (
-        <SkipDetails hasFiles={data.uploads.length > 0} onSkip={() => goToStep(TOTAL - 1)} />
+        <SkipDetails
+          hasFiles={data.uploads.length > 0}
+          onSkip={() => {
+            telemetry.next();
+            goToStep(TOTAL - 1);
+          }}
+        />
       )}
       {step === 0 && <OfferStep data={data} update={update} />}
       {step === 1 && <Step0 data={data} update={update} goNext={goNext} />}
@@ -445,6 +546,8 @@ export default function FunnelBClient() {
           turnstileRef={turnstileCallbackRef}
         />
       )}
+
+      {showMissing && missing.length > 0 && <MissingSummary items={missing} summaryRef={missingRef} />}
 
       {submitting && uploadProgress && (
         <p role="status" className="mt-4 text-sm text-ink-muted">
@@ -977,6 +1080,7 @@ function OfferStep({ data, update }: StepProps) {
         <div className="relative max-w-xs">
           <input
             id="funnel-b-offer-price"
+            name="existing_offer_price"
             type="number"
             inputMode="numeric"
             min={1}
@@ -998,6 +1102,7 @@ function OfferStep({ data, update }: StepProps) {
       >
         <input
           type="text"
+          name="existing_offer_studio"
           className="input-field"
           placeholder="z. B. Küchen Müller GmbH, Musterstadt"
           value={data.existingOfferStudio}
@@ -1006,6 +1111,7 @@ function OfferStep({ data, update }: StepProps) {
       </Field>
 
       <Field
+        id="funnel-b-offer-delivery"
         label="Angebot und Planung *"
         hint="Mit Ihren Unterlagen können wir genau vergleichen – und Sie können die Detailfragen danach überspringen."
       >
@@ -1099,6 +1205,8 @@ function Step8({
       <div className="grid gap-4 md:grid-cols-2">
         <Field label="PLZ *">
           <input
+            id="funnel-b-postal-code"
+            name="postal_code"
             type="text"
             inputMode="numeric"
             pattern="\d{5}"
@@ -1114,6 +1222,7 @@ function Step8({
         </Field>
         <Field label="Stadt" hint="Optional, ergänzen wir aus PLZ.">
           <input
+            name="city"
             type="text"
             autoComplete="address-level2"
             className="input-field"
@@ -1139,6 +1248,8 @@ function Step8({
       <div className="grid gap-4 md:grid-cols-2">
         <Field label="Vorname *">
           <input
+            id="funnel-b-first-name"
+            name="first_name"
             type="text"
             autoComplete="given-name"
             className="input-field"
@@ -1148,6 +1259,8 @@ function Step8({
         </Field>
         <Field label="Nachname *">
           <input
+            id="funnel-b-last-name"
+            name="last_name"
             type="text"
             autoComplete="family-name"
             className="input-field"
@@ -1160,6 +1273,8 @@ function Step8({
       <div className="grid gap-4 md:grid-cols-2">
         <Field label="E-Mail *">
           <input
+            id="funnel-b-email"
+            name="email"
             type="email"
             autoComplete="email"
             className="input-field"
@@ -1169,6 +1284,8 @@ function Step8({
         </Field>
         <Field label="Telefon *" hint="Wir rufen Sie für den Experten-Check an.">
           <input
+            id="funnel-b-phone"
+            name="phone"
             type="tel"
             autoComplete="tel"
             className="input-field"
@@ -1181,6 +1298,8 @@ function Step8({
       <div className="space-y-3 rounded-xl border border-border bg-surface-soft p-4 text-sm">
         <label className="flex items-start gap-3">
           <input
+            id="funnel-b-consent-share"
+            name="consent_share"
             type="checkbox"
             className="mt-0.5 h-4 w-4 flex-none accent-brand-700"
             checked={data.consentShare}
@@ -1201,6 +1320,8 @@ function Step8({
         </label>
         <label className="flex items-start gap-3">
           <input
+            id="funnel-b-consent-call"
+            name="consent_call"
             type="checkbox"
             className="mt-0.5 h-4 w-4 flex-none accent-brand-700"
             checked={data.consentCall}
@@ -1213,6 +1334,7 @@ function Step8({
         </label>
         <label className="flex items-start gap-3">
           <input
+            name="consent_studio_call"
             type="checkbox"
             className="mt-0.5 h-4 w-4 flex-none accent-brand-700"
             checked={data.consentStudioCall}
@@ -1226,6 +1348,7 @@ function Step8({
         </label>
         <label className="flex items-start gap-3">
           <input
+            name="marketing"
             type="checkbox"
             className="mt-0.5 h-4 w-4 flex-none accent-brand-700"
             checked={data.consentMarketing}
@@ -1282,11 +1405,14 @@ const LABELLED_CONTROLS = new Set(["input", "select", "textarea"]);
  * Alles andere (Kachelgruppen, Combobox) wird als benannte Gruppe ausgezeichnet.
  */
 function Field({
+  id,
   label,
   hint,
   controlId,
   children,
 }: {
+  /** id der Gruppe (Kachelgruppen), z. B. als Sprungziel für fehlende Angaben. */
+  id?: string;
   label: string;
   hint?: string;
   controlId?: string;
@@ -1319,7 +1445,7 @@ function Field({
   }
 
   return (
-    <div role="group" aria-labelledby={`${baseId}-label`} aria-describedby={hintId}>
+    <div id={id} role="group" aria-labelledby={`${baseId}-label`} aria-describedby={hintId}>
       <p id={`${baseId}-label`} className="label-field">
         {label}
       </p>

@@ -1,13 +1,15 @@
-import { ArrowLeft, ArrowRight, Check, Phone, ShieldCheck } from "lucide-react";
+import { ArrowLeft, ArrowRight, Check, ShieldCheck } from "lucide-react";
 import { useEffect, useRef, type ReactNode } from "react";
-import { Link } from "react-router-dom";
+import { FunnelFooter } from "@/components/funnel/funnel-footer";
+import { FunnelHeader } from "@/components/funnel/funnel-header";
 import { Button } from "@/components/ui/button";
-import { SiteLogo } from "@/components/SiteLogo";
-import { useSupportPhone } from "@/hooks/useSupportPhone";
+import { useVirtualKeyboardOpen } from "@/hooks/useVirtualKeyboardOpen";
 import { cn } from "@/lib/utils";
 import type { KitchenEstimate } from "./core";
 import { PLANNER_STEPS, type PlannerStep } from "./state";
 import { PriceRange, PriceSummary } from "./components/PriceSummary";
+
+const SAVED_IN_BROWSER = "Ihre Planung bleibt in diesem Browser gespeichert. Sie können später genau hier weitermachen.";
 
 export function PlannerShell({
   step,
@@ -19,6 +21,7 @@ export function PlannerShell({
   onNext,
   nextLabel,
   showSummary,
+  guardExit,
   children,
 }: {
   step: PlannerStep;
@@ -30,13 +33,15 @@ export function PlannerShell({
   onNext: () => void;
   nextLabel: string;
   showSummary: boolean;
+  /** Logo-Klick fragt nach, sobald geplant wurde. */
+  guardExit: boolean;
   children: ReactNode;
 }) {
-  const phone = useSupportPhone();
   const index = PLANNER_STEPS.findIndex((s) => s.id === step);
   const current = PLANNER_STEPS[index];
   const headingRef = useRef<HTMLHeadingElement>(null);
   const shownStep = useRef(step);
+  const keyboardOpen = useVirtualKeyboardOpen();
 
   // Nach einem Schrittwechsel die neue Überschrift fokussieren (Tastatur, Screenreader).
   useEffect(() => {
@@ -47,24 +52,17 @@ export function PlannerShell({
   }, [step]);
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-muted/40 via-background to-background pb-28 lg:pb-12">
-      <header className="sticky top-0 z-40 border-b bg-background/95 backdrop-blur">
-        <div className="container flex h-16 items-center justify-between gap-4">
-          <SiteLogo variant="icon-text-compact" />
-          <div className="flex items-center gap-3">
-            <span className="hidden items-center gap-1.5 text-xs text-muted-foreground md:inline-flex">
-              <ShieldCheck className="h-4 w-4 text-primary" /> Kostenlos · automatisch gespeichert
-            </span>
-            <a
-              href={phone.href}
-              aria-label={`Anrufen: ${phone.display}`}
-              className="inline-flex min-h-11 min-w-11 items-center justify-center gap-1.5 rounded-lg px-2.5 text-sm font-semibold text-primary hover:bg-primary/10"
-            >
-              <Phone className="h-4 w-4" aria-hidden="true" />
-              <span className="hidden sm:inline">{phone.display}</span>
-            </a>
-          </div>
-        </div>
+    <div className={cn("min-h-screen bg-gradient-to-b from-muted/40 via-background to-background", showSummary && "pb-28 lg:pb-0")}>
+      <FunnelHeader
+        guardExit={guardExit}
+        savedHint={SAVED_IN_BROWSER}
+        containerClassName="container"
+        aside={
+          <span className="hidden items-center gap-1.5 text-xs text-muted-foreground md:inline-flex">
+            <ShieldCheck className="h-4 w-4 text-primary" aria-hidden="true" /> Kostenlos · automatisch gespeichert
+          </span>
+        }
+      >
         <nav aria-label="Fortschritt" className="container pb-3">
           <ol className="flex gap-1.5">
             {PLANNER_STEPS.map((s, i) => {
@@ -97,9 +95,9 @@ export function PlannerShell({
             })}
           </ol>
         </nav>
-      </header>
+      </FunnelHeader>
 
-      <main className="container py-6 sm:py-8">
+      <main data-funnel-telemetry="" className="container py-6 sm:py-8">
         <div className="mb-6">
           <p className="text-xs font-bold uppercase tracking-wider text-primary">
             Schritt {index + 1} von {PLANNER_STEPS.length}
@@ -139,9 +137,7 @@ export function PlannerShell({
                 <ArrowLeft className="mr-2 h-4 w-4" /> Zurück
               </Button>
             ) : (
-              <Link to="/" className="text-sm text-muted-foreground hover:text-foreground">
-                Zur Startseite
-              </Link>
+              <span />
             )}
             <Button size="lg" onClick={onNext}>
               {nextLabel} <ArrowRight className="ml-2 h-5 w-5" />
@@ -150,8 +146,15 @@ export function PlannerShell({
         )}
       </main>
 
+      <FunnelFooter />
+
       {showSummary && (
-        <div className="fixed inset-x-0 bottom-0 z-40 border-t bg-background/95 px-4 py-3 backdrop-blur lg:hidden safe-bottom">
+        <div
+          className={cn(
+            "fixed inset-x-0 bottom-0 z-40 border-t bg-background/95 px-4 py-3 backdrop-blur lg:hidden safe-bottom",
+            keyboardOpen && "hidden",
+          )}
+        >
           <div className="flex items-center gap-2 min-[380px]:gap-3">
             {index > 0 && (
               <Button variant="outline" size="icon" className="h-12 w-12 flex-none" onClick={onBack} aria-label="Zurück">

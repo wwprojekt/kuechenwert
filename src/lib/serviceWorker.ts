@@ -4,6 +4,7 @@
  */
 
 import React from 'react';
+import { isFunnelPath } from './funnelRoutes';
 import { logger } from './logger';
 
 interface ServiceWorkerManager {
@@ -156,6 +157,8 @@ class ServiceWorkerManagerImpl implements ServiceWorkerManager {
     let reloading = false;
     navigator.serviceWorker.addEventListener('controllerchange', () => {
       if (!hadController || reloading) return;
+      // Nicht mitten im Funnel: hochgeladene Unterlagen und die Bot-Prüfung überstehen kein Neuladen.
+      if (isFunnelPath(window.location.pathname)) return;
       reloading = true;
       logger.log('Service Worker: Controller changed, reloading page');
       window.location.reload();

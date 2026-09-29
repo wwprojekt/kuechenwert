@@ -44,6 +44,9 @@
     "src/components/funnel/combobox.tsx",
     "src/components/funnel/funnel-b-icons.tsx",
     "src/components/funnel/funnel-b-shell.tsx",
+    "src/components/funnel/funnel-footer.tsx",
+    "src/components/funnel/funnel-header.tsx",
+    "src/components/funnel/funnel-progress.tsx",
     "src/components/funnel/funnel-a-icons.tsx",
     "src/components/funnel/funnel-a-pictograms.tsx",
     "src/components/funnel/funnel-seo.tsx",
@@ -85,6 +88,8 @@
     "src/pages/dashboard/UserProfile.tsx",
     "src/lib/dealerApplications.ts",
     "src/lib/funnelAnalytics.ts",
+    "src/lib/funnelRoutes.ts",
+    "src/lib/funnelTelemetry.ts",
     "src/lib/gadsConversionService.ts",
     "src/lib/germanErrors.ts",
     "src/lib/invoiceGenerator.ts",
@@ -98,6 +103,8 @@
     "src/lib/utm.ts",
     "src/hooks/useTurnstile.ts",
     "src/hooks/useSupportPhone.ts",
+    "src/hooks/useFunnelTelemetry.ts",
+    "src/hooks/useVirtualKeyboardOpen.ts",
     "src/hooks/__tests__/**/*",
     "supabase/functions/_shared/kitchen-catalog.ts",
     "supabase/functions/_shared/kitchen-pricing.ts",
@@ -105,6 +112,7 @@
     "supabase/functions/_shared/fal-models.ts",
     "supabase/functions/_shared/price-calibration.ts",
     "supabase/functions/_shared/funnel-a-catalog.ts",
-    "supabase/functions/_shared/funnel-b-catalog.ts"
+    "supabase/functions/_shared/funnel-b-catalog.ts",
+    "supabase/functions/_shared/funnel-telemetry.ts"
   ]
 }

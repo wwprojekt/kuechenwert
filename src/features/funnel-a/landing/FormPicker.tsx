@@ -10,9 +10,15 @@ const TILE =
   "hover:-translate-y-0.5 hover:border-primary hover:shadow-md " +
   "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2";
 
-function FormTile({ option, to }: { option: ChoiceOption; to: string }) {
+interface TileProps {
+  option: ChoiceOption;
+  to: string;
+  onPick?: () => void;
+}
+
+function FormTile({ option, to, onPick }: TileProps) {
   return (
-    <Link to={to} className={cn(TILE, "flex-col")}>
+    <Link to={to} onClick={onPick} className={cn(TILE, "flex-col")}>
       <span className="flex aspect-[4/3] items-center justify-center overflow-hidden bg-muted/60 p-3 transition-colors group-hover:bg-primary/5">
         <KitchenFormPlan
           form={option.id}
@@ -27,9 +33,9 @@ function FormTile({ option, to }: { option: ChoiceOption; to: string }) {
   );
 }
 
-function UnsureTile({ option, to }: { option: ChoiceOption; to: string }) {
+function UnsureTile({ option, to, onPick }: TileProps) {
   return (
-    <Link to={to} className={cn(TILE, "items-center gap-4 p-4")}>
+    <Link to={to} onClick={onPick} className={cn(TILE, "items-center gap-4 p-4")}>
       <span
         aria-hidden="true"
         className="grid h-14 w-14 flex-none place-items-center rounded-2xl bg-primary/10 text-primary transition-colors group-hover:bg-primary group-hover:text-primary-foreground"
@@ -53,18 +59,18 @@ function UnsureTile({ option, to }: { option: ChoiceOption; to: string }) {
  * Funnel A bei Schritt 2. Die „Steht noch nicht fest“-Kachel füllt die letzte
  * Zeile, damit das Raster bei 2, 3 und 4 Spalten ohne Lücke aufgeht.
  */
-export function FormPicker({ search, labelledBy }: { search: string; labelledBy: string }) {
+export function FormPicker({ search, labelledBy, onPick }: { search: string; labelledBy: string; onPick?: () => void }) {
   return (
     <>
       <ul aria-labelledby={labelledBy} className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 lg:grid-cols-4">
         {FORM_OPTIONS.map((option) =>
           option.id === UNSURE ? (
             <li key={option.id} className="col-span-2 sm:col-span-3 lg:col-span-2">
-              <UnsureTile option={option} to={funnelEntryUrl(search, option.id)} />
+              <UnsureTile option={option} to={funnelEntryUrl(search, option.id)} onPick={onPick} />
             </li>
           ) : (
             <li key={option.id}>
-              <FormTile option={option} to={funnelEntryUrl(search, option.id)} />
+              <FormTile option={option} to={funnelEntryUrl(search, option.id)} onPick={onPick} />
             </li>
           ),
         )}

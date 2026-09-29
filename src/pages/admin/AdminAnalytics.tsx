@@ -1,4 +1,5 @@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { FunnelTab } from "@/components/admin/analytics/FunnelTab";
 import { PlatformTab } from "@/components/admin/analytics/PlatformTab";
 import { VisitorTab } from "@/components/admin/analytics/VisitorTab";
 import { usePlatformStats } from "@/components/admin/analytics/usePlatformStats";
@@ -20,19 +21,23 @@ export default function AdminAnalytics() {
     <div className="space-y-8">
       <div>
         <h1 className="mb-2 text-xl font-bold sm:text-2xl md:text-3xl">Analytics</h1>
-        <p className="text-muted-foreground">Anfragen, Studio-Angebote und Besucher der letzten 30 Tage</p>
+        <p className="text-muted-foreground">Anfragen, Studio-Angebote, Besucher und Funnel-Abbrüche</p>
       </div>
 
       <Tabs defaultValue="platform" className="space-y-6">
-        <TabsList className="grid w-full max-w-md grid-cols-2">
+        <TabsList className="grid w-full max-w-lg grid-cols-3">
           <TabsTrigger value="platform">Marktplatz</TabsTrigger>
           <TabsTrigger value="visitors">Besucher</TabsTrigger>
+          <TabsTrigger value="funnels">Funnels</TabsTrigger>
         </TabsList>
         <TabsContent value="platform">
           <PlatformTab stats={platform.data} />
         </TabsContent>
         <TabsContent value="visitors">
           <VisitorTab stats={visitors.data} />
+        </TabsContent>
+        <TabsContent value="funnels">
+          <FunnelTab />
         </TabsContent>
       </Tabs>
     </div>

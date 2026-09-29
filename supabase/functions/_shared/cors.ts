@@ -32,7 +32,7 @@ const ALLOWED_ORIGINS: string[] = [
  * Checks whether the given origin is allowed.
  * Matches exact production origins, Netlify deploy previews, and localhost.
  */
-function isAllowedOrigin(origin: string | null): boolean {
+export function isAllowedOrigin(origin: string | null): boolean {
   if (!origin) return false;
 
   // Exact match for production domains

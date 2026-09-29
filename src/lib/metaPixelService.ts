@@ -13,6 +13,7 @@
  * 
  * Standard-Events (Meta-definiert):
  * - PageView: Automatisch bei Consent-Grant + Route-Wechsel
+ * - InitiateCheckout: Erste Antwort in einem Funnel (A, B, C)
  * - Lead: Küchenanfrage mit Kontaktdaten abgeschickt (Funnel A, B, C)
  * - CompleteRegistration: Nutzer- oder Studio-Registrierung abgeschlossen
  * - Contact: Kontaktformular abgesendet
@@ -162,6 +163,17 @@ export function trackMetaLead(params?: {
     content_category: params?.content_category || 'Küche',
     value: params?.value || 0,
     currency: params?.currency || 'EUR',
+  });
+}
+
+/**
+ * InitiateCheckout - Küchenanfrage begonnen (erste Antwort in Funnel A, B oder C).
+ */
+export function trackMetaInitiateCheckout(params: { content_name: string; content_category: string }): void {
+  safeFbq('track', 'InitiateCheckout', {
+    content_name: params.content_name,
+    content_category: params.content_category,
+    currency: 'EUR',
   });
 }
 

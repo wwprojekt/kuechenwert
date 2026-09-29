@@ -54,6 +54,7 @@ export function ContactStep({
   submitting,
   error,
   onSubmit,
+  onInvalid,
   turnstileRef,
 }: {
   estimate: KitchenEstimate;
@@ -64,6 +65,8 @@ export function ContactStep({
   submitting: boolean;
   error: string | null;
   onSubmit: (values: ContactValues) => void;
+  /** Absenden mit Fehlern: Feldschlüssel für die Funnel-Telemetrie. */
+  onInvalid?: (fields: string[]) => void;
   turnstileRef: (node: HTMLDivElement | null) => void;
 }) {
   const {
@@ -91,7 +94,11 @@ export function ContactStep({
   });
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} noValidate className="grid gap-6 lg:grid-cols-[1.35fr_1fr]">
+    <form
+      onSubmit={handleSubmit(onSubmit, (invalid) => onInvalid?.(Object.keys(invalid)))}
+      noValidate
+      className="grid gap-6 lg:grid-cols-[1.35fr_1fr]"
+    >
       <div className="space-y-6 rounded-2xl border bg-card p-5 sm:p-7">
         <div>
           <h3 className="text-lg font-bold text-foreground">Wohin dürfen die Studios ihre Angebote schicken?</h3>
@@ -177,7 +184,12 @@ export function ContactStep({
             name="share_with_studios"
             render={({ field }) => (
               <label className="flex cursor-pointer items-start gap-3 text-sm leading-relaxed">
-                <Checkbox checked={!!field.value} onCheckedChange={(v) => field.onChange(v === true)} className="mt-0.5" />
+                <Checkbox
+                  data-track="share_with_studios"
+                  checked={!!field.value}
+                  onCheckedChange={(v) => field.onChange(v === true)}
+                  className="mt-0.5"
+                />
                 <span>
                   Ich willige ein, dass KüchenWert meine Planung ohne Kontaktdaten freigeschalteten Küchenstudios in meiner Region zur
                   Angebotserstellung zeigt und meine Kontaktdaten an das von mir gewählte Studio sowie an bis zu drei Studios zur persönlichen
@@ -192,7 +204,12 @@ export function ContactStep({
             name="contact_by_phone"
             render={({ field }) => (
               <label className="flex cursor-pointer items-start gap-3 text-sm leading-relaxed">
-                <Checkbox checked={field.value} onCheckedChange={(v) => field.onChange(v === true)} className="mt-0.5" />
+                <Checkbox
+                  data-track="contact_by_phone"
+                  checked={field.value}
+                  onCheckedChange={(v) => field.onChange(v === true)}
+                  className="mt-0.5"
+                />
                 <span>Studios und KüchenWert dürfen mich zu meinem Projekt auch telefonisch kontaktieren.</span>
               </label>
             )}
@@ -202,7 +219,12 @@ export function ContactStep({
             name="marketing"
             render={({ field }) => (
               <label className="flex cursor-pointer items-start gap-3 text-sm leading-relaxed text-muted-foreground">
-                <Checkbox checked={field.value} onCheckedChange={(v) => field.onChange(v === true)} className="mt-0.5" />
+                <Checkbox
+                  data-track="marketing"
+                  checked={field.value}
+                  onCheckedChange={(v) => field.onChange(v === true)}
+                  className="mt-0.5"
+                />
                 <span>Ich möchte Planungstipps und Aktionen von KüchenWert per E-Mail erhalten (jederzeit abbestellbar).</span>
               </label>
             )}
@@ -213,7 +235,12 @@ export function ContactStep({
               name="ai_training"
               render={({ field }) => (
                 <label className="flex cursor-pointer items-start gap-3 text-sm leading-relaxed text-muted-foreground">
-                  <Checkbox checked={field.value} onCheckedChange={(v) => field.onChange(v === true)} className="mt-0.5" />
+                  <Checkbox
+                    data-track="ai_training"
+                    checked={field.value}
+                    onCheckedChange={(v) => field.onChange(v === true)}
+                    className="mt-0.5"
+                  />
                   <span>
                     Meine Raumfotos und Bewertungen dürfen ohne Namen und Kontaktdaten gespeichert werden, um die KI-Visualisierung von
                     KüchenWert zu verbessern – auch für das Training eigener Modelle. Höchstens 36 Monate, Widerruf jederzeit auf der

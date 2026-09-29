@@ -19,6 +19,7 @@ import {
 import type { ValidContact } from "@/features/funnel-a/validation";
 import { ApiError, errorMessage } from "@/features/marketplace/api-client";
 import { storeProjectToken } from "@/features/marketplace/project-token";
+import { useFunnelTelemetry } from "@/hooks/useFunnelTelemetry";
 import { useTurnstile } from "@/hooks/useTurnstile";
 import { getConsentedClickIds } from "@/lib/clickIdService";
 import { trackFunnelStep, trackFunnelSubmitError } from "@/lib/funnelAnalytics";
@@ -42,6 +43,13 @@ export function FunnelAClient({ slug }: { slug: FunnelAStepSlug }) {
   const prevSlug = index > 0 ? FUNNEL_A_SLUGS[index - 1] : undefined;
   const nextSlug = index < FUNNEL_A_SLUGS.length - 1 ? FUNNEL_A_SLUGS[index + 1] : undefined;
   const missingSlug = firstMissingStep(answers);
+  const telemetry = useFunnelTelemetry({
+    funnel: "a",
+    step: slug,
+    stepIndex: index,
+    stepLabel: step.eyebrow,
+    totalSteps: FUNNEL_A_SLUGS.length,
+  });
 
   useEffect(() => {
     trackFunnelStep("a", slug, index, FUNNEL_A_SLUGS.length);
@@ -49,11 +57,15 @@ export function FunnelAClient({ slug }: { slug: FunnelAStepSlug }) {
 
   const goTo = useCallback((target: FunnelAStepSlug) => navigate(stepPath(target)), [navigate]);
   const goNext = useCallback(() => {
-    if (nextSlug) goTo(nextSlug);
-  }, [goTo, nextSlug]);
+    if (!nextSlug) return;
+    telemetry.next();
+    goTo(nextSlug);
+  }, [goTo, nextSlug, telemetry]);
   const goBack = useCallback(() => {
-    if (prevSlug) goTo(prevSlug);
-  }, [goTo, prevSlug]);
+    if (!prevSlug) return;
+    telemetry.back();
+    goTo(prevSlug);
+  }, [goTo, prevSlug, telemetry]);
 
   // Fotos des nächsten Schritts vorladen, damit die Kacheln sofort vollständig erscheinen.
   useEffect(() => {
@@ -65,7 +77,9 @@ export function FunnelAClient({ slug }: { slug: FunnelAStepSlug }) {
   }, [nextSlug]);
 
   const handleSubmit = async (valid: ValidContact, website: string) => {
+    telemetry.submitClicked();
     if (missingSlug) {
+      telemetry.validationFailed([missingSlug]);
       goTo(missingSlug);
       return;
     }
@@ -83,6 +97,7 @@ export function FunnelAClient({ slug }: { slug: FunnelAStepSlug }) {
       });
       clear();
       clearSubmissionId("a");
+      telemetry.submitSucceeded();
       // Ohne Token (Honeypot) gibt es keinen Lead – also auch keine Conversion.
       if (!result.project_token) {
         navigate(THANK_YOU_PATH, { replace: true });
@@ -96,11 +111,14 @@ export function FunnelAClient({ slug }: { slug: FunnelAStepSlug }) {
       if (err instanceof ApiError && err.code === "project_link") {
         clear();
         clearSubmissionId("a");
+        telemetry.submitSucceeded();
         await trackFunnelALead(valid, answers);
         navigate(THANK_YOU_PATH, { replace: true });
         return;
       }
-      trackFunnelSubmitError("a", err instanceof ApiError ? err.code ?? `http_${err.status}` : "network");
+      const reason = err instanceof ApiError ? err.code ?? `http_${err.status}` : "network";
+      trackFunnelSubmitError("a", reason);
+      telemetry.submitFailed(reason);
       setSubmitError(errorMessage(err));
       resetTurnstile();
       setSubmitting(false);
@@ -108,6 +126,7 @@ export function FunnelAClient({ slug }: { slug: FunnelAStepSlug }) {
   };
 
   const nextLabel = step.kind === "choice" && !step.required && !isStepAnswered(step, answers) ? "Überspringen" : "Weiter";
+  const blockedHint = step.kind === "plz" ? "Bitte geben Sie Ihre fünfstellige Postleitzahl ein." : "Bitte wählen Sie eine Antwort aus.";
 
   return (
     <FunnelShell
@@ -119,6 +138,8 @@ export function FunnelAClient({ slug }: { slug: FunnelAStepSlug }) {
       onBack={goBack}
       onNext={step.kind === "contact" ? undefined : goNext}
       canProceed={canLeaveStep(step, answers)}
+      blockedHint={blockedHint}
+      onBlocked={() => telemetry.validationFailed([step.kind === "contact" ? slug : step.field])}
       nextLabel={nextLabel}
     >
       {step.kind === "contact" ? (
@@ -126,6 +147,10 @@ export function FunnelAClient({ slug }: { slug: FunnelAStepSlug }) {
           contact={contact}
           onChange={patchContact}
           onSubmit={handleSubmit}
+          onInvalid={(fields) => {
+            telemetry.submitClicked();
+            telemetry.validationFailed(fields);
+          }}
           submitting={submitting}
           error={submitError}
           turnstileRef={turnstileCallbackRef}

@@ -21,6 +21,8 @@ interface ContactStepProps {
   contact: FunnelAContact;
   onChange: (patch: Partial<FunnelAContact>) => void;
   onSubmit: (contact: ValidContact, website: string) => void;
+  /** Absenden mit Fehlern: Feldschlüssel für die Funnel-Telemetrie. */
+  onInvalid?: (fields: ContactField[]) => void;
   submitting: boolean;
   error: string | null;
   turnstileRef: (node: HTMLDivElement | null) => void;
@@ -28,7 +30,7 @@ interface ContactStepProps {
   missing: { label: string; onFix: () => void } | null;
 }
 
-export function ContactStep({ contact, onChange, onSubmit, submitting, error, turnstileRef, missing }: ContactStepProps) {
+export function ContactStep({ contact, onChange, onSubmit, onInvalid, submitting, error, turnstileRef, missing }: ContactStepProps) {
   const [website, setWebsite] = useState("");
   const [attempted, setAttempted] = useState(false);
   const [touched, setTouched] = useState<Partial<Record<ContactField, boolean>>>({});
@@ -48,8 +50,9 @@ export function ContactStep({ contact, onChange, onSubmit, submitting, error, tu
     if (submitting) return;
     setAttempted(true);
     if (!validation.ok) {
-      const first = CONTACT_FIELD_ORDER.find((field) => validation.errors[field]);
-      if (first) document.getElementById(fieldId(first))?.focus();
+      const failed = CONTACT_FIELD_ORDER.filter((field) => validation.errors[field]);
+      onInvalid?.(failed);
+      if (failed[0]) document.getElementById(fieldId(failed[0]))?.focus();
       return;
     }
     onSubmit(validation.value, website);

@@ -21,6 +21,10 @@ verify_jwt = false
 [functions.kw-contact]
 verify_jwt = false
 
+# Nimmt sendBeacon-Anfragen ohne Header an; Origin-Prüfung und Rate-Limit in der Function.
+[functions.kw-funnel-telemetry]
+verify_jwt = false
+
 [functions.kw-market-worker]
 verify_jwt = false
 

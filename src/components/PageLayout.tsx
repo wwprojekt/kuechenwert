@@ -24,6 +24,12 @@ interface PageLayoutProps {
   hideHeader?: boolean;
   /** Blendet den Footer aus (z.B. im Wizard-Flow) */
   hideFooter?: boolean;
+  /**
+   * Ersetzt Kopf und Fußzeile der Website, z. B. im Fokusmodus der Funnels
+   * (FunnelHeader/FunnelFooter); dann ohne „Nach oben“-Button.
+   */
+  header?: ReactNode;
+  footer?: ReactNode;
 }
 
 const INDEX_ROBOTS = "index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1";
@@ -43,7 +49,10 @@ const PageLayout = ({
   breadcrumbs,
   hideHeader = false,
   hideFooter = false,
+  header,
+  footer,
 }: PageLayoutProps) => {
+  const customChrome = header !== undefined || footer !== undefined;
   const { settings } = useSettings();
   const location = useLocation();
   const siteName = settings?.site_name || BRAND.name;
@@ -88,7 +97,7 @@ const PageLayout = ({
         )}
       </Helmet>
       <div className="flex flex-col min-h-screen">
-        {!hideHeader && <Header />}
+        {!hideHeader && (header ?? <Header />)}
         <main id="main-content" tabIndex={-1} className="flex-1 outline-none">
           {showBreadcrumbs && (
             <div className="container mx-auto px-4 pt-4">
@@ -97,8 +106,8 @@ const PageLayout = ({
           )}
           {children}
         </main>
-        {!hideFooter && <Footer />}
-        <ScrollToTop />
+        {!hideFooter && (footer ?? <Footer />)}
+        {!customChrome && <ScrollToTop />}
       </div>
     </>
   );

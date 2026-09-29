@@ -1,6 +1,9 @@
 import { useEffect, useRef, type ReactNode } from "react";
 import { ArrowLeft, ArrowRight, BadgeEuro, Clock3, Loader2, ShieldCheck } from "lucide-react";
-import { FOCUS_RING, FunnelHeader } from "@/components/funnel/funnel-shell";
+import { FunnelFooter } from "@/components/funnel/funnel-footer";
+import { FOCUS_RING, FunnelHeader } from "@/components/funnel/funnel-header";
+import { FunnelProgress } from "@/components/funnel/funnel-progress";
+import { useVirtualKeyboardOpen } from "@/hooks/useVirtualKeyboardOpen";
 import { cn } from "@/lib/utils";
 
 export interface FunnelBShellProps {
@@ -10,12 +13,16 @@ export interface FunnelBShellProps {
   stepLabel: string;
   stepDescription?: string;
   onBack: () => void;
+  /** Prüft selbst, ob alles Nötige ausgefüllt ist, und zeigt sonst, was fehlt. */
   onNext: () => void;
-  canProceed: boolean;
   isFinalStep?: boolean;
   isSubmitting?: boolean;
   nextLabel?: string;
   submitLabel?: string;
+  /** Logo-Klick fragt nach, sobald Angaben gemacht wurden. */
+  guardExit?: boolean;
+  /** Unterlagen überstehen kein Neuladen: dann warnt der Browser. */
+  guardUnload?: boolean;
   /** optional sidebar content (Trust, Tipps) */
   sidebar?: ReactNode;
 }
@@ -28,20 +35,10 @@ const TRUST_ITEMS = [
 
 type StepNavProps = Pick<
   FunnelBShellProps,
-  "currentStep" | "onBack" | "onNext" | "canProceed" | "isFinalStep" | "isSubmitting" | "nextLabel" | "submitLabel"
+  "currentStep" | "onBack" | "onNext" | "isFinalStep" | "isSubmitting" | "nextLabel" | "submitLabel"
 > & { compact?: boolean };
 
-function StepNav({
-  currentStep,
-  onBack,
-  onNext,
-  canProceed,
-  isFinalStep,
-  isSubmitting,
-  nextLabel,
-  submitLabel,
-  compact,
-}: StepNavProps) {
+function StepNav({ currentStep, onBack, onNext, isFinalStep, isSubmitting, nextLabel, submitLabel, compact }: StepNavProps) {
   return (
     <>
       <button
@@ -56,7 +53,7 @@ function StepNav({
         <button
           type="button"
           onClick={onNext}
-          disabled={!canProceed || isSubmitting}
+          disabled={isSubmitting}
           className={cn("btn-primary gap-1.5", compact && "flex-1", FOCUS_RING)}
         >
           {isSubmitting ? (
@@ -68,12 +65,7 @@ function StepNav({
           )}
         </button>
       ) : (
-        <button
-          type="button"
-          onClick={onNext}
-          disabled={!canProceed}
-          className={cn("btn-primary gap-1.5", compact && "flex-1", FOCUS_RING)}
-        >
+        <button type="button" onClick={onNext} className={cn("btn-primary gap-1.5", compact && "flex-1", FOCUS_RING)}>
           {nextLabel} <ArrowRight className="h-4 w-4" aria-hidden="true" />
         </button>
       )}
@@ -89,16 +81,17 @@ export function FunnelBShell({
   stepDescription,
   onBack,
   onNext,
-  canProceed,
   isFinalStep = false,
   isSubmitting = false,
   nextLabel = "Weiter",
   submitLabel = "Anfrage absenden",
+  guardExit = false,
+  guardUnload = false,
   sidebar,
 }: FunnelBShellProps) {
-  const percentage = Math.round(((currentStep + 1) / totalSteps) * 100);
   const headingRef = useRef<HTMLHeadingElement>(null);
   const shownStep = useRef(currentStep);
+  const keyboardOpen = useVirtualKeyboardOpen();
 
   // Nach einem Schrittwechsel die neue Frage fokussieren (Tastatur, Screenreader).
   useEffect(() => {
@@ -108,37 +101,16 @@ export function FunnelBShell({
     return () => window.cancelAnimationFrame(frame);
   }, [currentStep]);
 
-  const nav = { currentStep, onBack, onNext, canProceed, isFinalStep, isSubmitting, nextLabel, submitLabel };
+  const nav = { currentStep, onBack, onNext, isFinalStep, isSubmitting, nextLabel, submitLabel };
 
   return (
     <div className="flex min-h-screen flex-col bg-surface-soft">
-      <FunnelHeader />
+      <FunnelHeader guardExit={guardExit} guardUnload={guardUnload} containerClassName="mx-auto w-full max-w-5xl px-4 sm:px-6" />
 
-      <main className="flex flex-1 justify-center px-4 py-6 sm:py-10 lg:py-14">
+      <main data-funnel-telemetry="" className="flex flex-1 justify-center px-4 py-6 sm:py-10 lg:py-14">
         <div className="grid w-full max-w-5xl gap-6 lg:grid-cols-[1fr_280px]">
           <div className="flex min-w-0 flex-col">
-            <div className="mb-2 flex items-center justify-between">
-              <span className="text-[11px] font-semibold uppercase tracking-[0.14em] text-ink-muted">
-                Angebots-Vergleich
-              </span>
-              <span className="text-xs font-medium tabular-nums text-ink-muted">
-                Schritt {currentStep + 1} <span className="text-ink-muted">/ {totalSteps}</span>
-              </span>
-            </div>
-            <div
-              role="progressbar"
-              aria-valuenow={currentStep + 1}
-              aria-valuemin={1}
-              aria-valuemax={totalSteps}
-              aria-valuetext={`Schritt ${currentStep + 1} von ${totalSteps}`}
-              aria-label="Fortschritt"
-              className="h-[3px] w-full overflow-hidden rounded-full bg-border"
-            >
-              <div
-                className="h-full rounded-full bg-brand-500 transition-[width] duration-500 ease-out motion-reduce:transition-none"
-                style={{ width: `${percentage}%` }}
-              />
-            </div>
+            <FunnelProgress label="Angebots-Vergleich" current={currentStep} total={totalSteps} />
 
             <ul className="mt-3 flex flex-wrap items-center justify-center gap-x-5 gap-y-1.5 text-xs text-ink-muted">
               {TRUST_ITEMS.map(({ icon: Icon, label }) => (
@@ -182,7 +154,14 @@ export function FunnelBShell({
         </div>
       </main>
 
-      <div className="sticky bottom-0 z-30 border-t border-border bg-card/95 px-4 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-3 backdrop-blur sm:hidden">
+      <FunnelFooter />
+
+      <div
+        className={cn(
+          "sticky bottom-0 z-30 border-t border-border bg-card/95 px-4 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-3 backdrop-blur sm:hidden",
+          keyboardOpen && "hidden",
+        )}
+      >
         <div className="flex items-center justify-between gap-3">
           <StepNav {...nav} compact />
         </div>

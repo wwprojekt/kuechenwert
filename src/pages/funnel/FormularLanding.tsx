@@ -2,10 +2,14 @@ import { ArrowUp, BadgeCheck, Lock, ShieldCheck } from "lucide-react";
 import { useEffect, useRef } from "react";
 import { useLocation } from "react-router-dom";
 import PageLayout from "@/components/PageLayout";
+import { FunnelFooter } from "@/components/funnel/funnel-footer";
+import { FunnelHeader } from "@/components/funnel/funnel-header";
 import { Button } from "@/components/ui/button";
 import { FormPicker } from "@/features/funnel-a/landing/FormPicker";
 import { HowItWorksSteps } from "@/features/funnel-a/landing/HowItWorksSteps";
 import { LandingFaq } from "@/features/funnel-a/landing/LandingFaq";
+import { FUNNEL_A_FIRST_SLUG, FUNNEL_A_SLUGS, findStep } from "@/features/funnel-a/steps";
+import { useFunnelTelemetry } from "@/hooks/useFunnelTelemetry";
 import { captureUtmParams } from "@/lib/utm";
 
 const TRUST = [
@@ -19,12 +23,19 @@ const QUESTION_ID = "formular-frage";
 /**
  * /formular – Einstieg in Funnel A („Küchenangebote einholen“): Die erste
  * Frage steht direkt unter dem Hero, ein Klick auf eine Küchenform startet
- * den Funnel bei Schritt 2.
+ * den Funnel bei Schritt 2. Schon hier gilt der Fokusmodus der Funnels.
  */
 export default function FormularLanding() {
   const { search } = useLocation();
   const cardRef = useRef<HTMLDivElement>(null);
   const questionRef = useRef<HTMLHeadingElement>(null);
+  const telemetry = useFunnelTelemetry({
+    funnel: "a",
+    step: FUNNEL_A_FIRST_SLUG,
+    stepIndex: 0,
+    stepLabel: findStep(FUNNEL_A_FIRST_SLUG).eyebrow,
+    totalSteps: FUNNEL_A_SLUGS.length,
+  });
 
   useEffect(() => {
     captureUtmParams();
@@ -42,6 +53,8 @@ export default function FormularLanding() {
       description="Beschreiben Sie Ihre Wunschküche in ca. 3 Minuten: Geprüfte Küchenstudios aus Ihrer Region schicken Ihnen Angebote. Kostenlos und unverbindlich vergleichen."
       keywords="Küchenangebote vergleichen, Küche Angebote einholen, Küchenstudio Angebot, neue Küche Angebot, Küchenplanung kostenlos"
       canonicalPath="/formular"
+      header={<FunnelHeader containerClassName="container max-w-5xl px-4 sm:px-6" />}
+      footer={<FunnelFooter className="border-t border-border" />}
     >
       <section className="bg-gradient-to-b from-primary/[0.07] via-background to-background">
         <div className="container max-w-5xl px-4 pt-8 sm:px-6 sm:pt-12">
@@ -63,7 +76,7 @@ export default function FormularLanding() {
             </ul>
           </div>
 
-          <div ref={cardRef} className="mt-8 scroll-mt-24 rounded-2xl border bg-card p-4 shadow-lg sm:mt-10 sm:p-6 lg:p-8">
+          <div ref={cardRef} data-funnel-telemetry="" className="mt-8 scroll-mt-24 rounded-2xl border bg-card p-4 shadow-lg sm:mt-10 sm:p-6 lg:p-8">
             <p className="text-sm font-semibold text-primary">Frage 1 · insgesamt ca. 3 Minuten</p>
             <h2 id={QUESTION_ID} ref={questionRef} tabIndex={-1} className="mt-1 text-xl font-bold text-foreground outline-none sm:text-2xl">
               Welche Form soll Ihre Küche haben?
@@ -72,7 +85,7 @@ export default function FormularLanding() {
               Wählen Sie die Form, die Ihrem Raum am nächsten kommt – danach geht es direkt weiter.
             </p>
             <div className="mt-5">
-              <FormPicker search={search} labelledBy={QUESTION_ID} />
+              <FormPicker search={search} labelledBy={QUESTION_ID} onPick={telemetry.next} />
             </div>
           </div>
         </div>

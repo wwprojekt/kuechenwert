@@ -10,6 +10,7 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { useSettings } from '@/contexts/SettingsContext';
 import { trackWhatsAppClick } from '@/lib/gadsConversionService';
+import { isFunnelPath } from '@/lib/funnelRoutes';
 import { trackMetaWhatsAppClick } from '@/lib/metaPixelService';
 import { BRAND } from '@/lib/brand';
 
@@ -18,11 +19,11 @@ export const WhatsAppButton = () => {
   const { settings } = useSettings();
   const location = useLocation();
 
-  // Hide on admin, dashboard and in the funnels. Die Funnels zeigen die
-  // Support-Nummer im Kopf, und die schwebende Blase würde auf Mobile die
-  // fixierte Zurück/Weiter-Leiste verdecken.
-  const hiddenRoutes = ['/admin', '/dashboard', '/funnel'];
-  const shouldHide = hiddenRoutes.some(route => location.pathname.startsWith(route));
+  // Hide on admin, dashboard and in the funnels (Fokusmodus inkl. /formular).
+  // Die Funnels zeigen die Support-Nummer im Kopf, und die schwebende Blase
+  // würde auf Mobile die fixierte Zurück/Weiter-Leiste verdecken.
+  const hiddenRoutes = ['/admin', '/dashboard'];
+  const shouldHide = isFunnelPath(location.pathname) || hiddenRoutes.some(route => location.pathname.startsWith(route));
 
   if (shouldHide) {
     return null;

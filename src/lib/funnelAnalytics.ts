@@ -1,6 +1,7 @@
 import { analyticsService } from "@/lib/analyticsService";
+import type { FunnelId } from "@/lib/funnelRoutes";
 
-export type FunnelId = "a" | "b" | "c";
+export type { FunnelId };
 
 const lastStep = new Map<FunnelId, string>();
 
@@ -18,6 +19,16 @@ export function trackFunnelStep(funnel: FunnelId, step: string, index: number, t
     action: "view",
     label: step,
     properties: { funnel, step, step_number: index + 1, total_steps: total },
+  });
+}
+
+/** Erste Antwort eines Durchlaufs: Startpunkt für die Abschlussquote in GA4. */
+export function trackFunnelStart(funnel: FunnelId): void {
+  analyticsService.trackEvent("funnel_start", {
+    category: `funnel_${funnel}`,
+    action: "start",
+    label: funnel,
+    properties: { funnel },
   });
 }
 

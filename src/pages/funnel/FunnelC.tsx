@@ -32,6 +32,7 @@ import { EquipmentStep } from "@/features/planner/steps/EquipmentStep";
 import { RoomStep } from "@/features/planner/steps/RoomStep";
 import { StyleStep } from "@/features/planner/steps/StyleStep";
 import { VisualizeStep } from "@/features/planner/steps/VisualizeStep";
+import { useFunnelTelemetry } from "@/hooks/useFunnelTelemetry";
 import { useTurnstile } from "@/hooks/useTurnstile";
 import { trackFunnelStep, trackFunnelSubmitError, trackPlannerFeedback, trackPlannerRender } from "@/lib/funnelAnalytics";
 import { generateTransactionId, setEnhancedConversionFromForm, trackKitchenFunnelLead } from "@/lib/gadsConversionService";
@@ -107,6 +108,13 @@ export default function FunnelC() {
   }, [searchParams, setSearchParams, patchConfig, setForm]);
 
   const index = PLANNER_STEPS.findIndex((s) => s.id === state.step);
+  const telemetry = useFunnelTelemetry({
+    funnel: "c",
+    step: state.step,
+    stepIndex: index,
+    stepLabel: PLANNER_STEPS[index]?.label ?? state.step,
+    totalSteps: PLANNER_STEPS.length,
+  });
 
   useEffect(() => {
     trackFunnelStep("c", state.step, index, PLANNER_STEPS.length);
@@ -140,16 +148,19 @@ export default function FunnelC() {
       const firstIssue = Object.keys(wallIssues)[0];
       if (state.step === "raum" && stepIndex(step) > 0 && firstIssue) {
         setShowWallErrors(true);
+        telemetry.validationFailed(Object.keys(wallIssues).map((key) => `wall-${key}`));
         const field = document.getElementById(`wall-${firstIssue}`);
         field?.focus({ preventScroll: true });
         field?.scrollIntoView({ block: "center", behavior: "smooth" });
         return;
       }
+      if (stepIndex(step) > stepIndex(state.step)) telemetry.next();
+      else telemetry.back();
       const params = new URLSearchParams(searchParams);
       params.set("schritt", step);
       setSearchParams(params);
     },
-    [searchParams, setSearchParams, state.step, wallIssues],
+    [searchParams, setSearchParams, state.step, wallIssues, telemetry],
   );
 
   const next = () => goTo(PLANNER_STEPS[Math.min(index + 1, PLANNER_STEPS.length - 1)]!.id);
@@ -252,6 +263,7 @@ export default function FunnelC() {
   };
 
   const handleSubmit = async (values: ContactValues) => {
+    telemetry.submitClicked();
     setSubmitting(true);
     setSubmitError(null);
     try {
@@ -307,12 +319,15 @@ export default function FunnelC() {
         }
       }
 
+      telemetry.submitSucceeded();
       planner.markSubmitted();
       clearPlannerStorage();
       storeProjectToken(res.project_token);
       navigate("/projekt?neu=1", { replace: true });
     } catch (err) {
-      trackFunnelSubmitError("c", err instanceof ApiError ? err.code ?? `http_${err.status}` : err instanceof Error ? err.name : "unknown");
+      const reason = err instanceof ApiError ? err.code ?? `http_${err.status}` : err instanceof Error ? err.name : "unknown";
+      trackFunnelSubmitError("c", reason);
+      telemetry.submitFailed(reason);
       setSubmitError(errorMessage(err));
       resetTurnstile();
     } finally {
@@ -340,6 +355,7 @@ export default function FunnelC() {
         onNext={next}
         nextLabel={nextLabel}
         showSummary={index <= 3}
+        guardExit={state.furthestIndex > 0 || state.photos.length > 0}
       >
         {state.step === "raum" && (
           <RoomStep
@@ -387,6 +403,10 @@ export default function FunnelC() {
             submitting={submitting}
             error={submitError}
             onSubmit={handleSubmit}
+            onInvalid={(fields) => {
+              telemetry.submitClicked();
+              telemetry.validationFailed(fields);
+            }}
             turnstileRef={turnstileCallbackRef}
           />
         )}

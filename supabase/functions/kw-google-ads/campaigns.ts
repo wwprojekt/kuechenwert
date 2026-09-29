@@ -11,7 +11,8 @@
  * Callouts, Snippets, Anruf, Firmenname, Logo, Bilder), die nicht im Plan
  * stehen, werden entfernt; automatisch erstellte Verknüpfungen bleiben.
  * Remarketing-Listen (Präfix „KüchenWert | “) hängen zur Beobachtung an den
- * Kampagnen mit observeAudiences; fremde Listen bleiben unberührt.
+ * Kampagnen mit observeAudiences; abweichende Regeln werden angeglichen,
+ * fremde Listen bleiben unberührt.
  * Kampagnen, Anzeigengruppen und Listen werden nie gelöscht.
  *
  * Drei Pakete, jedes ein atomarer Mutate: „main“ (alles außer den beiden
@@ -95,7 +96,7 @@ interface LiveState {
   campaignLinks: Map<string, AssetLink[]>;
   customerLinks: AssetLink[];
   /** Eigene Remarketing-Listen (REMARKETING_PREFIX) nach Name. */
-  userLists: Map<string, { resourceName: string; lifespanDays: number; rules: string }>;
+  userLists: Map<string, { resourceName: string; rules: string }>;
   /** `${campaign}|${userList}` → Kriterium. */
   campaignUserLists: Map<string, string>;
 }
@@ -118,7 +119,7 @@ function liveQueries(plan: AccountPlan) {
       campaign_criterion.location.geo_target_constant, campaign_criterion.language.language_constant,
       campaign_criterion.user_interest.user_interest_category, campaign_criterion.user_list.user_list
       FROM campaign_criterion WHERE campaign.status != 'REMOVED'`,
-    userLists: `SELECT user_list.resource_name, user_list.name, user_list.membership_life_span,
+    userLists: `SELECT user_list.resource_name, user_list.name,
       user_list.rule_based_user_list.flexible_rule_user_list.inclusive_operands,
       user_list.rule_based_user_list.flexible_rule_user_list.exclusive_operands FROM user_list
       WHERE user_list.type = 'RULE_BASED'`,
@@ -195,7 +196,6 @@ async function loadLive(client: GoogleAdsClient, plan: AccountPlan): Promise<Liv
     const flexible = obj(obj(u.ruleBasedUserList).flexibleRuleUserList);
     live.userLists.set(str(u.name), {
       resourceName: str(u.resourceName),
-      lifespanDays: Number(u.membershipLifeSpan ?? 0),
       rules: ruleSignature(liveRuleItems(flexible.inclusiveOperands), liveRuleItems(flexible.exclusiveOperands)),
     });
   }
@@ -322,21 +322,39 @@ function campaignResource(c: CampaignPlan, resourceName: string, budget: string)
   };
 }
 
-const ruleSignature = (visited: string[], notVisited: string[]) => JSON.stringify([[...visited].sort(), [...notVisited].sort()]);
-/** URL-Regeln einer Liste wie im Plan: CONTAINS-Werte, andere Regeln mit Operator. */
+const ruleSignature = (inclusive: string[], exclusive: string[]) => JSON.stringify([[...inclusive].sort(), [...exclusive].sort()]);
+const planRuleSignature = (l: RemarketingListPlan) =>
+  ruleSignature(l.visited.map((v) => `${v}@${l.lifespanDays}`), l.notVisited.map((v) => `${v}@${l.lifespanDays}`));
+/** Operanden wie im Plan: „Wert@Tage“ für URL enthält, andere Regeln mit Operator. */
 const liveRuleItems = (operands: unknown) =>
-  arr(operands)
-    .flatMap((o) => arr(obj(obj(o).rule).ruleItemGroups))
-    .flatMap((g) => arr(obj(g).ruleItems))
-    .map((i) => {
-      const item = obj(i);
-      const rule = obj(item.stringRuleItem);
-      return item.name === "url__" && rule.operator === "CONTAINS" ? str(rule.value) : `${str(item.name)}:${str(rule.operator)}:${str(rule.value)}`;
-    });
+  arr(operands).flatMap((o) => {
+    const days = String(obj(o).lookbackWindowDays ?? "");
+    return arr(obj(obj(o).rule).ruleItemGroups)
+      .flatMap((g) => arr(obj(g).ruleItems))
+      .map((i) => {
+        const item = obj(i);
+        const rule = obj(item.stringRuleItem);
+        const value = item.name === "url__" && rule.operator === "CONTAINS"
+          ? str(rule.value)
+          : `${str(item.name)}:${str(rule.operator)}:${str(rule.value)}`;
+        return `${value}@${days}`;
+      });
+  });
 
-/** Eine Seite je Operand: Google lehnt mehrere Regelgruppen in einem Operanden ab (TOO_MANY). */
-const urlOperand = (value: string) => ({
+/**
+ * Eine Seite je Operand: Google lehnt mehrere Regelgruppen in einem Operanden
+ * ab (TOO_MANY). Die Dauer steht am Operanden (lookback_window_days), weil
+ * Google membership_life_span bei regelbasierten Listen ignoriert.
+ */
+const urlOperand = (value: string, days: number) => ({
   rule: { ruleItemGroups: [{ ruleItems: [{ name: "url__", stringRuleItem: { operator: "CONTAINS", value } }] }] },
+  lookbackWindowDays: String(days),
+});
+
+const flexibleRules = (l: RemarketingListPlan) => ({
+  inclusiveRuleOperator: "OR",
+  inclusiveOperands: l.visited.map((v) => urlOperand(v, l.lifespanDays)),
+  exclusiveOperands: l.notVisited.map((v) => urlOperand(v, l.lifespanDays)),
 });
 
 function userListResource(l: RemarketingListPlan): Obj {
@@ -344,15 +362,7 @@ function userListResource(l: RemarketingListPlan): Obj {
     name: l.name,
     description: l.description,
     membershipStatus: "OPEN",
-    membershipLifeSpan: String(l.lifespanDays),
-    ruleBasedUserList: {
-      prepopulationStatus: "REQUESTED",
-      flexibleRuleUserList: {
-        inclusiveRuleOperator: "OR",
-        inclusiveOperands: l.visited.map(urlOperand),
-        exclusiveOperands: l.notVisited.map(urlOperand),
-      },
-    },
+    ruleBasedUserList: { prepopulationStatus: "REQUESTED", flexibleRuleUserList: flexibleRules(l) },
   };
 }
 
@@ -516,7 +526,7 @@ function planOperations(
     }
   }
 
-  // Remarketing-Listen: anlegen (Paket lists) bzw. Mitgliedsdauer angleichen
+  // Remarketing-Listen: anlegen (Paket lists) bzw. Regeln angleichen
   const userListRns: Array<string | undefined> = [];
   for (const l of plan.remarketingLists) {
     const existing = live.userLists.get(l.name);
@@ -526,17 +536,11 @@ function planOperations(
       userListRns.push(undefined);
       continue;
     }
-    if (existing.rules !== ruleSignature(l.visited, l.notVisited)) {
-      out.warnings.push(
-        `Remarketing „${l.name}“: Regeln im Konto weichen vom Plan ab. Zum Ändern die Liste im Plan umbenennen; ` +
-          "dann entsteht eine neue, und die alte wird von den Kampagnen gelöst.",
-      );
-    }
-    if (existing.lifespanDays !== l.lifespanDays) {
-      main.add("remarketingLists", `Remarketing „${l.name}“: ${l.lifespanDays} Tage`, {
+    if (existing.rules !== planRuleSignature(l)) {
+      main.add("remarketingLists", `Remarketing „${l.name}“: Regeln angleichen`, {
         userListOperation: {
-          update: { resourceName: existing.resourceName, membershipLifeSpan: String(l.lifespanDays) },
-          updateMask: "membership_life_span",
+          update: { resourceName: existing.resourceName, ruleBasedUserList: { flexibleRuleUserList: flexibleRules(l) } },
+          updateMask: "rule_based_user_list.flexible_rule_user_list",
         },
       });
     }
@@ -812,11 +816,7 @@ function registerCreatedLists(batch: Batch, response: unknown, live: LiveState) 
     const plan = KW_ADS_PLAN.remarketingLists.find((l) => l.name === create.name);
     const resourceName = str(obj(obj(results[i]).userListResult).resourceName);
     if (!plan || !resourceName) return;
-    live.userLists.set(plan.name, {
-      resourceName,
-      lifespanDays: plan.lifespanDays,
-      rules: ruleSignature(plan.visited, plan.notVisited),
-    });
+    live.userLists.set(plan.name, { resourceName, rules: planRuleSignature(plan) });
   });
 }
 

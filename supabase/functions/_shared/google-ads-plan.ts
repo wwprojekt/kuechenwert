@@ -97,17 +97,17 @@ export const THANK_YOU_PATH = "/funnel/danke";
 
 /**
  * Remarketing-Liste aus den Seitenaufrufen des Google-Tags. Befüllt wird sie nur
- * mit Marketing-Einwilligung (tracking-loader.js). Der Name ist der Schlüssel:
- * Regeln einer bestehenden Liste werden nicht umgeschrieben, sondern gemeldet.
+ * mit Marketing-Einwilligung (tracking-loader.js). Der Name ist der Schlüssel;
+ * weichen die Regeln einer bestehenden Liste ab, gleicht campaigns sie an.
  */
 export interface RemarketingListPlan {
   name: string;
   description: string;
-  /** Mitgliedsdauer in Tagen, höchstens 540. */
+  /** Zeitraum in Tagen (1–540) für Besuch und Ausschluss, zugleich Verweildauer auf der Liste. */
   lifespanDays: number;
   /** Seiten-URL enthält einen dieser Werte (oder). */
   visited: string[];
-  /** Ausgenommen, wer eine Seite mit einem dieser Werte aufgerufen hat. */
+  /** Ausgenommen, wer im selben Zeitraum eine Seite mit einem dieser Werte aufgerufen hat. */
   notVisited: string[];
 }
 

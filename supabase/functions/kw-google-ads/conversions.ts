@@ -10,6 +10,12 @@
  * stornierter Rechnungen zurück. Gehashte Kontaktdaten nur, wenn das Konto
  * die Kundendaten-Bedingungen akzeptiert und Enhanced Conversions für Leads
  * aktiviert hat. dryRun: Google prüft nur (validateOnly), nichts wird verbucht.
+ *
+ *   { action: "upload-conversions", probe: true }
+ * schickt eine erfundene Conversion und einen Rückzug nur zur Prüfung an
+ * Google, ohne Datenbank (z. B. nach einem Wechsel von GADS_API_VERSION).
+ * Erwartet sind Einzelfehler wie UNPARSEABLE_GCLID; ein Fehler für die ganze
+ * Anfrage heißt, das Format passt nicht mehr.
  */
 
 import type { SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2.100.1";
@@ -149,6 +155,32 @@ async function sendBatch(
       last_error: null,
     };
   });
+}
+
+export async function probeUploads(client: GoogleAdsClient) {
+  const actions = await uploadActions(client);
+  if (!actions.contact) return { ok: false, error: 'Offline-Conversions fehlen in Google Ads – erst action "setup" ausführen.' };
+  const orderId = `kw-probe-${Date.now()}`;
+  const conversion = await clickConversion(
+    { orderId, valueEur: 1, conversionAt: new Date(Date.now() - 3_600_000).toISOString(), gclid: "kw-probe-invalid" },
+    actions.contact,
+    false,
+  );
+  const verdict = async (method: "uploadClickConversions" | "uploadConversionAdjustments", body: Record<string, unknown>) => {
+    try {
+      const failures = partialFailureDetails(await client.callCustomer(method, { ...body, partialFailure: true, validateOnly: true }));
+      return { requestAccepted: true, failures: failures.map((f) => ({ code: f.code, field: f.field })) };
+    } catch (err) {
+      return { requestAccepted: false, error: describeGoogleAdsError(err) };
+    }
+  };
+  const upload = await verdict("uploadClickConversions", { conversions: [conversion] });
+  const retraction = await verdict("uploadConversionAdjustments", {
+    conversionAdjustments: [
+      { conversionAction: actions.contact, adjustmentType: "RETRACTION", adjustmentDateTime: googleAdsDateTime(new Date()), orderId },
+    ],
+  });
+  return { ok: upload.requestAccepted && retraction.requestAccepted, probe: true, upload, retraction };
 }
 
 export async function runUploadConversions(client: GoogleAdsClient, sb: SupabaseClient, dryRun: boolean) {

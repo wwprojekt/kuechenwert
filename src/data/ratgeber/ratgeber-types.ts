@@ -9,7 +9,7 @@ export interface RatgeberConfig {
   keywords: string;
   h1: string;
   heroSubtitle: string;
-  category: "brand" | "condition";
+  category: "brand" | "topic";
   brandName?: string;
   primaryCta: { text: string; href: string };
   secondaryCta: { text: string; href: string };

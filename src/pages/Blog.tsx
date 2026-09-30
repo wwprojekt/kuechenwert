@@ -11,6 +11,7 @@ import { Calendar, ArrowRight } from "lucide-react";
 import { Link } from "react-router-dom";
 import { format } from "date-fns";
 import { de } from "date-fns/locale";
+import { BLOG_CATEGORIES } from "@/data/blog-categories";
 
 interface BlogPost {
   id: string;
@@ -26,7 +27,7 @@ interface BlogPost {
 }
 
 const ALL_CATEGORIES = "Alle Artikel";
-const CATEGORIES = [ALL_CATEGORIES, "Planung", "Kosten & Budget", "Materialien & Geräte", "Kaufberatung", "Pflege"];
+const CATEGORIES = [ALL_CATEGORIES, ...BLOG_CATEGORIES];
 
 const BlogEmptyState = () => (
   <div className="mx-auto max-w-2xl py-12 text-center">

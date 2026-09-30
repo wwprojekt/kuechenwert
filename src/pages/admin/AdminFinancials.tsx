@@ -593,7 +593,7 @@ export default function AdminFinancials() {
       (statusFilter === 'draft' && derived.displayStatus === 'draft') ||
       (statusFilter === 'overdue' && derived.isOverdue);
     
-    const matchesType = typeFilter === 'all' || (invoice.invoice_type || 'commission') === typeFilter;
+    const matchesType = typeFilter === 'all' || invoice.invoice_type === typeFilter;
 
     const matchesDate = filterByDate(invoice);
     
@@ -856,8 +856,6 @@ export default function AdminFinancials() {
                     <SelectItem value="all">Alle Typen</SelectItem>
                     <SelectItem value="lead_purchase">Kontaktfreischaltungen</SelectItem>
                     <SelectItem value="lead_commission">Vermittlungsprovisionen</SelectItem>
-                    <SelectItem value="commission">Provisionen (alt)</SelectItem>
-                    <SelectItem value="seller_penalty">Vertragsstrafen (alt)</SelectItem>
                   </SelectContent>
                 </Select>
                 <Select value={dateFilter} onValueChange={setDateFilter}>
@@ -925,12 +923,6 @@ export default function AdminFinancials() {
                                 <span className="font-semibold text-primary cursor-pointer hover:underline" onClick={() => openInvoicePdf(invoice)}>
                                   {invoice.invoice_number}
                                 </span>
-                                {invoice.invoice_type === 'seller_penalty' && (
-                                  <Badge variant="destructive" className="text-[10px] px-1.5 py-0">
-                                    <Scale className="h-3 w-3 mr-0.5" />
-                                    Strafe
-                                  </Badge>
-                                )}
                               </div>
                               <div className="text-xs text-muted-foreground">
                                 {dealerName}
@@ -942,46 +934,30 @@ export default function AdminFinancials() {
                               )}
                             </div>
 
-                            {/* Project / Penalty Reason */}
+                            {/* Project */}
                             <div className="hidden lg:block min-w-[150px]">
-                              {invoice.invoice_type === 'seller_penalty' ? (
-                                <>
-                                  <div className="font-medium text-sm text-destructive">
-                                    {invoice.penalty_reason === 'anderweitiger_verkauf' ? 'Anderweitiger Verkauf' :
-                                     invoice.penalty_reason === 'vorzeitige_ruecknahme' ? 'Vorzeitige Rücknahme' :
-                                     invoice.penalty_reason === 'falsche_angaben' ? 'Falsche Angaben' :
-                                     'Vertragsstrafe'}
-                                  </div>
-                                  <div className="text-xs text-muted-foreground">
-                                    {invoice.invoice_date ? format(new Date(invoice.invoice_date), 'dd.MM.yyyy', { locale: de }) : ''}
-                                  </div>
-                                </>
+                              {projectLabel(invoice.lead) ? (
+                                <button
+                                  onClick={() => navigateToProject(invoice)}
+                                  className="flex items-center gap-1.5 font-medium text-sm text-primary hover:underline text-left"
+                                >
+                                  <ClipboardList className="h-3.5 w-3.5 shrink-0" />
+                                  {projectLabel(invoice.lead)}
+                                  <ExternalLink className="h-3 w-3 shrink-0 opacity-50" />
+                                </button>
                               ) : (
-                                <>
-                                  {projectLabel(invoice.lead) ? (
-                                    <button
-                                      onClick={() => navigateToProject(invoice)}
-                                      className="flex items-center gap-1.5 font-medium text-sm text-primary hover:underline text-left"
-                                    >
-                                      <ClipboardList className="h-3.5 w-3.5 shrink-0" />
-                                      {projectLabel(invoice.lead)}
-                                      <ExternalLink className="h-3 w-3 shrink-0 opacity-50" />
-                                    </button>
-                                  ) : (
-                                    <div className="text-sm text-muted-foreground">Kein Projekt</div>
-                                  )}
-                                  <div className="text-xs text-muted-foreground mt-0.5">
-                                    {invoiceTypeLabel(invoice.invoice_type)}
-                                  </div>
-                                  <div className="text-xs text-muted-foreground mt-0.5">
-                                    {invoice.invoice_date ? format(new Date(invoice.invoice_date), 'dd.MM.yyyy', { locale: de }) : ''}
-                                  </div>
-                                  <div className="text-xs text-muted-foreground">
-                                    Netto: {Number(invoice.net_amount || 0).toLocaleString('de-DE', { style: 'currency', currency: 'EUR' })}
-                                    {invoice.reverse_charge && <span className="ml-1 text-amber-600">(RC)</span>}
-                                  </div>
-                                </>
+                                <div className="text-sm text-muted-foreground">Kein Projekt</div>
                               )}
+                              <div className="text-xs text-muted-foreground mt-0.5">
+                                {invoiceTypeLabel(invoice.invoice_type)}
+                              </div>
+                              <div className="text-xs text-muted-foreground mt-0.5">
+                                {invoice.invoice_date ? format(new Date(invoice.invoice_date), 'dd.MM.yyyy', { locale: de }) : ''}
+                              </div>
+                              <div className="text-xs text-muted-foreground">
+                                Netto: {Number(invoice.net_amount || 0).toLocaleString('de-DE', { style: 'currency', currency: 'EUR' })}
+                                {invoice.reverse_charge && <span className="ml-1 text-amber-600">(RC)</span>}
+                              </div>
                             </div>
 
                             {/* Status + Progress */}
@@ -1323,11 +1299,6 @@ export default function AdminFinancials() {
 
                     // Restriction-status helpers.
                     //
-                    // `isDealerInvoice` mirrors the carve-out in
-                    // `process-dunning`: penalty invoices issued to private
-                    // sellers do NOT trigger the auto-restriction, so we
-                    // suppress the related warnings on those rows.
-                    //
                     // `isCurrentlyRestricted` reflects the live state of the
                     // dealer profile (loaded via the dunning query). It does
                     // NOT necessarily mean THIS invoice caused the lock —
@@ -1337,14 +1308,8 @@ export default function AdminFinancials() {
                     // warning icon next to rows where the next dunning step
                     // (current effective level + 1) would cross the
                     // configured `dunningRestrictAtLevel` threshold.
-                    const isDealerInvoice =
-                      invoice.invoice_type !== 'seller_penalty' &&
-                      invoice.invoice_type !== 'private_penalty';
-                    const isCurrentlyRestricted =
-                      isDealerInvoice &&
-                      Boolean(invoice.dealer?.account_restricted);
+                    const isCurrentlyRestricted = Boolean(invoice.dealer?.account_restricted);
                     const nextReminderTriggersRestriction =
-                      isDealerInvoice &&
                       dunningRestrictAtLevel > 0 &&
                       effectiveLevel < dunningRestrictAtLevel &&
                       effectiveLevel + 1 >= dunningRestrictAtLevel;
@@ -1361,10 +1326,7 @@ export default function AdminFinancials() {
                               </div>
                               {/*
                                 Restriction badge — visible iff the dealer's
-                                profile currently has account_restricted = true
-                                AND this row is a dealer invoice (skip on
-                                penalty rows where the badge would be
-                                misleading because penalties never restrict).
+                                profile currently has account_restricted = true.
                               */}
                               {isCurrentlyRestricted && (
                                 <Tooltip>

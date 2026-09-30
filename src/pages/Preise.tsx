@@ -82,7 +82,7 @@ const Preise = () => {
               </CardContent>
             </Card>
 
-            {/* Fuer Kuechenstudios / Haendler */}
+            {/* Fuer Kuechenstudios */}
             <Card className="border-2 hover:border-primary/20 transition-all duration-300">
               <CardHeader className="border-b bg-muted/30">
                 <CardTitle className="text-xl sm:text-2xl text-center">

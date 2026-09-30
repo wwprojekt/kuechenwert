@@ -8,6 +8,7 @@ import {
   customerBadge,
 } from '../_shared/email-builder.ts';
 import { getCorsHeaders, handleCorsPreflightRequest } from '../_shared/cors.ts';
+import { BRAND, BRAND_LEGAL } from '../_shared/brand-config.ts';
 import { edgeLogger, logEdgeError } from '../_shared/edgeLogger.ts';
 
 /**
@@ -250,20 +251,14 @@ Deno.serve(async (req) => {
   //
   // Background: `process-dunning` flips `profiles.account_restricted = true`
   // once a dealer's overdue invoice reaches `dunning_restrict_at_level`.
-  // Until this block existed, NOTHING ever flipped it back to `false` — not
-  // even full payment of the invoice that triggered the restriction. The
-  // dealer would stay locked out of `place-bid` and `instant-buy` forever
-  // unless an admin manually edited the profile in the database.
+  // Without this block nothing flips it back — the studio would stay locked
+  // out of new offers and contact unlocks unless an admin edited the profile.
   //
-  // We lift the restriction here iff ALL of these hold:
+  // We lift the restriction here iff BOTH of these hold:
   //   1. This invoice is now fully paid (`isFullyPaid`) — partial payments
   //      keep the dealer technically overdue, so we don't touch the flag.
-  //   2. The invoice is a dealer invoice (NOT seller_penalty / private_penalty),
-  //      mirroring `isDealerInvoice` in `process-dunning`. Penalty invoices
-  //      never trigger restrictions in the first place, so receiving payment
-  //      on one says nothing about restriction state.
-  //   3. The dealer has NO other overdue dealer invoice still open (pending
-  //      or partial). Otherwise the restriction is still warranted by another
+  //   2. The dealer has NO other overdue invoice still open (pending or
+  //      partial). Otherwise the restriction is still warranted by another
   //      invoice and lifting it here would silently undo a valid lock.
   //
   // The actual UPDATE is guarded by `.eq('account_restricted', true)` so it
@@ -273,27 +268,20 @@ Deno.serve(async (req) => {
   // Failure of this step does NOT roll back the payment. The money was
   // received and recorded, the lift is best-effort. Admins can lift
   // manually via the dealer profile screen.
-  const isPenaltyInvoice =
-    invoice.invoice_type === 'seller_penalty' ||
-    invoice.invoice_type === 'private_penalty';
-
   let restrictionLifted = false;
   let restrictionLiftError: string | null = null;
   let restrictionLiftSkippedReason:
     | 'partial_payment'
-    | 'penalty_invoice'
     | 'still_overdue_other_invoice'
     | null = null;
 
   if (!isFullyPaid) {
     restrictionLiftSkippedReason = 'partial_payment';
-  } else if (isPenaltyInvoice) {
-    restrictionLiftSkippedReason = 'penalty_invoice';
   } else {
     try {
       const nowIso = new Date().toISOString();
 
-      // Look for ANY other overdue dealer invoice (limit 1 — we just need
+      // Look for ANY other overdue invoice of the studio (limit 1 — we just need
       // to know whether at least one exists). We exclude the invoice we
       // just paid so the freshly-set payment_status='paid' on it doesn't
       // matter for the query, but also so partial-payment rounding edge
@@ -305,8 +293,6 @@ Deno.serve(async (req) => {
         .in('payment_status', ['pending', 'partial'])
         .lt('due_date', nowIso)
         .neq('status', 'cancelled')
-        .neq('invoice_type', 'seller_penalty')
-        .neq('invoice_type', 'private_penalty')
         .neq('id', invoice.id)
         .limit(1);
 
@@ -377,10 +363,10 @@ Deno.serve(async (req) => {
     try {
       const { data: settings } = await supabaseAdmin.from('site_settings').select('*').single();
       const settingsData = settings || {
-        site_name: 'KüchenWert',
-        site_description: 'Küchenangebote vergleichen',
-        contact_email: 'info@kuechenwert24.de',
-        support_phone: '+49 511 51532476',
+        site_name: BRAND.name,
+        site_description: BRAND.tagline,
+        contact_email: BRAND.supportEmail,
+        support_phone: BRAND_LEGAL.phone,
       };
 
       const subject = isFullyPaid
@@ -443,11 +429,11 @@ Deno.serve(async (req) => {
           Authorization: `Bearer ${RESEND_API_KEY}`,
         },
         body: JSON.stringify({
-          from: `${settingsData.site_name} <info@kuechenwert24.de>`,
+          from: `${settingsData.site_name} <${BRAND.supportEmail}>`,
           to: [recipientEmail],
           subject,
           html,
-          reply_to: 'info@kuechenwert24.de',
+          reply_to: BRAND.supportEmail,
         }),
       });
 
@@ -459,7 +445,7 @@ Deno.serve(async (req) => {
 
         // log into admin_emails for the email center
         await supabaseAdmin.from('admin_emails').insert({
-          sender_email: 'info@kuechenwert24.de',
+          sender_email: BRAND.supportEmail,
           sender_name: settingsData.site_name,
           recipient_email: recipientEmail,
           recipient_name: recipientName,

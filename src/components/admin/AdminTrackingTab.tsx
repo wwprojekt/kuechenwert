@@ -4,10 +4,10 @@
  * Zentrales Verwaltungs-UI für ALLE Tracking-Konfigurationen:
  * - Master-Toggle (alles an/aus)
  * - Google Analytics 4 (Measurement ID)
- * - Google Ads (Conversion ID + alle 9 Conversion-Labels + Werte)
+ * - Google Ads (Conversion ID + Conversion-Labels + Werte)
  * - Google Tag Manager (Container ID)
  * - Meta Pixel (Pixel ID)
- * - Server-Side Google Ads (Customer ID, Login Customer ID, Action ID)
+ * - Microsoft Ads (UET-Tag, Conversion-Ziele)
  * - Live-Status Card (was tatsächlich im Browser geladen ist)
  *
  * Die Werte werden in `site_settings.tracking_config` (JSONB) gespeichert.
@@ -26,14 +26,12 @@ import {
   Activity,
   AlertTriangle,
   RefreshCw,
-  ServerCog,
   Tag,
   TrendingUp,
 } from "lucide-react";
 import {
   DEFAULT_TRACKING_CONFIG,
   type ConversionLabelKey,
-  type ConversionValueKey,
   type TrackingConfig,
 } from "@/lib/trackingConfig";
 import GoogleAdsApiStatusCard from "./GoogleAdsApiStatusCard";
@@ -48,33 +46,11 @@ interface AdminTrackingTabProps {
   onChange: (next: TrackingConfig) => void;
 }
 
-const CONVERSION_KEYS: ConversionLabelKey[] = [
-  "KUECHEN_LEAD",
-  "KONTAKTFORMULAR_GESENDET",
-  "WIZARD_ABGESCHLOSSEN",
-  "WERTRECHNER_LEAD",
-  "WERTERMITTLUNG_LEAD",
-  "TERMINBUCHUNG",
-  "LANDING_PAGE_LEAD",
-  "WIZARD_GESTARTET",
-  "WIZARD_FAHRZEUGDATEN",
-  "BEWERTUNG_ABGESCHLOSSEN",
-];
+const CONVERSION_KEYS: ConversionLabelKey[] = ["KUECHEN_LEAD", "KONTAKTFORMULAR_GESENDET"];
 
-const VALUE_KEYS: ConversionValueKey[] = [...CONVERSION_KEYS, "INSTANT_BUY"];
-
-const CONVERSION_LABELS_DE: Record<ConversionValueKey, { title: string; subtitle: string; primary: boolean }> = {
+const CONVERSION_LABELS_DE: Record<ConversionLabelKey, { title: string; subtitle: string; primary: boolean }> = {
   KUECHEN_LEAD:            { title: "Küchenanfrage",                subtitle: "Funnel A, B oder C mit Kontaktdaten abgesendet", primary: true  },
   KONTAKTFORMULAR_GESENDET:{ title: "Kontaktformular gesendet",     subtitle: "/kontakt Formular abgesendet",                  primary: true  },
-  WIZARD_ABGESCHLOSSEN:    { title: "Wizard abgeschlossen (Altlast)", subtitle: "Wird nicht mehr ausgelöst",                  primary: false },
-  WERTRECHNER_LEAD:        { title: "Wertrechner Lead (Altlast)",   subtitle: "Wird nicht mehr ausgelöst",                     primary: false },
-  WERTERMITTLUNG_LEAD:     { title: "Wertermittlung Lead (Altlast)", subtitle: "Wird nicht mehr ausgelöst",                    primary: false },
-  TERMINBUCHUNG:           { title: "Terminbuchung (Altlast)",      subtitle: "Wird nicht mehr ausgelöst",                     primary: false },
-  LANDING_PAGE_LEAD:       { title: "Landing Page Funnel (Altlast)", subtitle: "Wird nicht mehr ausgelöst",                    primary: false },
-  WIZARD_GESTARTET:        { title: "Wizard gestartet (Altlast)",   subtitle: "Wird nicht mehr ausgelöst",                     primary: false },
-  WIZARD_FAHRZEUGDATEN:    { title: "Wizard Schritt 2 (Altlast)",   subtitle: "Wird nicht mehr ausgelöst",                     primary: false },
-  BEWERTUNG_ABGESCHLOSSEN: { title: "Bewertung abgeschlossen (Altlast)", subtitle: "Wird nicht mehr ausgelöst",                primary: false },
-  INSTANT_BUY:             { title: "Sofortkauf (Altlast)",         subtitle: "Wird nicht mehr ausgelöst",                     primary: false },
 };
 
 function ensureConfig(value: TrackingFormValue): TrackingConfig {
@@ -98,7 +74,6 @@ function ensureConfig(value: TrackingFormValue): TrackingConfig {
       conversion_goals: { ...d.microsoft_ads.conversion_goals, ...(v.microsoft_ads?.conversion_goals ?? {}) },
       values: { ...d.microsoft_ads.values, ...(v.microsoft_ads?.values ?? {}) },
     },
-    server_side: { ...d.server_side, ...(v.server_side ?? {}) },
   };
 }
 
@@ -184,13 +159,11 @@ export default function AdminTrackingTab({ value, onChange }: AdminTrackingTabPr
     update({ google_ads: { ...cfg.google_ads, ...p } });
   const updateLabel = (key: ConversionLabelKey, label: string) =>
     updateGads({ labels: { ...cfg.google_ads.labels, [key]: label } });
-  const updateValue = (key: ConversionValueKey, value: number) =>
+  const updateValue = (key: ConversionLabelKey, value: number) =>
     updateGads({ values: { ...cfg.google_ads.values, [key]: value } });
   const updateGtm = (p: Partial<TrackingConfig["gtm"]>) => update({ gtm: { ...cfg.gtm, ...p } });
   const updatePixel = (p: Partial<TrackingConfig["meta_pixel"]>) =>
     update({ meta_pixel: { ...cfg.meta_pixel, ...p } });
-  const updateServer = (p: Partial<TrackingConfig["server_side"]>) =>
-    update({ server_side: { ...cfg.server_side, ...p } });
 
   const ga4Valid = isValidGa4(cfg.ga4.measurement_id);
   const gadsValid = isValidGads(cfg.google_ads.conversion_id);
@@ -201,7 +174,7 @@ export default function AdminTrackingTab({ value, onChange }: AdminTrackingTabPr
     update({ microsoft_ads: { ...cfg.microsoft_ads, ...p } });
   const updateMsGoal = (key: ConversionLabelKey, goal: string) =>
     updateMs({ conversion_goals: { ...cfg.microsoft_ads.conversion_goals, [key]: goal } });
-  const updateMsValue = (key: ConversionValueKey, value: number) =>
+  const updateMsValue = (key: ConversionLabelKey, value: number) =>
     updateMs({ values: { ...cfg.microsoft_ads.values, [key]: value } });
 
   return (
@@ -303,7 +276,7 @@ export default function AdminTrackingTab({ value, onChange }: AdminTrackingTabPr
             )}
           </CardTitle>
           <CardDescription>
-            GA4 Measurement Protocol – wird auch von der Edge Function <code>track-conversion</code> serverseitig genutzt.
+            Seitenaufrufe und Anfragen im Browser, nur mit Statistik-Einwilligung.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -394,7 +367,7 @@ export default function AdminTrackingTab({ value, onChange }: AdminTrackingTabPr
               <h4 className="font-medium">Conversion-Labels</h4>
               <p className="text-sm text-muted-foreground">
                 Jedes Event hat einen Label-String aus Google Ads. Format: ohne <code>AW-...</code> Präfix,
-                nur der Teil nach dem Slash. Beispiel: <code>JO7oCPuNkY4cEL7FhpdD</code>
+                nur der Teil nach dem Slash. Beispiel: <code>AbC1dEfGhIjKlMnOpQrS</code>
               </p>
             </div>
             <div className="space-y-2">
@@ -418,7 +391,7 @@ export default function AdminTrackingTab({ value, onChange }: AdminTrackingTabPr
                       <Input
                         value={cfg.google_ads.labels[key] || ""}
                         onChange={(e) => updateLabel(key, e.target.value)}
-                        placeholder="z.B. JO7oCPuNkY4cEL7FhpdD"
+                        placeholder="z.B. AbC1dEfGhIjKlMnOpQrS"
                         className="font-mono text-xs"
                       />
                     </div>
@@ -434,11 +407,10 @@ export default function AdminTrackingTab({ value, onChange }: AdminTrackingTabPr
               <h4 className="font-medium">Conversion-Werte (€)</h4>
               <p className="text-sm text-muted-foreground">
                 Smart Bidding nutzt diese Werte zur Optimierung. Höher = aggressiver geboten.
-                Aktiv ausgelöst werden nur Küchenanfrage und Kontaktformular.
               </p>
             </div>
             <div className="grid gap-2 md:grid-cols-2 lg:grid-cols-3">
-              {VALUE_KEYS.map((key) => {
+              {CONVERSION_KEYS.map((key) => {
                 const meta = CONVERSION_LABELS_DE[key];
                 return (
                   <div key={`val-${key}`} className="space-y-1">
@@ -555,7 +527,7 @@ export default function AdminTrackingTab({ value, onChange }: AdminTrackingTabPr
             UET-Pixel + Custom-Event-Conversions parallel zu Google Ads. Funktioniert
             additiv — wenn deaktiviert oder Tag-ID leer, ändert sich am bisherigen
             Google-Tracking nichts. Der msclkid-Click-ID-Capture läuft unabhängig
-            davon (für späteres Server-Side-Sale-Back).
+            davon.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -646,11 +618,11 @@ export default function AdminTrackingTab({ value, onChange }: AdminTrackingTabPr
               <h4 className="font-medium">Conversion-Werte für Bing-Smart-Bidding (€)</h4>
               <p className="text-sm text-muted-foreground">
                 Werden separat von Google Ads gepflegt — Bing-Smart-Bidding kann andere
-                Wertgewichtungen brauchen, weil das Auktionsumfeld günstiger ist.
+                Wertgewichtungen brauchen, weil Klicks dort meist günstiger sind.
               </p>
             </div>
             <div className="grid gap-2 md:grid-cols-2 lg:grid-cols-3">
-              {VALUE_KEYS.map((key) => {
+              {CONVERSION_KEYS.map((key) => {
                 const meta = CONVERSION_LABELS_DE[key];
                 return (
                   <div key={`uetval-${key}`} className="space-y-1">
@@ -685,47 +657,6 @@ export default function AdminTrackingTab({ value, onChange }: AdminTrackingTabPr
         }
       />
 
-      {/* Server-Side Google Ads */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <ServerCog className="w-5 h-5" />
-            Server-Side Google Ads (Edge Function)
-          </CardTitle>
-          <CardDescription>
-            Nur für Offline-Uploads über die Edge Function <code>track-conversion</code>, die derzeit nichts
-            hochlädt: Küchenanfragen misst das Google-Tag im Browser. Die Google-Ads-Zugangsdaten liegen im Supabase
-            Vault (<code>gads_*</code>), siehe Live-Diagnose.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="gads-action">Offline Conversion Action ID</Label>
-            <Input
-              id="gads-action"
-              value={cfg.server_side.gads_offline_conversion_action_id}
-              onChange={(e) => updateServer({ gads_offline_conversion_action_id: e.target.value })}
-              placeholder="z.B. 7576040066"
-            />
-            <p className="text-xs text-muted-foreground">
-              Numerische ID aus Google Ads → Tools → Conversions → URL-Parameter
-            </p>
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="gads-mcc">Login Customer ID (MCC)</Label>
-            <Input
-              id="gads-mcc"
-              value={cfg.server_side.gads_login_customer_id}
-              onChange={(e) => updateServer({ gads_login_customer_id: e.target.value })}
-              placeholder="z.B. 9746508145 (ohne Bindestriche)"
-            />
-            <p className="text-xs text-muted-foreground">
-              Falls das Konto über ein Verwaltungskonto (MCC) verbunden ist. Sonst leer lassen.
-            </p>
-          </div>
-        </CardContent>
-      </Card>
-
       {/* Aktionen */}
       <Card>
         <CardHeader>
@@ -756,9 +687,9 @@ export default function AdminTrackingTab({ value, onChange }: AdminTrackingTabPr
           <Button
             variant="outline"
             onClick={() => {
-              const cw = window as unknown as { gtag?: (...args: unknown[]) => void };
-              if (typeof cw.gtag === "function") {
-                cw.gtag("event", "admin_test_event", {
+              const w = window as unknown as { gtag?: (...args: unknown[]) => void };
+              if (typeof w.gtag === "function") {
+                w.gtag("event", "admin_test_event", {
                   event_category: "Admin",
                   event_label: "test_from_admin_tracking_tab",
                   value: 1,

@@ -145,7 +145,7 @@ function formatDateTime(iso: string | null): string {
   });
 }
 
-/** Signierte URLs je Bucket in einem Aufruf pro Bucket (Admins dürfen beide Planer-Buckets lesen). */
+/** Signierte URLs in einem Aufruf je Bucket (planner_renders.storage_bucket, sonst planner-media). */
 async function signRenderUrls(rows: Array<{ image_path: string | null; storage_bucket: string | null }>) {
   const byBucket = new Map<string, string[]>();
   for (const r of rows) {

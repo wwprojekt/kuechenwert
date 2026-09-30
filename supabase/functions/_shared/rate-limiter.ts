@@ -223,12 +223,6 @@ export const RATE_LIMITS = {
     maxRequests: 5
   },
 
-  // Bidding endpoints - prevent bid spam
-  BIDDING: {
-    windowMs: 60 * 1000, // 1 minute
-    maxRequests: 10
-  },
-
   // File upload endpoints
   UPLOAD: {
     windowMs: 60 * 1000, // 1 minute

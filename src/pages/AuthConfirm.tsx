@@ -1,8 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import { ensureValidRLSSession } from "@/lib/sessionGuard";
-import { logger } from "@/lib/logger";
 import PageLayout from "@/components/PageLayout";
 import { BRAND } from "@/lib/brand";
 
@@ -37,7 +35,7 @@ const getRedirectPath = (type: string, redirectTo: string | null): string => {
     case "magiclink":
       return "/";
     case "email_change":
-      return "/profil";
+      return "/dashboard/profile";
     case "signup":
       return "/dashboard";
     default:
@@ -105,37 +103,6 @@ const AuthConfirm = () => {
 
         setStatus("success");
         setMessage(getSuccessMessage(type));
-
-        // After signup confirmation: adopt any orphaned wizard sessions that
-        // belong to this user's email.
-        //
-        // Since the wizard_sessions RLS is now owner-scoped, we can no longer
-        // SELECT by customer_email from the client. Instead we call the
-        // SECURITY DEFINER RPC `link_wizard_sessions_to_confirmed_user()`,
-        // which runs as the server, checks auth.jwt()->>email itself, and
-        // updates every matching orphan session atomically. This avoids the
-        // previous two-step read/update dance that race-conditioned against
-        // auto-convert-wizard.
-        if (type === "signup" || type === "email") {
-          try {
-            const sessionValid = await ensureValidRLSSession();
-            if (sessionValid) {
-              const { error: linkError } = await supabase.rpc(
-                "link_wizard_sessions_to_confirmed_user"
-              );
-              if (linkError) {
-                logger.warn(
-                  "link_wizard_sessions_to_confirmed_user RPC failed (non-critical):",
-                  linkError
-                );
-              }
-            }
-          } catch (linkError) {
-            console.error("Error during post-confirmation session linking:", linkError);
-            // Non-critical: don't block the redirect. The user can always
-            // re-submit or the background cron will retry.
-          }
-        }
 
         // Redirect nach 2 Sekunden
         const targetPath = getRedirectPath(type, redirectTo);

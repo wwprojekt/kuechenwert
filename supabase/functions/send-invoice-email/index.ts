@@ -68,9 +68,6 @@ Deno.serve(async (req) => {
       .select(`
         *,
         dealer:profiles(first_name, last_name, company_name, email, customer_number),
-        auction:auctions(
-          kitchen:kitchens(manufacturer, model)
-        ),
         lead:leads(postal_code, city),
         items:invoice_items(description)
       `)
@@ -116,7 +113,6 @@ Deno.serve(async (req) => {
 
     // ─── Prepare display values ────────────────────────────────────
     const labels = describeInvoice(invoice);
-    const isPenalty = labels.isPenalty;
 
     const personName = `${invoice.dealer.first_name || ''} ${invoice.dealer.last_name || ''}`.trim();
     const dealerName = invoice.dealer.company_name || personName;
@@ -146,8 +142,8 @@ Deno.serve(async (req) => {
       
       ${infoBox('Rechnungsdetails', `
         ${detailRow('Rechnungsnummer', invoice.invoice_number)}
-        ${detailRow(isPenalty ? 'Grund' : 'Leistung', isPenalty ? labels.referenceValue : itemDescription)}
-        ${!isPenalty && labels.referenceTitle !== 'Leistung' ? detailRow(labels.referenceTitle, labels.referenceValue) : ''}
+        ${detailRow('Leistung', itemDescription)}
+        ${detailRow(labels.referenceTitle, labels.referenceValue)}
         ${detailRow('Rechnungsdatum', invoiceDateFormatted)}
         ${detailRow('F&auml;lligkeitsdatum', dueDateFormatted)}
         ${detailRow('Zahlungsziel', `${payDays} Tage`)}
@@ -168,11 +164,8 @@ Deno.serve(async (req) => {
       ${paragraph('Bei Fragen zu Ihrer Rechnung stehen wir Ihnen gerne zur Verf&uuml;gung.')}
     `;
 
-    const emailTitle = isPenalty ? 'Vertragsstrafe' : 'Neue Rechnung';
-    const emailSubject = isPenalty
-      ? `Vertragsstrafe – Rechnung ${invoice.invoice_number} - ${siteName}`
-      : `Rechnung ${invoice.invoice_number} - ${siteName}`;
-    const emailHtml = buildEmailLayout(settingsData, emailTitle, content);
+    const emailSubject = `Rechnung ${invoice.invoice_number} - ${siteName}`;
+    const emailHtml = buildEmailLayout(settingsData, 'Neue Rechnung', content);
 
     // ─── PDF-Anhang: Die Rechnung ist das PDF, ohne Anhang kein Versand ──
     let pdfBase64 = providedPdfBase64;

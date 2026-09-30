@@ -7,6 +7,7 @@ import {
   detailRow,
 } from '../_shared/email-builder.ts';
 import { getCorsHeaders, handleCorsPreflightRequest } from '../_shared/cors.ts';
+import { BRAND, BRAND_LEGAL } from '../_shared/brand-config.ts';
 import { edgeLogger, logEdgeError } from '../_shared/edgeLogger.ts';
 
 /**
@@ -55,10 +56,10 @@ interface SettingsLike {
 }
 
 const fallbackSettings: SettingsLike = {
-  site_name: 'KüchenWert',
-  site_description: 'Küchenangebote vergleichen',
-  contact_email: 'info@kuechenwert24.de',
-  support_phone: '+49 511 51532476',
+  site_name: BRAND.name,
+  site_description: BRAND.tagline,
+  contact_email: BRAND.supportEmail,
+  support_phone: BRAND_LEGAL.phone,
 };
 
 function displayName(p: ProfileLite | null | undefined, fallback?: string): string {
@@ -83,11 +84,11 @@ async function sendMail(
         Authorization: `Bearer ${RESEND_API_KEY}`,
       },
       body: JSON.stringify({
-        from: `${settings.site_name} <info@kuechenwert24.de>`,
+        from: `${settings.site_name} <${BRAND.supportEmail}>`,
         to: [recipientEmail],
         subject,
         html,
-        reply_to: 'info@kuechenwert24.de',
+        reply_to: BRAND.supportEmail,
       }),
     });
     if (!res.ok) {
@@ -184,18 +185,18 @@ Deno.serve(async (req) => {
     const { data: settingsRow } = await supabaseAdmin.from('site_settings').select('*').single();
     const settings: SettingsLike = (settingsRow as SettingsLike | null) ?? fallbackSettings;
 
-    const subject = `Ihre Händlerbewerbung wurde zurückgezogen – ${application.company_name ?? settings.site_name}`;
+    const subject = `Ihre Studio-Registrierung wurde zurückgezogen – ${application.company_name ?? settings.site_name}`;
     const content = `
       ${greeting(recipientName)}
-      ${paragraph(`wir möchten Sie informieren, dass Ihre Händlerbewerbung bei <strong>${settings.site_name}</strong> aus unserem System entfernt wurde.`)}
-      ${infoBox('Ihre Bewerbung', `
+      ${paragraph(`wir möchten Sie informieren, dass Ihre Registrierung als Küchenstudio bei <strong>${settings.site_name}</strong> aus unserem System entfernt wurde.`)}
+      ${infoBox('Ihre Registrierung', `
         ${detailRow('Firma', application.company_name ?? '—')}
         ${detailRow('Status zum Zeitpunkt der Löschung', application.status === 'pending' ? 'In Prüfung' : application.status === 'approved' ? 'Genehmigt' : application.status === 'rejected' ? 'Abgelehnt' : application.status ?? '—')}
         ${application.submitted_at ? detailRow('Eingereicht am', new Date(application.submitted_at).toLocaleDateString('de-DE')) : ''}
       `, 'warning')}
       ${reason ? infoBox('Grund', paragraph(reason), 'info') : ''}
-      ${paragraph(`Falls Sie weiterhin Interesse an einem Händlerkonto bei ${settings.site_name} haben, können Sie jederzeit eine neue Bewerbung einreichen.`)}
-      ${paragraph(`Bei Fragen erreichen Sie uns unter <a href="mailto:${settings.contact_email}" style="color:#1f8aa2;">${settings.contact_email}</a> oder telefonisch unter ${settings.support_phone}.`)}
+      ${paragraph(`Falls Sie weiterhin Interesse an einem Studio-Konto bei ${settings.site_name} haben, können Sie sich jederzeit erneut registrieren.`)}
+      ${paragraph(`Bei Fragen erreichen Sie uns unter <a href="mailto:${settings.contact_email}" style="color:#336753;">${settings.contact_email}</a> oder telefonisch unter ${settings.support_phone}.`)}
     `;
 
     const html = buildEmailLayout(settings, subject, content);
@@ -206,7 +207,7 @@ Deno.serve(async (req) => {
     if (result.ok) {
       try {
         await supabaseAdmin.from('admin_emails').insert({
-          sender_email: 'info@kuechenwert24.de',
+          sender_email: BRAND.supportEmail,
           sender_name: settings.site_name,
           recipient_email: recipientEmail,
           recipient_name: recipientName,
@@ -265,7 +266,7 @@ Deno.serve(async (req) => {
       companyName: application.company_name,
       mailSent,
       mailError,
-      message: 'Händlerbewerbung wurde gelöscht',
+      message: 'Studio-Registrierung wurde gelöscht',
     }),
     { status: 200, headers },
   );

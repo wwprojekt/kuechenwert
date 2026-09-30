@@ -196,13 +196,7 @@ export default function AdminDealerDetail() {
         effectiveLegalDocs = fallbackDocs;
       }
 
-      // 4. Fetch SEPA mandates
-      const { data: sepaMandates } = await supabase
-        .from("sepa_mandates")
-        .select("id, status, mandate_reference, created_at")
-        .eq("dealer_application_id", data.id);
-
-      // 5. Offers in the marketplace (approved studios only)
+      // 4. Offers in the marketplace (approved studios only)
       let offers: UserOffer[] = [];
       let offersTotal = 0;
       let activeOffers = 0;
@@ -215,7 +209,7 @@ export default function AdminDealerDetail() {
         ]);
       }
 
-      // 6. Fetch invoices
+      // 5. Fetch invoices
       let invoices: Tables<"invoices">[] = [];
       let invoicesTotal = 0;
       if (data.user_id) {
@@ -229,7 +223,7 @@ export default function AdminDealerDetail() {
         invoicesTotal = count ?? 0;
       }
 
-      // 7. Check email confirmation status via auth
+      // 6. Check email confirmation status via auth
       let emailConfirmed = true;
       if (data.user_id) {
         try {
@@ -248,7 +242,6 @@ export default function AdminDealerDetail() {
         profile,
         profiles: profile,
         legal_documents: effectiveLegalDocs,
-        sepa_mandates: sepaMandates || [],
         offers,
         offersTotal,
         activeOffers,
@@ -462,7 +455,6 @@ export default function AdminDealerDetail() {
   // Ensure all Supabase relations are always arrays (Supabase may return a single object for 1:N)
   const safeArray = (val: any): any[] => Array.isArray(val) ? val : val ? [val] : [];
   const dealerLegalDocs = safeArray(dealer?.legal_documents);
-  const dealerSepaMandates = safeArray(dealer?.sepa_mandates);
   const dealerInvoices = dealer?.invoices ?? [];
 
   return (
@@ -904,29 +896,6 @@ export default function AdminDealerDetail() {
                           <p className="text-sm mt-2 text-amber-600">Das Küchenstudio hat noch keine Dokumente eingereicht.</p>
                         )}
                       </div>
-                    )}
-
-                    {/* SEPA Mandates */}
-                    {dealerSepaMandates.length > 0 && (
-                      <>
-                        <Separator className="my-6" />
-                        <h4 className="font-semibold mb-4">SEPA-Lastschriftmandate</h4>
-                        <div className="space-y-3">
-                          {dealerSepaMandates.map((mandate: any) => (
-                            <div key={mandate.id} className="flex items-center justify-between p-3 rounded-lg border">
-                              <div>
-                                <p className="font-mono text-sm">{mandate.mandate_reference}</p>
-                                <p className="text-xs text-muted-foreground">
-                                  Erstellt: {formatDate(mandate.created_at)}
-                                </p>
-                              </div>
-                              <Badge variant={mandate.status === "active" ? "default" : "outline"}>
-                                {mandate.status}
-                              </Badge>
-                            </div>
-                          ))}
-                        </div>
-                      </>
                     )}
                   </DetailSection>
                 </TabsContent>

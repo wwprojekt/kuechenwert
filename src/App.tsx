@@ -9,7 +9,6 @@ import { BrowserRouter, Routes, Route, useLocation } from "react-router-dom";
 import PageTransition from "./components/PageTransition";
 import { ErrorBoundary } from "./components/ErrorBoundary";
 import { WhatsAppButton } from "./components/WhatsAppButton";
-import { RedirectKeepingQuery } from "./components/RedirectKeepingQuery";
 import CookieBanner from "./components/CookieBanner";
 import RouteFallback from "./components/RouteFallback";
 import ScrollRestoration from "./components/ScrollRestoration";
@@ -37,17 +36,11 @@ const ResetPassword = lazyRetry(() => import("./pages/ResetPassword"));
 const AuthConfirm = lazyRetry(() => import("./pages/AuthConfirm"));
 
 // Core pages
-const Verkaufen = lazyRetry(() => import("./pages/Verkaufen"));
-// Die Caravan-Routen /verkaufen/wizard, /kaufen und /auktion/:id leiten auf
-// /formular um (siehe Routen-Tabelle).
-const VerkaufenDanke = lazyRetry(() => import("./pages/VerkaufenDanke"));
 const Ratgeber = lazyRetry(() => import("./pages/Ratgeber"));
 const UeberUns = lazyRetry(() => import("./pages/UeberUns"));
 const Kontakt = lazyRetry(() => import("./pages/Kontakt"));
 const Haendler = lazyRetry(() => import("./pages/Haendler"));
-const Ankaufstationen = lazyRetry(() => import("./pages/Ankaufstationen"));
-const Wertermittlung = lazyRetry(() => import("./pages/Wertermittlung"));
-const Wertrechner = lazyRetry(() => import("./pages/Wertrechner"));
+const Kuechenstudios = lazyRetry(() => import("./pages/Kuechenstudios"));
 const Kuechenrechner = lazyRetry(() => import("./pages/Kuechenrechner"));
 
 // Legal pages
@@ -86,13 +79,6 @@ const AdminLeads = lazyRetry(() => import("./pages/admin/AdminLeads"));
 const AdminPlannerSessions = lazyRetry(() => import("./pages/admin/AdminPlannerSessions"));
 const AdminUserDetail = lazyRetry(() => import("./pages/admin/AdminUserDetail"));
 const AdminDealerDetail = lazyRetry(() => import("./pages/admin/AdminDealerDetail"));
-
-// SEO Landing Pages (Kuechen-Themen).
-// Die Wohnmobil-/Wohnwagen-/Schwacke-Landing-Pages (17 Pages + 16 Data-Files)
-// wurden beim Caravan-Cleanup komplett entfernt. Kuechen-Landing-Pages werden
-// sobald verfuegbar hier als `lazyRetry`-Chunks registriert und in der
-// Routen-Tabelle weiter unten ergaenzt (`/nobilia-kueche-planen`,
-// `/kueche-guenstig-kaufen-2026`, …).
 
 // Ratgeber detail
 const RatgeberPage = lazyRetry(() => import("./pages/ratgeber/RatgeberPage"));
@@ -163,19 +149,8 @@ const App = () => (
               <Route path="/forgot-password" element={<ForgotPassword />} />
               <Route path="/reset-password" element={<ResetPassword />} />
               <Route path="/auth/confirm" element={<AuthConfirm />} />
-              <Route path="/verkaufen" element={<Verkaufen />} />
-              {/* Alte Caravan-Wizard-Route leitet auf den neuen Kuechen-Funnel um. */}
-              <Route path="/verkaufen/wizard" element={<RedirectKeepingQuery to="/formular" />} />
-              <Route path="/verkaufen/danke" element={<VerkaufenDanke />} />
-              <Route path="/kuechenstudios" element={<Ankaufstationen />} />
-              <Route path="/ankaufstationen" element={<RedirectKeepingQuery to="/kuechenstudios" />} />
-              {/* Legacy Wert-Routen → neuer KuechenRechner (Phase 3 Rebrand).
-                  Komponenten liefern nur noch <Navigate to="/kuechenrechner" />. */}
-              <Route path="/wertermittlung" element={<Wertermittlung />} />
-              <Route path="/wertrechner" element={<Wertrechner />} />
+              <Route path="/kuechenstudios" element={<Kuechenstudios />} />
               <Route path="/kuechenrechner" element={<Kuechenrechner />} />
-              <Route path="/kaufen" element={<RedirectKeepingQuery to="/formular" />} />
-              <Route path="/auktion/:id" element={<RedirectKeepingQuery to="/formular" />} />
 
               {/* Funnel A/B/C - Lead-Gen, Offer-Compare, Traumkueche */}
               <Route path="/formular" element={<FormularLanding />} />
@@ -183,7 +158,6 @@ const App = () => (
               <Route path="/funnel/a/:step" element={<FunnelA />} />
               <Route path="/funnel/b" element={<FunnelB />} />
               <Route path="/funnel/c" element={<FunnelC />} />
-              <Route path="/traumkueche" element={<RedirectKeepingQuery to="/funnel/c" />} />
               <Route path="/funnel/danke" element={<FunnelDanke />} />
               <Route path="/projekt" element={<ProjectLinkPage />} />
               <Route path="/projekt/:token" element={<ProjectPage />} />
@@ -230,12 +204,6 @@ const App = () => (
 
               {/* Unified Dashboard Routes - Smart routing based on user role */}
               <Route path="/dashboard/*" element={<SmartDashboard />} />
-              
-              {/* SEO Landing Pages (Kuechen-Themen).
-                  Die Caravan-Landings (/wohnmobil-*, /wohnwagen-*,
-                  /schwacke-liste-*) wurden beim Cleanup entfernt und laufen
-                  in die NotFound-Route. Neue Kuechen-Landing-Pages werden
-                  hier als eigene <Route> eingefuegt. */}
 
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFound />} />

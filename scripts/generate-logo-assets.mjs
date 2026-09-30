@@ -7,12 +7,15 @@
  * Quellen:  public/favicon.svg (Icon farbig), public/logo-white.svg (Icon hell),
  *           src/assets/kitchen-before.webp + kitchen-after.webp (OG-Motiv)
  * Wortmarke und OG-Bild rendert Chromium (Playwright) in Fira Sans, der
- * Website-Schrift; Icons, WebP und ICO erzeugt sharp.
+ * Website-Schrift; Icons, WebP und ICO erzeugt sharp. Zum Schluss legt
+ * scripts/fingerprint-brand-assets.mjs die extern genutzten Bilder mit
+ * Inhalts-Hash unter public/brand/ ab.
  */
 
 import { chromium } from "@playwright/test";
 import fs from "node:fs/promises";
 import sharp from "sharp";
+import { fingerprintBrandAssets } from "./fingerprint-brand-assets.mjs";
 
 const OUT = "public";
 const NAME_A = "Küchen";
@@ -175,3 +178,6 @@ try {
 } finally {
   await browser.close();
 }
+
+console.log("Brand-Assets mit Inhalts-Hash → public/brand");
+await fingerprintBrandAssets();

@@ -89,9 +89,9 @@ function trackedCheckable(target: EventTarget | null): Element | null {
 }
 
 /**
- * Schritt- und Feldereignisse eines Funnels (Muster der CaravanWert-Wizard-
- * Telemetrie). Feldereignisse kommen per Delegation aus dem Container mit
- * data-funnel-telemetry; Felder brauchen dafür name, id oder data-track.
+ * Schritt- und Feldereignisse eines Funnels. Feldereignisse kommen per
+ * Delegation aus dem Container mit data-funnel-telemetry; Felder brauchen
+ * dafür name, id oder data-track.
  */
 export function useFunnelTelemetry({ funnel, step, stepIndex, stepLabel, totalSteps }: Options): FunnelTelemetry {
   const current = useRef<ActiveFunnelStep>({ funnel, step, stepIndex, enteredAt: Date.now() });

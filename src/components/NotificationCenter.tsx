@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
-import { Bell, Check, CheckCheck, Trash2, Gavel, Trophy, Clock, Search, CreditCard, Info, X } from "lucide-react";
+import { Bell, CheckCheck, Trash2, Trophy, Clock, TrendingDown, KeyRound, Ban, AlertTriangle, ClipboardList, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
@@ -11,36 +11,43 @@ import { ensureValidRLSSession } from "@/lib/sessionGuard";
 
 interface Notification {
   id: string;
-  user_id: string;
   type: string;
   title: string;
   message: string;
   link: string | null;
-  auction_id: string | null;
   is_read: boolean;
   created_at: string;
 }
 
+const NOTIFICATION_COLUMNS = "id, type, title, message, link, is_read, created_at";
+
+/** Typen aus kw-market-worker und kw-order-worker; unbekannte zeigen die Glocke. */
 const NOTIFICATION_ICONS: Record<string, typeof Bell> = {
-  outbid: Gavel,
-  auction_won: Trophy,
-  auction_ending: Clock,
-  new_auction: Bell,
-  search_match: Search,
-  payment_reminder: CreditCard,
-  system: Info,
-  bid_confirmed: Check,
+  project_new: Bell,
+  project_underbid: TrendingDown,
+  contact_unlocked: KeyRound,
+  project_awarded: Trophy,
+  project_not_awarded: Ban,
+  project_ended: Clock,
+  project_cancelled: Ban,
+  complaint_filed: AlertTriangle,
+  complaint_decided: AlertTriangle,
+  order_reminder: ClipboardList,
+  order_update: ClipboardList,
 };
 
 const NOTIFICATION_COLORS: Record<string, string> = {
-  outbid: "text-destructive bg-red-50",
-  auction_won: "text-success bg-green-50",
-  auction_ending: "text-warning bg-amber-50",
-  new_auction: "text-blue-700 bg-blue-50",
-  search_match: "text-purple-700 bg-purple-50",
-  payment_reminder: "text-warning bg-orange-50",
-  system: "text-muted-foreground bg-muted",
-  bid_confirmed: "text-success bg-emerald-50",
+  project_new: "text-primary bg-primary/10",
+  project_underbid: "text-destructive bg-destructive/10",
+  contact_unlocked: "text-success bg-success/10",
+  project_awarded: "text-success bg-success/10",
+  project_not_awarded: "text-muted-foreground bg-muted",
+  project_ended: "text-warning bg-warning/10",
+  project_cancelled: "text-muted-foreground bg-muted",
+  complaint_filed: "text-warning bg-warning/10",
+  complaint_decided: "text-warning bg-warning/10",
+  order_reminder: "text-warning bg-warning/10",
+  order_update: "text-primary bg-primary/10",
 };
 
 function timeAgo(dateString: string): string {
@@ -74,7 +81,7 @@ export default function NotificationCenter() {
       if (!sessionValid) return [];
       const { data, error } = await supabase
         .from("dealer_notifications")
-        .select("*")
+        .select(NOTIFICATION_COLUMNS)
         .eq("user_id", user.id)
         .order("created_at", { ascending: false })
         .limit(50);
@@ -286,7 +293,7 @@ export default function NotificationCenter() {
             ) : (
               notifications.map((notification) => {
                 const IconComponent = NOTIFICATION_ICONS[notification.type] || Bell;
-                const colorClass = NOTIFICATION_COLORS[notification.type] || "text-gray-500 bg-gray-50";
+                const colorClass = NOTIFICATION_COLORS[notification.type] || "text-muted-foreground bg-muted";
 
                 return (
                   <div

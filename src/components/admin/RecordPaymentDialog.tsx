@@ -159,10 +159,10 @@ export function RecordPaymentDialog({
 
       const statusText = data.newStatus === "paid" ? "vollständig bezahlt" : "Teilzahlung erfasst";
       const emailHint = data.emailSent
-        ? "Bestätigungs-E-Mail an Händler versendet."
+        ? "Bestätigungs-E-Mail an das Küchenstudio versendet."
         : "ACHTUNG: Bestätigungs-E-Mail konnte nicht versendet werden – bitte manuell informieren.";
       const restrictionHint = data.restrictionLifted
-        ? " Konto-Sperre des Händlers wurde automatisch aufgehoben."
+        ? " Konto-Sperre des Küchenstudios wurde automatisch aufgehoben."
         : "";
       toast.success(`Zahlung erfasst`, {
         description: `€${data.paymentAmount.toLocaleString("de-DE")} – ${statusText}. ${emailHint}${restrictionHint}`,

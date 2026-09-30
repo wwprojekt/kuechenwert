@@ -7,7 +7,7 @@
 
 import { useEffect, useRef } from 'react';
 import { useLocation } from 'react-router-dom';
-import { trackPageView, trackEvent, trackBusinessEvent } from '@/lib/analyticsService';
+import { trackPageView, trackEvent } from '@/lib/analyticsService';
 
 /**
  * Hook to automatically track page views on route changes
@@ -32,8 +32,7 @@ export function useAnalytics() {
   return {
     trackPageView,
     trackEvent,
-    trackBusinessEvent,
   };
 }
 
-export { trackPageView, trackEvent, trackBusinessEvent };
+export { trackPageView, trackEvent };

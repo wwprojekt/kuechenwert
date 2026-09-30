@@ -2,14 +2,15 @@
  * Storage Utilities
  * 
  * Helper functions for working with Supabase Storage, especially
- * for private buckets that require signed URLs instead of public URLs.
- * 
- * Private buckets: dealer-documents, invoices, purchase-contracts
- * Public buckets: kitchen-photos, branding
+ * for private buckets that require signed URLs instead of public URLs
+ * (e.g. dealer-documents, invoices).
  */
 
 import { supabase } from "@/integrations/supabase/client";
 import { logger } from "@/lib/logger";
+
+/** Öffentlicher Bucket für Blog-Titelbilder und Bilder im Artikeltext (Schreiben nur Admins). */
+export const BLOG_IMAGE_BUCKET = "public-assets";
 
 /**
  * Extract the storage path from a Supabase public URL.
@@ -101,13 +102,6 @@ export async function getDealerDocumentSignedUrl(url: string): Promise<string> {
  */
 export async function getInvoiceSignedUrl(url: string): Promise<string> {
   return getSignedUrl(url, "invoices");
-}
-
-/**
- * Get a signed URL specifically for purchase contracts.
- */
-export async function getContractSignedUrl(url: string): Promise<string> {
-  return getSignedUrl(url, "purchase-contracts");
 }
 
 /**

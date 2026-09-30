@@ -3,7 +3,6 @@
  *
  * Allowed origins:
  * - Production: https://kuechenwert24.de and https://www.kuechenwert24.de
- * - Staging/Preview: Netlify deploy previews (*.netlify.app)
  * - Development: localhost on any port
  *
  * Usage in Edge Functions:
@@ -30,16 +29,13 @@ const ALLOWED_ORIGINS: string[] = [
 
 /**
  * Checks whether the given origin is allowed.
- * Matches exact production origins, Netlify deploy previews, and localhost.
+ * Matches exact production origins and localhost.
  */
 export function isAllowedOrigin(origin: string | null): boolean {
   if (!origin) return false;
 
   // Exact match for production domains
   if (ALLOWED_ORIGINS.includes(origin)) return true;
-
-  // Netlify deploy previews: https://<deploy-id>--<site>.netlify.app
-  if (/^https:\/\/[a-z0-9-]+\.netlify\.app$/.test(origin)) return true;
 
   // Local development: http://localhost:<port>
   if (/^http:\/\/localhost(:\d+)?$/.test(origin)) return true;

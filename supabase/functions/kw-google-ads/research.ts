@@ -7,6 +7,7 @@
  * niedrig/hoch in Euro.
  */
 
+import { BRAND } from "../_shared/brand-config.ts";
 import type { GoogleAdsClient } from "../_shared/google-ads.ts";
 import { HttpError } from "../_shared/kw-http.ts";
 
@@ -62,7 +63,7 @@ function keywordList(value: unknown, max: number, field: string): string[] {
 export async function keywordIdeas(client: GoogleAdsClient, body: Record<string, unknown>) {
   const seeds = keywordList(body.seeds, MAX_SEEDS, "seeds");
   const limit = Math.min(MAX_IDEAS, Math.max(1, Number(body.limit ?? 500) || 500));
-  const url = typeof body.url === "string" && body.url.startsWith("https://kuechenwert24.de/") ? body.url : undefined;
+  const url = typeof body.url === "string" && body.url.startsWith(`${BRAND.baseUrl}/`) ? body.url : undefined;
   const data = await client.callCustomer("generateKeywordIdeas", {
     language: LANGUAGE_GERMAN,
     geoTargetConstants: [GEO_GERMANY],

@@ -34,7 +34,7 @@ const ADMIN_PAGES = [
   { title: "Fehlerprotokoll", path: "/admin/error-logs", icon: AlertTriangle, keywords: "fehler bugs errors" },
   { title: "Cron-Health", path: "/admin/cron-health", icon: TimerReset, keywords: "cron jobs scheduler pg_cron pg_net edge functions" },
   { title: "Audit-Log", path: "/admin/audit-log", icon: Shield, keywords: "protokoll änderungen" },
-  { title: "Einstellungen", path: "/admin/settings", icon: Settings, keywords: "konfiguration branding" },
+  { title: "Einstellungen", path: "/admin/settings", icon: Settings, keywords: "konfiguration rechnung mahnwesen seo tracking" },
 ];
 
 const EMPTY_RESULTS = { profiles: [], leads: [], invoices: [] };

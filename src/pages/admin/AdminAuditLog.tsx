@@ -69,7 +69,6 @@ const ACTION_LABELS: Record<string, { label: string; color: string }> = {
 const ENTITY_LABELS: Record<string, string> = {
   user: "Benutzer",
   profile: "Profil",
-  kitchen: "Küche",
   dealer: "Küchenstudio",
   dealer_application: "Studio-Bewerbung",
   invoice: "Rechnung",

@@ -2,6 +2,7 @@ import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.100.1';
 import { buildEmailLayout, paragraph } from '../_shared/email-builder.ts';
 import { checkCronOrServiceRoleOrAdmin } from '../_shared/auth.ts';
+import { BRAND, BRAND_LEGAL } from '../_shared/brand-config.ts';
 
 const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY");
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
@@ -29,17 +30,12 @@ const handler = async (req: Request): Promise<Response> => {
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
     const now = new Date().toISOString();
 
-    // Find due emails:
-    // - `status='scheduled'` → klassisches Admin-Email-Scheduling via
-    //   `send-admin-email`
-    // - `status='queued'` MIT `scheduled_at` → Quiet-Hours-Deferral aus den
-    //   Notification-Sendepfaden (Digest, Outbid, Instant-Buy-Alert, ...).
-    //   Rows ohne `scheduled_at` bleiben unberuehrt (Resend-Pipeline nutzt
-    //   `queued` auch als Zwischenstatus fuer Retries).
+    // Fällige Mails aus dem Admin-Email-Scheduling (send-admin-email).
+    // `queued` ist der Zwischenstatus von sendAdminEmail und bleibt unberührt.
     const { data: emails, error: fetchError } = await supabase
       .from('admin_emails')
       .select('*')
-      .in('status', ['scheduled', 'queued'])
+      .eq('status', 'scheduled')
       .not('scheduled_at', 'is', null)
       .lte('scheduled_at', now)
       .order('scheduled_at', { ascending: true })
@@ -55,10 +51,10 @@ const handler = async (req: Request): Promise<Response> => {
     // Fetch site settings
     const { data: settings } = await supabase.from('site_settings').select('*').single();
     const settingsData = settings || {
-      site_name: 'KüchenWert',
-      site_description: 'Küchenangebote vergleichen',
-      contact_email: 'info@kuechenwert24.de',
-      support_phone: '+49 511 51532476',
+      site_name: BRAND.name,
+      site_description: BRAND.tagline,
+      contact_email: BRAND.supportEmail,
+      support_phone: BRAND_LEGAL.phone,
     };
 
     let sent = 0;
@@ -66,11 +62,9 @@ const handler = async (req: Request): Promise<Response> => {
 
     for (const email of emails) {
       try {
-        // Build HTML with branding — aber nicht doppelt wrappen. Quiet-Hours-
-        // Deferral speichert bereits die vollstaendig gerenderte Mail (mit
-        // Layout) in `body_html`; das Admin-Email-Scheduling uebergibt hingegen
-        // nur den Inner-Content. Heuristik: wenn `body_html` bereits ein
-        // <html> oder <!DOCTYPE>-Wrapper enthaelt, direkt versenden.
+        // Build HTML with branding. send-admin-email speichert nur den Inhalt;
+        // enthaelt `body_html` schon eine vollstaendige Mail (<html> oder
+        // <!DOCTYPE>), wird sie nicht doppelt gewrappt.
         const rawBody = email.body_html || paragraph(email.body_text || '');
         const alreadyWrapped = /<!doctype html|<html[\s>]/i.test(rawBody);
         const html = alreadyWrapped
@@ -78,11 +72,11 @@ const handler = async (req: Request): Promise<Response> => {
           : buildEmailLayout(settingsData, email.subject, rawBody);
 
         const emailPayload: any = {
-          from: `${email.sender_name || settingsData.site_name} <${email.sender_email || 'info@kuechenwert24.de'}>`,
+          from: `${email.sender_name || settingsData.site_name} <${email.sender_email || BRAND.supportEmail}>`,
           to: [email.recipient_email],
           subject: email.subject,
           html,
-          reply_to: 'info@kuechenwert24.de',
+          reply_to: BRAND.supportEmail,
         };
 
         // Add CC/BCC if present

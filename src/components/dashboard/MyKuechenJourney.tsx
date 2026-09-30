@@ -80,7 +80,7 @@ const FUNNEL_META: Record<
     icon: Wand2,
     color:
       "text-purple-600 bg-purple-50 border-purple-200 dark:bg-purple-950/20 dark:border-purple-800",
-    description: "Küche im eigenen Raum visualisieren, Preis sehen und Studios bieten lassen.",
+    description: "Küche im eigenen Raum visualisieren, Preis sehen und Angebote von Studios erhalten.",
   },
 };
 
@@ -93,7 +93,7 @@ function formatStatus(status: string): { label: string; tone: "default" | "succe
     case "matched":
       return { label: "Studios zugeordnet", tone: "default" };
     case "in_auction":
-      return { label: "Studios bieten", tone: "default" };
+      return { label: "Studios geben Angebote ab", tone: "default" };
     case "sold":
     case "contacted":
       return { label: "Studio meldet sich", tone: "default" };

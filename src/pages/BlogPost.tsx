@@ -13,6 +13,7 @@ import { Button } from "@/components/ui/button";
 import DOMPurify from "dompurify";
 import { useSettings } from "@/contexts/SettingsContext";
 import { BRAND } from "@/lib/brand/config";
+import { generateArticleSchema } from "@/lib/seo";
 
 interface BlogPost {
   id: string;
@@ -77,33 +78,14 @@ const BlogPost = () => {
     );
   }
 
-  // Generate structured data for the article
-  const articleSchema = {
-    '@context': 'https://schema.org',
-    '@type': 'BlogPosting',
-    headline: post.title,
+  const articleSchema = generateArticleSchema({
+    title: post.title,
     description: post.excerpt || post.title,
     datePublished: post.published_at || post.created_at,
-    dateModified: post.created_at,
-    author: {
-      '@type': 'Organization',
-      name: siteName,
-    },
-    publisher: {
-      '@type': 'Organization',
-      name: siteName,
-      logo: {
-        '@type': 'ImageObject',
-        url: `${BRAND.baseUrl}/logo.png?v=2`,
-      },
-    },
-    image: post.featured_image_url || `${BRAND.baseUrl}/og-image.jpg`,
+    authorName: siteName,
+    imageUrl: post.featured_image_url || undefined,
     articleSection: post.category,
-    mainEntityOfPage: {
-      '@type': 'WebPage',
-      '@id': `${BRAND.baseUrl}/blog/${post.slug}`,
-    },
-  };
+  });
 
   return (
     <PageLayout

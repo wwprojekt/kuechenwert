@@ -29,7 +29,7 @@ Field required [type=missing, ...]
   "project_id": "gzqayoalwtmypndrmqes",
   "name": "my-function",
   "entrypoint_path": "index.ts",
-  "verify_jwt": true,
+  "verify_jwt": false,
   "files": [
     {
       "name": "index.ts",
@@ -44,6 +44,7 @@ Field required [type=missing, ...]
 - **NIEMALS** `supabase_deploy_edge_function` ohne `files` aufrufen
 - **NIEMALS** den vollen Pfad als `entrypoint_path` verwenden (z.B. `functions/my-function/index.ts`) – nur den Dateinamen (`index.ts`)
 - Bei mehreren Dateien (z.B. `index.ts` + `utils.ts`) **ALLE** Dateien im `files`-Array mitgeben
+- `verify_jwt` immer wie in `supabase/config.toml` setzen (derzeit bei allen Functions `false`, die Functions prüfen die Berechtigung selbst). Mit `true` weist das Gateway jeden Aufruf ohne gültiges JWT ab: Funnels mit Publishable Key, Cron-Jobs mit `x-kw-cron-secret`, Webhooks.
 
 ## Mehrere Dateien
 
@@ -61,9 +62,9 @@ Wenn die Edge Function aus mehreren Dateien besteht:
 
 ## Supabase-Projekt Referenz
 
-- **Projekt-ID:** `gzqayoalwtmypndrmqes` (KuechenWert)
+- **Projekt-ID:** `gzqayoalwtmypndrmqes` (KüchenWert)
 - **Region:** eu-central-1
-- `zcrwqxsyptjwkuxfacvq` ist das CaravanWert-Projekt — dorthin **niemals** deployen.
+- `project_id` vor jedem Deploy mit genau dieser ID vergleichen. Jede andere ID gehört zu einem fremden Projekt: nicht deployen, sondern nachfragen (siehe `.cursor/rules/project-scope.mdc`).
 
 ## Shared-Module
 

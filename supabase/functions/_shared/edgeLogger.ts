@@ -25,10 +25,7 @@ type ErrorCategory =
   | 'marketplace'
   | 'privacy'
   | 'maintenance'
-  | 'kaufchance'
-  | 'auction'
   | 'invoice'
-  | 'contract'
   | 'unknown';
 
 interface SupabaseLike {

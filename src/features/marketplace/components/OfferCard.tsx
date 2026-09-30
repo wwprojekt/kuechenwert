@@ -1,4 +1,4 @@
-import { BadgeCheck, CalendarClock, Check, Globe, MapPin, Star, Truck } from "lucide-react";
+import { BadgeCheck, CalendarClock, Check, Globe, MapPin, Truck } from "lucide-react";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -52,11 +52,6 @@ export function OfferCard({
               <span className="inline-flex items-center gap-1">
                 <MapPin className="h-3.5 w-3.5" /> {offer.dealer.city}
                 {offer.dealer.distance_km != null && ` · ${Math.round(offer.dealer.distance_km)} km`}
-              </span>
-            )}
-            {offer.dealer.rating != null && offer.dealer.reviews > 0 && (
-              <span className="inline-flex items-center gap-1">
-                <Star className="h-3.5 w-3.5 fill-accent text-accent" /> {Number(offer.dealer.rating).toLocaleString("de-DE", { maximumFractionDigits: 1 })} ({offer.dealer.reviews})
               </span>
             )}
           </p>

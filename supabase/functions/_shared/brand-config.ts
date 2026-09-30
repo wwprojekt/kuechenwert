@@ -6,9 +6,8 @@
  * WICHTIG: Beide Dateien MUESSEN identische Werte haben. Bei Aenderung
  * IMMER beide Dateien anpassen.
  *
- * Zentrale Quelle fuer Brand-Metadaten, die in E-Mails, Log-Ausgaben,
- * Webhook-Signaturen und generierten PDFs (Rechnungen, Kaufvertraege,
- * Uebergabeprotokolle) verwendet werden.
+ * Zentrale Quelle fuer Brand-Metadaten, die in E-Mails, Log-Ausgaben und
+ * generierten PDFs (Rechnungen) verwendet werden.
  *
  * Domain-Strategie:
  *   Primary:  kuechenwert24.de (ASCII, Umlaut-frei)
@@ -20,9 +19,10 @@
  * inkompatibel sind.
  */
 
+import { BRAND_ASSET_PATHS } from "./brand-assets.ts";
+
 export const BRAND = {
   name: "KüchenWert",
-  // Marke der WohnWert GmbH (dieselbe Firma betreibt auch CaravanWert).
   legalName: "WohnWert GmbH",
   tagline: "Traumküche planen & Angebote vergleichen",
   domain: "kuechenwert24.de",
@@ -65,19 +65,14 @@ export const BRAND_URLS = {
 /**
  * Absolute Logo-URLs (fuer E-Mail-Templates und PDF-Header).
  * Nur PNG/JPEG: Outlook und PDF-Bibliotheken koennen kein WebP.
- * Erzeugt von scripts/generate-logo-assets.mjs.
- *
- * Bei neuen Logo-Dateien ASSET_VERSION erhoehen: Cloudflare, Gmail-Proxy und
- * Mail-Clients cachen Bilder unter derselben URL sehr lange.
+ * Pfade mit Inhalts-Hash aus brand-assets.ts (scripts/fingerprint-brand-assets.mjs).
  */
-const ASSET_VERSION = "2";
-
 export const BRAND_LOGO_URLS = {
   /** Wortmarke dunkel auf hell, 964×260. */
-  primary: `${BRAND.baseUrl}/logo-2x.png?v=${ASSET_VERSION}`,
+  primary: `${BRAND.baseUrl}${BRAND_ASSET_PATHS.wordmark}`,
   /** Wortmarke hell fuer den dunkelgruenen E-Mail-Header, 964×260. */
-  email: `${BRAND.baseUrl}/logo-email.png?v=${ASSET_VERSION}`,
+  email: `${BRAND.baseUrl}${BRAND_ASSET_PATHS.email}`,
   /** Wortmarke hell auf dunkel, 482×130. */
-  white: `${BRAND.baseUrl}/logo-white.png?v=${ASSET_VERSION}`,
-  ogImage: `${BRAND.baseUrl}/og-image.jpg?v=${ASSET_VERSION}`,
+  white: `${BRAND.baseUrl}${BRAND_ASSET_PATHS.wordmarkWhite}`,
+  ogImage: `${BRAND.baseUrl}${BRAND_ASSET_PATHS.ogImage}`,
 } as const;

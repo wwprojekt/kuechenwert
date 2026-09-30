@@ -43,8 +43,6 @@ export interface ProjectOffer {
     verified: boolean;
     member_since?: string;
     distance_km?: number;
-    rating?: number;
-    reviews: number;
     intro?: string;
     phone?: string;
     email?: string;

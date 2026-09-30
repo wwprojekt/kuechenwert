@@ -2,19 +2,16 @@ import type { ElementType } from "react";
 import { Link } from "react-router-dom";
 import {
   Users, TrendingUp, UserPlus, Mail, AlertCircle, MessageSquare, Building2,
-  FileText, CheckCircle2, ArrowRight, Bell, Inbox, RefreshCw, ExternalLink,
-  Activity, BarChart3, PhoneCall, Sparkles,
+  FileText, CheckCircle2, Bell, Inbox, RefreshCw, ExternalLink,
+  Activity, BarChart3, Sparkles,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { FunnelCInsightCard } from "@/components/admin/FunnelCInsightCard";
 import {
   ActionItemsList,
   CountBadge,
   QuickStatCard,
   RevenueOverview,
-  UrgencyBadge,
 } from "@/components/admin/dashboard/DashboardWidgets";
 import {
   timeAgo,
@@ -23,13 +20,11 @@ import {
   useDashboardCounts,
   useLeadMetrics,
   useRevenueStats,
-  useUrgentLeads,
   type TimelineItem,
 } from "@/components/admin/dashboard/useAdminDashboardData";
 
 const TIMELINE_DOT: Record<TimelineItem["type"], string> = {
   lead: "bg-emerald-500",
-  wizard: "bg-blue-500",
   email: "bg-orange-500",
   dealer: "bg-amber-500",
 };
@@ -58,7 +53,6 @@ function QuickLink({ to, icon: Icon, iconClass, label, hint, hintClass }: {
 export default function AdminDashboard() {
   const { data: counts } = useDashboardCounts();
   const { data: actionItems, isLoading: actionsLoading } = useActionItems();
-  const { data: urgentLeads } = useUrgentLeads();
   const { data: revenue } = useRevenueStats();
   const { data: timeline } = useActivityTimeline();
   const { data: metrics } = useLeadMetrics();
@@ -113,13 +107,13 @@ export default function AdminDashboard() {
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-2 sm:gap-3">
         <QuickStatCard
           title="Neue Anfragen"
-          value={counts?.totalAnfragen || 0}
-          subtitle="unbearbeitet / 24 h"
+          value={counts?.recentLeads || 0}
+          subtitle="letzte 24 h"
           icon={FileText}
           color="text-blue-600"
           bgColor="bg-blue-100"
           link="/admin/leads"
-          badge={counts?.totalAnfragen}
+          badge={counts?.recentLeads}
         />
         <QuickStatCard
           title="Nachrichten"
@@ -218,42 +212,6 @@ export default function AdminDashboard() {
         </div>
 
         <div className="lg:col-span-2 space-y-4">
-          {urgentLeads && urgentLeads.length > 0 && (
-            <Card className="border-2 border-orange-200 dark:border-orange-900">
-              <CardHeader className="pb-3">
-                <div className="flex items-center justify-between">
-                  <CardTitle className="text-base flex items-center gap-2">
-                    <PhoneCall className="w-4 h-4 text-orange-600" />
-                    Dringende Anfragen
-                  </CardTitle>
-                  <Button asChild variant="ghost" size="sm" className="text-xs h-7">
-                    <Link to="/admin/leads">
-                      Alle <ArrowRight className="w-3 h-3 ml-1" />
-                    </Link>
-                  </Button>
-                </div>
-              </CardHeader>
-              <CardContent className="pt-0">
-                <div className="space-y-1">
-                  {urgentLeads.slice(0, 5).map((lead) => (
-                    <Link key={lead.id} to="/admin/leads" className="block">
-                      <div className="flex items-center justify-between gap-2 p-2.5 rounded-lg hover:bg-muted/60 transition-colors">
-                        <div className="min-w-0 flex-1">
-                          <p className="text-sm font-medium truncate">{lead.name}</p>
-                          <p className="text-xs text-muted-foreground truncate">{lead.summary}</p>
-                        </div>
-                        <div className="flex items-center gap-2 flex-shrink-0">
-                          {lead.contacted && <Badge variant="outline" className="text-[10px] px-1 py-0 h-4">Kontaktiert</Badge>}
-                          <UrgencyBadge days={lead.ageDays} />
-                        </div>
-                      </div>
-                    </Link>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-          )}
-
           {timeline && timeline.length > 0 && (
             <Card className="border-2">
               <CardHeader className="pb-3">
@@ -293,7 +251,7 @@ export default function AdminDashboard() {
                   icon={UserPlus}
                   iconClass="text-cyan-500"
                   label="Leads"
-                  hint={counts?.totalAnfragen ? `${counts.totalAnfragen} neu` : undefined}
+                  hint={counts?.recentLeads ? `${counts.recentLeads} neu` : undefined}
                   hintClass="text-cyan-600"
                 />
                 <QuickLink

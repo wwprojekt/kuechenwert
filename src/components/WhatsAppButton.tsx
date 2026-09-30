@@ -48,10 +48,6 @@ export const WhatsAppButton = () => {
     return null;
   }
 
-  // Auktions-Detailseiten haben auf Mobile eine sticky Bid-Bar am unteren
-  // Rand. Damit der WhatsApp-Button die Bar nicht überlappt, schieben wir
-  // ihn dort höher (nur auf Mobile, ab sm: zurück zur Standard-Position).
-  //
   // z-index: bewusst z-40 (CookieBanner ist z-50). Solange das Cookie-Banner
   // sichtbar ist, soll die Datenschutz-Entscheidung nicht durch die FAB
   // verdeckt werden. Sobald der Banner verschwunden ist, sitzt der FAB
@@ -59,10 +55,7 @@ export const WhatsAppButton = () => {
   //
   // safe-area-inset-bottom verhindert Kollision mit dem iOS Home-Indicator
   // (Notch-Geräte ab iPhone X) und Android-Gesture-Bar.
-  const isAuctionPage = location.pathname.startsWith('/auktion/');
-  const positionClasses = isAuctionPage
-    ? 'fixed bottom-[calc(6rem+env(safe-area-inset-bottom))] left-4 sm:bottom-8 sm:left-8 z-40'
-    : 'fixed bottom-[calc(2rem+env(safe-area-inset-bottom))] left-4 sm:bottom-8 sm:left-8 z-40';
+  const positionClasses = 'fixed bottom-[calc(2rem+env(safe-area-inset-bottom))] left-4 sm:bottom-8 sm:left-8 z-40';
 
   // Don't render if no phone number configured
   if (!settings?.whatsapp_number && !settings?.support_phone) {

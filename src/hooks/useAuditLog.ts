@@ -22,7 +22,6 @@ export type AuditAction =
 
 export type AuditEntityType =
   | "user"
-  | "kitchen"
   | "dealer"
   | "invoice"
   | "email"

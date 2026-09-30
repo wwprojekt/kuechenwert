@@ -4,7 +4,7 @@ import { buildEmailLayout, greeting, paragraph, button, infoBox, list } from "..
 import { getCorsHeaders, handleCorsPreflightRequest } from "../_shared/cors.ts";
 import { edgeLogger } from "../_shared/edgeLogger.ts";
 import { checkServiceRoleOrAdmin } from "../_shared/auth.ts";
-import { BRAND } from "../_shared/brand-config.ts";
+import { BRAND, BRAND_LEGAL } from "../_shared/brand-config.ts";
 
 const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY");
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
@@ -60,7 +60,7 @@ const handler = async (req: Request): Promise<Response> => {
       site_name: BRAND.name,
       site_description: "Das Vergleichsportal für neue Küchen",
       contact_email: BRAND.supportEmail,
-      support_phone: "+49 511 51532476",
+      support_phone: BRAND_LEGAL.phone,
     };
 
     const redirectUrl = body.hasPassword ? `${BRAND.baseUrl}/dashboard` : `${BRAND.baseUrl}/dashboard?setup=password`;

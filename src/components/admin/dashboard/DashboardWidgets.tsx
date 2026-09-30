@@ -14,12 +14,6 @@ export function CountBadge({ count, color = "bg-red-500" }: { count: number; col
   );
 }
 
-export function UrgencyBadge({ days }: { days: number }) {
-  if (days >= 3) return <Badge className="bg-red-500 text-white text-[10px] px-1.5 py-0">{days} Tage</Badge>;
-  if (days >= 1) return <Badge className="bg-orange-500 text-white text-[10px] px-1.5 py-0">{days} Tag{days > 1 ? "e" : ""}</Badge>;
-  return <Badge className="bg-green-500 text-white text-[10px] px-1.5 py-0">Heute</Badge>;
-}
-
 interface QuickStatCardProps {
   title: string;
   value: number | string;

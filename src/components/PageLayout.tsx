@@ -20,10 +20,6 @@ interface PageLayoutProps {
   noIndex?: boolean;
   structuredData?: object | object[];
   breadcrumbs?: BreadcrumbItem[] | boolean;
-  /** Blendet den Header aus (z.B. im Wizard-Flow) */
-  hideHeader?: boolean;
-  /** Blendet den Footer aus (z.B. im Wizard-Flow) */
-  hideFooter?: boolean;
   /**
    * Ersetzt Kopf und Fußzeile der Website, z. B. im Fokusmodus der Funnels
    * (FunnelHeader/FunnelFooter); dann ohne „Nach oben“-Button.
@@ -47,8 +43,6 @@ const PageLayout = ({
   noIndex = false,
   structuredData,
   breadcrumbs,
-  hideHeader = false,
-  hideFooter = false,
   header,
   footer,
 }: PageLayoutProps) => {
@@ -97,7 +91,7 @@ const PageLayout = ({
         )}
       </Helmet>
       <div className="flex flex-col min-h-screen">
-        {!hideHeader && (header ?? <Header />)}
+        {header ?? <Header />}
         <main id="main-content" tabIndex={-1} className="flex-1 outline-none">
           {showBreadcrumbs && (
             <div className="container mx-auto px-4 pt-4">
@@ -106,7 +100,7 @@ const PageLayout = ({
           )}
           {children}
         </main>
-        {!hideFooter && (footer ?? <Footer />)}
+        {footer ?? <Footer />}
         {!customChrome && <ScrollToTop />}
       </div>
     </>

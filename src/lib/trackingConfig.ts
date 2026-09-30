@@ -2,7 +2,7 @@
  * Tracking Configuration Service
  *
  * Single source of truth for runtime tracking IDs (GA4, Google Ads,
- * GTM, Meta Pixel, server-side IDs). Backed by `site_settings.tracking_config`
+ * GTM, Meta Pixel, Microsoft Ads). Backed by `site_settings.tracking_config`
  * (JSONB) and editable via Admin Backend → Einstellungen → Tracking.
  *
  * - SettingsContext writes the loaded config to `window.__TRACKING_CONFIG__`
@@ -19,19 +19,7 @@
  * `reloadTrackingScripts()` call from the admin UI).
  */
 
-export type ConversionLabelKey =
-  | 'KUECHEN_LEAD'
-  | 'BEWERTUNG_ABGESCHLOSSEN'
-  | 'KONTAKTFORMULAR_GESENDET'
-  | 'WERTERMITTLUNG_LEAD'
-  | 'WERTRECHNER_LEAD'
-  | 'WIZARD_ABGESCHLOSSEN'
-  | 'TERMINBUCHUNG'
-  | 'LANDING_PAGE_LEAD'
-  | 'WIZARD_GESTARTET'
-  | 'WIZARD_FAHRZEUGDATEN';
-
-export type ConversionValueKey = ConversionLabelKey | 'INSTANT_BUY';
+export type ConversionLabelKey = 'KUECHEN_LEAD' | 'KONTAKTFORMULAR_GESENDET';
 
 export interface TrackingConfig {
   enabled: boolean;
@@ -45,7 +33,7 @@ export interface TrackingConfig {
     conversion_id: string;
     allow_enhanced_conversions: boolean;
     labels: Record<ConversionLabelKey, string>;
-    values: Record<ConversionValueKey, number>;
+    values: Record<ConversionLabelKey, number>;
   };
   gtm: {
     enabled: boolean;
@@ -71,11 +59,7 @@ export interface TrackingConfig {
     uet_tag_id: string;
     allow_enhanced_conversions: boolean;
     conversion_goals: Record<ConversionLabelKey, string>;
-    values: Record<ConversionValueKey, number>;
-  };
-  server_side: {
-    gads_offline_conversion_action_id: string;
-    gads_login_customer_id: string;
+    values: Record<ConversionLabelKey, number>;
   };
 }
 
@@ -97,28 +81,11 @@ export const DEFAULT_TRACKING_CONFIG: TrackingConfig = {
     allow_enhanced_conversions: true,
     labels: {
       KUECHEN_LEAD: '',
-      BEWERTUNG_ABGESCHLOSSEN: '',
       KONTAKTFORMULAR_GESENDET: '',
-      WERTERMITTLUNG_LEAD: '',
-      WERTRECHNER_LEAD: '',
-      WIZARD_ABGESCHLOSSEN: '',
-      TERMINBUCHUNG: '',
-      LANDING_PAGE_LEAD: '',
-      WIZARD_GESTARTET: '',
-      WIZARD_FAHRZEUGDATEN: '',
     },
     values: {
       KUECHEN_LEAD: 9.0,
-      WIZARD_ABGESCHLOSSEN: 9.0,
-      TERMINBUCHUNG: 9.0,
       KONTAKTFORMULAR_GESENDET: 1.0,
-      WERTERMITTLUNG_LEAD: 2.5,
-      WERTRECHNER_LEAD: 2.5,
-      LANDING_PAGE_LEAD: 1.0,
-      WIZARD_GESTARTET: 1.0,
-      WIZARD_FAHRZEUGDATEN: 1.0,
-      BEWERTUNG_ABGESCHLOSSEN: 0,
-      INSTANT_BUY: 0,
     },
   },
   gtm: {
@@ -135,33 +102,12 @@ export const DEFAULT_TRACKING_CONFIG: TrackingConfig = {
     allow_enhanced_conversions: true,
     conversion_goals: {
       KUECHEN_LEAD: 'kuechen_lead',
-      WIZARD_ABGESCHLOSSEN: 'wizard_completed',
       KONTAKTFORMULAR_GESENDET: 'kontakt_lead',
-      WERTERMITTLUNG_LEAD: 'wertermittlung_lead',
-      WERTRECHNER_LEAD: 'wertrechner_lead',
-      TERMINBUCHUNG: 'terminbuchung',
-      LANDING_PAGE_LEAD: 'landing_funnel_start',
-      WIZARD_GESTARTET: 'wizard_started',
-      WIZARD_FAHRZEUGDATEN: 'wizard_vehicle_data',
-      BEWERTUNG_ABGESCHLOSSEN: 'bewertung_abgeschlossen',
     },
     values: {
       KUECHEN_LEAD: 9.0,
-      WIZARD_ABGESCHLOSSEN: 9.0,
-      TERMINBUCHUNG: 9.0,
       KONTAKTFORMULAR_GESENDET: 1.0,
-      WERTERMITTLUNG_LEAD: 2.5,
-      WERTRECHNER_LEAD: 2.5,
-      LANDING_PAGE_LEAD: 1.0,
-      WIZARD_GESTARTET: 1.0,
-      WIZARD_FAHRZEUGDATEN: 1.0,
-      BEWERTUNG_ABGESCHLOSSEN: 0,
-      INSTANT_BUY: 0,
     },
-  },
-  server_side: {
-    gads_offline_conversion_action_id: '',
-    gads_login_customer_id: '',
   },
 };
 
@@ -202,7 +148,7 @@ export function mergeTrackingConfig(partial: unknown): TrackingConfig {
         ? p.google_ads.allow_enhanced_conversions
         : d.google_ads.allow_enhanced_conversions,
       labels: { ...d.google_ads.labels, ...(p.google_ads?.labels ?? {}) } as Record<ConversionLabelKey, string>,
-      values: { ...d.google_ads.values, ...(p.google_ads?.values ?? {}) } as Record<ConversionValueKey, number>,
+      values: { ...d.google_ads.values, ...(p.google_ads?.values ?? {}) } as Record<ConversionLabelKey, number>,
     },
     gtm: {
       enabled: typeof p.gtm?.enabled === 'boolean' ? p.gtm.enabled : d.gtm.enabled,
@@ -231,15 +177,7 @@ export function mergeTrackingConfig(partial: unknown): TrackingConfig {
       values: {
         ...d.microsoft_ads.values,
         ...(p.microsoft_ads?.values ?? {}),
-      } as Record<ConversionValueKey, number>,
-    },
-    server_side: {
-      gads_offline_conversion_action_id: typeof p.server_side?.gads_offline_conversion_action_id === 'string'
-        ? p.server_side.gads_offline_conversion_action_id.trim()
-        : d.server_side.gads_offline_conversion_action_id,
-      gads_login_customer_id: typeof p.server_side?.gads_login_customer_id === 'string'
-        ? p.server_side.gads_login_customer_id.trim()
-        : d.server_side.gads_login_customer_id,
+      } as Record<ConversionLabelKey, number>,
     },
   };
 }
@@ -302,7 +240,7 @@ export function getConversionLabel(key: ConversionLabelKey): string {
   return cfg.google_ads.labels[key] ?? DEFAULT_TRACKING_CONFIG.google_ads.labels[key];
 }
 
-export function getConversionValue(key: ConversionValueKey): number {
+export function getConversionValue(key: ConversionLabelKey): number {
   const cfg = getTrackingConfig();
   const v = cfg.google_ads.values[key];
   return typeof v === 'number' ? v : DEFAULT_TRACKING_CONFIG.google_ads.values[key];
@@ -357,7 +295,7 @@ export function getMicrosoftConversionGoal(key: ConversionLabelKey): string {
   );
 }
 
-export function getMicrosoftConversionValue(key: ConversionValueKey): number {
+export function getMicrosoftConversionValue(key: ConversionLabelKey): number {
   const cfg = getTrackingConfig();
   const v = cfg.microsoft_ads.values[key];
   return typeof v === 'number' ? v : DEFAULT_TRACKING_CONFIG.microsoft_ads.values[key];

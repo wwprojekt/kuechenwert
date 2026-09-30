@@ -24,7 +24,7 @@ export const BRAND = {
   name: "KüchenWert",
 
   // Rechtlicher Firmenname (fuer Impressum / AGB-Verweise). KüchenWert ist
-  // eine Marke der WohnWert GmbH (dieselbe Firma betreibt auch CaravanWert).
+  // eine Marke der WohnWert GmbH.
   legalName: "WohnWert GmbH",
 
   // Produkt-Claim / Subline.

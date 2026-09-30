@@ -416,14 +416,3 @@ export const trackEvent = (
     properties?: Record<string, unknown>;
   }
 ) => analyticsService.trackEvent(eventName, options);
-
-// Business event tracking
-export const trackBusinessEvent = (
-  eventName: 'vehicle_listed' | 'bid_placed' | 'auction_won' | 'appointment_booked' | 'user_registered' | 'search_performed',
-  properties?: Record<string, unknown>
-) => {
-  analyticsService.trackEvent(eventName, {
-    category: 'business',
-    properties,
-  });
-};

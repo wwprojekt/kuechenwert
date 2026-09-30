@@ -7,8 +7,8 @@ const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
 /**
- * Admin-only Edge Function to create a user account for a customer.
- * Used when admin converts a wizard session to a kitchen listing.
+ * Admin-only Edge Function to create a user account for a studio
+ * (DealerCreateDialog, role "dealer") or a customer.
  *
  * NOTE: verify_jwt is set to false to avoid 401 errors from expired tokens.
  * Authentication is handled internally by verifying the caller is an admin.
@@ -21,7 +21,7 @@ const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
  *   firstName?: string
  *   lastName?: string
  *   phone?: string
- *   role?: "private" | "seller" (default: "private")
+ *   role?: "dealer" | "private" (default: "private"; every other role becomes a customer)
  * }
  *
  * Returns: { userId: string, isExisting: boolean }
@@ -57,7 +57,7 @@ const handler = async (req: Request): Promise<Response> => {
     const token = authHeader.replace("Bearer ", "");
 
     // Verify the caller's identity using service_role + token parameter
-    // (same pattern as place-bid, instant-buy – avoids SUPABASE_ANON_KEY dependency)
+    // (avoids a SUPABASE_ANON_KEY dependency)
     const userClient = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
     const { data: { user: callerUser }, error: authError } = await userClient.auth.getUser(token);
     if (authError || !callerUser) {
@@ -99,7 +99,7 @@ const handler = async (req: Request): Promise<Response> => {
     const firstName = body.firstName?.trim() || "";
     const lastName = body.lastName?.trim() || "";
     const phone = body.phone?.trim() || null;
-    const role = body.role || "private";
+    const isDealer = body.role === "dealer";
 
     // Check if user already exists by email in profiles table
     const { data: existingProfile } = await adminClient
@@ -185,7 +185,8 @@ const handler = async (req: Request): Promise<Response> => {
         first_name: firstName || null,
         last_name: lastName || null,
         phone: phone,
-        account_type: role,
+        // profiles.account_type erlaubt nur private und business (Studios, wie approve_dealer_application).
+        account_type: isDealer ? "business" : "private",
       }, { onConflict: "id" });
 
     if (profileError) {
@@ -198,7 +199,7 @@ const handler = async (req: Request): Promise<Response> => {
       .from("user_roles")
       .upsert({
         user_id: userId,
-        role: role === "dealer" ? "dealer" : "seller",
+        role: isDealer ? "dealer" : "seller",
       }, { onConflict: "user_id" });
 
     if (roleError) {

@@ -2,6 +2,7 @@ import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.100.1';
 import { buildEmailLayout, greeting } from '../_shared/email-builder.ts';
 import { getCorsHeaders, handleCorsPreflightRequest } from '../_shared/cors.ts';
+import { BRAND, BRAND_LEGAL } from '../_shared/brand-config.ts';
 
 const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY");
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
@@ -14,11 +15,10 @@ interface SendEmailRequest {
   cc?: string;
   bcc?: string;
   reply_to_message_id?: string;
-  reply_to_message_type?: 'support' | 'contact' | 'vehicle_question';
+  reply_to_message_type?: 'support' | 'contact';
   recipient_name?: string;
   attachments?: Array<{ filename: string; content: string; type?: string }>;
   scheduled_at?: string;
-  plain_answer?: string; // Die reine Admin-Antwort ohne Kontext-Text (für kitchen_questions)
 }
 
 const handler = async (req: Request): Promise<Response> => {
@@ -46,7 +46,11 @@ const handler = async (req: Request): Promise<Response> => {
     }
 
     const body: SendEmailRequest = await req.json();
-    const { to, subject, body_html, cc, bcc, reply_to_message_id, reply_to_message_type, recipient_name, attachments, scheduled_at, plain_answer } = body;
+    const { to, subject, body_html, cc, bcc, reply_to_message_id, recipient_name, attachments, scheduled_at } = body;
+    const reply_to_message_type =
+      body.reply_to_message_type === 'support' || body.reply_to_message_type === 'contact'
+        ? body.reply_to_message_type
+        : undefined;
 
     if (!to || !subject || !body_html) {
       return new Response(JSON.stringify({ error: 'Missing required fields: to, subject, body_html' }), { status: 400, headers });
@@ -82,10 +86,10 @@ const handler = async (req: Request): Promise<Response> => {
     // Fetch site settings
     const { data: settings } = await supabase.from('site_settings').select('*').single();
     const settingsData = settings || {
-      site_name: 'KüchenWert',
-      site_description: 'Küchenangebote vergleichen',
-      contact_email: 'info@kuechenwert24.de',
-      support_phone: '+49 511 51532476',
+      site_name: BRAND.name,
+      site_description: BRAND.tagline,
+      contact_email: BRAND.supportEmail,
+      support_phone: BRAND_LEGAL.phone,
     };
 
     // Build email with branding
@@ -105,7 +109,7 @@ const handler = async (req: Request): Promise<Response> => {
       const { data: emailRecord, error: insertError } = await supabase
         .from('admin_emails')
         .insert({
-          sender_email: 'info@kuechenwert24.de',
+          sender_email: BRAND.supportEmail,
           sender_name: settingsData.site_name,
         recipient_email: cleanTo,
         recipient_name: recipient_name || null,
@@ -139,13 +143,13 @@ const handler = async (req: Request): Promise<Response> => {
 
     // Build Resend payload
     const resendPayload: any = {
-      from: `${settingsData.site_name} <info@kuechenwert24.de>`,
+      from: `${settingsData.site_name} <${BRAND.supportEmail}>`,
       to: [cleanTo],
       cc: ccList,
       bcc: bccList,
       subject,
       html,
-      reply_to: 'info@kuechenwert24.de',
+      reply_to: BRAND.supportEmail,
     };
 
     // Add attachments if provided
@@ -209,7 +213,7 @@ const handler = async (req: Request): Promise<Response> => {
     const { data: emailRecord, error: insertError } = await supabase
       .from('admin_emails')
       .insert({
-        sender_email: 'info@kuechenwert24.de',
+        sender_email: BRAND.supportEmail,
         sender_name: settingsData.site_name,
         recipient_email: cleanTo,
         recipient_name: recipient_name || null,
@@ -236,31 +240,18 @@ const handler = async (req: Request): Promise<Response> => {
       console.error("Error logging email:", insertError);
     }
 
-    // If this is a reply to a support/contact/vehicle_question message, update the original
+    // If this is a reply to a support/contact message, update the original
     if (reply_to_message_id && reply_to_message_type) {
-      if (reply_to_message_type === 'vehicle_question') {
-        // Speichere nur die reine Admin-Antwort, nicht den vollen E-Mail-Body mit Kontext
-        const answerText = plain_answer || body_html.replace(/<[^>]*>/g, '');
-        await supabase
-          .from('kitchen_questions')
-          .update({
-            answer: answerText,
-            answered_at: new Date().toISOString(),
-            answered_by: user.id,
-          })
-          .eq('id', reply_to_message_id);
-      } else {
-        const table = reply_to_message_type === 'support' ? 'support_messages' : 'contact_messages';
-        await supabase
-          .from(table)
-          .update({
-            admin_response: body_html.replace(/<[^>]*>/g, ''),
-            responded_at: new Date().toISOString(),
-            responded_by: user.id,
-            status: 'resolved',
-          })
-          .eq('id', reply_to_message_id);
-      }
+      const table = reply_to_message_type === 'support' ? 'support_messages' : 'contact_messages';
+      await supabase
+        .from(table)
+        .update({
+          admin_response: body_html.replace(/<[^>]*>/g, ''),
+          responded_at: new Date().toISOString(),
+          responded_by: user.id,
+          status: 'resolved',
+        })
+        .eq('id', reply_to_message_id);
     }
 
     return new Response(JSON.stringify({

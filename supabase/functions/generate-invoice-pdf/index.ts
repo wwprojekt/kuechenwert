@@ -18,9 +18,6 @@ const TEXT_LIGHT = { r: 107, g: 114, b: 128 };
 const GREEN_BG = { r: 238, g: 241, b: 236 };
 const GREEN_BORDER = { r: 190, g: 208, b: 196 };
 const GREEN_TEXT = { r: 42, g: 85, b: 68 };
-const RED_BG = { r: 254, g: 242, b: 242 };
-const RED_BORDER = { r: 252, g: 165, b: 165 };
-const RED_TEXT = { r: 185, g: 28, b: 28 };
 const AMBER_BG = { r: 255, g: 251, b: 235 };
 const AMBER_BORDER = { r: 245, g: 158, b: 11 };
 const AMBER_TEXT = { r: 146, g: 64, b: 14 };
@@ -69,7 +66,7 @@ Deno.serve(async (req) => {
 
     const { data: invoice, error: invoiceError } = await supabase
       .from('invoices')
-      .select(`*, dealer:profiles(salutation, first_name, last_name, company_name, email, company_street, company_city, company_zip, company_country, address_street, address_city, address_zip, address_country, customer_number, vat_id), auction:auctions(kitchen:kitchens(manufacturer, model)), lead:leads(postal_code, city), items:invoice_items(*)`)
+      .select(`*, dealer:profiles(first_name, last_name, company_name, email, company_street, company_city, company_zip, company_country, address_street, address_city, address_zip, address_country, customer_number, vat_id), lead:leads(postal_code, city), items:invoice_items(*)`)
       .eq('id', invoiceId).maybeSingle();
     if (invoiceError) throw invoiceError;
     if (!invoice) return json({ error: 'Rechnung nicht gefunden.' }, 404);
@@ -82,36 +79,17 @@ Deno.serve(async (req) => {
     const website = BRAND_META.domain;
 
     const labels = describeInvoice(invoice);
-    const isPenalty = labels.isPenalty;
     const personalName = `${invoice.dealer?.first_name||''} ${invoice.dealer?.last_name||''}`.trim();
-    // Penalty recipients are typically private sellers → use personal name + private
-    // address. Commission recipients are dealers → prefer company name + company
-    // address. In both cases we fall back to the other set so the PDF always shows
-    // a complete recipient block (important for printing & postal mailing).
-    const dlrName = isPenalty
-      ? (personalName || invoice.dealer?.company_name || 'Verkäufer')
-      : (invoice.dealer?.company_name || personalName || 'Küchenstudio');
-    const dlrStreet = isPenalty
-      ? (invoice.dealer?.address_street || invoice.dealer?.company_street || '')
-      : (invoice.dealer?.company_street || invoice.dealer?.address_street || '');
-    const dlrZip = isPenalty
-      ? (invoice.dealer?.address_zip || invoice.dealer?.company_zip || '')
-      : (invoice.dealer?.company_zip || invoice.dealer?.address_zip || '');
-    const dlrCity = isPenalty
-      ? (invoice.dealer?.address_city || invoice.dealer?.company_city || '')
-      : (invoice.dealer?.company_city || invoice.dealer?.address_city || '');
-    const dlrCountry = isPenalty
-      ? (invoice.dealer?.address_country || invoice.dealer?.company_country || invoice.dealer_country || 'DE')
-      : (invoice.dealer?.company_country || invoice.dealer?.address_country || invoice.dealer_country || 'DE');
+    // Empfänger ist das Küchenstudio: Firmenname und -anschrift, ersatzweise die
+    // Personenangaben, damit der Anschriftenblock für den Postversand vollständig ist.
+    const dlrName = invoice.dealer?.company_name || personalName || 'Küchenstudio';
+    const dlrStreet = invoice.dealer?.company_street || invoice.dealer?.address_street || '';
+    const dlrZip = invoice.dealer?.company_zip || invoice.dealer?.address_zip || '';
+    const dlrCity = invoice.dealer?.company_city || invoice.dealer?.address_city || '';
+    const dlrCountry = invoice.dealer?.company_country || invoice.dealer?.address_country || invoice.dealer_country || 'DE';
     const dlrVatId = invoice.dealer?.vat_id || '';
     const custNum = invoice.customer_number || invoice.dealer?.customer_number || '';
     const isRC = invoice.reverse_charge === true;
-
-    let agbVersionStr = '';
-    if (isPenalty) {
-      const { data: lp } = await supabase.from('legal_pages').select('updated_at').eq('slug','agb').eq('is_published',true).maybeSingle();
-      agbVersionStr = lp?.updated_at ? `AGB ${new Date(lp.updated_at).toLocaleDateString('de-DE')}` : 'AGB Stand 10.04.2026';
-    }
 
     const invDate = fmtDate(invoice.invoice_date || invoice.created_at);
     const dueDateStr = fmtDate(invoice.due_date);
@@ -146,11 +124,6 @@ Deno.serve(async (req) => {
 
     // Recipient with full address (German postal layout, suitable for windowed envelopes)
     let ry=y+4;
-    const dlrSalutation = (invoice.dealer?.salutation || '').trim();
-    if(isPenalty && dlrSalutation){
-      doc.setTextColor(TEXT_MED.r,TEXT_MED.g,TEXT_MED.b); doc.setFontSize(9); doc.setFont('helvetica','normal');
-      doc.text(dlrSalutation,ml,ry); ry+=5;
-    }
     doc.setTextColor(TEXT_DARK.r,TEXT_DARK.g,TEXT_DARK.b); doc.setFontSize(11); doc.setFont('helvetica','bold');
     doc.text(dlrName,ml,ry); ry+=5;
     doc.setFont('helvetica','normal'); doc.setFontSize(9);
@@ -184,28 +157,20 @@ Deno.serve(async (req) => {
 
     y=Math.max(ry,my)+2;
 
-    // Reference box (project, kitchen or penalty)
-    const refBg = isPenalty ? RED_BG : GREEN_BG;
-    const refBorder = isPenalty ? RED_BORDER : GREEN_BORDER;
-    const refText = isPenalty ? RED_TEXT : GREEN_TEXT;
-    const refTitle = labels.referenceTitle.toUpperCase();
-    const refDetail = labels.referenceValue;
-    doc.setFillColor(refBg.r,refBg.g,refBg.b);
-    doc.setDrawColor(refBorder.r,refBorder.g,refBorder.b);
+    // Reference box (Küchenprojekt)
+    doc.setFillColor(GREEN_BG.r,GREEN_BG.g,GREEN_BG.b);
+    doc.setDrawColor(GREEN_BORDER.r,GREEN_BORDER.g,GREEN_BORDER.b);
     doc.roundedRect(ml,y,cw,14,2,2,'FD');
-    doc.setTextColor(refText.r,refText.g,refText.b); doc.setFontSize(6.5); doc.setFont('helvetica','bold');
-    doc.text(refTitle,ml+6,y+5);
+    doc.setTextColor(GREEN_TEXT.r,GREEN_TEXT.g,GREEN_TEXT.b); doc.setFontSize(6.5); doc.setFont('helvetica','bold');
+    doc.text(labels.referenceTitle.toUpperCase(),ml+6,y+5);
     doc.setTextColor(TEXT_DARK.r,TEXT_DARK.g,TEXT_DARK.b); doc.setFontSize(10);
-    doc.text(refDetail,ml+6,y+11);
+    doc.text(labels.referenceValue,ml+6,y+11);
     y+=18;
 
     // Intro
     doc.setTextColor(TEXT_MED.r,TEXT_MED.g,TEXT_MED.b); doc.setFontSize(8.5); doc.setFont('helvetica','normal');
     doc.text('Sehr geehrte Damen und Herren,',ml,y); y+=4;
-    const introLine = isPenalty
-      ? 'hiermit stellen wir Ihnen folgende Vertragsstrafe gemäß § 8 Abs. 4 unserer AGB in Rechnung:'
-      : 'hiermit stellen wir Ihnen folgende Leistungen in Rechnung:';
-    doc.text(introLine,ml,y); y+=8;
+    doc.text('hiermit stellen wir Ihnen folgende Leistungen in Rechnung:',ml,y); y+=8;
 
     // Table header
     doc.setFillColor(248,250,252); doc.rect(ml,y,cw,7,'F');
@@ -250,11 +215,9 @@ Deno.serve(async (req) => {
     y+=6;
     doc.setDrawColor(ACCENT.r,ACCENT.g,ACCENT.b); doc.setLineWidth(0.5); doc.line(tx,y,tv+4,y);
     y+=2;
-    const totalBg = isPenalty ? RED_BG : GREEN_BG;
-    const totalText = isPenalty ? RED_TEXT : GREEN_TEXT;
-    doc.setFillColor(totalBg.r,totalBg.g,totalBg.b);
+    doc.setFillColor(GREEN_BG.r,GREEN_BG.g,GREEN_BG.b);
     doc.rect(tx-4,y,cw-tx+ml+8,9,'F');
-    doc.setTextColor(totalText.r,totalText.g,totalText.b); doc.setFontSize(11); doc.setFont('helvetica','bold');
+    doc.setTextColor(GREEN_TEXT.r,GREEN_TEXT.g,GREEN_TEXT.b); doc.setFontSize(11); doc.setFont('helvetica','bold');
     doc.text('Gesamtbetrag',tx,y+6.5);
     doc.text(fmtCur(gross),tv,y+6.5,{align:'right'});
     y+=15;
@@ -296,15 +259,7 @@ Deno.serve(async (req) => {
 
     // Closing
     doc.setTextColor(TEXT_MED.r,TEXT_MED.g,TEXT_MED.b); doc.setFontSize(8.5); doc.setFont('helvetica','normal');
-    const closingLine = isPenalty
-      ? 'Bitte begleichen Sie den Betrag fristgerecht.'
-      : 'Vielen Dank für Ihr Vertrauen und die Zusammenarbeit!';
-    doc.text(closingLine,ml,y); y+=4.5;
-    if (isPenalty && agbVersionStr) {
-      doc.setFontSize(7); doc.setTextColor(TEXT_LIGHT.r,TEXT_LIGHT.g,TEXT_LIGHT.b);
-      doc.text(`Grundlage: ${agbVersionStr}, akzeptiert bei Registrierung.`,ml,y); y+=4.5;
-      doc.setFontSize(8.5); doc.setTextColor(TEXT_MED.r,TEXT_MED.g,TEXT_MED.b);
-    }
+    doc.text('Vielen Dank für Ihr Vertrauen und die Zusammenarbeit!',ml,y); y+=4.5;
     doc.text('Mit freundlichen Grüßen',ml,y); y+=5;
     doc.setTextColor(ACCENT.r,ACCENT.g,ACCENT.b); doc.setFont('helvetica','bold');
     doc.text(`Ihr ${siteName} Team`,ml,y);

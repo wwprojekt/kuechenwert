@@ -8,6 +8,7 @@ import {
   customerBadge,
 } from '../_shared/email-builder.ts';
 import { getCorsHeaders, handleCorsPreflightRequest } from '../_shared/cors.ts';
+import { BRAND, BRAND_LEGAL } from '../_shared/brand-config.ts';
 import { edgeLogger, logEdgeError } from '../_shared/edgeLogger.ts';
 
 /**
@@ -195,10 +196,10 @@ Deno.serve(async (req) => {
     try {
       const { data: settings } = await supabaseAdmin.from('site_settings').select('*').single();
       const settingsData = settings || {
-        site_name: 'KüchenWert',
-        site_description: 'Küchenangebote vergleichen',
-        contact_email: 'info@kuechenwert24.de',
-        support_phone: '+49 511 51532476',
+        site_name: BRAND.name,
+        site_description: BRAND.tagline,
+        contact_email: BRAND.supportEmail,
+        support_phone: BRAND_LEGAL.phone,
       };
 
       const subject = `Rechnung ${invoice.invoice_number} storniert`;
@@ -250,7 +251,7 @@ Deno.serve(async (req) => {
           'Bitte verwenden Sie diese E-Mail als Beleg für Ihre Buchhaltung. Falls Sie die ursprüngliche Rechnung bereits gebucht haben, stornieren Sie den Vorgang bitte ebenfalls in Ihrer Buchhaltung.',
         )}
         ${paragraph(
-          'Bei Rückfragen sind wir unter <a href="mailto:info@kuechenwert24.de" style="color:#1f8aa2;">info@kuechenwert24.de</a> für Sie da.',
+          `Bei Rückfragen sind wir unter <a href="mailto:${BRAND.supportEmail}" style="color:#336753;">${BRAND.supportEmail}</a> für Sie da.`,
         )}
       `;
 
@@ -263,11 +264,11 @@ Deno.serve(async (req) => {
           Authorization: `Bearer ${RESEND_API_KEY}`,
         },
         body: JSON.stringify({
-          from: `${settingsData.site_name} <info@kuechenwert24.de>`,
+          from: `${settingsData.site_name} <${BRAND.supportEmail}>`,
           to: [recipientEmail],
           subject,
           html,
-          reply_to: 'info@kuechenwert24.de',
+          reply_to: BRAND.supportEmail,
         }),
       });
 
@@ -278,7 +279,7 @@ Deno.serve(async (req) => {
         emailSent = true;
 
         await supabaseAdmin.from('admin_emails').insert({
-          sender_email: 'info@kuechenwert24.de',
+          sender_email: BRAND.supportEmail,
           sender_name: settingsData.site_name,
           recipient_email: recipientEmail,
           recipient_name: recipientName,

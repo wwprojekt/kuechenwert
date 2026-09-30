@@ -13,7 +13,7 @@
 
 import React, { useEffect, useState, Suspense } from 'react';
 import { lazyRetry } from '@/lib/lazyRetry';
-import { useNavigate, Link, Routes, Route, Navigate } from 'react-router-dom';
+import { useNavigate, Link, Routes, Route } from 'react-router-dom';
 import { useUserRole } from '@/hooks/useUserRole';
 import { useDealerPending } from '@/hooks/useDealerPending';
 import { useAuth } from '@/contexts/AuthContext';
@@ -44,17 +44,6 @@ const MyMessages = lazyRetry(() => import('@/pages/dashboard/MyMessages'));
 const MyInvoices = lazyRetry(() => import('@/pages/dashboard/MyInvoices'));
 const UserProfile = lazyRetry(() => import('@/pages/dashboard/UserProfile'));
 const AccountSettings = lazyRetry(() => import('@/pages/dashboard/AccountSettings'));
-
-/**
- * Pfade aus dem früheren Caravan-Auktionsmodell (Inserate, Gebote, Kaufchancen,
- * Übergabetermine, Kaufverträge …). Alte Links und Bookmarks landen in der
- * Projekt-Börse.
- */
-const LEGACY_DEALER_PATHS = [
-  'auctions', 'inventory', 'inventory/:id', 'bids', 'favorites', 'sofortkauf',
-  'kaufchancen', 'appointments', 'contracts', 'claims', 'search-alerts',
-  'listings', 'listings/new', 'listings/:id/edit', 'listings/:id',
-];
 
 /**
  * Wrap a lazy component in Suspense with a consistent loading fallback
@@ -219,10 +208,6 @@ const DealerDashboardWrapper = () => {
 
             <Route path="messages" element={<LazyPage Component={MyMessages} />} />
             <Route path="invoices" element={<LazyPage Component={MyInvoices} />} />
-
-            {LEGACY_DEALER_PATHS.map((path) => (
-              <Route key={path} path={path} element={<Navigate to="/dashboard/projekte" replace />} />
-            ))}
           </>
         )}
         
@@ -256,8 +241,7 @@ const UserDashboardWrapper = () => {
           }
         />
         
-        {/* Fallback: Übersicht für unbekannte Pfade, auch für die früheren
-            Caravan-Pfade /listings, /bids, /favorites, /documents … */}
+        {/* Fallback: Übersicht für unbekannte Pfade */}
         <Route path="*" element={<LazyPage Component={DashboardOverview} />} />
       </Routes>
     </UserLayoutContent>

@@ -25,7 +25,6 @@ import {
   getMicrosoftConversionValue,
   isMicrosoftAdsEnabled,
   type ConversionLabelKey,
-  type ConversionValueKey,
 } from '@/lib/trackingConfig';
 
 declare global {
@@ -80,7 +79,7 @@ function safeUet(...args: unknown[]): boolean {
  */
 export function sendBingConversion(
   key: ConversionLabelKey,
-  valueKey: ConversionValueKey,
+  valueKey: ConversionLabelKey,
   transactionId?: string,
 ): void {
   const goalName = getMicrosoftConversionGoal(key);

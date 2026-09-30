@@ -125,7 +125,7 @@ const Header = () => {
     };
   }, [mobileMenuOpen]);
 
-  const plannerActive = isActive("/funnel/c") || isActive("/traumkueche");
+  const plannerActive = isActive("/funnel/c");
 
   return (
     <>

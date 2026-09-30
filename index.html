@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <!-- interactive-widget=resizes-content tells Chrome to resize the layout
          viewport when the on-screen keyboard opens, so sticky bottom-nav
-         buttons (e.g. in the Verkaufs-Wizard) stay above the keyboard.
+         buttons (e.g. in the funnels) stay above the keyboard.
          iOS Safari ignores this, but also respects position:sticky within
          scrollable containers. viewport-fit=cover enables env(safe-area-*). -->
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, interactive-widget=resizes-content" />
@@ -40,7 +40,6 @@
          /assets/hero-kitchen-<hash>.webp im Bundle. Kein static preload hier,
          weil der Hash build-abhaengig ist. Vite fuegt den optimalen Ladepfad
          per <link rel=modulepreload> + Code-Splitting selbst ein. -->
-    <!-- Preconnect fuer Unsplash faellt weg, weil der Hero jetzt lokal kommt. -->
 
     <!-- Fira Sans kommt als eigenes Asset aus dem Bundle (@fontsource, src/main.tsx):
          keine Anfrage an Google-Server. vite.config.ts lädt die Schnitte 400/600/800
@@ -56,13 +55,14 @@
     <meta name="keywords" content="Küche planen, Küchenplaner online, Küche visualisieren, KI Küchenplaner, Küche Preis berechnen, Küchenstudio Angebote vergleichen, neue Küche kaufen, Küchen Preisvergleich, Nobilia, Häcker, Nolte, KüchenWert" data-rh="true" />
     <meta name="author" content="KüchenWert" />
 
-    <!-- Open Graph / Facebook -->
+    <!-- Open Graph / Facebook. og:image und twitter:image trägt
+         scripts/fingerprint-brand-assets.mjs ein (Pfad mit Inhalts-Hash). -->
     <meta property="og:type" content="website" data-rh="true" />
     <meta property="og:site_name" content="KüchenWert" />
     <meta property="og:locale" content="de_DE" />
     <meta property="og:title" content="KüchenWert — Ihre Traumküche im eigenen Raum visualisiert" data-rh="true" />
     <meta property="og:description" content="Foto hochladen, Küche konfigurieren, Preis sehen – und Angebote geprüfter Küchenstudios vergleichen. Kostenlos & unverbindlich." data-rh="true" />
-    <meta property="og:image" content="https://kuechenwert24.de/og-image.jpg" />
+    <meta property="og:image" content="https://kuechenwert24.de/brand/og-image.536b312637.jpg" />
     <meta property="og:image:type" content="image/jpeg" />
     <meta property="og:image:width" content="1200" />
     <meta property="og:image:height" content="630" />
@@ -72,7 +72,7 @@
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:title" content="KüchenWert — Ihre Traumküche im eigenen Raum visualisiert" data-rh="true" />
     <meta name="twitter:description" content="Foto hochladen, Küche konfigurieren, Preis sehen – und Angebote geprüfter Küchenstudios vergleichen." data-rh="true" />
-    <meta name="twitter:image" content="https://kuechenwert24.de/og-image.jpg" />
+    <meta name="twitter:image" content="https://kuechenwert24.de/brand/og-image.536b312637.jpg" />
 
     <!-- Kein statisches Organization-Schema: Startseite und /ueber-uns liefern
          es über PageLayout (src/lib/seo.ts), sonst stünde es dort doppelt. -->

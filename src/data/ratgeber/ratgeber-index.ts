@@ -1,10 +1,6 @@
-// Public API fuer Ratgeber-Daten.
-//
-// Die Caravanwert-Ratgeber (15 Brand-Files + 2 Condition-Files) wurden beim
-// KuechenWert-Umbau entfernt. Dieses Modul bleibt als Loader-Geruest
-// bestehen, damit /ratgeber/:slug → RatgeberTemplate spaeter einfach mit
-// neuen Kuechen-Themen gefuettert werden kann (z.B. nobilia-kueche-planen,
-// grifflose-kueche-2026, l-kueche-kosten).
+// Public API fuer Ratgeber-Daten: Loader fuer /ratgeber/:slug → RatgeberTemplate
+// (Kuechen-Themen wie nobilia-kueche-planen, grifflose-kueche-2026,
+// l-kueche-kosten).
 //
 // Um neuen Content zu registrieren:
 //   1. src/data/ratgeber/ratgeber-<topic>.ts mit einem `RatgeberConfig`

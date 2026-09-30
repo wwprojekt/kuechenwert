@@ -2,6 +2,7 @@ import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.100.1';
 import { buildEmailLayout, paragraph, greeting, button, infoBox, detailRow, amountDisplay, customerBadge } from '../_shared/email-builder.ts';
 import { checkCronOrServiceRoleOrAdmin } from '../_shared/auth.ts';
+import { BRAND, BRAND_LEGAL } from '../_shared/brand-config.ts';
 import { describeInvoice } from '../_shared/invoice-labels.ts';
 
 const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY");
@@ -9,14 +10,8 @@ const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
 /**
- * Freundliche Zahlungserinnerung – wird per Cron-Job aufgerufen.
+ * Freundliche Zahlungserinnerung an Küchenstudios – wird per Cron-Job aufgerufen.
  * Sendet eine Erinnerung 3 Tage nach Fälligkeit, BEVOR das Mahnwesen greift.
- *
- * FIXED: amount → gross_amount (invoices table column)
- * FIXED: buyer_id → dealer_id (invoices table column)
- * FIXED: status = 'pending' → payment_status = 'pending' (invoices uses payment_status)
- * FIXED: dunning_level removed (not a column in invoices)
- * FIXED: auctions join via auction_id FK
  */
 
 const handler = async (req: Request): Promise<Response> => {
@@ -36,17 +31,6 @@ const handler = async (req: Request): Promise<Response> => {
     const threeDaysAgo = new Date();
     threeDaysAgo.setDate(threeDaysAgo.getDate() - 3);
 
-    // FIXED: Use correct column names from invoices table
-    // - gross_amount instead of amount
-    // - dealer_id instead of buyer_id (note: for seller_penalty invoices,
-    //   dealer_id stores the SELLER's user id — the column is named dealer
-    //   for historical reasons but holds the invoice recipient regardless of role)
-    // - payment_status instead of status for payment filtering
-    // - removed dunning_level (not in invoices table)
-    // - auction_id is a FK in invoices, but for seller_penalty invoices it
-    //   may be NULL → we read invoice_type and only join the auction context
-    //   when it's a regular commission invoice (otherwise we'd send a
-    //   "Wohnmobil"-Fallback that confuses recipients of a Vertragsstrafe).
     // Filter rules:
     // - payment_status IN ('pending','partial'): teilweise bezahlte, aber 3+
     //   Tage überfällige Rechnungen bekommen ebenfalls die weiche Erinnerung.
@@ -58,7 +42,7 @@ const handler = async (req: Request): Promise<Response> => {
     const { data: invoices, error: fetchError } = await supabase
       .from('invoices')
       .select(`
-        id, invoice_number, gross_amount, due_date, dealer_id, invoice_type, penalty_reason, payment_reminder_sent,
+        id, invoice_number, gross_amount, due_date, dealer_id, invoice_type, payment_reminder_sent,
         lead:leads(postal_code, city)
       `)
       .in('payment_status', ['pending', 'partial'])
@@ -80,10 +64,10 @@ const handler = async (req: Request): Promise<Response> => {
     // Fetch site settings
     const { data: settings } = await supabase.from('site_settings').select('*').single();
     const settingsData = settings || {
-      site_name: 'KüchenWert',
-      site_description: 'Küchenangebote vergleichen',
-      contact_email: 'info@kuechenwert24.de',
-      support_phone: '+49 511 51532476',
+      site_name: BRAND.name,
+      site_description: BRAND.tagline,
+      contact_email: BRAND.supportEmail,
+      support_phone: BRAND_LEGAL.phone,
     };
 
     let sent = 0;
@@ -91,30 +75,17 @@ const handler = async (req: Request): Promise<Response> => {
 
     for (const invoice of invoices) {
       try {
-        // Get profile of the invoice recipient. For commission invoices this is
-        // a dealer; for seller_penalty invoices it's a private seller — same
-        // column either way (dealer_id).
         const { data: profile } = await supabase
           .from('profiles')
-          .select('salutation, first_name, last_name, company_name, email, customer_number')
+          .select('first_name, last_name, company_name, email, customer_number')
           .eq('id', invoice.dealer_id)
           .single();
 
         if (!profile?.email) continue;
 
-        const isPenalty = invoice.invoice_type === 'seller_penalty';
-        // Greeting prefers the proper name. For penalty (private seller):
-        // "Vorname Nachname". For commission (dealer): company_name if set,
-        // otherwise the personal name. Both fall back to the other side so we
-        // never end up with an empty greeting line.
         const personalName = [profile.first_name, profile.last_name].filter(Boolean).join(' ');
-        const recipientName = isPenalty
-          ? (personalName || profile.company_name || '')
-          : (profile.company_name || personalName || '');
+        const recipientName = profile.company_name || personalName || '';
 
-        // Subject line and headline differ slightly: a private seller hasn't
-        // bought anything from us, so calling it a "Rechnung" with vehicle
-        // context is misleading.
         const lead = Array.isArray(invoice.lead) ? invoice.lead[0] : invoice.lead;
         const labels = describeInvoice({ ...invoice, lead });
         const refLabel = labels.referenceTitle;
@@ -124,7 +95,6 @@ const handler = async (req: Request): Promise<Response> => {
           year: 'numeric', month: 'long', day: 'numeric',
         });
 
-        // FIXED: Use gross_amount instead of amount
         const amount = typeof invoice.gross_amount === 'number'
           ? invoice.gross_amount.toLocaleString('de-DE', { style: 'currency', currency: 'EUR' })
           : `${invoice.gross_amount} €`;
@@ -146,8 +116,8 @@ const handler = async (req: Request): Promise<Response> => {
           `, 'info', settingsData)}
           ${amountDisplay('Offener Betrag', amount)}
           ${paragraph('Sollte sich Ihre Zahlung mit dieser Erinnerung &uuml;berschnitten haben, betrachten Sie diese Nachricht bitte als gegenstandslos.')}
-          ${paragraph(`Falls Sie Fragen zur Rechnung haben oder eine Ratenzahlung vereinbaren m&ouml;chten, kontaktieren Sie uns gerne unter <a href="mailto:${settingsData.contact_email}" style="color: #1f8aa2;">${settingsData.contact_email}</a> oder telefonisch unter <a href="tel:${settingsData.support_phone.replace(/\s/g, '')}" style="color: #1f8aa2;">${settingsData.support_phone}</a>.`)}
-          ${button('Rechnung ansehen', 'https://kuechenwert24.de/dashboard', settingsData)}
+          ${paragraph(`Falls Sie Fragen zur Rechnung haben oder eine Ratenzahlung vereinbaren m&ouml;chten, kontaktieren Sie uns gerne unter <a href="mailto:${settingsData.contact_email}" style="color: #336753;">${settingsData.contact_email}</a> oder telefonisch unter <a href="tel:${settingsData.support_phone.replace(/\s/g, '')}" style="color: #336753;">${settingsData.support_phone}</a>.`)}
+          ${button('Rechnung ansehen', `${BRAND.baseUrl}/dashboard/invoices`, settingsData)}
         `;
 
         const html = buildEmailLayout(settingsData, subject, emailContent);
@@ -159,11 +129,11 @@ const handler = async (req: Request): Promise<Response> => {
             "Authorization": `Bearer ${RESEND_API_KEY}`,
           },
           body: JSON.stringify({
-            from: `${settingsData.site_name} <info@kuechenwert24.de>`,
+            from: `${settingsData.site_name} <${BRAND.supportEmail}>`,
             to: [profile.email],
             subject,
             html,
-            reply_to: 'info@kuechenwert24.de',
+            reply_to: BRAND.supportEmail,
           }),
         });
 
@@ -177,7 +147,7 @@ const handler = async (req: Request): Promise<Response> => {
         // Log in admin_emails for System tab
         try {
           await supabase.from('admin_emails').insert({
-            sender_email: 'info@kuechenwert24.de',
+            sender_email: BRAND.supportEmail,
             sender_name: settingsData.site_name,
             recipient_email: profile.email,
             recipient_name: recipientName || null,

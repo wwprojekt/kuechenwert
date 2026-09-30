@@ -358,11 +358,11 @@ const RegisterHaendler = () => {
         }
       }
 
-      // Google Ads: Enhanced Conversions + Händler-Registrierung
+      // Google Ads: Enhanced Conversions + Studio-Registrierung
       await setEnhancedConversionData({ email: validated.email, firstName: validated.contactPersonName.split(' ')[0], lastName: validated.contactPersonName.split(' ').slice(1).join(' '), phone: validated.phone, postalCode: validated.companyPostalCode, country: validated.country });
       trackUserRegistered('dealer_registration');
-      trackMetaCompleteRegistration({ content_name: 'Haendler-Registrierung' });
-      trackMetaSubmitApplication({ content_name: 'Haendler-Bewerbung' });
+      trackMetaCompleteRegistration({ content_name: 'Studio-Registrierung' });
+      trackMetaSubmitApplication({ content_name: 'Studio-Bewerbung' });
       trackEvent('dealer_registered', { category: 'business', label: validated.companyName, properties: { country: validated.country } });
 
       setRegistrationComplete(true);

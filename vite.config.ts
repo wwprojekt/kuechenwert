@@ -93,7 +93,7 @@ export default defineConfig(({ mode }) => ({
           // Heavy chunks that are only needed on a tiny minority of routes
           // are loaded on demand by the lazy chunk that uses them, instead
           // of being preloaded on every public page hit. Keep this list
-          // conservative — anything used by Login/Register/Wizard/Hero
+          // conservative — anything used by Login/Register/Funnels/Hero
           // (vendor-forms, vendor-icons, vendor-query) MUST stay preloaded
           // to avoid a regression on the most common landing pages.
           if (dep.includes("vendor-recharts")) return false; // only AdminAnalytics

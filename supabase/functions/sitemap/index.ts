@@ -8,8 +8,7 @@
 // "Gesendete URL als noindex gekennzeichnet"): Impressum, Datenschutz, AGB,
 // /ratgeber, Login/Registrierung, Funnel A, Danke-Seite, /projekt, Konten.
 // Aendert eine Seite ihr noIndex, hier und in public/sitemap.xml nachziehen.
-// Die Caravan-Routen des Forks (/kaufen, /auktion/:id, Wohnmobil-Landings)
-// leitet nginx per 301 um, auch sie fehlen hier bewusst.
+// Alt-URLs, die nginx per 301 umleitet, gehoeren ebenfalls nicht hinein.
 //
 // lastmod gibt es nur fuer Blog-Posts (updated_at aus der Datenbank). Fuer die
 // statischen Seiten fehlt ein verlaessliches Aenderungsdatum, und ein falsches
@@ -19,13 +18,14 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.100.1'
 import { getCorsHeaders, handleCorsPreflightRequest } from '../_shared/cors.ts'
+import { BRAND } from '../_shared/brand-config.ts'
 
 interface SitemapUrl {
   loc: string
   lastmod?: string
 }
 
-const BASE_URL = 'https://kuechenwert24.de'
+const BASE_URL = BRAND.baseUrl
 
 const STATIC_PATHS = [
   '/',

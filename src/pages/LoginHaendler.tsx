@@ -1,8 +1,8 @@
 import { Navigate, useSearchParams } from "react-router-dom";
 
 /**
- * Legacy Händler-Login page — redirects to the unified /login page.
- * Kept as a redirect to avoid breaking existing bookmarks or links.
+ * Studio-Login unter /login/haendler: leitet auf das gemeinsame /login weiter
+ * und behält das Ziel aus `redirect`.
  */
 const LoginHaendler = () => {
   const [searchParams] = useSearchParams();

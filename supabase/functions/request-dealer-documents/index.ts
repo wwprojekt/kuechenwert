@@ -3,6 +3,7 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.100.1';
 import { buildEmailLayout, infoBox, paragraph, button, list, warningBox } from '../_shared/email-builder.ts';
 import { getCorsHeaders, handleCorsPreflightRequest } from '../_shared/cors.ts';
 import { checkServiceRoleOrAdmin } from '../_shared/auth.ts';
+import { BRAND, BRAND_LEGAL } from '../_shared/brand-config.ts';
 
 const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY");
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
@@ -50,10 +51,10 @@ const handler = async (req: Request): Promise<Response> => {
       .single();
 
     const settingsData = settings || {
-      site_name: 'KüchenWert',
-      site_description: 'Küchenangebote vergleichen',
-      contact_email: 'info@kuechenwert24.de',
-      support_phone: '+49 511 51532476',
+      site_name: BRAND.name,
+      site_description: BRAND.tagline,
+      contact_email: BRAND.supportEmail,
+      support_phone: BRAND_LEGAL.phone,
     };
 
     // Build the document list
@@ -67,25 +68,24 @@ const handler = async (req: Request): Promise<Response> => {
     // Build email content
     const emailContent = `
       ${paragraph(`Hallo ${dealer_name},`)}
-      ${paragraph(`vielen Dank für Ihre Registrierung als Händler bei <strong>${settingsData.site_name}</strong>. Um Ihren Händlerzugang freizuschalten, benötigen wir noch einige Dokumente von Ihnen.`)}
-      ${warningBox('Bitte laden Sie die folgenden Dokumente in Ihrem Händler-Dashboard hoch, damit wir Ihren Antrag prüfen können.')}
+      ${paragraph(`vielen Dank für die Registrierung Ihres Küchenstudios bei <strong>${settingsData.site_name}</strong>. Um Ihren Studio-Zugang freizuschalten, benötigen wir noch einige Dokumente von Ihnen.`)}
+      ${warningBox('Bitte laden Sie die folgenden Dokumente im Studio-Portal hoch, damit wir Ihren Antrag prüfen können.')}
       ${infoBox('Erforderliche Dokumente', `
         ${list(docList)}
-        ${paragraph('<strong>Erlaubte Dateiformate:</strong> PDF, JPG, PNG (max. 10 MB pro Datei)')}
+        ${paragraph('<strong>Erlaubte Dateiformate:</strong> PDF, JPG, PNG (max. 25 MB pro Datei)')}
       `, 'info', settingsData)}
       ${paragraph('So laden Sie Ihre Dokumente hoch:')}
       ${list([
-        'Melden Sie sich in Ihrem Händler-Dashboard an',
-        'Klicken Sie auf "Dokumente für Verifizierung"',
+        'Melden Sie sich im Studio-Portal an',
+        'Klicken Sie auf „Dokumente für Verifizierung“',
         'Laden Sie die erforderlichen Dokumente hoch',
       ])}
-      ${button('Zum Händler-Dashboard', 'https://kuechenwert24.de/dashboard')}
-      ${paragraph('Ihre Dokumente werden vertraulich behandelt und nur zur Verifizierung Ihres Händlerkontos verwendet. Nach der Prüfung erhalten Sie eine E-Mail-Benachrichtigung.')}
-      ${paragraph(`Bei Fragen stehen wir Ihnen gerne unter <a href="mailto:${settingsData.contact_email}" style="color: #1f8aa2;">${settingsData.contact_email}</a> oder telefonisch unter <strong>${settingsData.support_phone}</strong> zur Verfügung.`)}
-      ${paragraph('Mit freundlichen Grüßen,<br>Ihr KuechenWert-Team')}
+      ${button('Zum Studio-Portal', `${BRAND.baseUrl}/dashboard`)}
+      ${paragraph('Ihre Dokumente werden vertraulich behandelt und nur zur Verifizierung Ihres Studio-Kontos verwendet. Nach der Prüfung erhalten Sie eine E-Mail-Benachrichtigung.')}
+      ${paragraph(`Bei Fragen stehen wir Ihnen gerne unter <a href="mailto:${settingsData.contact_email}" style="color: #336753;">${settingsData.contact_email}</a> oder telefonisch unter <strong>${settingsData.support_phone}</strong> zur Verfügung.`)}
     `;
 
-    const subject = `Dokumente für Ihre Händler-Verifizierung erforderlich – ${settingsData.site_name}`;
+    const subject = `Dokumente für die Freischaltung Ihres Küchenstudios – ${settingsData.site_name}`;
     const html = buildEmailLayout(settingsData, subject, emailContent);
 
     // Send email via Resend
@@ -96,11 +96,11 @@ const handler = async (req: Request): Promise<Response> => {
         Authorization: `Bearer ${RESEND_API_KEY}`,
       },
       body: JSON.stringify({
-        from: `${settingsData.site_name} <info@kuechenwert24.de>`,
+        from: `${settingsData.site_name} <${BRAND.supportEmail}>`,
         to: [dealer_email],
         subject: subject,
         html: html,
-        reply_to: 'info@kuechenwert24.de',
+        reply_to: BRAND.supportEmail,
       }),
     });
 
@@ -116,39 +116,30 @@ const handler = async (req: Request): Promise<Response> => {
 
     console.log('Document request email sent successfully:', emailResult.id);
 
-    // Update counter in dealer_applications
-    const { error: updateError } = await supabase.rpc('increment_counter', {
-      table_name: 'dealer_applications',
-      column_name: 'document_request_sent_count',
-      row_id: dealer_application_id,
-    });
+    // Nicht atomar: Nur Admins lösen die Anforderung aus, parallele Anforderungen
+    // für dieselbe Bewerbung kommen praktisch nicht vor.
+    const { data: currentApp } = await supabase
+      .from('dealer_applications')
+      .select('document_request_sent_count')
+      .eq('id', dealer_application_id)
+      .maybeSingle();
 
-    // Fallback: direct update if RPC doesn't exist
-    if (updateError) {
-      console.log('RPC increment_counter not available, using direct update');
-      // First get current count
-      const { data: currentApp } = await supabase
-        .from('dealer_applications')
-        .select('document_request_sent_count')
-        .eq('id', dealer_application_id)
-        .single();
-
-      const currentCount = currentApp?.document_request_sent_count || 0;
-
-      await supabase
-        .from('dealer_applications')
-        .update({
-          document_request_sent_count: currentCount + 1,
-          document_request_last_sent_at: new Date().toISOString(),
-        })
-        .eq('id', dealer_application_id);
+    const { error: counterError } = await supabase
+      .from('dealer_applications')
+      .update({
+        document_request_sent_count: (currentApp?.document_request_sent_count ?? 0) + 1,
+        document_request_last_sent_at: new Date().toISOString(),
+      })
+      .eq('id', dealer_application_id);
+    if (counterError) {
+      console.error('Could not update document request counter:', counterError);
     }
 
     // Log in admin_emails table with the proper email_type so the Email Center
     // can group/filter dealer document requests separately from generic 'auto' mails.
     try {
       await supabase.from('admin_emails').insert({
-        sender_email: 'info@kuechenwert24.de',
+        sender_email: BRAND.supportEmail,
         sender_name: settingsData.site_name,
         recipient_email: dealer_email,
         recipient_name: dealer_name,

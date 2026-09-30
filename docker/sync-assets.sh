@@ -9,7 +9,7 @@
 #
 # WARUM:
 # Standard-Dockerfile-COPY ersetzt das gesamte /usr/share/nginx/html bei
-# jedem Deploy → alte Chunk-Filenames (z.B. AuctionDetail-XYZ123.js) sind
+# jedem Deploy → alte Chunk-Filenames (z.B. FunnelC-XYZ123.js) sind
 # weg. User mit alter index.html im Tab bekommen 404. Cloudflare cached
 # diese 404 — selbst nach unserem 404-Header-Fix dauert es Stunden bis
 # Edge-PoPs frisch sind.
@@ -20,8 +20,9 @@
 #   Build-Version.
 # - assets/ wird mit `cp -n` (no-clobber) gemerged — vorhandene Hashes
 #   bleiben erhalten, neue Hashes werden ergänzt.
-# - Alte Asset-Files (mtime > 30 Tage) werden gelöscht damit das Volume
-#   nicht unbegrenzt wächst. 30 Tage = 4 Wochen Browser-Tab-Toleranz.
+# - Asset-Files, die seit 30 Tagen in keinem gestarteten Build mehr
+#   vorkamen, werden gelöscht damit das Volume nicht unbegrenzt wächst.
+#   30 Tage = 4 Wochen Browser-Tab-Toleranz.
 #
 # FAIL-SAFE:
 # Wenn /usr/share/nginx/html/assets KEIN persistent volume ist, läuft
@@ -34,6 +35,7 @@
 #   Mount Path: /usr/share/nginx/html/assets
 #   Volume Type: Volume Mount (named volume oder bind mount, beides OK)
 # Erst dann greift die Old-Chunk-Preservation tatsächlich.
+# Schritt für Schritt: docs/dokploy-asset-volume-setup.md
 # =============================================================================
 
 set -eu
@@ -114,6 +116,11 @@ if [ -d "$SRC/assets" ]; then
                 log "WARN: Copy fehlgeschlagen: $rel_path"
                 COPY_ERROR_COUNT=$((COPY_ERROR_COUNT + 1))
             fi
+        else
+            # Gehört zum laufenden Build: mtime auffrischen, sonst löscht der
+            # Cleanup (Schritt 4) Chunks, die seit über RETENTION_DAYS
+            # unverändert in jedem Build stecken (z.B. vendor-react-*.js).
+            touch "$dst_file" 2>/dev/null || true
         fi
     done
     AFTER=$(find "$ASSETS_DIR" -type f 2>/dev/null | wc -l | tr -d ' ')
@@ -129,10 +136,11 @@ if [ -d "$SRC/assets" ]; then
 fi
 
 # 4) Cleanup: Asset-Files älter als RETENTION_DAYS löschen.
-#    Schützt das Volume vor unbegrenztem Wachstum. -mtime ist relativ
-#    zur Datei-Modification-Time — bei cp behält das Ziel die
-#    Original-mtime, somit altert ein Chunk ab dem Zeitpunkt seines
-#    erstmaligen Build-Erscheinens.
+#    Schützt das Volume vor unbegrenztem Wachstum. Schritt 3 setzt die
+#    mtime aller Dateien des laufenden Builds auf jetzt (neu kopiert oder
+#    per touch), -mtime zählt also ab dem letzten Container-Start, dessen
+#    Build die Datei noch enthielt. Dateien des laufenden Builds löscht der
+#    Cleanup deshalb nie.
 DELETED_COUNT=0
 if [ -d "$ASSETS_DIR" ]; then
     DELETED_COUNT=$(find "$ASSETS_DIR" -type f -mtime "+$RETENTION_DAYS" -print 2>/dev/null | wc -l | tr -d ' ')
@@ -144,7 +152,9 @@ log "Cleanup: $DELETED_COUNT Files älter als ${RETENTION_DAYS}d gelöscht"
 #    read-only mount — nginx kann auch root-owned files lesen).
 chown -R nginx:nginx "$DST" 2>/dev/null || true
 
-# 6) Stamp-File für externe Verifikation (z.B. via /verify-deploy).
+# 6) Stamp-File mit der Sync-Zeit, zur Kontrolle im Container
+#    (cat /usr/share/nginx/html/.last-deploy). Per HTTP nicht abrufbar,
+#    nginx sperrt versteckte Dateien.
 date -u +"%Y-%m-%dT%H:%M:%SZ" > "$DST/.last-deploy" 2>/dev/null || true
 
 log "Sync abgeschlossen ($(date -u +%Y-%m-%dT%H:%M:%SZ))"

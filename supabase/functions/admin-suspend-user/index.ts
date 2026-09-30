@@ -7,6 +7,7 @@ import {
   warningBox,
 } from '../_shared/email-builder.ts';
 import { getCorsHeaders, handleCorsPreflightRequest } from '../_shared/cors.ts';
+import { BRAND, BRAND_LEGAL } from '../_shared/brand-config.ts';
 import { edgeLogger, logEdgeError } from '../_shared/edgeLogger.ts';
 
 /**
@@ -33,7 +34,6 @@ import { edgeLogger, logEdgeError } from '../_shared/edgeLogger.ts';
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL') ?? '';
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
 const RESEND_API_KEY = Deno.env.get('RESEND_API_KEY') ?? '';
-const SITE_URL = Deno.env.get('PUBLIC_SITE_URL') ?? 'https://kuechenwert24.de';
 
 interface RequestBody {
   userId: string;
@@ -59,10 +59,10 @@ interface SettingsLike {
 }
 
 const fallbackSettings: SettingsLike = {
-  site_name: 'KüchenWert',
-  site_description: 'Küchenangebote vergleichen',
-  contact_email: 'info@kuechenwert24.de',
-  support_phone: '+49 511 51532476',
+  site_name: BRAND.name,
+  site_description: BRAND.tagline,
+  contact_email: BRAND.supportEmail,
+  support_phone: BRAND_LEGAL.phone,
 };
 
 function displayName(p: ProfileLite | null | undefined): string {
@@ -87,11 +87,11 @@ async function sendMail(
         Authorization: `Bearer ${RESEND_API_KEY}`,
       },
       body: JSON.stringify({
-        from: `${settings.site_name} <info@kuechenwert24.de>`,
+        from: `${settings.site_name} <${BRAND.supportEmail}>`,
         to: [recipientEmail],
         subject,
         html,
-        reply_to: 'info@kuechenwert24.de',
+        reply_to: BRAND.supportEmail,
       }),
     });
     if (!res.ok) {
@@ -208,24 +208,24 @@ Deno.serve(async (req) => {
     const { data: settingsRow } = await supabaseAdmin.from('site_settings').select('*').single();
     const settings: SettingsLike = (settingsRow as SettingsLike | null) ?? fallbackSettings;
     const subject = suspend
-      ? (isDealer ? 'Ihr Händlerkonto wurde gesperrt' : 'Ihr Konto wurde gesperrt')
-      : (isDealer ? 'Ihr Händlerkonto wurde wieder freigegeben' : 'Ihr Konto wurde wieder freigegeben');
+      ? (isDealer ? 'Ihr Studio-Konto wurde gesperrt' : 'Ihr Konto wurde gesperrt')
+      : (isDealer ? 'Ihr Studio-Konto wurde wieder freigegeben' : 'Ihr Konto wurde wieder freigegeben');
 
-    const accountLabel = isDealer ? 'Händlerkonto' : 'Konto';
+    const accountLabel = isDealer ? 'Studio-Konto' : 'Konto';
     const content = suspend
       ? `
         ${greeting(displayName(profile))}
         ${paragraph(`wir möchten Sie darüber informieren, dass Ihr <strong>${accountLabel}</strong> bei ${settings.site_name} mit sofortiger Wirkung gesperrt wurde.`)}
         ${warningBox('Ein Login ist aktuell nicht möglich. Projekte, Angebote und Aufträge sind während der Sperrung nicht zugänglich.')}
         ${reason ? infoBox('Grund der Sperrung', paragraph(reason), 'warning') : ''}
-        ${paragraph(`Sollten Sie Fragen zur Sperrung haben oder eine Aufhebung beantragen wollen, kontaktieren Sie bitte unseren Support unter <a href="mailto:${settings.contact_email}" style="color:#1f8aa2;">${settings.contact_email}</a> oder telefonisch unter ${settings.support_phone}.`)}
+        ${paragraph(`Sollten Sie Fragen zur Sperrung haben oder eine Aufhebung beantragen wollen, kontaktieren Sie bitte unseren Support unter <a href="mailto:${settings.contact_email}" style="color:#336753;">${settings.contact_email}</a> oder telefonisch unter ${settings.support_phone}.`)}
       `
       : `
         ${greeting(displayName(profile))}
         ${paragraph(`gute Nachrichten: Ihr <strong>${accountLabel}</strong> bei ${settings.site_name} wurde wieder freigegeben. Sie können sich ab sofort wieder anmelden und alle Funktionen nutzen.`)}
         ${infoBox('Status', paragraph('<strong>Aktiv</strong> – Sperrung aufgehoben'), 'success')}
-        ${paragraph(`Bei Rückfragen erreichen Sie uns unter <a href="mailto:${settings.contact_email}" style="color:#1f8aa2;">${settings.contact_email}</a>.`)}
-        ${paragraph(`<a href="${SITE_URL}/login" style="color:#1f8aa2;">Jetzt einloggen →</a>`)}
+        ${paragraph(`Bei Rückfragen erreichen Sie uns unter <a href="mailto:${settings.contact_email}" style="color:#336753;">${settings.contact_email}</a>.`)}
+        ${paragraph(`<a href="${BRAND.baseUrl}/login" style="color:#336753;">Jetzt einloggen →</a>`)}
       `;
 
     const html = buildEmailLayout(settings, subject, content);
@@ -236,7 +236,7 @@ Deno.serve(async (req) => {
     if (result.ok) {
       try {
         await supabaseAdmin.from('admin_emails').insert({
-          sender_email: 'info@kuechenwert24.de',
+          sender_email: BRAND.supportEmail,
           sender_name: settings.site_name,
           recipient_email: profile.email,
           recipient_name: displayName(profile),

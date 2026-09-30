@@ -18,7 +18,7 @@ const RANGES = [7, 30, 90] as const;
 
 const rate = (part: number, whole: number) => (whole > 0 ? `${Math.round((part / whole) * 100)} %` : "–");
 
-/** Abbruchanalyse je Funnel aus der Funnel-Telemetrie (Muster der CaravanWert-UX-Auswertung). */
+/** Abbruchanalyse je Funnel aus der Funnel-Telemetrie. */
 export function FunnelTab() {
   const [searchParams] = useSearchParams();
   const [funnel, setFunnel] = useState<FunnelId>(() => FUNNELS.find((f) => f.id === searchParams.get("funnel"))?.id ?? "a");

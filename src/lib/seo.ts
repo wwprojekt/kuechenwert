@@ -5,6 +5,7 @@
  */
 
 import { BRAND, BRAND_LEGAL } from "@/lib/brand/config";
+import { BRAND_ASSET_URLS } from "@/lib/brand/assets";
 import { FALLBACK_SUPPORT_PHONE } from "@/hooks/useSupportPhone";
 
 // Base URL for canonical URLs (aus zentraler Brand-Config).
@@ -18,11 +19,8 @@ const LEGAL_ADDRESS = {
   addressCountry: 'DE',
 } as const;
 
-// Logo-URL fuer Structured Data (Google, Facebook). SVG ist seit 2024 offiziell
-// in schema.org ImageObject erlaubt und wird von Google fuer Organization-Logos
-// akzeptiert.
-const SCHEMA_LOGO_URL = `${BASE_URL}/logo.png?v=2`;
-const SCHEMA_IMAGE_FALLBACK = `${BASE_URL}/og-image.jpg`;
+const SCHEMA_LOGO_URL = BRAND_ASSET_URLS.logoSquare;
+const SCHEMA_IMAGE_FALLBACK = BRAND_ASSET_URLS.ogImage;
 
 /**
  * Generate canonical URL for a given path
@@ -147,52 +145,6 @@ export function generateArticleSchema(data: ArticleSchemaData) {
 }
 
 /**
- * Product structured data for vehicles/auctions
- */
-export interface ProductSchemaData {
-  name: string;
-  description: string;
-  brand: string;
-  model: string;
-  year?: number;
-  price: number;
-  currency?: string;
-  availability?: string;
-  condition?: string;
-  imageUrl?: string;
-}
-
-export function generateProductSchema(data: ProductSchemaData) {
-  const schema: Record<string, unknown> = {
-    '@context': 'https://schema.org',
-    '@type': 'Product',
-    name: data.name,
-    description: data.description,
-    brand: {
-      '@type': 'Brand',
-      name: data.brand,
-    },
-    model: data.model,
-    productionDate: data.year?.toString(),
-    image: data.imageUrl || SCHEMA_IMAGE_FALLBACK,
-    offers: {
-      '@type': 'Offer',
-      price: data.price,
-      priceCurrency: data.currency || 'EUR',
-      availability: data.availability || 'https://schema.org/InStock',
-      itemCondition: data.condition || 'https://schema.org/UsedCondition',
-      seller: {
-        '@type': 'Organization',
-        name: BRAND.name,
-      },
-    },
-  };
-
-  return schema;
-}
-
-
-/**
  * FAQ structured data
  */
 export interface FAQItem {
@@ -243,8 +195,6 @@ export function getBreadcrumbsFromPath(path: string): BreadcrumbItem[] {
   const breadcrumbs: BreadcrumbItem[] = [{ name: 'Home', path: '/' }];
   
   const pathMap: Record<string, string> = {
-    '/verkaufen': 'Verkaufen',
-    '/kaufen': 'Küchen kaufen',
     '/kontakt': 'Kontakt',
     '/ratgeber': 'Ratgeber',
     '/ueber-uns': 'Über uns',
@@ -261,11 +211,7 @@ export function getBreadcrumbsFromPath(path: string): BreadcrumbItem[] {
     '/funnel/b': 'Studio-Preis unterbieten',
     '/funnel/c': 'KI-Traumküchen-Planer',
     '/preise': 'Preise & Leistungen',
-    '/wertermittlung': 'KüchenRechner',
-    '/wertrechner': 'KüchenRechner',
     '/kuechenrechner': 'KüchenRechner',
-    '/verkaufen/wizard': 'Küchenanfrage',
-    '/verkaufen/danke': 'Vielen Dank',
   };
 
   // Handle simple paths
@@ -296,96 +242,5 @@ export function getBreadcrumbsFromPath(path: string): BreadcrumbItem[] {
 export function injectStructuredData(data: object | object[]): string {
   const dataArray = Array.isArray(data) ? data : [data];
   return JSON.stringify(dataArray.length === 1 ? dataArray[0] : dataArray);
-}
-
-/**
- * WebApplication structured data for the Wertrechner (free online valuation tool).
- *
- * Rules for Google Rich Snippets with stars:
- *  - Type `WebApplication` (subtype of SoftwareApplication) is an officially
- *    supported reviewable entity, and `offers.price: "0"` is explicitly allowed
- *    for free tools.
- *  - `aggregateRating` is only included when `reviewCount >= minReviews`. For
- *    fewer reviews Google won't show stars anyway, and a low count looks
- *    fragile. Passing a count below the threshold returns a schema without
- *    `aggregateRating`.
- *  - The `@id` is a stable identifier across multiple landing pages that all
- *    contain the calculator — this tells Google they describe the same entity
- *    and avoids duplicate-rating problems.
- *
- * Pages that may emit this schema (calculator IS the primary content):
- *   /kuechenrechner (canonical, Kuechen-Budget-Estimator). Die Caravan-
- *   Rechner-Landings (/was-ist-mein-wohnmobil-wert, /wohnmobil-wertermittlung-
- *   kostenlos etc.) wurden beim Cleanup entfernt.
- *
- * Pages that must NOT emit this schema (calculator is secondary):
- *   Homepage, /verkaufen/*, /kaufen/*, /ratgeber/*, /haendler/*, auctions
- */
-export interface WertrechnerSchemaInput {
-  /** Current page URL (absolute). Canonical @id uses `/wertrechner#webapp`. */
-  pageUrl?: string;
-  /** Current average rating (0-5). Pass 0 if unknown or below threshold. */
-  averageRating: number;
-  /** Total number of approved reviews. */
-  reviewCount: number;
-  /** Minimum count required to include `aggregateRating`. Default: 30. */
-  minReviews?: number;
-}
-
-export function generateWertrechnerSchema(input: WertrechnerSchemaInput) {
-  const {
-    pageUrl,
-    averageRating,
-    reviewCount,
-    minReviews = 30,
-  } = input;
-
-  const canonicalUrl = `${BASE_URL}/wertrechner`;
-  const includeRating = reviewCount >= minReviews && averageRating > 0;
-
-  const schema: Record<string, unknown> = {
-    '@context': 'https://schema.org',
-    '@type': 'WebApplication',
-    '@id': `${canonicalUrl}#webapp`,
-    name: `${BRAND.name} Küchen-Wertrechner`,
-    alternateName: [
-      'Küchen Wert ermitteln',
-      'Küchen Wertrechner',
-      'Wert meiner Küche',
-    ],
-    description:
-      'Kostenloser Online-Wertrechner für gebrauchte Küchen. Liefert in wenigen Minuten eine realistische Wertschätzung auf Basis von Marke, Alter, Ausstattung und Zustand.',
-    url: canonicalUrl,
-    ...(pageUrl ? { mainEntityOfPage: pageUrl } : {}),
-    applicationCategory: 'BusinessApplication',
-    applicationSubCategory: 'Kitchen Valuation Tool',
-    operatingSystem: 'Any',
-    browserRequirements: 'Requires JavaScript. Requires HTML5.',
-    inLanguage: 'de',
-    isAccessibleForFree: true,
-    offers: {
-      '@type': 'Offer',
-      price: '0',
-      priceCurrency: 'EUR',
-    },
-    provider: {
-      '@type': 'Organization',
-      name: BRAND.name,
-      url: BASE_URL,
-    },
-    ...(includeRating
-      ? {
-          aggregateRating: {
-            '@type': 'AggregateRating',
-            ratingValue: averageRating.toFixed(2),
-            reviewCount: reviewCount.toString(),
-            bestRating: '5',
-            worstRating: '1',
-          },
-        }
-      : {}),
-  };
-
-  return schema;
 }
 

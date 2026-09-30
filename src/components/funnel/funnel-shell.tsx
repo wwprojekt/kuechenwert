@@ -72,7 +72,7 @@ export function FunnelShell({
     if (canProceed) setBlocked(false);
   }, [canProceed]);
 
-  // Wie bei CaravanWert bleibt „Weiter“ klickbar und sagt, was noch fehlt.
+  // „Weiter“ bleibt klickbar und sagt, was noch fehlt.
   const handleNext = () => {
     if (!onNext) return;
     if (!canProceed) {

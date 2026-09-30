@@ -52,8 +52,8 @@ self.addEventListener('activate', (event) => {
       await Promise.all(
         cacheNames.filter((name) => !CURRENT_CACHES.includes(name)).map((name) => caches.delete(name)),
       );
-      // Push notifications belonged to the former auction platform. Dropping leftover
-      // subscriptions keeps browsers from showing generic "updated in the background" notices.
+      // KüchenWert sends no push notifications. Dropping leftover subscriptions keeps
+      // browsers from showing generic "updated in the background" notices.
       const subscription = await self.registration.pushManager?.getSubscription().catch(() => null);
       await subscription?.unsubscribe().catch(() => false);
       await self.clients.claim();

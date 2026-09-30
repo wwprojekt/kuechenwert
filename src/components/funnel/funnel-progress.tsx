@@ -1,10 +1,10 @@
 import { cn } from "@/lib/utils";
 
 /**
- * Fortschritt in Prozent mit Vorsprung (wie im CaravanWert-Wizard): Der erste
- * Schritt zeigt 10 %, der letzte 95 %, denn fertig ist die Anfrage erst mit
- * dem Absenden. Bei vielen Schritten wirkt das weniger abschreckend als
- * „Schritt 2 / 18“; die Schrittzahl bleibt für Screenreader erhalten.
+ * Fortschritt in Prozent mit Vorsprung: Der erste Schritt zeigt 10 %, der
+ * letzte 95 %, denn fertig ist die Anfrage erst mit dem Absenden. Bei vielen
+ * Schritten wirkt das weniger abschreckend als „Schritt 2 / 18“; die
+ * Schrittzahl bleibt für Screenreader erhalten.
  */
 export function funnelProgressPercent(current: number, total: number): number {
   if (total <= 1) return 95;

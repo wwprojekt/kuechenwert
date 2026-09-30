@@ -3,7 +3,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.100.1";
 import { getCorsHeaders, handleCorsPreflightRequest } from "../_shared/cors.ts";
 import { edgeLogger, logEdgeError } from "../_shared/edgeLogger.ts";
 import { checkServiceRoleOrAdmin } from "../_shared/auth.ts";
-import { BRAND } from "../_shared/brand-config.ts";
+import { BRAND, BRAND_LEGAL } from "../_shared/brand-config.ts";
 import {
   buildEmailLayout,
   paragraph,
@@ -59,7 +59,7 @@ const fallbackSettings: SettingsLike = {
   site_name: BRAND.name,
   site_description: BRAND.tagline,
   contact_email: BRAND.supportEmail,
-  support_phone: "+49 511 51532476",
+  support_phone: BRAND_LEGAL.phone,
 };
 
 function displayName(p: ProfileLite | null | undefined, emailFallback?: string | null): string {
@@ -87,11 +87,11 @@ async function sendMail(
         Authorization: `Bearer ${RESEND_API_KEY}`,
       },
       body: JSON.stringify({
-        from: `${settings.site_name} <info@kuechenwert24.de>`,
+        from: `${settings.site_name} <${BRAND.supportEmail}>`,
         to: [recipientEmail],
         subject,
         html,
-        reply_to: "info@kuechenwert24.de",
+        reply_to: BRAND.supportEmail,
       }),
     });
     if (!res.ok) {
@@ -189,7 +189,7 @@ const handler = async (req: Request): Promise<Response> => {
       if (result.ok) {
         try {
           await supabase.from("admin_emails").insert({
-            sender_email: "info@kuechenwert24.de",
+            sender_email: BRAND.supportEmail,
             sender_name: settings.site_name,
             recipient_email: recipientEmail,
             recipient_name: recipientName,

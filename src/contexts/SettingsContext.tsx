@@ -11,33 +11,16 @@ interface SiteSettings {
   contact_email: string;
   support_phone: string;
   maintenance_mode: boolean;
-  logo_url: string | null;
-  favicon_url: string | null;
-  tuv_badge_url: string | null;
-  primary_color: string;
-  secondary_color: string;
-  dark_mode_enabled: boolean;
   smtp_host: string | null;
   smtp_port: number;
   smtp_user: string | null;
   smtp_password: string | null;
   from_email: string;
   notify_new_registration: boolean;
-  notify_new_auction: boolean;
-  notify_new_bid: boolean;
   meta_title: string;
   meta_description: string;
   meta_keywords: string;
-  google_analytics_id: string | null;
-  google_tag_manager_id: string | null;
   sitemap_enabled: boolean;
-  default_auction_duration_days: number;
-  soft_close_extension_minutes: number;
-  min_bid_increment_percent: number;
-  commission_rate_percent: number;
-  reserve_price_required: boolean;
-  autobid_enabled: boolean;
-  buy_now_enabled: boolean;
   whatsapp_number: string | null;
   company_address: string | null;
   company_city: string | null;
@@ -95,22 +78,9 @@ function writeCache(settings: SiteSettings) {
   }
 }
 
-// Farben und Dark Mode kommen ausschließlich aus index.css bzw. next-themes:
-// Die DB-Werte (z. B. "160 32 30" ohne %) sind kein gültiges CSS-HSL und
-// würden Dark-Mode-Farben und Akzent überschreiben.
-function applyFavicon(settings: SiteSettings) {
-  if (!settings.favicon_url) return;
-  let favicon = document.querySelector('link[rel="icon"][type="image/svg+xml"], link[rel="icon"]') as HTMLLinkElement | null;
-  if (!favicon) {
-    favicon = document.createElement("link");
-    favicon.rel = "icon";
-    document.head.appendChild(favicon);
-  }
-  favicon.href = settings.favicon_url;
-}
-
+// Logos, Favicon, Farben und Dark Mode kommen aus der Brand-Config bzw.
+// index.css, nicht aus site_settings.
 function publish(settings: SiteSettings) {
-  applyFavicon(settings);
   // Synchroner Global-Zugriff für Tracking-Services außerhalb von React.
   setTrackingConfig((settings as { tracking_config?: unknown }).tracking_config);
 }

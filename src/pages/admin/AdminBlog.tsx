@@ -1,6 +1,8 @@
 import { useState, useRef } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { logger } from '@/lib/logger';
+import { BLOG_IMAGE_BUCKET } from '@/lib/storageUtils';
+import { BLOG_CATEGORIES } from '@/data/blog-categories';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -27,14 +29,7 @@ import {
 } from '@/components/ui/select';
 import { useAuth } from '@/contexts/AuthContext';
 
-const categories = [
-  'Allgemein',
-  'Kaufberatung',
-  'Verkaufstipps',
-  'Wartung & Pflege',
-  'Reiseberichte',
-  'Rechtliches',
-];
+const DEFAULT_CATEGORY: string = BLOG_CATEGORIES[0];
 
 interface BlogPost {
   id: string;
@@ -61,7 +56,7 @@ export default function AdminBlog() {
     excerpt: '',
     content: '',
     featured_image_url: '',
-    category: 'Allgemein',
+    category: DEFAULT_CATEGORY,
     published: false,
   });
 
@@ -138,15 +133,16 @@ export default function AdminBlog() {
       const filePath = `blog-featured/${fileName}`;
 
       const { error: uploadError } = await supabase.storage
-        .from('kitchen-photos')
+        .from(BLOG_IMAGE_BUCKET)
         .upload(filePath, file, {
           contentType: file.type || `image/${fileExt}`,
+          cacheControl: '31536000, immutable',
         });
 
       if (uploadError) throw uploadError;
 
       const { data: { publicUrl } } = supabase.storage
-        .from('kitchen-photos')
+        .from(BLOG_IMAGE_BUCKET)
         .getPublicUrl(filePath);
 
       setFormData({ ...formData, featured_image_url: publicUrl });
@@ -164,7 +160,7 @@ export default function AdminBlog() {
       excerpt: '',
       content: '',
       featured_image_url: '',
-      category: 'Allgemein',
+      category: DEFAULT_CATEGORY,
       published: false,
     });
     setEditingPost(null);
@@ -254,7 +250,7 @@ export default function AdminBlog() {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    {categories.map((cat) => (
+                    {BLOG_CATEGORIES.map((cat) => (
                       <SelectItem key={cat} value={cat}>
                         {cat}
                       </SelectItem>

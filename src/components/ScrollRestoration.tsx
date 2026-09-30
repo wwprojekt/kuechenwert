@@ -11,7 +11,7 @@ const ScrollRestoration = () => {
   }, []);
 
   useEffect(() => {
-    // When a hash is present (e.g. /wertrechner#reviews) we want to scroll to
+    // When a hash is present (e.g. /datenschutz#ki-visualisierung) we want to scroll to
     // the matching anchor instead of jumping to the top of the page. We retry
     // briefly because the target element may not be mounted yet on the first
     // tick after navigation (lazy components, suspense fallbacks, etc.).

@@ -38,11 +38,10 @@ import {
 import { format } from "date-fns";
 import { de } from "date-fns/locale";
 import DOMPurify from "dompurify";
-import { BRAND } from "@/lib/brand/config";
+import { BRAND, BRAND_LOGOS } from "@/lib/brand";
 
-// Die Vorschau zeigt das lokale Brand-SVG. Fuer tatsaechlich gesendete
-// E-Mails wird der Pfad in site_settings.logo_url verwendet.
-const EMAIL_LOGO_URL = `${BRAND.baseUrl}/logo.svg`;
+// Dasselbe Logo wie im Kopf der gesendeten E-Mails (_shared/email-builder.ts).
+const EMAIL_LOGO_URL = `${BRAND.baseUrl}${BRAND_LOGOS.email}`;
 
 /**
  * Extract the actual error message from a Supabase FunctionsHttpError.
@@ -1062,17 +1061,17 @@ function InboxTab({ onUnreadCountChange }: { onUnreadCountChange: (count: number
             </DialogHeader>
             <div className="border rounded-lg overflow-hidden">
               <div style={{
-                background: 'linear-gradient(135deg, #0f766e 0%, #0d9488 50%, #14b8a6 100%)',
+                background: 'linear-gradient(135deg, #19372b 0%, #336753 50%, #4a8066 100%)',
                 padding: '24px',
                 textAlign: 'center' as const,
               }}>
                 <img src={EMAIL_LOGO_URL} alt={BRAND.name} style={{ height: '40px', margin: '0 auto' }} />
-                <p style={{ color: '#ccfbf1', fontSize: '12px', marginTop: '8px' }}>{BRAND.tagline}</p>
+                <p style={{ color: '#e2e8f0', fontSize: '12px', marginTop: '8px' }}>{BRAND.tagline}</p>
               </div>
               <div style={{ padding: '32px 24px', background: '#ffffff' }}>
                 <div dangerouslySetInnerHTML={{ __html: sanitizeHtml(previewHtml || '') }} className="prose prose-sm max-w-none" />
               </div>
-              <div style={{ background: '#134e4a', padding: '24px', textAlign: 'center' as const, color: '#94a3b8', fontSize: '12px' }}>
+              <div style={{ background: '#19372b', padding: '24px', textAlign: 'center' as const, color: '#b8c2b8', fontSize: '12px' }}>
                 <p>Mit freundlichen Grüßen – Ihr {BRAND.name} Team</p>
               </div>
             </div>
@@ -1738,12 +1737,12 @@ function ComposeTab() {
           </DialogHeader>
           <div className="border rounded-lg overflow-hidden">
             <div style={{
-              background: 'linear-gradient(135deg, #0f766e 0%, #0d9488 50%, #14b8a6 100%)',
+              background: 'linear-gradient(135deg, #19372b 0%, #336753 50%, #4a8066 100%)',
               padding: '24px',
               textAlign: 'center' as const,
             }}>
               <img src={EMAIL_LOGO_URL} alt={BRAND.name} style={{ height: '40px', margin: '0 auto' }} />
-              <p style={{ color: '#ccfbf1', fontSize: '12px', marginTop: '8px' }}>{BRAND.tagline}</p>
+              <p style={{ color: '#e2e8f0', fontSize: '12px', marginTop: '8px' }}>{BRAND.tagline}</p>
             </div>
             <div style={{ padding: '32px 24px', background: '#ffffff' }}>
               {recipientName && <p style={{ marginBottom: '16px' }}>Hallo {recipientName},</p>}
@@ -1756,7 +1755,7 @@ function ComposeTab() {
                 </div>
               )}
             </div>
-            <div style={{ background: '#134e4a', padding: '24px', textAlign: 'center' as const, color: '#94a3b8', fontSize: '12px' }}>
+            <div style={{ background: '#19372b', padding: '24px', textAlign: 'center' as const, color: '#b8c2b8', fontSize: '12px' }}>
               <p style={{ color: '#e2e8f0', marginBottom: '8px' }}>Mit freundlichen Grüßen – Ihr {BRAND.name} Team</p>
               <p>{BRAND.name} | {BRAND.supportEmail} | {BRAND.domain}</p>
             </div>
@@ -2063,12 +2062,12 @@ function BroadcastTab() {
           </DialogHeader>
           <div className="border rounded-lg overflow-hidden">
             <div style={{
-              background: 'linear-gradient(135deg, #0f766e 0%, #0d9488 50%, #14b8a6 100%)',
+              background: 'linear-gradient(135deg, #19372b 0%, #336753 50%, #4a8066 100%)',
               padding: '24px',
               textAlign: 'center' as const,
             }}>
               <img src={EMAIL_LOGO_URL} alt={BRAND.name} style={{ height: '40px', margin: '0 auto' }} />
-              <p style={{ color: '#ccfbf1', fontSize: '12px', marginTop: '8px' }}>{BRAND.tagline}</p>
+              <p style={{ color: '#e2e8f0', fontSize: '12px', marginTop: '8px' }}>{BRAND.tagline}</p>
             </div>
             <div style={{ padding: '32px 24px', background: '#ffffff' }}>
               <div dangerouslySetInnerHTML={{ __html: sanitizeHtml(bodyHtml || '') }} className="prose prose-sm max-w-none" />
@@ -2077,11 +2076,11 @@ function BroadcastTab() {
               <div style={{ padding: '12px 24px', background: '#f8fafc', borderTop: '1px solid #e2e8f0', textAlign: 'center' as const }}>
                 <p style={{ fontSize: '11px', color: '#94a3b8' }}>
                   Sie erhalten diese E-Mail, weil Sie bei {BRAND.name} registriert sind.{" "}
-                  <span style={{ color: '#0d9488', textDecoration: 'underline' }}>Abmelden</span>
+                  <span style={{ color: '#336753', textDecoration: 'underline' }}>Abmelden</span>
                 </p>
               </div>
             )}
-            <div style={{ background: '#134e4a', padding: '24px', textAlign: 'center' as const, color: '#94a3b8', fontSize: '12px' }}>
+            <div style={{ background: '#19372b', padding: '24px', textAlign: 'center' as const, color: '#b8c2b8', fontSize: '12px' }}>
               <p style={{ color: '#e2e8f0', marginBottom: '8px' }}>Mit freundlichen Grüßen – Ihr {BRAND.name} Team</p>
               <p>{BRAND.name} | {BRAND.supportEmail} | {BRAND.domain}</p>
             </div>
@@ -2698,7 +2697,7 @@ function StatsTab() {
   const getGroupLabel = (group: string) => {
     const labels: Record<string, string> = {
       all: 'Alle Benutzer', customers: 'Kunden', dealers: 'Küchenstudios',
-      verified_dealers: 'Verifizierte Küchenstudios', newsletter: 'Newsletter', active_bidders: 'Aktive Bieter',
+      verified_dealers: 'Verifizierte Küchenstudios', newsletter: 'Newsletter', custom: 'Eigene Liste',
     };
     return labels[group] || group;
   };
@@ -2913,6 +2912,7 @@ const SYSTEM_TYPE_LABELS: Record<string, string> = {
   email_confirmation_resend: 'Bestätigungslink',
   account_deleted: 'Konto gelöscht',
   dealer_application: 'Studio-Bewerbung',
+  dealer_application_admin: 'Studio-Registrierung (Admin)',
   dealer_application_deleted: 'Studio-Bewerbung gelöscht',
   dealer_documents_request: 'Dokument-Anforderung',
   project_created: 'Projekt angelegt',

@@ -3,16 +3,13 @@
  *
  * Zentrale Referenz fuer alle visuellen Brand-Assets.
  *
- * Logos + og-images liegen in public/ und werden ueber absolute Pfade
- * referenziert (damit sie auch in E-Mail-Templates funktionieren).
+ * Logos, Favicons und das OG-Bild liegen in public/. Was ausserhalb der
+ * Website angezeigt wird (E-Mail, Link-Vorschau, Structured Data), kommt mit
+ * Inhalts-Hash im Pfad aus BRAND_ASSET_PATHS (scripts/fingerprint-brand-assets.mjs);
+ * dieselbe Datei nutzen die Edge Functions fuer ihre Mails.
  *
  * Imports (statt statischer Strings) fuer Bilder im `src/assets`-Ordner,
  * damit Vite sie hashed und optimiert.
- *
- * Bei einem Rebrand (Phase 3) werden diese Pfade auf die neuen Asset-Dateien
- * umgebogen. Die Dateinamen in public/ koennen entweder ersetzt (gleiche
- * Dateinamen) oder durch neue Dateinamen ergaenzt werden; in letzterem Fall
- * muessen die Pfade hier angepasst werden.
  */
 
 import heroKitchen from "@/assets/hero-kitchen.webp";
@@ -26,25 +23,34 @@ import heroLifestyle from "@/assets/couple-kitchen.webp";
 import studioConsultant from "@/assets/studio-consultant.webp";
 import kitchenConsultation from "@/assets/kitchen-consultation.webp";
 import kitchenShowroom from "@/assets/kitchen-showroom.webp";
+import { BRAND_ASSET_PATHS } from "../../../supabase/functions/_shared/brand-assets.ts";
+import { BRAND } from "./config";
 
 /**
- * Statische Logo-Pfade (public/), relativ zur Site-Root. Rasterdateien
- * erzeugt scripts/generate-logo-assets.mjs aus den SVG-Quellen.
+ * Logo-Pfade relativ zur Site-Root. Die SVG-Icons zeigt nur die Website
+ * selbst, sie behalten ihren Dateinamen.
  */
 export const BRAND_LOGOS = {
   /** Icon farbig (SVG, vektorskaliert). */
   primary: "/logo.svg",
   /** Wortmarke dunkel auf hell, 964×260. */
-  primary2x: "/logo-2x.png",
+  primary2x: BRAND_ASSET_PATHS.wordmark,
   /** Icon hell fuer dunkle Hintergruende (SVG). */
   white: "/logo-white.svg",
   /** Wortmarke hell fuer den dunkelgruenen E-Mail-Header (PNG, Outlook-tauglich). */
-  email: "/logo-email.png",
+  email: BRAND_ASSET_PATHS.email,
   faviconIco: "/favicon.ico",
   faviconPng: "/favicon.png",
   appleTouchIcon: "/apple-touch-icon.png",
   /** Open-Graph-Bild 1200×630 (JPEG; soziale Netze rendern kein SVG). */
-  ogImage: "/og-image.jpg",
+  ogImage: BRAND_ASSET_PATHS.ogImage,
+} as const;
+
+/** Absolute URLs fuer Structured Data und Link-Vorschauen. */
+export const BRAND_ASSET_URLS = {
+  /** Quadratisches Logo 512×512 (schema.org Organization und Publisher). */
+  logoSquare: `${BRAND.baseUrl}${BRAND_ASSET_PATHS.logoSquare}`,
+  ogImage: `${BRAND.baseUrl}${BRAND_ASSET_PATHS.ogImage}`,
 } as const;
 
 /**

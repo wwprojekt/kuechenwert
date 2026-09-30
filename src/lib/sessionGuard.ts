@@ -233,8 +233,8 @@ export async function ensureValidSession(): Promise<{
     return { user: null, wasRefreshed: false, sessionExpired: false };
   } catch (err) {
     // Lock-Fehler: Kurz warten und erneut versuchen.
-    // Ohne Retry würde user:null zurückgegeben, was im Wizard-Submit dazu führt
-    // dass der eingeloggte User fälschlicherweise "Passwort fehlt" sieht.
+    // Ohne Retry würde user:null zurückgegeben und ein eingeloggter User
+    // fälschlich als abgemeldet behandelt.
     if (isLockError(err)) {
       logger.log('ensureValidSession: Lock-Fehler erkannt, warte 500ms und versuche erneut...');
       await new Promise(resolve => setTimeout(resolve, 500));
@@ -274,7 +274,7 @@ export async function ensureValidSession(): Promise<{
  * KRITISCH: supabase.auth.getSession() liest aus dem LOKALEN CACHE und gibt
  * Session-Objekte zurück, auch wenn der Access Token BEREITS ABGELAUFEN ist!
  * RLS-Queries mit abgelaufenem Token liefern stil leere Ergebnisse (auth.uid()=NULL),
- * was z.B. dazu führt, dass isDealer=false wird und das Bieten-UI verschwindet.
+ * was z.B. dazu führt, dass isDealer=false wird und das Studio-Portal verschwindet.
  * 
  * Diese Funktion prüft die Token-Gültigkeit und refresht proaktiv wenn nötig.
  * Dedupliziert parallele Aufrufe: wenn 10 Komponenten gleichzeitig aufrufen,
@@ -535,8 +535,7 @@ function notifySessionExpired(): void {
  * Returns:
  *   - message: best human-readable string (German if Edge Function set it)
  *   - status:  HTTP status code if available (only from Response objects)
- *   - body:    parsed body for callers that need extra fields like
- *              minimum_bid, current_bid (used by AuctionDetail's bid flow)
+ *   - body:    parsed body for callers that need extra fields
  */
 export interface FunctionsErrorInfo {
   message: string;
@@ -646,8 +645,8 @@ function isFunctions5xx(info: FunctionsErrorInfo): boolean {
 /**
  * Replace the message on the original error so callers preserve type
  * checks like `error instanceof FunctionsHttpError`. Also stamp the
- * extracted info on the error so callers (e.g. AuctionDetail bid flow)
- * can read body/status without re-parsing.
+ * extracted info on the error so callers can read body/status without
+ * re-parsing.
  */
 function decorateError(error: Error, info: FunctionsErrorInfo): Error {
   if (info.message && info.message !== error.message) {

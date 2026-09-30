@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.100.1';
+import { BRAND } from '../_shared/brand-config.ts';
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -187,7 +188,7 @@ const handler = async (req: Request): Promise<Response> => {
               console.log(`Marked ${bouncedEmail} as bounced in profiles`);
             }
 
-            // Add to global suppression list + cancel in-flight outreach.
+            // Add to global suppression list.
             // Uses webhook_add_email_suppression() because email_suppressions
             // only has a *functional* unique index on lower(email) (so the
             // PostgREST `onConflict: 'email'` upsert path doesn't work) and
@@ -238,21 +239,6 @@ const handler = async (req: Request): Promise<Response> => {
               })
               .eq('email', deliveredEmail)
               .eq('email_bounced', true);
-          }
-
-          // Propagate delivery to the google_review_requests queue so the
-          // admin panel can distinguish "sent by Resend" from "actually
-          // handed off to the recipient mailbox". Without this, the queue
-          // row sits on `sent` forever even after Resend confirms delivery.
-          const { error: grrErr } = await supabase.rpc(
-            'webhook_mark_google_review_delivered',
-            { p_resend_message_id: resendId },
-          );
-          if (grrErr) {
-            console.error(
-              `Failed to mark google_review_requests delivered for ${resendId}:`,
-              grrErr,
-            );
           }
         }
       }
@@ -410,8 +396,8 @@ const handler = async (req: Request): Promise<Response> => {
       .insert({
         sender_email: senderEmail,
         sender_name: finalSenderName,
-        recipient_email: emailData.to?.[0] || 'info@kuechenwert24.de',
-        recipient_name: 'KuechenWert',
+        recipient_email: emailData.to?.[0] || BRAND.supportEmail,
+        recipient_name: BRAND.name,
         recipient_id: null,
         subject: emailData.subject || '(Kein Betreff)',
         body_html: fullHtml,

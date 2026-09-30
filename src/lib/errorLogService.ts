@@ -57,7 +57,7 @@ function isTranslatorError(message: string, stack?: string): boolean {
 
   if (!stack) return false;
   // Stack-only signal: every frame URL is the HTML document of the page
-  // (caravanwert.de/<route>:1:NNN) and none point at our /assets/ bundle.
+  // (kuechenwert24.de/<route>:1:NNN) and none point at our /assets/ bundle.
   const lines = stack.split('\n').map((l) => l.trim()).filter((l) => l.startsWith('@') || l.includes('@http'));
   if (lines.length === 0) return false;
   const hasAssetFrame = /\/assets\/[A-Za-z0-9_.-]+\.(?:js|mjs)/.test(stack);
@@ -128,7 +128,7 @@ function isChunkPreloadError(message: string): boolean {
 function tryRecoverFromChunkPreloadError(): void {
   if (typeof window === 'undefined') return;
   try {
-    const KEY = 'cw_chunk_reload_done';
+    const KEY = 'kw_chunk_reload_done';
     if (window.sessionStorage.getItem(KEY) === '1') return;
     window.sessionStorage.setItem(KEY, '1');
     // Defer one tick so the current event loop finishes
@@ -380,9 +380,9 @@ function isThrottled(): boolean {
 //   Die bisherigen window-Marker (__lastLoggedErrorMessage / __lastLogged
 //   OriginalError) filtern nur *wenn Pfad A oder Pfad B zuerst lief und der
 //   Marker rechtzeitig gesetzt war*. Läuft der console.error- oder ErrorBoundary-
-//   Pfad ZUERST (= Debug-console.error in einem onError-Handler vor dem Toast;
-//   siehe ListingEdit.tsx Fix in Commit fe9873e), existiert der Marker beim
-//   ersten Log-Call noch nicht → der zweite Pfad legt einen Duplikat-Eintrag an.
+//   Pfad ZUERST (= Debug-console.error in einem onError-Handler vor dem Toast),
+//   existiert der Marker beim ersten Log-Call noch nicht → der zweite Pfad legt
+//   einen Duplikat-Eintrag an.
 //
 // Lösung:
 //   Ring-Puffer (Schlüssel: pagePath | originalError | componentName) mit
@@ -586,11 +586,6 @@ export function handleAndLogError(
     'already registered',
     'For security purposes, you can only request this',
     'Aus Sicherheitsgründen können Sie',
-    // Bidding – erwartete Validierungsfehler bei zu niedrigen Geboten
-    'Gebot muss mindestens',
-    'Gebot muss höher',
-    'Bid must be at least',
-    'Bid must be higher',
   ];
   const isHarmless = harmlessPatterns.some(p => 
     originalMessage.includes(p) || translated.message.includes(p)

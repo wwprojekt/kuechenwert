@@ -26,7 +26,7 @@ interface UseTableSortReturn<T> {
 }
 
 /**
- * Löst einen verschachtelten Pfad auf (z.B. "kitchen.seller.email")
+ * Löst einen verschachtelten Pfad auf (z.B. "dealer.company_name")
  */
 function getNestedValue(obj: any, path: string): unknown {
   return path.split(".").reduce((acc, part) => acc?.[part], obj);

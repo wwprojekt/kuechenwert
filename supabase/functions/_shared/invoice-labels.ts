@@ -1,26 +1,18 @@
 /**
  * Beschriftungen fuer Rechnungen je Rechnungstyp.
  *
- * Gemeinsame Quelle fuer send-invoice-email (Mail) und generate-invoice-pdf
- * (PDF), damit beide dieselbe Leistung und denselben Projektbezug nennen.
+ * Gemeinsame Quelle fuer send-invoice-email und send-payment-reminder (Mail)
+ * sowie generate-invoice-pdf (PDF), damit alle dieselbe Leistung und denselben
+ * Projektbezug nennen. Rechnungen entstehen nur ueber kw_create_market_invoice:
+ * Kontaktfreischaltung (lead_purchase) oder Vermittlungsprovision (lead_commission).
  */
-
-export const PENALTY_REASON_LABELS: Record<string, string> = {
-  anderweitiger_verkauf: "Anderweitiger Verkauf während der Auktion",
-  vorzeitige_ruecknahme: "Vorzeitige Rücknahme des Inserats",
-  falsche_angaben: "Falsche oder irreführende Angaben",
-};
 
 export interface InvoiceLabelInput {
   invoice_type?: string | null;
-  penalty_reason?: string | null;
   lead?: { postal_code?: string | null; city?: string | null } | null;
-  auction?: { kitchen?: { manufacturer?: string | null; model?: string | null } | null } | null;
-  items?: Array<{ description?: string | null }> | null;
 }
 
 export interface InvoiceLabels {
-  isPenalty: boolean;
   /** Ueberschrift der Referenzbox im PDF bzw. Label in der Mail. */
   referenceTitle: string;
   /** Inhalt der Referenzbox, z. B. "Küchenprojekt · PLZ 10115 Berlin". */
@@ -42,26 +34,10 @@ function projectReference(lead: InvoiceLabelInput["lead"]): string {
 }
 
 export function describeInvoice(invoice: InvoiceLabelInput): InvoiceLabels {
-  const type = invoice.invoice_type ?? "commission";
+  const reference = projectReference(invoice.lead);
 
-  if (type === "seller_penalty") {
-    const reason = (invoice.penalty_reason && PENALTY_REASON_LABELS[invoice.penalty_reason])
-      || invoice.penalty_reason
-      || "Vertragsstrafe";
+  if (invoice.invoice_type === "lead_purchase") {
     return {
-      isPenalty: true,
-      referenceTitle: "Vertragsstrafe",
-      referenceValue: reason,
-      serviceLabel: "Vertragsstrafe",
-      intro: "hiermit erhalten Sie Ihre Rechnung über eine Vertragsstrafe gemäß § 8 Abs. 4 unserer AGB.",
-      fallbackItemDescription: `Vertragsstrafe: ${reason}`,
-    };
-  }
-
-  if (type === "lead_purchase") {
-    const reference = projectReference(invoice.lead);
-    return {
-      isPenalty: false,
       referenceTitle: "Projekt",
       referenceValue: reference,
       serviceLabel: "Kontaktfreischaltung",
@@ -70,26 +46,11 @@ export function describeInvoice(invoice: InvoiceLabelInput): InvoiceLabels {
     };
   }
 
-  if (type === "lead_commission") {
-    const reference = projectReference(invoice.lead);
-    return {
-      isPenalty: false,
-      referenceTitle: "Projekt",
-      referenceValue: reference,
-      serviceLabel: "Vermittlungsprovision",
-      intro: "anbei erhalten Sie Ihre Rechnung über die Vermittlungsprovision für das Küchenprojekt, bei dem die Kund:in Ihr Angebot angenommen hat.",
-      fallbackItemDescription: `Vermittlungsprovision ${reference}`,
-    };
-  }
-
-  const kitchen = invoice.auction?.kitchen;
-  const kitchenName = [kitchen?.manufacturer, kitchen?.model].filter(Boolean).join(" ").trim();
   return {
-    isPenalty: false,
-    referenceTitle: kitchenName ? "Küche" : "Leistung",
-    referenceValue: kitchenName || "Vermittlungsprovision",
+    referenceTitle: "Projekt",
+    referenceValue: reference,
     serviceLabel: "Vermittlungsprovision",
-    intro: "anbei erhalten Sie Ihre Rechnung über die Vermittlungsprovision.",
-    fallbackItemDescription: kitchenName ? `Vermittlungsprovision: ${kitchenName}` : "Vermittlungsprovision",
+    intro: "anbei erhalten Sie Ihre Rechnung über die Vermittlungsprovision für das Küchenprojekt, bei dem die Kund:in Ihr Angebot angenommen hat.",
+    fallbackItemDescription: `Vermittlungsprovision ${reference}`,
   };
 }

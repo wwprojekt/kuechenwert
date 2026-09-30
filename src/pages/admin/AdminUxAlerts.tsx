@@ -31,7 +31,7 @@ function AlertList({ alerts, busyId, onStatus }: { alerts: UxAlert[]; busyId: st
   );
 }
 
-/** UX-Alerts der Funnels (Muster der CaravanWert-UX-Insights): was kaputt ist, wo Nutzer abbrechen, wo sie hängen. */
+/** UX-Alerts der Funnels: was kaputt ist, wo Nutzer abbrechen, wo sie hängen. */
 export default function AdminUxAlerts() {
   const queryClient = useQueryClient();
   const { user } = useAuth();

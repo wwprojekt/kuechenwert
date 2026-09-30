@@ -16,8 +16,6 @@ import { hasMarketingConsent } from '@/components/CookieBanner';
 import { logger } from '@/lib/logger';
 
 const STORAGE_PREFIX = "kuechenwert_";
-/** Ältere Einträge, die beim Lesen übernommen und entfernt werden. */
-const LEGACY_STORAGE_PREFIX = "caravanwert_";
 const CLICK_ID_EXPIRY_DAYS = 90;
 
 type ClickIdKey = "gclid" | "gbraid" | "wbraid" | "msclkid" | "fbclid";
@@ -73,7 +71,6 @@ function removeStored(): void {
   try {
     for (const key of CLICK_ID_KEYS) {
       localStorage.removeItem(`${STORAGE_PREFIX}${key}`);
-      localStorage.removeItem(`${LEGACY_STORAGE_PREFIX}${key}`);
     }
   } catch {
     // ignorieren
@@ -90,13 +87,13 @@ function storeClickId(key: ClickIdKey, value: string): void {
   if (hasMarketingConsent()) persist(key, data);
 }
 
-function readStored(prefix: string, key: ClickIdKey): StoredClickId | null {
+function readStored(key: ClickIdKey): StoredClickId | null {
   try {
-    const raw = localStorage.getItem(`${prefix}${key}`);
+    const raw = localStorage.getItem(`${STORAGE_PREFIX}${key}`);
     if (!raw) return null;
     const data = JSON.parse(raw) as StoredClickId;
     if (!data?.value || isExpired(data)) {
-      localStorage.removeItem(`${prefix}${key}`);
+      localStorage.removeItem(`${STORAGE_PREFIX}${key}`);
       return null;
     }
     return data;
@@ -110,19 +107,7 @@ function readClickId(key: ClickIdKey): string | null {
   const fromMemory = memory[key];
   if (fromMemory && !isExpired(fromMemory)) return fromMemory.value;
   if (!hasMarketingConsent()) return null;
-
-  const stored = readStored(STORAGE_PREFIX, key);
-  if (stored) return stored.value;
-
-  const legacy = readStored(LEGACY_STORAGE_PREFIX, key);
-  if (!legacy) return null;
-  persist(key, legacy);
-  try {
-    localStorage.removeItem(`${LEGACY_STORAGE_PREFIX}${key}`);
-  } catch {
-    // ignorieren
-  }
-  return legacy.value;
+  return readStored(key)?.value ?? null;
 }
 
 let consentListenerAttached = false;

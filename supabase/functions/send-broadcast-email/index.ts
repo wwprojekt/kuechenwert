@@ -2,7 +2,7 @@ import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.100.1';
 import { buildEmailLayout, paragraph } from '../_shared/email-builder.ts';
 import { getCorsHeaders, handleCorsPreflightRequest } from '../_shared/cors.ts';
-import { BRAND } from '../_shared/brand-config.ts';
+import { BRAND, BRAND_LEGAL } from '../_shared/brand-config.ts';
 import { getBroadcastRecipients, isBroadcastGroup, type BroadcastGroup } from '../_shared/broadcast-recipients.ts';
 import { createUnsubscribeToken, unsubscribeUrls, type UnsubscribeScope } from '../_shared/unsubscribe-token.ts';
 
@@ -83,7 +83,7 @@ const handler = async (req: Request): Promise<Response> => {
       site_name: BRAND.name,
       site_description: BRAND.tagline,
       contact_email: BRAND.supportEmail,
-      support_phone: '+49 511 51532476',
+      support_phone: BRAND_LEGAL.phone,
     };
 
     // Test mode: send only to test_email
@@ -101,11 +101,11 @@ const handler = async (req: Request): Promise<Response> => {
           "Authorization": `Bearer ${RESEND_API_KEY}`,
         },
         body: JSON.stringify({
-          from: `${settingsData.site_name} <info@kuechenwert24.de>`,
+          from: `${settingsData.site_name} <${BRAND.supportEmail}>`,
           to: [test_email],
           subject: `[TEST] ${subject}`,
           html,
-          reply_to: 'info@kuechenwert24.de',
+          reply_to: BRAND.supportEmail,
           headers: {
             'List-Unsubscribe': `<${EMAIL_SETTINGS_URL}>`,
           },
@@ -191,7 +191,7 @@ const handler = async (req: Request): Promise<Response> => {
 
           // Log each email
           await supabase.from('admin_emails').insert({
-            sender_email: 'info@kuechenwert24.de',
+            sender_email: BRAND.supportEmail,
             sender_name: settingsData.site_name,
             recipient_email: recipient.email,
             recipient_name: recipient.name,

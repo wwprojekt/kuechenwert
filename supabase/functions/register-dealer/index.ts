@@ -3,8 +3,11 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.100.1";
 import { getCorsHeaders, handleCorsPreflightRequest } from "../_shared/cors.ts";
 import { edgeLogger } from "../_shared/edgeLogger.ts";
 import { checkRateLimit, createRateLimitErrorResponse } from "../_shared/rate-limiter.ts";
-import { clientIp, validIp } from "../_shared/kw-http.ts";
+import { clientIp, escapeHtml, validIp } from "../_shared/kw-http.ts";
 import { checkTurnstile } from "../_shared/turnstile.ts";
+import { sendAdminEmail } from "../_shared/admin-mail.ts";
+import { BRAND } from "../_shared/brand-config.ts";
+import { button, detailRow, infoBox, paragraph } from "../_shared/email-builder.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -22,10 +25,11 @@ const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
  * 2. Generates a signup confirmation link (NOT a magic link – so the user
  *    must still log in with their password after confirming)
  * 3. Calls send-dealer-notification (type: application_received) with the
- *    confirmation URL embedded in a professional KuechenWert-branded email
+ *    confirmation URL embedded in the KüchenWert-branded email
+ * 4. Notifies the operator (sendAdminEmail, email_type dealer_application_admin)
  *
- * The result: The dealer receives exactly ONE email – a beautiful,
- * branded "Bewerbung eingegangen + E-Mail bestätigen" email.
+ * The result: The studio receives exactly ONE email – the branded
+ * "Registrierung eingegangen + E-Mail bestätigen" email.
  *
  * Security: This function is PUBLIC (no auth required) because it's the
  * registration endpoint. It uses the service_role key internally.
@@ -212,7 +216,7 @@ const handler = async (req: Request): Promise<Response> => {
     // We use type: "signup" so that when the user clicks the link,
     // Supabase sets email_confirmed_at. The user then needs to log in
     // with their password (unlike magiclink which auto-logs in).
-    const redirectUrl = "https://kuechenwert24.de/login";
+    const redirectUrl = `${BRAND.baseUrl}/login`;
     const { data: linkData, error: linkError } = await supabase.auth.admin.generateLink({
       type: "signup",
       email,
@@ -268,32 +272,26 @@ const handler = async (req: Request): Promise<Response> => {
       // Non-critical: User is created, they can request a new email later
     }
 
-    // ── Step 5: Send admin notification about new dealer application ────
+    // ── Step 5: Notify the operator about the new studio registration ──
     try {
-      const adminNotifyRes = await fetch(
-        `${SUPABASE_URL}/functions/v1/send-lead-notification`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "Authorization": `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
-          },
-          body: JSON.stringify({
-            type: "dealer",
-            name: body.contactPersonName || `${body.firstName} ${body.lastName}`.trim(),
-            email,
-            phone: body.phone || undefined,
-            companyName: body.companyName,
-            country: body.country || "DE",
-            skipUserEmail: true,
-          }),
-        }
-      );
-      if (!adminNotifyRes.ok) {
-        edgeLogger.error("Admin notification failed:", adminNotifyRes.status, await adminNotifyRes.text());
-      } else {
-        edgeLogger.info(`Sent admin notification for new dealer application: ${email}`);
-      }
+      const contactName = body.contactPersonName || `${body.firstName ?? ""} ${body.lastName ?? ""}`.trim();
+      const location = `${body.companyPostalCode ?? ""} ${body.companyCity ?? ""}`.trim();
+      await sendAdminEmail(supabase, {
+        emailType: "dealer_application_admin",
+        subject: (site) => `Neue Studio-Registrierung: ${body.companyName} – ${site}`,
+        title: "Neue Studio-Registrierung",
+        contentHtml:
+          infoBox("Küchenstudio", [
+            detailRow("Unternehmen", escapeHtml(body.companyName)),
+            contactName ? detailRow("Ansprechpartner", escapeHtml(contactName)) : "",
+            detailRow("E-Mail", escapeHtml(email)),
+            body.phone ? detailRow("Telefon", escapeHtml(body.phone)) : "",
+            location ? detailRow("Ort", escapeHtml(location)) : "",
+          ].join("")) +
+          paragraph("Die Registrierung wartet auf die Bestätigung der E-Mail-Adresse und die Prüfung der Unterlagen.") +
+          button("Registrierung prüfen", `${BRAND.baseUrl}/admin/dealers`),
+      });
+      edgeLogger.info(`Sent admin notification for new studio registration: ${email}`);
     } catch (adminEmailErr) {
       edgeLogger.error("Error sending admin notification:", adminEmailErr);
       // Non-critical

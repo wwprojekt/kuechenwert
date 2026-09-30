@@ -2,6 +2,7 @@ import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.100.1';
 import { buildEmailLayout, paragraph, greeting, infoBox, list } from '../_shared/email-builder.ts';
 import { checkServiceRoleOrAdmin } from '../_shared/auth.ts';
+import { BRAND, BRAND_LEGAL } from '../_shared/brand-config.ts';
 
 const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY");
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
@@ -9,7 +10,7 @@ const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
 /**
  * Auto-Responder – wird vom inbound-webhook aufgerufen.
- * Sendet eine automatische Bestätigung wenn eine E-Mail an info@kuechenwert24.de eingeht.
+ * Sendet eine automatische Bestätigung, wenn eine E-Mail an die Support-Adresse eingeht.
  */
 
 const handler = async (req: Request): Promise<Response> => {
@@ -31,7 +32,7 @@ const handler = async (req: Request): Promise<Response> => {
     }
 
     // Don't auto-respond to noreply addresses or our own emails
-    const skipPatterns = ['noreply', 'no-reply', 'mailer-daemon', 'postmaster', 'info@kuechenwert24.de', 'kuechenwert24.de'];
+    const skipPatterns = ['noreply', 'no-reply', 'mailer-daemon', 'postmaster', BRAND.domain];
     if (skipPatterns.some(p => sender_email.toLowerCase().includes(p))) {
       return new Response(JSON.stringify({ message: "Skipped auto-response for system address" }), {
         status: 200, headers: { "Content-Type": "application/json" },
@@ -59,10 +60,10 @@ const handler = async (req: Request): Promise<Response> => {
     // Fetch site settings
     const { data: settings } = await supabase.from('site_settings').select('*').single();
     const settingsData = settings || {
-      site_name: 'KüchenWert',
-      site_description: 'Vergleichsportal für neue Küchen — Angebote einholen, Studio-Preise unterbieten, KI-Visualisierung.',
-      contact_email: 'info@kuechenwert24.de',
-      support_phone: '+49 511 51532476',
+      site_name: BRAND.name,
+      site_description: BRAND.tagline,
+      contact_email: BRAND.supportEmail,
+      support_phone: BRAND_LEGAL.phone,
     };
 
     const displayName = sender_name?.split(' ')[0] || undefined;
@@ -76,10 +77,10 @@ const handler = async (req: Request): Promise<Response> => {
       `, 'info', settingsData)}
       ${paragraph('In der Zwischenzeit finden Sie Antworten auf h&auml;ufige Fragen m&ouml;glicherweise in unserem FAQ-Bereich:')}
       ${list([
-        '<a href="https://kuechenwert24.de/faq" style="color: #1f8aa2;">H&auml;ufig gestellte Fragen</a>',
-        '<a href="https://kuechenwert24.de/formular" style="color: #1f8aa2;">Angebote f&uuml;r Ihre Traumk&uuml;che einholen</a>',
-        '<a href="https://kuechenwert24.de/funnel/b" style="color: #1f8aa2;">Bestehendes K&uuml;chen-Angebot unterbieten lassen</a>',
-        '<a href="https://kuechenwert24.de/haendler" style="color: #1f8aa2;">Als K&uuml;chenstudio / H&auml;ndler mitmachen</a>',
+        `<a href="${BRAND.baseUrl}/faq" style="color: #336753;">H&auml;ufig gestellte Fragen</a>`,
+        `<a href="${BRAND.baseUrl}/formular" style="color: #336753;">Angebote f&uuml;r Ihre Traumk&uuml;che einholen</a>`,
+        `<a href="${BRAND.baseUrl}/funnel/b" style="color: #336753;">Bestehendes K&uuml;chen-Angebot unterbieten lassen</a>`,
+        `<a href="${BRAND.baseUrl}/haendler" style="color: #336753;">Als K&uuml;chenstudio mitmachen</a>`,
       ])}
       ${paragraph('<em>Dies ist eine automatische Best&auml;tigung. Bitte antworten Sie nicht auf diese E-Mail.</em>')}
     `;
@@ -93,7 +94,7 @@ const handler = async (req: Request): Promise<Response> => {
         "Authorization": `Bearer ${RESEND_API_KEY}`,
       },
       body: JSON.stringify({
-        from: `${settingsData.site_name} <info@kuechenwert24.de>`,
+        from: `${settingsData.site_name} <${BRAND.supportEmail}>`,
         to: [sender_email],
         subject,
         html,
@@ -109,7 +110,7 @@ const handler = async (req: Request): Promise<Response> => {
 
     // Log in admin_emails
     await supabase.from('admin_emails').insert({
-      sender_email: 'info@kuechenwert24.de',
+      sender_email: BRAND.supportEmail,
       sender_name: settingsData.site_name,
       recipient_email: sender_email,
       recipient_name: sender_name || null,

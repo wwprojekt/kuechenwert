@@ -123,13 +123,9 @@ verify_jwt = false
 [functions.sitemap]
 verify_jwt = false
 
-[functions.track-conversion]
-verify_jwt = false
-
 # --- Stillgelegt (410 Gone, _shared/gone.ts) ---
-# Caravan-Auktionen, Termine/Übergaben, Kaufverträge, Verkaufs-Wizard,
-# öffentliche Mail-Versender, alter Planer und Einmal-Werkzeuge. Können im
-# Supabase-Dashboard gelöscht werden; danach Verzeichnis und Eintrag entfernen.
+# Nach der Beobachtungsphase im Supabase-Dashboard löschen, danach Verzeichnis
+# und Eintrag entfernen.
 [functions.accept-kaufchance-offer]
 verify_jwt = false
 
@@ -294,6 +290,9 @@ verify_jwt = false
 verify_jwt = false
 
 [functions.send-wizard-resume-email]
+verify_jwt = false
+
+[functions.track-conversion]
 verify_jwt = false
 
 [functions.unsubscribe-google-review]

@@ -1,8 +1,8 @@
 /**
  * Funnel-Telemetrie: Schritt- und Feldereignisse der drei Funnels für die
- * Abbruchanalyse (Admin → Analytics → Funnels). Wie die Wizard-Telemetrie von
- * CaravanWert: Puffer im Speicher, gebündelter Versand an kw-funnel-telemetry,
- * beim Verlassen der Seite per sendBeacon.
+ * Abbruchanalyse (Admin → Analytics → Funnels). Puffer im Speicher,
+ * gebündelter Versand an kw-funnel-telemetry, beim Verlassen der Seite per
+ * sendBeacon.
  *
  * Datenschutz: nur Feldschlüssel (z. B. "email"), nie Eingaben; keine
  * Click-IDs, keine IP-Adresse. Gesendet wird nur mit Statistik-Einwilligung.

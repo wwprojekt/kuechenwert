@@ -1,10 +1,10 @@
 /**
- * Strikter Typecheck für den Marktplatz-/Planer-Code (Ratchet).
+ * Strikter Typecheck (Ratchet).
  *
- * Der Altbestand aus dem Caravan-Fork hat viele Typfehler. Neuer Code muss
- * trotzdem strikt fehlerfrei sein: tsc läuft mit tsconfig.strict.json, als
- * Fehler zählen nur Dateien, die in dessen "include" liegen – Fehler in
- * transitiv importierten Altdateien werden nur gezählt, nicht bewertet.
+ * tsc läuft mit tsconfig.strict.json. Als Fehler zählen nur Dateien, die in
+ * dessen "include" liegen – Fehler in transitiv importierten, noch nicht
+ * aufgenommenen Dateien werden nur gezählt, nicht bewertet. Neue Dateien
+ * kommen fehlerfrei in die Liste, bestehende nach ihrer Bereinigung.
  */
 
 import { spawnSync } from "node:child_process";

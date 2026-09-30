@@ -181,25 +181,6 @@ export function DealerCreateDialog({
         logger.warn("Profil account_type konnte nicht aktualisiert werden:", profileUpdateError.message);
       }
 
-      // Step 2c: Create dealer_levels entry (Bronze start level)
-      const { error: levelError } = await supabase
-        .from("dealer_levels")
-        .upsert(
-          {
-            dealer_id: userId,
-            level: "bronze",
-            total_bids: 0,
-            won_auctions: 0,
-            total_volume: 0,
-            points: 0,
-          },
-          { onConflict: "dealer_id" }
-        );
-
-      if (levelError) {
-        logger.warn("Dealer-Level konnte nicht erstellt werden:", levelError.message);
-      }
-
       // Step 3: Optionally send invite email
       if (formData.sendInviteEmail && !isExisting) {
         try {

@@ -33,40 +33,10 @@
  * - registration_token: (optional) Set to "true" to use registration mode (no JWT required)
  */
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.100.1';
+import { getCorsHeaders, handleCorsPreflightRequest } from '../_shared/cors.ts';
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-
-// --- Inline CORS (same as _shared/cors.ts) ---
-const ALLOWED_ORIGINS: string[] = [
-  'https://kuechenwert24.de',
-  'https://www.kuechenwert24.de',
-];
-
-function isAllowedOrigin(origin: string | null): boolean {
-  if (!origin) return false;
-  if (ALLOWED_ORIGINS.includes(origin)) return true;
-  if (/^https:\/\/[a-z0-9-]+\.netlify\.app$/.test(origin)) return true;
-  if (/^http:\/\/localhost(:\d+)?$/.test(origin)) return true;
-  if (/^http:\/\/127\.0\.0\.1(:\d+)?$/.test(origin)) return true;
-  return false;
-}
-
-function getCorsHeaders(req: Request): Record<string, string> {
-  const origin = req.headers.get('origin');
-  const allowedOrigin = isAllowedOrigin(origin) ? origin! : ALLOWED_ORIGINS[0];
-  return {
-    'Access-Control-Allow-Origin': allowedOrigin,
-    'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-    'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
-    'Vary': 'Origin',
-  };
-}
-
-function handleCorsPreflightRequest(req: Request): Response {
-  return new Response(null, { status: 204, headers: getCorsHeaders(req) });
-}
-// --- End inline CORS ---
 
 const ALLOWED_MIME_TYPES = [
   'application/pdf',
@@ -170,7 +140,7 @@ Deno.serve(async (req: Request) => {
       const userType = userData.user.user_metadata?.user_type;
       if (userType !== 'dealer') {
         console.error(`[registration-mode] User ${userId} is not a dealer (type: ${userType})`);
-        return new Response(JSON.stringify({ error: 'Benutzer ist kein Händler' }), {
+        return new Response(JSON.stringify({ error: 'Dieses Konto ist nicht als Küchenstudio registriert.' }), {
           status: 403,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         });
@@ -273,7 +243,7 @@ Deno.serve(async (req: Request) => {
 
       const userType = userData.user.user_metadata?.user_type;
       if (userType !== 'dealer') {
-        return new Response(JSON.stringify({ error: 'Benutzer ist kein Händler' }), {
+        return new Response(JSON.stringify({ error: 'Dieses Konto ist nicht als Küchenstudio registriert.' }), {
           status: 403,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         });

@@ -36,7 +36,7 @@ const FAQPage = () => {
         <div className="max-w-3xl mx-auto text-center">
           <h1 className="text-4xl md:text-5xl font-bold mb-6">Häufig gestellte Fragen</h1>
           <p className="text-lg text-muted-foreground">
-            Alles zur KI-Visualisierung, zur Preisschätzung und dazu, wie Studios um Ihr Projekt bieten.
+            Alles zur KI-Visualisierung, zur Preisschätzung und dazu, wie Studios Ihnen Angebote machen.
           </p>
         </div>
       </PageHero>

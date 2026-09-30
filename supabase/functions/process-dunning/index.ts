@@ -2,8 +2,11 @@ import { createClient, type SupabaseClient } from 'https://esm.sh/@supabase/supa
 import { buildEmailLayout, paragraph, infoBox, detailRow, amountDisplay, warningBox, customerBadge } from '../_shared/email-builder.ts';
 import { getCorsHeaders, handleCorsPreflightRequest } from '../_shared/cors.ts';
 import { checkCronOrServiceRoleOrAdmin } from '../_shared/auth.ts';
-import { BRAND } from '../_shared/brand-config.ts';
+import { BRAND, BRAND_LEGAL } from '../_shared/brand-config.ts';
 import { formatIban, issuerProfile } from '../_shared/issuer-profile.ts';
+
+const RESTRICTION_NOTICE =
+  'Ihr Studio-Konto ist für neue Angebote und Kontaktfreischaltungen gesperrt, bis die Zahlung eingegangen ist. Laufende Projekte bleiben erreichbar.';
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -61,16 +64,13 @@ Deno.serve(async (req) => {
       .maybeSingle();
 
     const settingsData = settings || {
-      site_name: 'KüchenWert',
-      site_description: 'Küchenangebote vergleichen',
-      contact_email: 'info@kuechenwert24.de',
-      support_phone: '',
+      site_name: BRAND.name,
+      site_description: BRAND.tagline,
+      contact_email: BRAND.supportEmail,
+      support_phone: BRAND_LEGAL.phone,
     };
 
-    // Get overdue invoices. Note: `dealer_id` stores the invoice recipient
-    // regardless of role; for seller_penalty invoices it is the private
-    // seller, not a dealer. We therefore also fetch invoice_type so the
-    // reminder body / restriction logic can adapt.
+    // Get overdue invoices.
     //
     // Includes BOTH `pending` and `partial` payment statuses: a partially
     // paid but overdue invoice is still in active dunning (only the open
@@ -80,7 +80,7 @@ Deno.serve(async (req) => {
       .from('invoices')
       .select(`
         *,
-        dealer:profiles(first_name, last_name, company_name, email, customer_number, salutation),
+        dealer:profiles(first_name, last_name, company_name, email, customer_number),
         reminders:payment_reminders(reminder_level, reminder_date)
       `)
       .in('payment_status', ['pending', 'partial'])
@@ -224,14 +224,7 @@ Deno.serve(async (req) => {
         const amountPaid = Number(invoice.amount_paid || 0);
         const remainingAmount = Math.max(0, grossAmount - amountPaid);
 
-        // Restrict account based on configurable level. Only meaningful for
-        // dealer commission invoices – seller_penalty invoices are issued to
-        // private sellers who do not have a "dealer account" to restrict.
-        const isDealerInvoice =
-          invoice.invoice_type !== 'seller_penalty' &&
-          invoice.invoice_type !== 'private_penalty';
-        const restrictsAccount =
-          isDealerInvoice && restrictAtLevel > 0 && reminderLevel >= restrictAtLevel;
+        const restrictsAccount = restrictAtLevel > 0 && reminderLevel >= restrictAtLevel;
 
         // Create payment reminder
         const subject = getReminderSubject(reminderLevel, invoice.invoice_number);
@@ -368,19 +361,14 @@ Deno.serve(async (req) => {
     return subjects[level] || `Mahnung - Rechnung ${invoiceNumber}`;
   }
 
-  // Pick the proper recipient name depending on invoice_type: private
-  // recipients (seller_penalty) by personal name, studios by company name.
   function getRecipientContext(invoice: any) {
-    const isPenalty = invoice.invoice_type === 'seller_penalty';
+    const companyName = (invoice.dealer?.company_name || '').trim();
     const personalName = `${invoice.dealer?.first_name || ''} ${invoice.dealer?.last_name || ''}`.trim();
-    const recipientName = isPenalty
-      ? (personalName || invoice.dealer?.company_name || 'Kunde')
-      : (invoice.dealer?.company_name || personalName || 'Kunde');
-    return { isPenalty, recipientName };
+    const salutation = companyName || !personalName
+      ? 'Sehr geehrte Damen und Herren,'
+      : `Guten Tag ${personalName},`;
+    return { recipientName: companyName || personalName || null, salutation };
   }
-
-  const RESTRICTION_NOTICE =
-    'Ihr Studio-Konto ist für neue Angebote und Kontaktfreischaltungen gesperrt, bis die Zahlung eingegangen ist. Laufende Projekte bleiben erreichbar.';
 
   function getReminderMessage(
     level: number,
@@ -389,7 +377,7 @@ Deno.serve(async (req) => {
     remainingAmount: number,
     restrictsAccount: boolean
   ): string {
-    const { recipientName } = getRecipientContext(invoice);
+    const { salutation } = getRecipientContext(invoice);
 
     const grossAmount = Number(invoice.gross_amount || 0);
     const amountPaid = Number(invoice.amount_paid || 0);
@@ -402,9 +390,9 @@ Deno.serve(async (req) => {
     const restrictWarning = restrictsAccount ? `\n\n${RESTRICTION_NOTICE}` : '';
 
     const messages: Record<number, string> = {
-      1: `Sehr geehrte/r ${recipientName},\n\n${amountLine}\n\nBitte \u00fcberweisen Sie den ${isPartial ? 'offenen Restbetrag' : 'Betrag'} zeitnah auf unser Konto.${restrictWarning}\n\nFalls Sie bereits bezahlt haben, betrachten Sie diese Nachricht als gegenstandslos.`,
-      2: `Sehr geehrte/r ${recipientName},\n\n${amountLine}\n\nDa die Zahlung trotz Erinnerung noch nicht eingegangen ist, berechnen wir eine Mahngeb\u00fchr von \u20ac${fee.toFixed(2)}.${restrictWarning}`,
-      3: `Sehr geehrte/r ${recipientName},\n\n${amountLine}\n\nDies ist unsere letzte Mahnung. Bei weiterer Nichtzahlung werden wir rechtliche Schritte einleiten.\n\nZus\u00e4tzliche Mahngeb\u00fchr: \u20ac${fee.toFixed(2)}${restrictWarning}`,
+      1: `${salutation}\n\n${amountLine}\n\nBitte \u00fcberweisen Sie den ${isPartial ? 'offenen Restbetrag' : 'Betrag'} zeitnah auf unser Konto.${restrictWarning}\n\nFalls Sie bereits bezahlt haben, betrachten Sie diese Nachricht als gegenstandslos.`,
+      2: `${salutation}\n\n${amountLine}\n\nDa die Zahlung trotz Erinnerung noch nicht eingegangen ist, berechnen wir eine Mahngeb\u00fchr von \u20ac${fee.toFixed(2)}.${restrictWarning}`,
+      3: `${salutation}\n\n${amountLine}\n\nDies ist unsere letzte Mahnung. Bei weiterer Nichtzahlung werden wir rechtliche Schritte einleiten.\n\nZus\u00e4tzliche Mahngeb\u00fchr: \u20ac${fee.toFixed(2)}${restrictWarning}`,
     };
 
     return messages[level] || messages[1];
@@ -425,7 +413,7 @@ Deno.serve(async (req) => {
       throw new Error('RESEND_API_KEY not configured');
     }
 
-    const { isPenalty, recipientName } = getRecipientContext(invoice);
+    const { recipientName, salutation } = getRecipientContext(invoice);
     const issuer = issuerProfile(settingsData);
     const siteName = settingsData.site_name || BRAND.name;
 
@@ -448,9 +436,9 @@ Deno.serve(async (req) => {
 
     // Build email content with email-builder
     const content = `
-      ${paragraph(`Sehr geehrte/r ${recipientName},`)}
+      ${paragraph(salutation)}
       ${customerBadge(invoice.dealer?.customer_number)}
-      ${paragraph(`unsere ${isPenalty ? 'Vertragsstrafen-Rechnung' : 'Rechnung'} <strong>${invoice.invoice_number}</strong> vom ${new Date(invoice.invoice_date).toLocaleDateString('de-DE')} ist ${isPartial ? 'nur teilweise beglichen' : 'noch nicht beglichen'}.`)}
+      ${paragraph(`unsere Rechnung <strong>${invoice.invoice_number}</strong> vom ${new Date(invoice.invoice_date).toLocaleDateString('de-DE')} ist ${isPartial ? 'nur teilweise beglichen' : 'noch nicht beglichen'}.`)}
 
       ${infoBox('Rechnungsdetails', `
         ${detailRow('Rechnungsnummer', invoice.invoice_number)}

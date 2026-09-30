@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useMemo } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -7,11 +8,13 @@ import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
-import { Save, Upload, Palette, Mail, Search, Globe, Loader2, Award, Receipt, Building2, Landmark, FileText, AlertTriangle, Shield, Gavel, Brain, Eye, EyeOff, CheckCircle2, XCircle, Activity } from "lucide-react";
+import { Save, Mail, Search, Globe, Loader2, Receipt, Building2, Landmark, FileText, AlertTriangle, Shield, Gavel, Activity } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import type { TablesUpdate } from "@/integrations/supabase/types";
 import { useSettings } from "@/contexts/SettingsContext";
 import { useAuditLog } from "@/hooks/useAuditLog";
 import { logger } from "@/lib/logger";
+import { ensureValidRLSSession } from "@/lib/sessionGuard";
 import AdminTrackingTab from "@/components/admin/AdminTrackingTab";
 import type { TrackingConfig } from "@/lib/trackingConfig";
 import {
@@ -26,23 +29,46 @@ import {
 } from "@/components/ui/alert-dialog";
 
 const SETTINGS_ID = '00000000-0000-0000-0000-000000000000';
+const SETTINGS_QUERY_KEY = ['admin-site-settings'] as const;
+const SESSION_EXPIRED = 'Ihre Sitzung ist abgelaufen. Bitte melden Sie sich erneut an.';
 
-/** Snapshot for dirty check (UI-only fields excluded). */
-function settingsFormSnapshot(data: object): string {
-  const { _showApiKey: _ui, ...rest } = data as Record<string, unknown>;
-  return JSON.stringify(rest);
+/** Spalten, die diese Seite bearbeitet: Nur sie werden geladen und gespeichert. */
+const EDITABLE_FIELDS = [
+  'site_name', 'site_tagline', 'site_description', 'contact_email', 'support_phone', 'whatsapp_number',
+  'company_address', 'company_city', 'company_postal_code', 'company_country', 'maintenance_mode',
+  'managing_director', 'bank_iban', 'bank_bic', 'bank_name', 'ust_id', 'tax_number', 'hrb_number',
+  'invoice_payment_terms_days', 'invoice_footer_text',
+  'dunning_auto_enabled', 'dunning_level1_days', 'dunning_level1_fee', 'dunning_level2_days',
+  'dunning_level2_fee', 'dunning_level3_days', 'dunning_level3_fee', 'dunning_restrict_at_level',
+  'smtp_host', 'smtp_port', 'smtp_user', 'smtp_password', 'from_email', 'notify_new_registration',
+  'meta_title', 'meta_description', 'meta_keywords', 'sitemap_enabled', 'tracking_config',
+] as const;
+
+type SettingsForm = Record<string, unknown>;
+
+async function fetchEditableSettings(): Promise<SettingsForm> {
+  if (!(await ensureValidRLSSession())) throw new Error(SESSION_EXPIRED);
+  const { data, error } = await supabase
+    .from('site_settings')
+    .select(EDITABLE_FIELDS.join(', '))
+    .eq('id', SETTINGS_ID)
+    .single();
+  if (error) throw error;
+  return data as unknown as SettingsForm;
+}
+
+function changedFields(current: SettingsForm, saved: SettingsForm) {
+  return EDITABLE_FIELDS.filter((field) => JSON.stringify(current[field] ?? null) !== JSON.stringify(saved[field] ?? null));
 }
 
 export default function AdminSettings() {
   const { toast } = useToast();
-  const { settings, refreshSettings } = useSettings();
+  const { refreshSettings } = useSettings();
   const { logEvent } = useAuditLog();
+  const queryClient = useQueryClient();
+  const { data: loaded, error: loadError } = useQuery({ queryKey: SETTINGS_QUERY_KEY, queryFn: fetchEditableSettings });
   const [isSaving, setIsSaving] = useState(false);
-  const [isUploading, setIsUploading] = useState(false);
   const [formData, setFormData] = useState<any>({});
-  const logoInputRef = useRef<HTMLInputElement>(null);
-  const faviconInputRef = useRef<HTMLInputElement>(null);
-  const tuvBadgeInputRef = useRef<HTMLInputElement>(null);
   const [activeTab, setActiveTab] = useState("general");
   const [savedSnapshot, setSavedSnapshot] = useState("");
   const [discardDialogOpen, setDiscardDialogOpen] = useState(false);
@@ -50,15 +76,15 @@ export default function AdminSettings() {
   const pendingTabRef = useRef<string | null>(null);
 
   useEffect(() => {
-    if (settings) {
-      setFormData(settings);
-      setSavedSnapshot(settingsFormSnapshot(settings));
+    if (loaded) {
+      setFormData(loaded);
+      setSavedSnapshot(JSON.stringify(loaded));
     }
-  }, [settings]);
+  }, [loaded]);
 
   const isDirty = useMemo(() => {
     if (!savedSnapshot) return false;
-    return settingsFormSnapshot(formData) !== savedSnapshot;
+    return JSON.stringify(formData) !== savedSnapshot;
   }, [formData, savedSnapshot]);
 
   const handleTabChange = (next: string) => {
@@ -85,66 +111,26 @@ export default function AdminSettings() {
     setDiscardDialogOpen(false);
   };
 
-  const handleFileUpload = async (file: File, type: 'logo' | 'favicon' | 'tuv_badge') => {
-    try {
-      setIsUploading(true);
-      
-      const fileExt = file.name.split('.').pop();
-      const fileName = `${type}-${Date.now()}.${fileExt}`;
-      const filePath = `${fileName}`;
-
-      const { error: uploadError } = await supabase.storage
-        .from('branding')
-        .upload(filePath, file, {
-          upsert: true,
-          contentType: file.type || `image/${fileExt}`,
-          cacheControl: "31536000, immutable",
-        });
-
-      if (uploadError) throw uploadError;
-
-      const { data: { publicUrl } } = supabase.storage
-        .from('branding')
-        .getPublicUrl(filePath);
-
-      setFormData({ ...formData, [`${type}_url`]: publicUrl });
-      
-      const typeLabels: Record<string, string> = {
-        logo: 'Logo',
-        favicon: 'Favicon',
-        tuv_badge: 'TÜV Badge'
-      };
-      
-      toast({
-        title: "Datei hochgeladen",
-        description: `${typeLabels[type]} erfolgreich hochgeladen.`,
-      });
-    } catch (error) {
-      logger.error('Upload error:', error);
-      toast({
-        title: "Fehler",
-        description: "Datei konnte nicht hochgeladen werden.",
-        variant: "destructive",
-      });
-    } finally {
-      setIsUploading(false);
-    }
-  };
-
   const handleSave = async () => {
+    if (!loaded) return;
+    const fields = changedFields(formData, loaded);
+    if (fields.length === 0) {
+      toast({ title: "Keine Änderungen", description: "Es gibt nichts zu speichern." });
+      return;
+    }
     setIsSaving(true);
     try {
-      // UI-interne Felder rausfiltern vor dem Speichern
-      const { _showApiKey, ...saveData } = formData;
+      if (!(await ensureValidRLSSession())) throw new Error(SESSION_EXPIRED);
+      const update = Object.fromEntries(fields.map((field) => [field, formData[field]])) as TablesUpdate<'site_settings'>;
       const { error } = await supabase
         .from('site_settings')
-        .update(saveData)
+        .update(update)
         .eq('id', SETTINGS_ID);
 
       if (error) throw error;
 
-      await refreshSettings();
-      logEvent({ action: "settings_changed", entityType: "settings", details: { fields: Object.keys(saveData) } });
+      await Promise.all([refreshSettings(), queryClient.invalidateQueries({ queryKey: SETTINGS_QUERY_KEY })]);
+      logEvent({ action: "settings_changed", entityType: "settings", details: { fields } });
 
       toast({
         title: "Einstellungen gespeichert",
@@ -166,45 +152,15 @@ export default function AdminSettings() {
     setFormData({ ...formData, [field]: value });
   };
 
-  // Helper function to convert HSL to Hex for color picker
-  const hslToHex = (hsl: string): string => {
-    const [h, s, l] = hsl.split(' ').map(Number);
-    const hDecimal = l / 100;
-    const a = (s * Math.min(hDecimal, 1 - hDecimal)) / 100;
-    const f = (n: number) => {
-      const k = (n + h / 30) % 12;
-      const color = hDecimal - a * Math.max(Math.min(k - 3, 9 - k, 1), -1);
-      return Math.round(255 * color).toString(16).padStart(2, '0');
-    };
-    return `#${f(0)}${f(8)}${f(4)}`;
-  };
+  if (loadError) {
+    return (
+      <div className="rounded-2xl border border-destructive/30 bg-destructive/5 p-6 text-sm text-destructive">
+        Einstellungen konnten nicht geladen werden: {loadError.message}
+      </div>
+    );
+  }
 
-  // Helper function to convert Hex to HSL
-  const hexToHsl = (hex: string): string => {
-    const r = parseInt(hex.slice(1, 3), 16) / 255;
-    const g = parseInt(hex.slice(3, 5), 16) / 255;
-    const b = parseInt(hex.slice(5, 7), 16) / 255;
-
-    const max = Math.max(r, g, b);
-    const min = Math.min(r, g, b);
-    let h = 0, s = 0;
-    const l = (max + min) / 2;
-
-    if (max !== min) {
-      const d = max - min;
-      s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
-      
-      switch (max) {
-        case r: h = ((g - b) / d + (g < b ? 6 : 0)) / 6; break;
-        case g: h = ((b - r) / d + 2) / 6; break;
-        case b: h = ((r - g) / d + 4) / 6; break;
-      }
-    }
-
-    return `${Math.round(h * 360)} ${Math.round(s * 100)} ${Math.round(l * 100)}`;
-  };
-
-  if (!settings) {
+  if (!loaded) {
     return (
       <div className="flex items-center justify-center h-64">
         <Loader2 className="w-8 h-8 animate-spin" />
@@ -218,7 +174,7 @@ export default function AdminSettings() {
         <div>
           <h1 className="text-xl sm:text-2xl md:text-3xl font-bold text-foreground">Einstellungen</h1>
           <p className="text-muted-foreground mt-1">
-            Verwalten Sie Ihre Plattform-Einstellungen und Branding
+            Verwalten Sie Ihre Plattform-Einstellungen
           </p>
         </div>
         <Button onClick={handleSave} disabled={isSaving} size="lg">
@@ -249,14 +205,10 @@ export default function AdminSettings() {
       </AlertDialog>
 
       <Tabs value={activeTab} onValueChange={handleTabChange} className="space-y-6">
-        <TabsList className="grid w-full grid-cols-4 md:grid-cols-7 lg:w-auto">
+        <TabsList className="grid w-full grid-cols-5 lg:w-auto">
           <TabsTrigger value="general" className="gap-2">
             <Globe className="w-4 h-4" />
             <span className="hidden sm:inline">Allgemein</span>
-          </TabsTrigger>
-          <TabsTrigger value="branding" className="gap-2">
-            <Palette className="w-4 h-4" />
-            <span className="hidden sm:inline">Branding</span>
           </TabsTrigger>
           <TabsTrigger value="invoice" className="gap-2">
             <Receipt className="w-4 h-4" />
@@ -273,10 +225,6 @@ export default function AdminSettings() {
           <TabsTrigger value="tracking" className="gap-2">
             <Activity className="w-4 h-4" />
             <span className="hidden sm:inline">Tracking</span>
-          </TabsTrigger>
-          <TabsTrigger value="ai" className="gap-2">
-            <Brain className="w-4 h-4" />
-            <span className="hidden sm:inline">KI / API</span>
           </TabsTrigger>
         </TabsList>
 
@@ -412,199 +360,6 @@ export default function AdminSettings() {
           </Card>
         </TabsContent>
 
-        {/* Branding Settings */}
-        <TabsContent value="branding" className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Branding & Design</CardTitle>
-              <CardDescription>
-                Passen Sie das Erscheinungsbild Ihrer Plattform an
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              <div className="space-y-4">
-                <div className="space-y-2">
-                  <Label>Logo</Label>
-                  <div className="flex items-center gap-4">
-                    <div className="w-32 h-32 rounded-lg border-2 border-dashed border-border flex items-center justify-center bg-muted overflow-hidden">
-                      {formData.logo_url ? (
-                        <img src={formData.logo_url} alt="Logo" className="w-full h-full object-contain" />
-                      ) : (
-                        <Upload className="w-8 h-8 text-muted-foreground" />
-                      )}
-                    </div>
-                    <div className="space-y-2">
-                      <input
-                        ref={logoInputRef}
-                        type="file"
-                        accept="image/*"
-                        className="hidden"
-                        onChange={(e) => {
-                          const file = e.target.files?.[0];
-                          if (file) handleFileUpload(file, 'logo');
-                        }}
-                      />
-                      <Button 
-                        variant="outline" 
-                        onClick={() => logoInputRef.current?.click()}
-                        disabled={isUploading}
-                      >
-                        {isUploading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Upload className="w-4 h-4 mr-2" />}
-                        Logo hochladen
-                      </Button>
-                      <p className="text-xs text-muted-foreground">
-                        PNG oder SVG, max. 2MB, empfohlen 512x512px
-                      </p>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="space-y-2">
-                  <Label>Favicon</Label>
-                  <div className="flex items-center gap-4">
-                    <div className="w-16 h-16 rounded border-2 border-dashed border-border flex items-center justify-center bg-muted overflow-hidden">
-                      {formData.favicon_url ? (
-                        <img src={formData.favicon_url} alt="Favicon" className="w-full h-full object-contain" />
-                      ) : (
-                        <Upload className="w-6 h-6 text-muted-foreground" />
-                      )}
-                    </div>
-                    <div className="space-y-2">
-                      <input
-                        ref={faviconInputRef}
-                        type="file"
-                        accept="image/*"
-                        className="hidden"
-                        onChange={(e) => {
-                          const file = e.target.files?.[0];
-                          if (file) handleFileUpload(file, 'favicon');
-                        }}
-                      />
-                      <Button 
-                        variant="outline" 
-                        size="sm"
-                        onClick={() => faviconInputRef.current?.click()}
-                        disabled={isUploading}
-                      >
-                        {isUploading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Upload className="w-4 h-4 mr-2" />}
-                        Favicon hochladen
-                      </Button>
-                      <p className="text-xs text-muted-foreground">
-                        ICO oder PNG, 32x32px oder 64x64px
-                      </p>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="space-y-2">
-                  <Label>TÜV-Zertifikat Badge</Label>
-                  <div className="flex items-center gap-4">
-                    <div className="w-20 h-20 rounded-lg border-2 border-dashed border-border flex items-center justify-center bg-muted overflow-hidden">
-                      {formData.tuv_badge_url ? (
-                        <img src={formData.tuv_badge_url} alt="TÜV Badge" className="w-full h-full object-contain" />
-                      ) : (
-                        <Award className="w-8 h-8 text-muted-foreground" />
-                      )}
-                    </div>
-                    <div className="space-y-2">
-                      <input
-                        ref={tuvBadgeInputRef}
-                        type="file"
-                        accept="image/*"
-                        className="hidden"
-                        onChange={(e) => {
-                          const file = e.target.files?.[0];
-                          if (file) handleFileUpload(file, 'tuv_badge');
-                        }}
-                      />
-                      <Button 
-                        variant="outline" 
-                        size="sm"
-                        onClick={() => tuvBadgeInputRef.current?.click()}
-                        disabled={isUploading}
-                      >
-                        {isUploading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Upload className="w-4 h-4 mr-2" />}
-                        TÜV Badge hochladen
-                      </Button>
-                      <p className="text-xs text-muted-foreground">
-                        PNG oder SVG, wird im Footer angezeigt
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <div className="space-y-4">
-                <h4 className="font-medium">Farbschema</h4>
-                <div className="grid gap-6 md:grid-cols-2">
-                  <div className="space-y-2">
-                    <Label htmlFor="primary-color">Primärfarbe</Label>
-                    <div className="flex gap-3 items-center">
-                      <input
-                        type="color"
-                        value={formData.primary_color ? hslToHex(formData.primary_color) : '#FF6B35'}
-                        onChange={(e) => updateField('primary_color', hexToHsl(e.target.value))}
-                        className="w-20 h-12 rounded-lg border-2 border-border cursor-pointer hover:border-primary transition-colors"
-                      />
-                      <div className="flex-1 space-y-1">
-                        <Input
-                          id="primary-color"
-                          value={formData.primary_color || ''}
-                          onChange={(e) => updateField('primary_color', e.target.value)}
-                          placeholder="16 100 60"
-                          className="font-mono text-sm"
-                        />
-                        <p className="text-xs text-muted-foreground">HSL: {formData.primary_color || '16 100 60'}</p>
-                      </div>
-                    </div>
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="secondary-color">Sekundärfarbe</Label>
-                    <div className="flex gap-3 items-center">
-                      <input
-                        type="color"
-                        value={formData.secondary_color ? hslToHex(formData.secondary_color) : '#1A3A52'}
-                        onChange={(e) => updateField('secondary_color', hexToHsl(e.target.value))}
-                        className="w-20 h-12 rounded-lg border-2 border-border cursor-pointer hover:border-primary transition-colors"
-                      />
-                      <div className="flex-1 space-y-1">
-                        <Input
-                          id="secondary-color"
-                          value={formData.secondary_color || ''}
-                          onChange={(e) => updateField('secondary_color', e.target.value)}
-                          placeholder="210 40 28"
-                          className="font-mono text-sm"
-                        />
-                        <p className="text-xs text-muted-foreground">HSL: {formData.secondary_color || '210 40 28'}</p>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-                <div className="p-4 bg-muted/50 rounded-lg border border-border">
-                  <p className="text-sm text-muted-foreground">
-                    <strong>Tipp:</strong> Verwenden Sie die Farbwähler für eine visuelle Auswahl oder geben Sie HSL-Werte manuell ein (Format: H S L, z.B. "16 100 60").
-                  </p>
-                </div>
-              </div>
-
-              <div className="flex items-center justify-between rounded-lg border p-4">
-                <div className="space-y-0.5">
-                  <Label htmlFor="dark-mode">Dark Mode aktivieren</Label>
-                  <p className="text-sm text-muted-foreground">
-                    Dunkles Theme für die Website
-                  </p>
-                </div>
-                <Switch 
-                  id="dark-mode"
-                  checked={formData.dark_mode_enabled || false}
-                  onCheckedChange={(checked) => updateField('dark_mode_enabled', checked)}
-                />
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        {/* Email Settings */}
         {/* Invoice / Rechnungseinstellungen */}
         <TabsContent value="invoice" className="space-y-6">
           {/* Firmendaten */}
@@ -1037,6 +792,7 @@ export default function AdminSettings() {
           </Card>
         </TabsContent>
 
+        {/* Email Settings */}
         <TabsContent value="email" className="space-y-6">
           <Card>
             <CardHeader>
@@ -1204,85 +960,6 @@ export default function AdminSettings() {
             value={(formData.tracking_config ?? null) as Partial<TrackingConfig> | null}
             onChange={(next) => updateField('tracking_config', next)}
           />
-        </TabsContent>
-
-        {/* KI / API Settings */}
-        <TabsContent value="ai" className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Brain className="w-5 h-5" />
-                KI-Bewertungssystem
-              </CardTitle>
-              <CardDescription>
-                Konfigurieren Sie die KI-gestützte Küchen-Kostenschätzung (Küchenrechner + Traumküche-Planer). Die KI lernt aus Ihren Expertenbewertungen und wird mit der Zeit immer genauer.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              <div className="space-y-2">
-                <Label htmlFor="openai-api-key" className="flex items-center gap-2">
-                  OpenAI API-Key
-                  {formData.openai_api_key ? (
-                    <span className="inline-flex items-center gap-1 text-xs text-green-600 font-normal">
-                      <CheckCircle2 className="w-3 h-3" /> Konfiguriert
-                    </span>
-                  ) : (
-                    <span className="inline-flex items-center gap-1 text-xs text-orange-500 font-normal">
-                      <XCircle className="w-3 h-3" /> Nicht konfiguriert
-                    </span>
-                  )}
-                </Label>
-                <div className="relative">
-                  <Input
-                    id="openai-api-key"
-                    type={formData._showApiKey ? "text" : "password"}
-                    value={formData.openai_api_key || ''}
-                    onChange={(e) => updateField('openai_api_key', e.target.value)}
-                    placeholder="sk-..."
-                    className="pr-10 font-mono text-sm"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setFormData({ ...formData, _showApiKey: !formData._showApiKey })}
-                    className="absolute right-2 top-1/2 -translate-y-1/2 p-2 text-muted-foreground hover:text-foreground active:text-foreground"
-                  >
-                    {formData._showApiKey ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                  </button>
-                </div>
-                <p className="text-xs text-muted-foreground">
-                  Benötigt für die KI-Bewertung im Küchenrechner und für OpenAI-Prompt-Enhancement im Traumküche-Planer. Erhalten Sie einen Key unter{" "}
-                  <a href="https://platform.openai.com/api-keys" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
-                    platform.openai.com/api-keys
-                  </a>
-                  . Kosten: ca. 0,001€ pro Bewertung.
-                </p>
-              </div>
-
-              <div className="rounded-lg border p-4 bg-muted/30 space-y-3">
-                <h4 className="font-medium text-sm">So funktioniert das KI-System:</h4>
-                <ol className="text-sm text-muted-foreground space-y-2 list-decimal list-inside">
-                  <li>Ein Nutzer beantwortet im <strong>Küchenrechner</strong> Fragen zu seiner Wunschküche</li>
-                  <li>Der <strong>Algorithmus</strong> berechnet einen Schätzwert basierend auf Form, Größe, Material und Ausstattung</li>
-                  <li>Die <strong>KI</strong> wird im Hintergrund abgefragt und liefert eine zusätzliche Preis-Range</li>
-                  <li>Sie tragen im Admin-Bereich unter <strong>Leads → Küchenrechner</strong> Ihren fundierten Expertenwert ein</li>
-                  <li>Die KI <strong>lernt</strong> aus Ihren Expertenwerten und wird mit jeder Bewertung genauer</li>
-                </ol>
-              </div>
-
-              <div className="rounded-lg border border-amber-200 bg-amber-50 p-4">
-                <div className="flex items-start gap-3">
-                  <AlertTriangle className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
-                  <div className="text-sm">
-                    <p className="font-medium text-amber-800">Hinweis zur Sicherheit</p>
-                    <p className="text-amber-700 mt-1">
-                      Der API-Key wird verschlüsselt in der Datenbank gespeichert und nur serverseitig in Edge Functions verwendet.
-                      Er ist niemals im Frontend sichtbar.
-                    </p>
-                  </div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
         </TabsContent>
       </Tabs>
     </div>

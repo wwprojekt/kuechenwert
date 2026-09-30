@@ -73,47 +73,6 @@ export default RelatedContent;
 /**
  * Predefined related content sets for common pages
  */
-export const verkaufenRelatedLinks: RelatedLink[] = [
-  {
-    title: "KüchenRechner",
-    description: "In 4 Schritten eine realistische Preis-Schätzung für Ihre neue Küche erhalten — ohne Kontaktdaten",
-    href: "/kuechenrechner",
-  },
-  {
-    title: "Studio-Preis unterbieten",
-    description: "Angebot vom Küchenstudio hochladen — geprüfte Küchenstudios unterbieten in 72 Stunden",
-    href: "/funnel/b",
-  },
-  {
-    title: "FAQ",
-    description: "Antworten auf häufig gestellte Fragen rund um die neue Traumküche",
-    href: "/faq",
-  },
-];
-
-export const kaufenRelatedLinks: RelatedLink[] = [
-  {
-    title: "Kostenlose Angebote erhalten",
-    description: "Wünsche angeben — geprüfte Küchenstudios melden sich mit passenden Angeboten",
-    href: "/formular",
-  },
-  {
-    title: "Traumküche visualisieren",
-    description: "KI-gestützter Planer visualisiert Ihre Wunsch-Küche und schätzt den Preis",
-    href: "/funnel/c",
-  },
-  {
-    title: "FAQ",
-    description: "Häufig gestellte Fragen rund um Planung, Vergleich & Kauf Ihrer neuen Küche",
-    href: "/faq",
-  },
-  {
-    title: "Über uns",
-    description: "Erfahren Sie mehr über unsere Qualitätsstandards und unseren Service",
-    href: "/ueber-uns",
-  },
-];
-
 export const haendlerRelatedLinks: RelatedLink[] = [
   {
     title: "Küchenstudio-Partner werden",
@@ -127,7 +86,7 @@ export const haendlerRelatedLinks: RelatedLink[] = [
   },
   {
     title: "Preise",
-    description: "Transparente Konditionen für Küchenstudios & Händler",
+    description: "Transparente Konditionen für Küchenstudios",
     href: "/preise",
   },
   {

@@ -165,7 +165,7 @@ function toast({ ...props }: Toast) {
   // Jeder Fehler-Toast wird automatisch ins Fehlerprotokoll geschrieben,
   // ABER nur wenn der Fehler nicht bereits über handleAndLogError() geloggt wurde.
   // Duplikat-Erkennung: Wenn der Toast von einer Komponente kommt die handleAndLogError()
-  // nutzt (z.B. VerkaufenWizard, Login, Kontakt), wird der Fehler bereits dort geloggt.
+  // nutzt (z.B. Login), wird der Fehler bereits dort geloggt.
   // Der toast-auto-capture ist nur für Toasts gedacht die OHNE handleAndLogError() ausgelöst werden.
   if (props.variant === "destructive") {
     const errorMessage = typeof props.description === 'string'

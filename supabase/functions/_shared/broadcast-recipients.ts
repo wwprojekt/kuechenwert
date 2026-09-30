@@ -20,7 +20,7 @@ export const BROADCAST_GROUP_LABELS: Record<BroadcastGroup, string> = {
 };
 
 export function isBroadcastGroup(value: unknown): value is BroadcastGroup {
-  return typeof value === 'string' && Object.hasOwn(BROADCAST_GROUP_LABELS, value);
+  return typeof value === 'string' && Object.prototype.hasOwnProperty.call(BROADCAST_GROUP_LABELS, value);
 }
 
 const PAGE_SIZE = 1000;
@@ -40,6 +40,14 @@ async function selectAll(build: (from: number, to: number) => PromiseLike<{ data
 async function userIdsWhere(supabase: any, column: string, value: boolean): Promise<Set<string>> {
   const rows = await selectAll((from, to) =>
     supabase.from('user_notification_preferences').select('user_id').eq(column, value).order('user_id').range(from, to),
+  );
+  return new Set(rows.map((r) => r.user_id as string));
+}
+
+// Studios erkennt nur user_roles: profiles.account_type kennt nur private und business.
+async function dealerIds(supabase: any): Promise<Set<string>> {
+  const rows = await selectAll((from, to) =>
+    supabase.from('user_roles').select('user_id').eq('role', 'dealer').order('user_id').range(from, to),
   );
   return new Set(rows.map((r) => r.user_id as string));
 }
@@ -82,18 +90,22 @@ export async function getBroadcastRecipients(
       .select('id, email, first_name, last_name, company_name')
       .not('email', 'is', null);
     if (group === 'customers') query = query.eq('account_type', 'private');
-    if (isDealerGroup) query = query.eq('account_type', 'dealer');
     if (group === 'verified_dealers') query = query.eq('is_verified', true);
     return query.order('id').range(from, to);
   });
 
+  const dealers = isDealerGroup ? await dealerIds(supabase) : null;
   const newsletter = group === 'newsletter' ? await userIdsWhere(supabase, 'newsletter_enabled', true) : null;
   const unsubscribed = await userIdsWhere(supabase, 'broadcast_emails_enabled', false);
   // Werbung nur mit Opt-in (§ 7 Abs. 2 UWG, gilt auch gegenueber Unternehmen).
   const promoOptIn = options.isPromotional ? await userIdsWhere(supabase, 'promotional_emails', true) : null;
 
   return profiles
-    .filter((p) => (!newsletter || newsletter.has(p.id)) && !unsubscribed.has(p.id) && (!promoOptIn || promoOptIn.has(p.id)))
+    .filter((p) =>
+      (!dealers || dealers.has(p.id)) &&
+      (!newsletter || newsletter.has(p.id)) &&
+      !unsubscribed.has(p.id) &&
+      (!promoOptIn || promoOptIn.has(p.id)))
     .map((p) => ({
       email: p.email,
       name: isDealerGroup ? p.company_name || personName(p) : personName(p),

@@ -1,8 +1,6 @@
 import { Link } from "react-router-dom";
-import { useMemo } from "react";
 import { useSettings } from "@/contexts/SettingsContext";
-import { proxiedImageUrl } from "@/lib/imageTransform";
-import { BRAND } from "@/lib/brand/config";
+import { BRAND, BRAND_LOGOS } from "@/lib/brand";
 
 interface SiteLogoProps {
   /** 
@@ -32,13 +30,7 @@ export function SiteLogo({
 }: SiteLogoProps) {
   const { settings, loading } = useSettings();
 
-  // Logo durch CF-Worker /img/-Proxy leiten (überschreibt Supabase no-cache).
-  // Lokale /logo.svg-Fallback wird von proxiedImageUrl unverändert
-  // durchgereicht (kein Storage-Marker im Pfad).
-  // Footer-Variante bekommt weißes Logo (Teal-auf-Weiß) für dunklen BG.
-  const defaultLogo = variant === "footer" ? "/logo-white.svg" : "/logo.svg";
-  const rawLogoUrl = settings?.logo_url || defaultLogo;
-  const logoUrl = useMemo(() => proxiedImageUrl(rawLogoUrl), [rawLogoUrl]);
+  const logoUrl = variant === "footer" ? BRAND_LOGOS.white : BRAND_LOGOS.primary;
   const siteName = settings?.site_name || BRAND.name;
   const siteTagline = settings?.site_tagline || BRAND.tagline;
 

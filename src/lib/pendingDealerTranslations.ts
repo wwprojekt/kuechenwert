@@ -70,12 +70,12 @@ export interface PendingDealerTranslations {
 /* ------------------------------------------------------------------ */
 
 const de: PendingDealerTranslations = {
-  bannerPendingTitle: 'Ihr Händlerkonto wird geprüft',
-  bannerRejectedTitle: 'Ihr Händlerantrag wurde abgelehnt',
+  bannerPendingTitle: 'Ihr Studiokonto wird geprüft',
+  bannerRejectedTitle: 'Ihr Studio-Antrag wurde abgelehnt',
   bannerPendingBadge: 'In Bearbeitung',
   bannerRejectedBadge: 'Abgelehnt',
   bannerPendingDescription:
-    'Alle Händler-Funktionen werden freigeschaltet, sobald Ihr Antrag genehmigt wurde. Sie können sich bereits im Dashboard umsehen.',
+    'Alle Studio-Funktionen werden freigeschaltet, sobald Ihr Antrag genehmigt wurde. Sie können sich bereits im Dashboard umsehen.',
   bannerRejectedDescription:
     'Leider konnte Ihr Antrag nicht genehmigt werden. Bitte kontaktieren Sie uns für weitere Informationen.',
   bannerRejectionReason: 'Begründung:',
@@ -91,7 +91,7 @@ const de: PendingDealerTranslations = {
 
   docTitle: 'Dokumente für Verifizierung',
   docDescription:
-    'Bitte laden Sie die folgenden Dokumente hoch, damit wir Ihren Händlerantrag prüfen können.',
+    'Bitte laden Sie die folgenden Dokumente hoch, damit wir Ihren Antrag prüfen können.',
   docRequiredDocuments: 'Erforderliche Dokumente',
   docAllUploaded:
     'Alle erforderlichen Dokumente hochgeladen – wir prüfen Ihren Antrag.',
@@ -116,7 +116,7 @@ const de: PendingDealerTranslations = {
   docReplace: 'Ersetzen',
   docUpload: 'Hochladen',
   docInfoBox:
-    'Erlaubte Dateiformate: PDF, JPG, PNG (max. 25 MB). Ihre Dokumente werden vertraulich behandelt und nur zur Verifizierung Ihres Händlerkontos verwendet. Nach der Prüfung erhalten Sie eine E-Mail-Benachrichtigung.',
+    'Erlaubte Dateiformate: PDF, JPG, PNG (max. 25 MB). Ihre Dokumente werden vertraulich behandelt und nur zur Verifizierung Ihres Studiokontos verwendet. Nach der Prüfung erhalten Sie eine E-Mail-Benachrichtigung.',
   docInvalidType: 'Ungültiger Dateityp. Erlaubt: PDF, JPG, PNG',
   docFileTooLarge: 'Datei zu groß. Maximal 25 MB erlaubt.',
   docUploadSuccess: 'erfolgreich hochgeladen',
@@ -132,12 +132,12 @@ const de: PendingDealerTranslations = {
 /* ------------------------------------------------------------------ */
 
 const en: PendingDealerTranslations = {
-  bannerPendingTitle: 'Your dealer account is being reviewed',
-  bannerRejectedTitle: 'Your dealer application was rejected',
+  bannerPendingTitle: 'Your kitchen studio account is being reviewed',
+  bannerRejectedTitle: 'Your kitchen studio application was rejected',
   bannerPendingBadge: 'Under Review',
   bannerRejectedBadge: 'Rejected',
   bannerPendingDescription:
-    'All dealer features will be unlocked once your application has been approved. You can already look around the dashboard.',
+    'All studio features will be unlocked once your application has been approved. You can already look around the dashboard.',
   bannerRejectedDescription:
     'Unfortunately, your application could not be approved. Please contact us for more information.',
   bannerRejectionReason: 'Reason:',
@@ -153,7 +153,7 @@ const en: PendingDealerTranslations = {
 
   docTitle: 'Documents for Verification',
   docDescription:
-    'Please upload the following documents so we can review your dealer application.',
+    'Please upload the following documents so we can review your application.',
   docRequiredDocuments: 'Required documents',
   docAllUploaded:
     'All required documents uploaded – we are reviewing your application.',
@@ -178,7 +178,7 @@ const en: PendingDealerTranslations = {
   docReplace: 'Replace',
   docUpload: 'Upload',
   docInfoBox:
-    'Allowed file formats: PDF, JPG, PNG (max. 25 MB). Your documents are treated confidentially and used only for dealer account verification. You will receive an email notification after the review.',
+    'Allowed file formats: PDF, JPG, PNG (max. 25 MB). Your documents are treated confidentially and used only to verify your studio account. You will receive an email notification after the review.',
   docInvalidType: 'Invalid file type. Allowed: PDF, JPG, PNG',
   docFileTooLarge: 'File too large. Maximum 25 MB allowed.',
   docUploadSuccess: 'uploaded successfully',
@@ -194,12 +194,12 @@ const en: PendingDealerTranslations = {
 /* ------------------------------------------------------------------ */
 
 const nl: PendingDealerTranslations = {
-  bannerPendingTitle: 'Uw dealerrekening wordt beoordeeld',
-  bannerRejectedTitle: 'Uw dealeraanvraag is afgewezen',
+  bannerPendingTitle: 'Uw keukenstudio-account wordt beoordeeld',
+  bannerRejectedTitle: 'Uw aanvraag als keukenstudio is afgewezen',
   bannerPendingBadge: 'In behandeling',
   bannerRejectedBadge: 'Afgewezen',
   bannerPendingDescription:
-    'Alle dealerfuncties worden ontgrendeld zodra uw aanvraag is goedgekeurd. U kunt alvast rondkijken in het dashboard.',
+    'Alle studiofuncties worden ontgrendeld zodra uw aanvraag is goedgekeurd. U kunt alvast rondkijken in het dashboard.',
   bannerRejectedDescription:
     'Helaas kon uw aanvraag niet worden goedgekeurd. Neem contact met ons op voor meer informatie.',
   bannerRejectionReason: 'Reden:',
@@ -215,7 +215,7 @@ const nl: PendingDealerTranslations = {
 
   docTitle: 'Documenten voor verificatie',
   docDescription:
-    'Upload de volgende documenten zodat wij uw dealeraanvraag kunnen beoordelen.',
+    'Upload de volgende documenten zodat wij uw aanvraag kunnen beoordelen.',
   docRequiredDocuments: 'Vereiste documenten',
   docAllUploaded:
     'Alle vereiste documenten geüpload – wij beoordelen uw aanvraag.',
@@ -240,7 +240,7 @@ const nl: PendingDealerTranslations = {
   docReplace: 'Vervangen',
   docUpload: 'Uploaden',
   docInfoBox:
-    'Toegestane bestandsformaten: PDF, JPG, PNG (max. 25 MB). Uw documenten worden vertrouwelijk behandeld en alleen gebruikt voor verificatie van uw dealerrekening. Na de beoordeling ontvangt u een e-mailmelding.',
+    'Toegestane bestandsformaten: PDF, JPG, PNG (max. 25 MB). Uw documenten worden vertrouwelijk behandeld en alleen gebruikt voor verificatie van uw studio-account. Na de beoordeling ontvangt u een e-mailmelding.',
   docInvalidType: 'Ongeldig bestandstype. Toegestaan: PDF, JPG, PNG',
   docFileTooLarge: 'Bestand te groot. Maximaal 25 MB toegestaan.',
   docUploadSuccess: 'succesvol geüpload',
@@ -256,12 +256,12 @@ const nl: PendingDealerTranslations = {
 /* ------------------------------------------------------------------ */
 
 const fr: PendingDealerTranslations = {
-  bannerPendingTitle: 'Votre compte concessionnaire est en cours de vérification',
-  bannerRejectedTitle: 'Votre demande de concessionnaire a été refusée',
+  bannerPendingTitle: 'Votre compte de cuisiniste est en cours de vérification',
+  bannerRejectedTitle: 'Votre demande de cuisiniste a été refusée',
   bannerPendingBadge: 'En cours',
   bannerRejectedBadge: 'Refusé',
   bannerPendingDescription:
-    'Toutes les fonctions concessionnaire seront débloquées dès que votre demande aura été approuvée. Vous pouvez déjà consulter le tableau de bord.',
+    'Toutes les fonctions pour les cuisinistes seront débloquées dès que votre demande aura été approuvée. Vous pouvez déjà consulter le tableau de bord.',
   bannerRejectedDescription:
     'Malheureusement, votre demande n\'a pas pu être approuvée. Veuillez nous contacter pour plus d\'informations.',
   bannerRejectionReason: 'Motif :',
@@ -302,7 +302,7 @@ const fr: PendingDealerTranslations = {
   docReplace: 'Remplacer',
   docUpload: 'Télécharger',
   docInfoBox:
-    'Formats de fichiers autorisés : PDF, JPG, PNG (max. 10 Mo). Vos documents sont traités de manière confidentielle et utilisés uniquement pour la vérification de votre compte. Vous recevrez une notification par e-mail après l\'examen.',
+    'Formats de fichiers autorisés : PDF, JPG, PNG (max. 25 Mo). Vos documents sont traités de manière confidentielle et utilisés uniquement pour la vérification de votre compte. Vous recevrez une notification par e-mail après l\'examen.',
   docInvalidType: 'Type de fichier invalide. Autorisé : PDF, JPG, PNG',
   docFileTooLarge: 'Fichier trop volumineux. Maximum 25 Mo autorisé.',
   docUploadSuccess: 'téléchargé avec succès',
@@ -318,12 +318,12 @@ const fr: PendingDealerTranslations = {
 /* ------------------------------------------------------------------ */
 
 const it: PendingDealerTranslations = {
-  bannerPendingTitle: 'Il vostro account concessionario è in fase di verifica',
-  bannerRejectedTitle: 'La vostra richiesta di concessionario è stata rifiutata',
+  bannerPendingTitle: 'Il vostro account di studio cucine è in fase di verifica',
+  bannerRejectedTitle: 'La vostra richiesta come studio cucine è stata rifiutata',
   bannerPendingBadge: 'In elaborazione',
   bannerRejectedBadge: 'Rifiutato',
   bannerPendingDescription:
-    'Tutte le funzioni concessionario verranno sbloccate non appena la vostra richiesta sarà approvata. Potete già consultare la dashboard.',
+    'Tutte le funzioni per gli studi cucine verranno sbloccate non appena la vostra richiesta sarà approvata. Potete già consultare la dashboard.',
   bannerRejectedDescription:
     'Purtroppo la vostra richiesta non ha potuto essere approvata. Contattateci per ulteriori informazioni.',
   bannerRejectionReason: 'Motivazione:',
@@ -380,12 +380,12 @@ const it: PendingDealerTranslations = {
 /* ------------------------------------------------------------------ */
 
 const es: PendingDealerTranslations = {
-  bannerPendingTitle: 'Su cuenta de concesionario está siendo revisada',
-  bannerRejectedTitle: 'Su solicitud de concesionario ha sido rechazada',
+  bannerPendingTitle: 'Su cuenta de estudio de cocinas está siendo revisada',
+  bannerRejectedTitle: 'Su solicitud como estudio de cocinas ha sido rechazada',
   bannerPendingBadge: 'En proceso',
   bannerRejectedBadge: 'Rechazado',
   bannerPendingDescription:
-    'Todas las funciones de concesionario se desbloquearán una vez que su solicitud haya sido aprobada. Ya puede explorar el panel de control.',
+    'Todas las funciones para estudios de cocinas se desbloquearán una vez que su solicitud haya sido aprobada. Ya puede explorar el panel de control.',
   bannerRejectedDescription:
     'Lamentablemente, su solicitud no pudo ser aprobada. Póngase en contacto con nosotros para más información.',
   bannerRejectionReason: 'Motivo:',
@@ -442,12 +442,12 @@ const es: PendingDealerTranslations = {
 /* ------------------------------------------------------------------ */
 
 const pt: PendingDealerTranslations = {
-  bannerPendingTitle: 'A sua conta de concessionário está a ser analisada',
-  bannerRejectedTitle: 'O seu pedido de concessionário foi rejeitado',
+  bannerPendingTitle: 'A sua conta de estúdio de cozinhas está a ser analisada',
+  bannerRejectedTitle: 'O seu pedido como estúdio de cozinhas foi rejeitado',
   bannerPendingBadge: 'Em análise',
   bannerRejectedBadge: 'Rejeitado',
   bannerPendingDescription:
-    'Todas as funções de concessionário serão desbloqueadas assim que o seu pedido for aprovado. Já pode explorar o painel.',
+    'Todas as funções para estúdios de cozinhas serão desbloqueadas assim que o seu pedido for aprovado. Já pode explorar o painel.',
   bannerRejectedDescription:
     'Infelizmente, o seu pedido não pôde ser aprovado. Contacte-nos para mais informações.',
   bannerRejectionReason: 'Motivo:',
@@ -504,12 +504,12 @@ const pt: PendingDealerTranslations = {
 /* ------------------------------------------------------------------ */
 
 const pl: PendingDealerTranslations = {
-  bannerPendingTitle: 'Twoje konto dealera jest weryfikowane',
-  bannerRejectedTitle: 'Twój wniosek dealerski został odrzucony',
+  bannerPendingTitle: 'Twoje konto studia kuchennego jest weryfikowane',
+  bannerRejectedTitle: 'Twój wniosek studia kuchennego został odrzucony',
   bannerPendingBadge: 'W trakcie',
   bannerRejectedBadge: 'Odrzucony',
   bannerPendingDescription:
-    'Wszystkie funkcje dealerskie zostaną odblokowane po zatwierdzeniu Twojego wniosku. Możesz już przeglądać panel.',
+    'Wszystkie funkcje dla studiów kuchennych zostaną odblokowane po zatwierdzeniu Twojego wniosku. Możesz już przeglądać panel.',
   bannerRejectedDescription:
     'Niestety Twój wniosek nie mógł zostać zatwierdzony. Skontaktuj się z nami, aby uzyskać więcej informacji.',
   bannerRejectionReason: 'Powód:',

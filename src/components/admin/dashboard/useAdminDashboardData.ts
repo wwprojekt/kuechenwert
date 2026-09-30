@@ -1,15 +1,15 @@
 import type { ElementType } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { differenceInDays, formatDistanceToNow } from "date-fns";
+import { formatDistanceToNow } from "date-fns";
 import { de } from "date-fns/locale";
-import { Building2, FileText, Mail, MessageSquare, TrendingUp } from "lucide-react";
+import { Building2, Mail, MessageSquare, TrendingUp } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { ensureValidRLSSession } from "@/lib/sessionGuard";
 import { formLabel, styleLabel } from "@/features/funnel-a/catalog";
 
 export interface ActionItem {
   id: string;
-  type: "wizard" | "lead" | "message" | "dealer";
+  type: "lead" | "message" | "dealer";
   title: string;
   subtitle: string;
   time: string;
@@ -23,7 +23,7 @@ export interface ActionItem {
 
 export interface TimelineItem {
   id: string;
-  type: "lead" | "wizard" | "email" | "dealer";
+  type: "lead" | "email" | "dealer";
   title: string;
   subtitle: string;
   time: string;
@@ -53,12 +53,6 @@ export function timeAgo(dateStr: string | null): string {
   } catch {
     return "";
   }
-}
-
-function wizardSummary(kitchenSummary: string | null, formData: unknown): string {
-  const fd = formData && typeof formData === "object" ? (formData as Record<string, unknown>) : null;
-  const fromForm = fd ? `${fd.kitchen_style || ""} ${fd.kitchen_form || ""}`.trim() : "";
-  return kitchenSummary || fromForm || "Küche (ohne Details)";
 }
 
 export function leadSummary(lead: {
@@ -94,41 +88,36 @@ export function useDashboardCounts() {
     queryKey: ["adminDashboardCounts"],
     queryFn: async () => {
       const empty = {
-        openSupport: 0, newContacts: 0, newWizards: 0, recentLeads: 0,
-        pendingDealers: 0, totalUsers: 0, totalLeads: 0, totalMessages: 0, totalAnfragen: 0,
+        openSupport: 0, newContacts: 0, recentLeads: 0,
+        pendingDealers: 0, totalUsers: 0, totalLeads: 0, totalMessages: 0,
       };
       const sessionValid = await ensureValidRLSSession();
       if (!sessionValid) return empty;
 
-      const [supportRes, contactRes, wizardRes, recentLeadsRes, dealerRes, usersRes, totalLeadsRes] = await Promise.all([
+      const [supportRes, contactRes, recentLeadsRes, dealerRes, usersRes, totalLeadsRes] = await Promise.all([
         supabase.from("support_messages").select("id", { count: "exact", head: true }).or("status.eq.open,status.is.null"),
         supabase.from("contact_messages").select("id", { count: "exact", head: true }).eq("status", "new").is("deleted_at", null),
-        supabase.from("wizard_sessions").select("id", { count: "exact", head: true }).eq("status", "completed").or("is_viewed.is.null,is_viewed.eq.false").is("disposition", null),
         supabase.from("leads").select("id", { count: "exact", head: true }).gte("created_at", isoDaysAgo(1)),
         supabase.from("dealer_applications").select("id", { count: "exact", head: true }).eq("status", "pending"),
         supabase.from("profiles").select("id", { count: "exact", head: true }),
         supabase.from("leads").select("id", { count: "exact", head: true }),
       ]);
 
-      const failed = [supportRes, contactRes, wizardRes, recentLeadsRes, dealerRes, usersRes, totalLeadsRes].filter((r) => r.error);
+      const failed = [supportRes, contactRes, recentLeadsRes, dealerRes, usersRes, totalLeadsRes].filter((r) => r.error);
       if (failed.length > 0) {
         console.error("Dashboard-Zähler fehlgeschlagen:", failed.map((r) => r.error));
       }
 
       const openSupport = supportRes.count || 0;
       const newContacts = contactRes.count || 0;
-      const newWizards = wizardRes.count || 0;
-      const recentLeads = recentLeadsRes.count || 0;
       return {
         openSupport,
         newContacts,
-        newWizards,
-        recentLeads,
+        recentLeads: recentLeadsRes.count || 0,
         pendingDealers: dealerRes.count || 0,
         totalUsers: usersRes.count || 0,
         totalLeads: totalLeadsRes.count || 0,
         totalMessages: openSupport + newContacts,
-        totalAnfragen: newWizards + recentLeads,
       };
     },
     ...POLL_OPTIONS,
@@ -146,15 +135,7 @@ export function useActionItems() {
       const sessionValid = await ensureValidRLSSession();
       if (!sessionValid) return [];
 
-      const [wizardRes, leadsRes, supportRes, contactRes, dealerRes] = await Promise.all([
-        supabase
-          .from("wizard_sessions")
-          .select("id, customer_name, customer_email, kitchen_summary, completed_at, form_data")
-          .eq("status", "completed")
-          .or("is_viewed.is.null,is_viewed.eq.false")
-          .is("disposition", null)
-          .order("completed_at", { ascending: false })
-          .limit(10),
+      const [leadsRes, supportRes, contactRes, dealerRes] = await Promise.all([
         // leads hat keine is_viewed/disposition-Spalte, daher die Einträge der letzten 24 h.
         supabase
           .from("leads")
@@ -184,22 +165,6 @@ export function useActionItems() {
       ]);
 
       const items: ActionItem[] = [];
-
-      for (const w of wizardRes.data || []) {
-        items.push({
-          id: `wizard-${w.id}`,
-          type: "wizard",
-          title: `Neue Funnel-A-Anfrage: ${wizardSummary(w.kitchen_summary, w.form_data)}`,
-          subtitle: w.customer_name || w.customer_email || "Unbekannter Kunde",
-          time: w.completed_at || "",
-          link: "/admin/leads",
-          priority: "high",
-          icon: FileText,
-          iconColor: "text-blue-600 bg-blue-100",
-          badge: "Funnel A",
-          badgeColor: "bg-blue-500",
-        });
-      }
 
       for (const l of leadsRes.data || []) {
         const typeLabel = LEAD_TYPE_LABELS[l.funnel_type] ?? "Lead";
@@ -364,37 +329,6 @@ export function useLeadMetrics() {
 }
 
 // ============================================================================
-// Nicht bearbeitete Funnel-A-Anfragen (älteste zuerst)
-// ============================================================================
-
-export function useUrgentLeads() {
-  return useQuery({
-    queryKey: ["adminUrgentLeads"],
-    queryFn: async () => {
-      const sessionValid = await ensureValidRLSSession();
-      if (!sessionValid) return [];
-
-      const { data } = await supabase
-        .from("wizard_sessions")
-        .select("id, customer_name, customer_email, kitchen_summary, completed_at, resume_email_sent_at, admin_called_at, form_data")
-        .eq("status", "completed")
-        .is("disposition", null)
-        .order("completed_at", { ascending: true })
-        .limit(10);
-
-      return (data || []).map((s) => ({
-        id: s.id,
-        name: s.customer_name || s.customer_email || "Unbekannt",
-        summary: wizardSummary(s.kitchen_summary, s.form_data),
-        ageDays: s.completed_at ? differenceInDays(new Date(), new Date(s.completed_at)) : 0,
-        contacted: !!(s.resume_email_sent_at || s.admin_called_at),
-      }));
-    },
-    ...POLL_OPTIONS,
-  });
-}
-
-// ============================================================================
 // Aktivitäts-Timeline
 // ============================================================================
 
@@ -405,9 +339,8 @@ export function useActivityTimeline() {
       const sessionValid = await ensureValidRLSSession();
       if (!sessionValid) return [];
 
-      const [leadsRes, wizardRes, emailsRes, dealerRes] = await Promise.all([
+      const [leadsRes, emailsRes, dealerRes] = await Promise.all([
         supabase.from("leads").select("id, funnel_type, first_name, last_name, postal_code, created_at").order("created_at", { ascending: false }).limit(5),
-        supabase.from("wizard_sessions").select("id, customer_name, kitchen_summary, created_at, status, form_data").order("created_at", { ascending: false }).limit(5),
         supabase.from("admin_emails").select("id, subject, created_at, sender_email").eq("direction", "inbound").order("created_at", { ascending: false }).limit(5),
         supabase.from("dealer_applications").select("id, company_name, created_at, status").order("created_at", { ascending: false }).limit(3),
       ]);
@@ -419,14 +352,6 @@ export function useActivityTimeline() {
           title: `Neuer Lead · ${LEAD_TYPE_LABELS[l.funnel_type] ?? l.funnel_type}`,
           subtitle: personLabel(l.first_name, l.last_name, `PLZ ${l.postal_code}`),
           time: l.created_at,
-        });
-      }
-      for (const w of wizardRes.data || []) {
-        items.push({
-          id: `wizard-${w.id}`, type: "wizard",
-          title: w.status === "completed" ? "Anfrage abgeschlossen" : "Neue Anfrage",
-          subtitle: `${w.customer_name || "Unbekannt"} – ${wizardSummary(w.kitchen_summary, w.form_data)}`,
-          time: w.created_at || "",
         });
       }
       for (const e of emailsRes.data || []) {

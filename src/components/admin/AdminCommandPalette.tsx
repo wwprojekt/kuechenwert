@@ -15,12 +15,13 @@ import {
 import {
   LayoutDashboard, Users, Building2, Mail, Settings,
   TrendingUp, FileText, Shield, Search, MessageCircle,
-  AlertTriangle, CreditCard, Scale, UserPlus, Receipt, TimerReset, Sparkles,
+  AlertTriangle, CreditCard, Scale, UserPlus, Receipt, TimerReset, Sparkles, Activity,
 } from "lucide-react";
 
 const ADMIN_PAGES = [
   { title: "Übersicht", path: "/admin", icon: LayoutDashboard, keywords: "dashboard startseite home" },
   { title: "Leads & Anfragen", path: "/admin/leads", icon: UserPlus, keywords: "leads anfragen funnel ausschreibung projekte" },
+  { title: "UX-Alerts", path: "/admin/ux", icon: Activity, keywords: "ux alerts abbruch funnel fehler reibung telemetrie usability" },
   { title: "Traumküchen-KI (Funnel C)", path: "/admin/planner-sessions", icon: Sparkles, keywords: "ai ki fal flux openai planner renders visualisierung funnel c traumkueche" },
   { title: "E-Mail-Center", path: "/admin/email", icon: Mail, keywords: "nachrichten posteingang" },
   { title: "Nachrichten", path: "/admin/messages", icon: MessageCircle, keywords: "support kontakt kontaktformular hilfe" },

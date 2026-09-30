@@ -3810,6 +3810,93 @@ export type Database = {
         }
         Relationships: []
       }
+      kw_ux_alerts: {
+        Row: {
+          alert_key: string
+          auto_resolved: boolean
+          category: string
+          created_at: string
+          detail: string
+          field: string | null
+          first_seen_at: string
+          funnel: string | null
+          hint: string
+          id: string
+          kind: string
+          last_seen_at: string
+          metrics: Json
+          occurrences: number
+          reopened_count: number
+          resolved_at: string | null
+          resolved_by: string | null
+          resolved_note: string | null
+          severity: string
+          severity_rank: number | null
+          status: string
+          step: string | null
+          step_index: number | null
+          step_label: string | null
+          title: string
+          window_hours: number
+        }
+        Insert: {
+          alert_key: string
+          auto_resolved?: boolean
+          category: string
+          created_at?: string
+          detail: string
+          field?: string | null
+          first_seen_at?: string
+          funnel?: string | null
+          hint: string
+          id?: string
+          kind: string
+          last_seen_at?: string
+          metrics?: Json
+          occurrences?: number
+          reopened_count?: number
+          resolved_at?: string | null
+          resolved_by?: string | null
+          resolved_note?: string | null
+          severity: string
+          severity_rank?: number | null
+          status?: string
+          step?: string | null
+          step_index?: number | null
+          step_label?: string | null
+          title: string
+          window_hours?: number
+        }
+        Update: {
+          alert_key?: string
+          auto_resolved?: boolean
+          category?: string
+          created_at?: string
+          detail?: string
+          field?: string | null
+          first_seen_at?: string
+          funnel?: string | null
+          hint?: string
+          id?: string
+          kind?: string
+          last_seen_at?: string
+          metrics?: Json
+          occurrences?: number
+          reopened_count?: number
+          resolved_at?: string | null
+          resolved_by?: string | null
+          resolved_note?: string | null
+          severity?: string
+          severity_rank?: number | null
+          status?: string
+          step?: string | null
+          step_index?: number | null
+          step_label?: string | null
+          title?: string
+          window_hours?: number
+        }
+        Relationships: []
+      }
       lead_access_tokens: {
         Row: {
           created_at: string
@@ -7548,6 +7635,11 @@ export type Database = {
         }[]
       }
       kw_turnstile_secret: { Args: never; Returns: string }
+      kw_ux_detect_alerts: { Args: never; Returns: Json }
+      kw_wilson_lower: {
+        Args: { p_hits: number; p_total: number }
+        Returns: number
+      }
       lift_dealer_restriction: {
         Args: { dealer_id_param: string }
         Returns: boolean

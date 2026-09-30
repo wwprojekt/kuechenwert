@@ -1,3 +1,4 @@
+import { useSearchParams } from "react-router-dom";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { FunnelTab } from "@/components/admin/analytics/FunnelTab";
 import { PlatformTab } from "@/components/admin/analytics/PlatformTab";
@@ -5,9 +6,14 @@ import { VisitorTab } from "@/components/admin/analytics/VisitorTab";
 import { usePlatformStats } from "@/components/admin/analytics/usePlatformStats";
 import { useVisitorStats } from "@/components/admin/analytics/useVisitorStats";
 
+const TABS = ["platform", "visitors", "funnels"] as const;
+
 export default function AdminAnalytics() {
   const platform = usePlatformStats();
   const visitors = useVisitorStats();
+  const [searchParams] = useSearchParams();
+  const requestedTab = searchParams.get("tab");
+  const defaultTab = TABS.find((t) => t === requestedTab) ?? "platform";
 
   if (platform.isLoading || visitors.isLoading) {
     return (
@@ -24,7 +30,7 @@ export default function AdminAnalytics() {
         <p className="text-muted-foreground">Anfragen, Studio-Angebote, Besucher und Funnel-Abbrüche</p>
       </div>
 
-      <Tabs defaultValue="platform" className="space-y-6">
+      <Tabs defaultValue={defaultTab} className="space-y-6">
         <TabsList className="grid w-full max-w-lg grid-cols-3">
           <TabsTrigger value="platform">Marktplatz</TabsTrigger>
           <TabsTrigger value="visitors">Besucher</TabsTrigger>

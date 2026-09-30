@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { CheckCircle2, Clock, MousePointerClick, Users } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -19,7 +20,8 @@ const rate = (part: number, whole: number) => (whole > 0 ? `${Math.round((part /
 
 /** Abbruchanalyse je Funnel aus der Funnel-Telemetrie (Muster der CaravanWert-UX-Auswertung). */
 export function FunnelTab() {
-  const [funnel, setFunnel] = useState<FunnelId>("a");
+  const [searchParams] = useSearchParams();
+  const [funnel, setFunnel] = useState<FunnelId>(() => FUNNELS.find((f) => f.id === searchParams.get("funnel"))?.id ?? "a");
   const [days, setDays] = useState<number>(30);
   const { data: stats, isLoading, error } = useFunnelStats(funnel, days);
   const totals = stats?.totals;

@@ -74,6 +74,7 @@
     "src/components/admin/DealerEditDialog.tsx",
     "src/components/admin/UserEditDialog.tsx",
     "src/pages/admin/AdminAiControl.tsx",
+    "src/pages/admin/AdminUxAlerts.tsx",
     "src/pages/admin/AdminAnalytics.tsx",
     "src/pages/admin/AdminAuditLog.tsx",
     "src/pages/admin/AdminCronHealth.tsx",

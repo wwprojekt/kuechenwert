@@ -32,7 +32,15 @@ function Probe({ step, stepIndex }: { step: string; stepIndex: number }) {
         <input name="email" aria-label="E-Mail" />
         <input type="checkbox" name="marketing" aria-label="Werbung" />
         <input name="website" tabIndex={-1} aria-label="Honigtopf" />
+        <button type="button">
+          <span>Weiter</span>
+        </button>
+        <button type="button" data-track="remove_file" aria-label="Angebot_Mustermann.pdf entfernen">
+          <svg aria-hidden="true" />
+        </button>
+        <p data-testid="text">Ihr Preis 18000 €</p>
       </main>
+      <button type="button">Cookie-Banner</button>
       <input name="cookie_search" aria-label="Außerhalb" />
     </>
   );
@@ -69,6 +77,29 @@ describe("useFunnelTelemetry", () => {
     fireEvent.focusIn(getByLabelText("Honigtopf"));
     expect(events()).toEqual(["field_focus:email", "field_blur_filled:email", "field_corrected:email", "field_focus:email"]);
     expect(JSON.stringify(logged)).not.toContain("max@example.org");
+    act(() => api!.submitSucceeded());
+    unmount();
+  });
+
+  it("erkennt Mehrfachklicks nur im Funnel und ohne Nutzerdaten", () => {
+    const { getByText, getByTestId, getByLabelText, unmount } = render(<Probe step="angebot" stepIndex={0} />);
+    logged.length = 0;
+    const clickThrice = (el: Element) => {
+      for (let i = 0; i < 3; i++) fireEvent.click(el);
+    };
+    clickThrice(getByText("Weiter"));
+    clickThrice(getByLabelText("Angebot_Mustermann.pdf entfernen"));
+    clickThrice(getByTestId("text"));
+    clickThrice(getByText("Cookie-Banner"));
+    fireEvent.click(getByText("Weiter"));
+
+    const rage = logged.filter((e) => e.event === "rage_click");
+    expect(rage).toHaveLength(3);
+    expect(rage[0]).toMatchObject({ metadata: { label: "Weiter", tag: "button" } });
+    expect(rage[1]).toMatchObject({ field: "remove_file", metadata: { label: null, tag: "button" } });
+    expect(rage[2]).toMatchObject({ metadata: { tag: "p", dead: true } });
+    expect(JSON.stringify(rage)).not.toContain("Mustermann");
+    expect(JSON.stringify(rage)).not.toContain("18000");
     act(() => api!.submitSucceeded());
     unmount();
   });

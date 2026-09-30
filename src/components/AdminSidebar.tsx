@@ -22,6 +22,7 @@ import {
   Sparkles,
   SlidersHorizontal,
   BrainCircuit,
+  Activity,
 } from "lucide-react";
 import {
   Sidebar,
@@ -44,7 +45,7 @@ import { useAdminNotificationCounts } from "@/components/admin/AdminNotification
 // Types
 // ============================================================================
 
-type BadgeKey = "leads" | "messages" | "dealers" | "unreadEmails";
+type BadgeKey = "leads" | "messages" | "dealers" | "unreadEmails" | "uxAlerts";
 
 interface MenuItem {
   title: string;
@@ -72,6 +73,7 @@ const menuGroups: MenuGroup[] = [
     items: [
       { title: "Übersicht", url: "/admin", icon: LayoutDashboard },
       { title: "Leads & Anfragen", url: "/admin/leads", icon: UserPlus, badgeKey: "leads" },
+      { title: "UX-Alerts", url: "/admin/ux", icon: Activity, badgeKey: "uxAlerts" },
       { title: "Marktplatz-Einstellungen", url: "/admin/marktplatz", icon: SlidersHorizontal },
       { title: "Traumküchen-Planungen", url: "/admin/planner-sessions", icon: Sparkles },
       { title: "KI & Preis-Engine", url: "/admin/ki", icon: BrainCircuit },
@@ -266,6 +268,7 @@ export function AdminSidebar() {
     messages: (counts?.support || 0) + (counts?.contacts || 0),
     dealers: counts?.dealers || 0,
     unreadEmails: counts?.unreadEmails || 0,
+    uxAlerts: counts?.uxAlerts || 0,
   };
 
   const handleSignOut = async () => {

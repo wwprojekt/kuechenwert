@@ -33,6 +33,7 @@ export const FUNNEL_TELEMETRY_EVENTS = [
   "exit_cancelled",
   "help_clicked",
   "js_error",
+  "rage_click",
 ] as const;
 export type FunnelTelemetryEvent = (typeof FUNNEL_TELEMETRY_EVENTS)[number];
 

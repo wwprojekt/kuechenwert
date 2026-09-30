@@ -2,7 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { ensureValidRLSSession } from "@/lib/sessionGuard";
 import { Link } from "react-router-dom";
-import { Bell, UserPlus, Mail, MessageCircle, Building2 } from "lucide-react";
+import { Activity, Bell, UserPlus, Mail, MessageCircle, Building2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Popover,
@@ -26,6 +26,8 @@ export interface AdminNotificationCounts {
   contacts: number;
   dealers: number;
   unreadEmails: number;
+  /** Offene UX-Alerts der Stufen Kritisch und Warnung. */
+  uxAlerts: number;
 }
 
 /** Zentrale Zähler-Abfrage – wird von Sidebar und Header geteilt */
@@ -37,13 +39,14 @@ export function useAdminNotificationCounts() {
       if (!sessionValid) return null;
 
       const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
-      const [leadsRes, supportRes, contactRes, dealerRes, unreadEmailsRes] = await Promise.all([
+      const [leadsRes, supportRes, contactRes, dealerRes, unreadEmailsRes, uxAlertsRes] = await Promise.all([
         // leads hat keine is_viewed-Spalte – gezählt werden die neuen Leads aller Funnel der letzten 24 h.
         supabase.from("leads").select("id", { count: "exact", head: true }).gte("created_at", twentyFourHoursAgo),
         supabase.from("support_messages").select("id", { count: "exact", head: true }).or("status.eq.open,status.is.null"),
         supabase.from("contact_messages").select("id", { count: "exact", head: true }).eq("status", "new").is("deleted_at", null),
         supabase.from("dealer_applications").select("id", { count: "exact", head: true }).eq("status", "pending"),
         supabase.from("admin_emails").select("id", { count: "exact", head: true }).eq("direction", "inbound").eq("status", "unread"),
+        supabase.from("kw_ux_alerts").select("id", { count: "exact", head: true }).eq("status", "open").in("severity", ["high", "medium"]),
       ]);
 
       return {
@@ -52,6 +55,7 @@ export function useAdminNotificationCounts() {
         contacts: contactRes.count || 0,
         dealers: dealerRes.count || 0,
         unreadEmails: unreadEmailsRes.count || 0,
+        uxAlerts: uxAlertsRes.count || 0,
       };
     },
     // Badge counts are not time-critical; 90 s is plenty. staleTime 60 s prevents
@@ -72,6 +76,7 @@ export function AdminNotificationBell() {
     { label: "Kontaktanfragen", count: data?.contacts || 0, path: "/admin/messages?tab=kontakt", icon: MessageCircle, color: "text-pink-600" },
     { label: "Support-Nachrichten", count: data?.support || 0, path: "/admin/messages?tab=support", icon: MessageCircle, color: "text-orange-600" },
     { label: "Studio-Bewerbungen", count: data?.dealers || 0, path: "/admin/dealers", icon: Building2, color: "text-amber-600" },
+    { label: "UX-Alerts (kritisch/Warnung)", count: data?.uxAlerts || 0, path: "/admin/ux", icon: Activity, color: "text-destructive" },
   ];
 
   const activeItems = items.filter((i) => i.count > 0);

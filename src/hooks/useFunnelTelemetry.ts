@@ -22,6 +22,10 @@ export const FUNNEL_TELEMETRY_ROOT = "data-funnel-telemetry";
 
 const IDLE_MS = 25_000;
 const TAB_AWAY_MIN_MS = 1500;
+/** Mehrfachklick: so viele Klicks auf dasselbe Element innerhalb des Fensters. */
+const RAGE_CLICKS = 3;
+const RAGE_WINDOW_MS = 1000;
+const CLICKABLE = 'button, a, label, select, [role="button"], [role="checkbox"], [role="radio"], [role="switch"], [data-track]';
 const NON_TEXT_INPUTS = new Set(["checkbox", "radio", "button", "submit", "reset", "image", "file", "hidden", "range", "color"]);
 const HELPER_ID = /-(?:error|hint|desc|unit|label|status)$/;
 const CHUNK_ERROR = /ChunkLoadError|Loading chunk|dynamically imported module|Importing a module script failed/i;
@@ -65,6 +69,16 @@ function trackedField(target: EventTarget | null): HTMLInputElement | HTMLTextAr
     (target instanceof HTMLInputElement && !NON_TEXT_INPUTS.has(target.type));
   if (!isEntry || target.tabIndex < 0) return null;
   return target;
+}
+
+/**
+ * Sichtbarer Text eines Bedienelements, nie Eingaben. Kein aria-label: das
+ * enthält teils Nutzerdaten (z. B. den Dateinamen beim Entfernen-Button).
+ */
+function clickLabel(el: Element): string | null {
+  if (el instanceof HTMLInputElement || el instanceof HTMLTextAreaElement || el instanceof HTMLSelectElement) return null;
+  const text = (el.textContent ?? "").replace(/\s+/g, " ").trim();
+  return text ? scrubErrorText(text).slice(0, 60) : null;
 }
 
 function trackedCheckable(target: EventTarget | null): Element | null {
@@ -239,7 +253,25 @@ export function useFunnelTelemetry({ funnel, step, stepIndex, stepLabel, totalSt
       if (!empty) filled.current.add(key);
       log(empty ? "field_blur_empty" : "field_blur_filled", { field: key });
     };
+    let burst: { el: Element; start: number; count: number } | null = null;
+    const onRageClick = (target: EventTarget | null) => {
+      if (!(target instanceof Element) || !target.closest(`[${FUNNEL_TELEMETRY_ROOT}]`)) return;
+      const clickable = target.closest(CLICKABLE);
+      const el = clickable ?? target;
+      const now = Date.now();
+      if (burst && burst.el === el && now - burst.start <= RAGE_WINDOW_MS) burst.count += 1;
+      else burst = { el, start: now, count: 1 };
+      if (burst.count !== RAGE_CLICKS) return;
+      // Nicht klickbare Ziele nur mit Tag-Namen: ihr Text kann Eingaben oder Dateinamen enthalten.
+      const tag = el.tagName.toLowerCase();
+      log("rage_click", {
+        field: fieldKey(el) ?? undefined,
+        metadata: clickable ? { label: clickLabel(el), tag } : { tag, dead: true },
+      });
+    };
+
     const onClick = (event: MouseEvent) => {
+      onRageClick(event.target);
       const el = trackedCheckable(event.target);
       const key = el && fieldKey(el);
       if (!el || !key) return;

@@ -25,6 +25,7 @@ export function PendingFileList({ files, onRemove, disabled = false }: PendingFi
             <span className="flex-none text-xs text-ink-subtle">{formatFileSize(item.file.size)}</span>
             <button
               type="button"
+              data-track="remove_file"
               onClick={() => onRemove(item.id)}
               disabled={disabled}
               className="flex-none rounded p-1 text-ink-muted hover:bg-destructive/10 hover:text-destructive disabled:opacity-50"

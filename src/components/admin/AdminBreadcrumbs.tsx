@@ -19,6 +19,7 @@ const ROUTE_LABELS: Record<string, string> = {
   legal: "Rechtliches",
   "error-logs": "Fehlerprotokoll",
   "cron-health": "Cron-Health",
+  ux: "UX-Alerts",
   "audit-log": "Audit-Log",
   settings: "Einstellungen",
 };

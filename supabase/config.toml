@@ -98,6 +98,11 @@ verify_jwt = false
 verify_jwt = false
 
 # --- E-Mail ---
+# Send-Email-Hook von Supabase Auth; prüft die Standard-Webhooks-Signatur
+# (SEND_EMAIL_HOOK_SECRET).
+[functions.kw-auth-email]
+verify_jwt = false
+
 [functions.send-admin-email]
 verify_jwt = false
 

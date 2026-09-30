@@ -2937,6 +2937,14 @@ const SYSTEM_TYPE_LABELS: Record<string, string> = {
   scheduled: 'Geplant',
   password_reset: 'Passwort zurücksetzen',
   verification: 'Verifizierung',
+  auth_signup: 'Registrierung bestätigen',
+  auth_invite: 'Einladung',
+  auth_magiclink: 'Anmeldelink',
+  auth_email: 'Anmeldelink',
+  auth_recovery: 'Passwort zurücksetzen',
+  auth_email_change: 'E-Mail-Änderung',
+  auth_reauthentication: 'Bestätigungscode',
+  auth_notification: 'Sicherheitshinweis',
   notification: 'Benachrichtigung',
 };
 

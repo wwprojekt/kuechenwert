@@ -248,6 +248,11 @@ export const button = (text: string, url: string, _settings?: Settings) => {
   `;
 };
 
+/** Link als Text unter einem Button, für Clients, die Buttons nicht anzeigen. url bereits HTML-maskiert. */
+export const linkFallback = (url: string) => {
+  return `<p style="color: ${BRAND.textLight}; font-size: 13px; line-height: 1.6; margin: 0 0 16px;">Falls der Button nicht funktioniert, öffnen Sie diesen Link:<br><a href="${url}" style="color: ${BRAND.primary}; word-break: break-all;">${url}</a></p>`;
+};
+
 export const paragraph = (text: string) => {
   return `<p style="color: ${BRAND.text}; font-size: 15px; line-height: 1.7; margin: 16px 0;">${text}</p>`;
 };
@@ -272,6 +277,19 @@ export const amountDisplay = (label: string, amount: string) => {
         <td align="center" style="background-color: ${BRAND.bgGray}; border-radius: 12px; padding: 24px;">
           <p style="margin: 0 0 6px; font-size: 13px; color: ${BRAND.textLight}; font-weight: 600; text-transform: uppercase; letter-spacing: 1px;">${label}</p>
           <p style="margin: 0; font-size: 32px; font-weight: 800; color: ${BRAND.primary};">${amount}</p>
+        </td>
+      </tr>
+    </table>
+  `;
+};
+
+export const codeDisplay = (label: string, code: string) => {
+  return `
+    <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="margin: 24px 0;">
+      <tr>
+        <td align="center" style="background-color: ${BRAND.bgGray}; border-radius: 12px; padding: 24px;">
+          <p style="margin: 0 0 8px; font-size: 13px; color: ${BRAND.textLight}; font-weight: 600; text-transform: uppercase; letter-spacing: 1px;">${label}</p>
+          <p style="margin: 0; font-size: 34px; font-weight: 800; color: ${BRAND.primary}; letter-spacing: 8px; font-family: 'Courier New', monospace;">${code}</p>
         </td>
       </tr>
     </table>

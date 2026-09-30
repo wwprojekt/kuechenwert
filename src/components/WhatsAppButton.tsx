@@ -3,7 +3,7 @@
  * Provides quick customer support access via WhatsApp
  */
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import { MessageCircle, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -14,10 +14,29 @@ import { isFunnelPath } from '@/lib/funnelRoutes';
 import { trackMetaWhatsAppClick } from '@/lib/metaPixelService';
 import { BRAND } from '@/lib/brand';
 
+/** Ab dieser Scrolltiefe erscheint die Blase auf der Startseite (sie läge sonst über den drei Funnel-Buttons). */
+const HOME_REVEAL_PX = 240;
+
+function useScrolledPast(px: number, active: boolean): boolean {
+  const [past, setPast] = useState(() => !active || (typeof window !== 'undefined' && window.scrollY > px));
+  useEffect(() => {
+    if (!active) {
+      setPast(true);
+      return;
+    }
+    const onScroll = () => setPast(window.scrollY > px);
+    onScroll();
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => window.removeEventListener('scroll', onScroll);
+  }, [px, active]);
+  return past;
+}
+
 export const WhatsAppButton = () => {
   const [isExpanded, setIsExpanded] = useState(false);
   const { settings } = useSettings();
   const location = useLocation();
+  const revealed = useScrolledPast(HOME_REVEAL_PX, location.pathname === '/');
 
   // Hide on admin, dashboard and in the funnels (Fokusmodus inkl. /formular).
   // Die Funnels zeigen die Support-Nummer im Kopf, und die schwebende Blase
@@ -25,7 +44,7 @@ export const WhatsAppButton = () => {
   const hiddenRoutes = ['/admin', '/dashboard'];
   const shouldHide = isFunnelPath(location.pathname) || hiddenRoutes.some(route => location.pathname.startsWith(route));
 
-  if (shouldHide) {
+  if (shouldHide || !revealed) {
     return null;
   }
 

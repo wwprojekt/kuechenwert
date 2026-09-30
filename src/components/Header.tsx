@@ -179,7 +179,7 @@ const Header = () => {
 
       {/* Main Header */}
       <header className="sticky top-0 z-50 w-full bg-background/95 backdrop-blur-md border-b border-border/50 shadow-sm safe-top">
-        <nav className="container flex h-20 items-center justify-between gap-2 sm:gap-4" aria-label="Hauptnavigation">
+        <nav className="container flex h-16 items-center justify-between gap-2 sm:gap-4 lg:h-20" aria-label="Hauptnavigation">
           <SiteLogo variant="icon-text" />
 
           <div className="hidden lg:flex items-center gap-5">
@@ -273,7 +273,7 @@ const Header = () => {
         </nav>
 
         {mobileMenuOpen && (
-          <div id="mobile-menu" className="lg:hidden border-t bg-background/95 max-h-[calc(100dvh-5rem)] overflow-y-auto overscroll-contain">
+          <div id="mobile-menu" className="lg:hidden border-t bg-background/95 max-h-[calc(100dvh-4rem)] overflow-y-auto overscroll-contain">
             <div className="container py-4 flex flex-col gap-1 pb-[max(1rem,env(safe-area-inset-bottom))]">
               <Link
                 to="/funnel/c"

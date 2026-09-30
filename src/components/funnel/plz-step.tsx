@@ -1,4 +1,4 @@
-import { CircleCheck, Info, MapPin } from "lucide-react";
+import { CircleCheck, MapPin } from "lucide-react";
 import type { FormEvent } from "react";
 import { regionForPostalCode } from "@/features/funnel-a/catalog";
 import { useStudioCoverage } from "@/features/funnel-a/coverage";
@@ -61,13 +61,6 @@ export function PlzStep({ value, onChange, onSubmit }: PlzStepProps) {
             <MapPin className="h-4 w-4 flex-none text-brand-600" aria-hidden="true" />
             Region {region}
             {studios !== null && studios > 0 && ` · ${studios} ${studios === 1 ? "Küchenstudio" : "Küchenstudios"} in Ihrer Nähe`}
-          </span>
-        )}
-        {region && studios === 0 && (
-          <span className="flex items-start gap-2 rounded-lg border border-border bg-card px-4 py-2.5 text-left text-sm text-ink-muted">
-            <Info className="mt-0.5 h-4 w-4 flex-none text-brand-600" aria-hidden="true" />
-            In Ihrer Region nimmt aktuell noch kein Partnerstudio teil. Sie können trotzdem anfragen – unser Team meldet sich dann
-            persönlich und sucht passende Studios.
           </span>
         )}
         {isComplete && !region && (

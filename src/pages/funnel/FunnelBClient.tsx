@@ -7,7 +7,7 @@ import { FunnelTrustStrip } from "@/components/funnel/funnel-shell";
 import { submitFunnelB } from "@/features/funnel-b/api";
 import { loadFunnelB, serializeFunnelB, submissionFields, FUNNEL_B_STORAGE_KEY, type FunnelBData } from "@/features/funnel-b/state";
 import { funnelBFlow, funnelBStep, guardFunnelBStep, isSkippable, missingIn, parseFunnelBStep, type FunnelBStepKey } from "@/features/funnel-b/steps";
-import { ConsentStep, ContactStep, NameStep, PlzCityStep } from "@/features/funnel-b/steps/ContactSteps";
+import { ContactStep, NameStep, PlzCityStep } from "@/features/funnel-b/steps/ContactSteps";
 import {
   AppliancesStep,
   BrandStep,
@@ -49,9 +49,10 @@ const TRUST = [
 ];
 
 /**
- * Funnel B („Angebot unterbieten“): eine Frage pro Bildschirm, Schritt in
- * ?schritt=<schlüssel>. Detailfragen nur auf Wunsch; Absenden über kw-lead-b,
- * danach Dateien über signierte URLs und die Danke-Seite.
+ * Funnel B („Studio-Preis unterbieten“): eine Frage pro Bildschirm, Schritt in
+ * ?schritt=<schlüssel>. Detailfragen nur auf Wunsch; der Kontaktschritt mit
+ * AGB-Haken sendet über kw-lead-b ab, danach Dateien über signierte URLs und
+ * die Danke-Seite.
  */
 export default function FunnelBClient() {
   const navigate = useNavigate();
@@ -184,7 +185,7 @@ export default function FunnelBClient() {
 
   const handleNext = useCallback(() => {
     const { step: current, data: now } = latest.current;
-    if (current === "einwilligung") telemetry.submitClicked();
+    if (current === "kontakt") telemetry.submitClicked();
     const missing = missingIn(current, now);
     if (missing.length > 0) {
       setBlocked(missing[0]!.message);
@@ -193,7 +194,7 @@ export default function FunnelBClient() {
       (el?.matches("input, button, select, textarea") ? el : el?.querySelector<HTMLElement>("input, button, select, textarea"))?.focus();
       return;
     }
-    if (current === "einwilligung") {
+    if (current === "kontakt") {
       void submit();
       return;
     }
@@ -241,8 +242,7 @@ export default function FunnelBClient() {
     anzahlung: <DownPaymentStep {...props} />,
     plz: <PlzCityStep {...props} />,
     name: <NameStep {...props} />,
-    kontakt: <ContactStep {...props} />,
-    einwilligung: <ConsentStep {...props} honeypot={honeypot} onHoneypot={setHoneypot} turnstileRef={turnstileCallbackRef} />,
+    kontakt: <ContactStep {...props} honeypot={honeypot} onHoneypot={setHoneypot} turnstileRef={turnstileCallbackRef} />,
   };
 
   const optionalEmpty = isSkippable(step, data);
@@ -255,13 +255,13 @@ export default function FunnelBClient() {
       total={total}
       heading={def.question}
       hint={def.hint}
-      hintAlways={step === "preis" || step === "kontakt"}
+      hintAlways={step === "preis"}
       guardExit={hasProgress}
       guardUnload={hasProgress}
       nav={{
         onBack: index > 0 ? handleBack : undefined,
         onNext: handleNext,
-        nextLabel: step === "einwilligung" ? "Anfrage absenden" : optionalEmpty ? "Überspringen" : "Weiter",
+        nextLabel: step === "kontakt" ? "Kostenlos Angebote erhalten" : optionalEmpty ? "Überspringen" : "Weiter",
         busy: submitting,
         busyLabel: progressHint ?? "Wird gesendet …",
         blockedHint: submitError ?? blocked,

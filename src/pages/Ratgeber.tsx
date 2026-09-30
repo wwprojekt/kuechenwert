@@ -50,7 +50,7 @@ const REQUEST_PATHS: ResourceLink[] = [
     icon: Sparkles,
     title: "Traumküche planen",
     description:
-      "Raumfoto hochladen, Küche mit KI gestalten und einen geschätzten Preis sehen. Auf Wunsch machen Ihnen geprüfte Studios 7 Tage lang Angebote.",
+      "Raumfoto hochladen, Küche mit KI gestalten und einen geschätzten Preis sehen. Dazu machen Ihnen geprüfte Studios 7 Tage lang kostenlose Angebote.",
     cta: "Mit KI planen",
   },
   {
@@ -64,10 +64,10 @@ const REQUEST_PATHS: ResourceLink[] = [
   {
     to: "/funnel/b",
     icon: TrendingDown,
-    title: "Angebot unterbieten lassen",
+    title: "Preis unterbieten lassen",
     description:
-      "Sie haben schon ein Angebot? Andere Studios können es 72 Stunden lang unterbieten.",
-    cta: "Angebot prüfen lassen",
+      "Sie haben schon eine Planung und einen Preis vom Studio? Andere Studios können ihn 72 Stunden lang unterbieten.",
+    cta: "Preis unterbieten lassen",
   },
 ];
 

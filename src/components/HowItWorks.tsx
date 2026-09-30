@@ -22,7 +22,7 @@ const CHANNELS: Channel[] = [
     title: "Traumküche visualisieren",
     subtitle: "Ihr Raum, Ihre Küche – fotorealistisch",
     description:
-      "Foto Ihres Raums hochladen, Maße angeben und Fronten, Arbeitsplatte und Geräte wählen. Die KI zeigt Ihre neue Küche in Ihrem Raum – mit Preisschätzung. Auf Wunsch erstellen geprüfte Studios 7 Tage lang Angebote für Ihr Projekt.",
+      "Foto Ihres Raums hochladen, Maße angeben und Fronten, Arbeitsplatte und Geräte wählen. Die KI zeigt Ihre neue Küche in Ihrem Raum – mit Preisschätzung. Dazu können geprüfte Studios aus Ihrer Region 7 Tage lang kostenlose, unverbindliche Angebote für genau diese Küche machen.",
     benefits: ["KI-Vorschau im eigenen Raum", "Preisschätzung mit Einzelpositionen", "Studios machen Angebote – Sie wählen"],
     to: "/funnel/c",
     ctaLabel: "Küche planen",
@@ -41,14 +41,14 @@ const CHANNELS: Channel[] = [
   },
   {
     icon: TrendingDown,
-    badge: "Schon ein Angebot?",
+    badge: "Schon beim Studio gewesen?",
     title: "Studio-Preis unterbieten",
-    subtitle: "Studios unterbieten Ihr vorhandenes Angebot",
+    subtitle: "Studios unterbieten den Preis Ihrer Planung",
     description:
-      "Sie haben schon ein Angebot vom Küchenstudio? Laden Sie es hoch – nach einem kurzen Telefonat mit unserem Team können andere geprüfte Studios 72 Stunden lang ein günstigeres Angebot für dieselbe oder eine vergleichbare Küche machen.",
-    benefits: ["72 Stunden Angebotsphase", "Kurzer Angebots-Check am Telefon", "Ohne Ihren Namen vorgestellt"],
+      "Sie haben eine Planung vom Küchenstudio und einen Preis? Laden Sie die Planung hoch – ein schriftliches Angebot brauchen Sie nicht. Nach einem kurzen Telefonat mit unserem Team können andere geprüfte Studios 72 Stunden lang ein günstigeres Angebot für dieselbe oder eine vergleichbare Küche machen.",
+    benefits: ["72 Stunden Angebotsphase", "Planung als Handyfoto genügt", "Ohne Ihren Namen vorgestellt"],
     to: "/funnel/b",
-    ctaLabel: "Angebot unterbieten lassen",
+    ctaLabel: "Preis unterbieten lassen",
   },
 ];
 
@@ -64,7 +64,7 @@ const HowItWorks = () => {
             Drei Wege zu Ihrer neuen Küche
           </h2>
           <p className="text-base leading-relaxed text-muted-foreground sm:text-lg md:text-xl">
-            Ob Ideenphase, konkrete Wünsche oder schon ein Angebot in der Hand – alle Wege sind kostenlos, unverbindlich und
+            Ob Ideenphase, konkrete Wünsche oder schon eine Planung vom Studio – alle Wege sind kostenlos, unverbindlich und
             enden auf Ihrer persönlichen Projektseite mit allen Angeboten.
           </p>
         </div>

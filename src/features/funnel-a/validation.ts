@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { TERMS_MISSING } from "../../../supabase/functions/_shared/lead-terms.ts";
 
 export const SALUTATIONS = ["Herr", "Frau", "Divers"] as const;
 export type Salutation = (typeof SALUTATIONS)[number];
@@ -11,22 +12,22 @@ export const NAME_MAX = 80;
 export const EMAIL_MAX = 254;
 export const PHONE_MAX = 40;
 
-/** Formularzustand des Kontaktschritts inkl. freiwilliger Einwilligungen. */
+/** Formularzustand von Name und Kontaktschritt. */
 export interface FunnelAContact {
   salutation: Salutation | "";
   first_name: string;
   last_name: string;
   email: string;
   phone: string;
-  contact_by_phone: boolean;
-  marketing: boolean;
+  /** AGB akzeptiert, Datenschutzerklärung gelesen (FUNNEL_TERMS.a); übersteht kein Neuladen. */
+  accept_terms: boolean;
 }
 
-export type ContactField = "salutation" | "first_name" | "last_name" | "email" | "phone";
+export type ContactField = "salutation" | "first_name" | "last_name" | "email" | "phone" | "accept_terms";
 export type ContactErrors = Partial<Record<ContactField, string>>;
 
 /** Reihenfolge im Formular – der erste Fehler bekommt den Fokus. */
-export const CONTACT_FIELD_ORDER: readonly ContactField[] = ["salutation", "first_name", "last_name", "email", "phone"];
+export const CONTACT_FIELD_ORDER: readonly ContactField[] = ["salutation", "first_name", "last_name", "email", "phone", "accept_terms"];
 
 export interface ValidContact {
   salutation: Salutation | null;
@@ -34,8 +35,6 @@ export interface ValidContact {
   last_name: string;
   email: string;
   phone: string;
-  contact_by_phone: boolean;
-  marketing: boolean;
 }
 
 export function emptyContact(): FunnelAContact {
@@ -45,8 +44,7 @@ export function emptyContact(): FunnelAContact {
     last_name: "",
     email: "",
     phone: "",
-    contact_by_phone: false,
-    marketing: false,
+    accept_terms: false,
   };
 }
 
@@ -54,7 +52,7 @@ function isSalutation(value: unknown): value is Salutation {
   return typeof value === "string" && (SALUTATIONS as readonly string[]).includes(value);
 }
 
-/** Liest einen (untrusted) gespeicherten Kontaktstand ein. */
+/** Liest einen (untrusted) gespeicherten Kontaktstand ein; die AGB bestätigt der Kunde bei jedem Absenden neu. */
 export function sanitizeContact(input: unknown): FunnelAContact {
   const raw = input && typeof input === "object" && !Array.isArray(input) ? (input as Record<string, unknown>) : {};
   const text = (value: unknown, max: number) => (typeof value === "string" ? value.slice(0, max) : "");
@@ -64,8 +62,7 @@ export function sanitizeContact(input: unknown): FunnelAContact {
     last_name: text(raw.last_name, NAME_MAX),
     email: text(raw.email, EMAIL_MAX),
     phone: text(raw.phone, PHONE_MAX),
-    contact_by_phone: raw.contact_by_phone === true,
-    marketing: raw.marketing === true,
+    accept_terms: false,
   };
 }
 
@@ -100,8 +97,7 @@ const contactSchema = z.object({
       (value) => PHONE_PATTERN.test(value) && countDigits(value) >= 6 && countDigits(value) <= 16,
       "Bitte geben Sie eine gültige Telefonnummer mit Vorwahl an, z. B. 0511 123456.",
     ),
-  contact_by_phone: z.boolean(),
-  marketing: z.boolean(),
+  accept_terms: z.literal(true, { errorMap: () => ({ message: TERMS_MISSING }) }),
 });
 
 // Die jeweils fehlende Eigenschaft als undefined deklariert: So greift die
@@ -129,8 +125,6 @@ export function validateContact(contact: FunnelAContact): ContactValidation {
       last_name: v.last_name,
       email: v.email,
       phone: v.phone,
-      contact_by_phone: v.contact_by_phone,
-      marketing: v.marketing,
     },
   };
 }

@@ -16,7 +16,6 @@ import {
   LeadContactStep,
   LeadNameStep,
   OccasionStep,
-  OffersStep,
   PLANNER_CONTACT_FORM,
   PLANNER_NAME_FORM,
   TimeframeStep,
@@ -49,15 +48,17 @@ const HEADINGS: Record<PlannerStep, { heading: string; hint?: string }> = {
   extras: { heading: "Welche Extras wünschen Sie sich?", hint: "Mehrfachauswahl möglich." },
   leistungen: { heading: "Was soll das Küchenstudio übernehmen?", hint: "Mehrfachauswahl möglich." },
   wuensche: { heading: "Haben Sie besondere Wünsche?", hint: "Optional – die KI berücksichtigt sie in Ihrer Visualisierung." },
-  plz: { heading: "Wo soll Ihre neue Küche hin?", hint: "Für regionale Preise und Küchenstudios in Ihrer Nähe." },
+  plz: { heading: "Wo soll Ihre neue Küche hin?", hint: "Für regionale Preise und Angebote von Küchenstudios in Ihrer Nähe." },
   visualisierung: { heading: "Ihre Küche wird visualisiert …" },
-  angebote: { heading: "Möchten Sie auch kostenlose Angebote von Küchenstudios?" },
-  zeitrahmen: { heading: "Wann soll Ihre neue Küche kommen?", hint: "So können die Studios Lieferzeit und Montage einplanen." },
+  zeitrahmen: { heading: "Wann soll Ihre neue Küche kommen?", hint: "Damit die Studios Ihr Angebot auf Lieferzeit und Montage abstimmen." },
   budget: { heading: "Welches Budget haben Sie eingeplant?", hint: "Unverbindlich – damit die Studios passende Angebote machen." },
   anlass: { heading: "Was ist der Anlass für die neue Küche?" },
   wohnsituation: { heading: "Wie wohnen Sie?", hint: "Bei Mietwohnungen klären die Studios Umbauten mit Ihnen vorab." },
-  name: { heading: "Fast geschafft! Wie dürfen wir Sie ansprechen?" },
-  kontakt: { heading: "Wohin dürfen wir Ihre Küche schicken?", hint: "Danach sehen Sie Küche und Preis sofort – und erhalten beides per E-Mail." },
+  name: { heading: "Fast geschafft! Wie dürfen wir Sie ansprechen?", hint: "Damit die Studios ihr Angebot persönlich an Sie richten." },
+  kontakt: {
+    heading: "Wohin dürfen wir Ihre Küche und Ihre Angebote schicken?",
+    hint: "Ihre Küche und den Preis sehen Sie sofort – die Angebote der Studios kommen per E-Mail.",
+  },
   ergebnis: { heading: "Hier ist Ihre neue Küche" },
 };
 
@@ -183,10 +184,6 @@ export function PlannerFunnel({ c }: { c: Controller }) {
       nav = null;
       content = <VisualizingStep percent={renderPercent} photoUrl={selectedPhoto?.url ?? null} error={c.genError} />;
       break;
-    case "angebote":
-      above = <RenderStatusChip phase={c.renderPhase} percent={renderPercent} />;
-      content = <OffersStep value={state.offersChoice} onChange={planner.setOffersChoice} onAdvance={actions.goNext} />;
-      break;
     case "zeitrahmen":
       above = <RenderStatusChip phase={c.renderPhase} percent={renderPercent} />;
       nav = { ...nav, nextLabel: state.timeframe ? "Weiter" : "Überspringen" };
@@ -214,15 +211,13 @@ export function PlannerFunnel({ c }: { c: Controller }) {
       break;
     case "kontakt":
       above = <RenderStatusChip phase={c.renderPhase} percent={renderPercent} />;
-      nav = { ...nav, onNext: undefined, nextForm: PLANNER_CONTACT_FORM, nextLabel: "Meine Küche ansehen", busy: c.submitting, busyLabel: "Wird freigeschaltet …" };
+      nav = { ...nav, onNext: undefined, nextForm: PLANNER_CONTACT_FORM, nextLabel: "Küche & Angebote erhalten", busy: c.submitting, busyLabel: "Wird freigeschaltet …" };
       content = (
         <LeadContactStep
           contact={c.contact}
           errors={c.leadErrors}
-          wantsOffers={state.offersChoice === "ja"}
           onChange={c.setContact}
           onSubmit={actions.submitLead}
-          onChangeChoice={() => actions.navigate("angebote")}
           honeypot={c.honeypot}
           onHoneypot={c.setHoneypot}
           turnstileRef={c.turnstileCallbackRef}
@@ -231,7 +226,9 @@ export function PlannerFunnel({ c }: { c: Controller }) {
       break;
     case "ergebnis":
       heading = firstName ? `${firstName}, hier ist Ihre neue Küche` : HEADINGS.ergebnis.heading;
-      hint = "Visualisierung und Preisschätzung haben wir Ihnen auch per E-Mail geschickt.";
+      hint = state.offersRequested
+        ? "Visualisierung und Preisschätzung haben wir Ihnen auch per E-Mail geschickt – die Angebote der Studios folgen."
+        : "Visualisierung und Preisschätzung haben wir Ihnen auch per E-Mail geschickt.";
       nav = state.offersRequested
         ? { onNext: () => routerNavigate("/projekt"), nextLabel: "Zu meiner Projektseite", mobileOnly: true }
         : { onNext: () => c.setOffersDialog(true), nextLabel: "Kostenlose Angebote anfordern", mobileOnly: true };

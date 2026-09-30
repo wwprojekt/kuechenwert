@@ -13,19 +13,21 @@
  *                 auf das nächste Modell der Ausweichkette wechseln (höchstens
  *                 drei Versuche), fertiges Bild speichern
  *   feedback      Bewertung einer Visualisierung (1 / -1 / null, bei -1 mit Gründen)
- *   submit        Kontakt erfassen → Lead (+ Ausschreibung bei request_offers)
+ *   submit        Kontakt und AGB-Haken erfassen → Lead mit Ausschreibung
  *                 + Projektlink; liefert die freigeschalteten Visualisierungen
  *                 und startet eine, falls vorher keine zustande kam
- *   request-offers  Lead ohne Ausschreibung: Angebote nachträglich anfordern
- *                 (phone, falls beim Abschluss keine Nummer angegeben wurde)
+ *   request-offers  Lead ohne Ausschreibung (bis 30.09.2026 „nur
+ *                 Visualisierung“): Angebote nachfordern (phone, falls beim
+ *                 Abschluss keine Nummer angegeben wurde)
  *   sweep         Cron kw-planner-sweep: Visualisierungen abschließen, die
  *                 kein Browser mehr abfragt (Tab geschlossen, Handy im Standby)
  *   admin-open-tender  Admin: Ausschreibung zu einer Planung als Entwurf
  *                 anlegen (lead_id, notify_customer); nur mit Einwilligung
  *
- * Jede Visualisierung ist ein Lead: Bild-URLs und Preisschätzung liefert der
- * Server erst, wenn Name und E-Mail erfasst sind (session.lead_id); die
- * Telefonnummer ist nur mit „Ja, Angebote“ Pflicht.
+ * Jede Visualisierung ist ein Lead mit Ausschreibung: Bild-URLs und
+ * Preisschätzung liefert der Server erst, wenn Name, E-Mail, Telefon und die
+ * AGB-Bestätigung erfasst sind (session.lead_id). Seiten von vor dem
+ * 30.09.2026 schicken accept_terms nicht mit und behalten Ja/Nein zu Angeboten.
  *
  * Modelle, A/B-Vergleich und Tageslimit stehen in kw_ai_settings
  * (_shared/fal-models.ts). Auth: anonym über session_token (kw_ + 48 hex),
@@ -68,13 +70,8 @@ import {
   type RoomInput,
 } from "../_shared/kitchen-catalog.ts";
 import { estimateKitchenPrice, type KitchenEstimate } from "../_shared/kitchen-pricing.ts";
-import {
-  OFFERS_CONSENT_TEXT_VERSION,
-  openPlannerTender,
-  openPlannerTenderAsAdmin,
-  plannerCover,
-  requestPlannerOffers,
-} from "../_shared/planner-offers.ts";
+import { openPlannerTender, openPlannerTenderAsAdmin, plannerCover, requestPlannerOffers } from "../_shared/planner-offers.ts";
+import { FUNNEL_TERMS, TERMS_MISSING, termsAnswer } from "../_shared/lead-terms.ts";
 import { dimensionsSource, sanitizeProvenance, type PlannerProvenance } from "../_shared/planner-provenance.ts";
 import type { PlannerLeadFrame } from "../_shared/planner-summary.ts";
 import { FUNNEL_A_BUDGET, HOUSING_OPTIONS, OCCASION_OPTIONS, housingType as housingTypeOf } from "../_shared/funnel-a-catalog.ts";
@@ -125,7 +122,8 @@ const CAP_REACHED_TEXT =
   "Die Visualisierung ist heute stark gefragt. Bitte versuchen Sie es später noch einmal – Ihre Planung und die Preisschätzung bleiben erhalten, Angebote können Sie trotzdem anfordern.";
 const FAILED_TEXT = "Die Visualisierung ist fehlgeschlagen. Bitte versuchen Sie es erneut – oft hilft ein anderes Foto.";
 const SIGNED_URL_TTL = 60 * 60;
-const CONSENT_TEXT_VERSION = OFFERS_CONSENT_TEXT_VERSION;
+/** Ja/Nein zu Angeboten mit eigenem Anruf-Haken, bis 30.09.2026. */
+const LEGACY_CONSENT_TEXT_VERSION = "kw-projekt-2026-09-30b";
 const ALLOWED_IMAGE_TYPES: Record<string, string> = {
   "image/jpeg": "jpg",
   "image/png": "png",
@@ -1046,20 +1044,26 @@ async function actionSubmit(req: Request, sb: SupabaseClient, body: Record<strin
   const phone = phoneInput ? normalizePhone(phoneInput) : null;
   const postalCode = typeof c.postal_code === "string" ? c.postal_code.trim() : "";
   const city = cleanText(c.city, 80);
-  // Ältere Clients kennen request_offers nicht und schicken immer die Einwilligung mit.
-  const requestOffers = body.request_offers === undefined ? consents.share_with_studios === true : body.request_offers === true;
+  // Mit AGB-Haken wird jede Planung ausgeschrieben; ältere Seiten fragten Ja/Nein
+  // (noch älteren fehlt auch request_offers, sie schicken immer die Einwilligung mit).
+  const terms = termsAnswer(consents);
+  if (terms === "declined") throw new HttpError(422, TERMS_MISSING, "terms");
+  const withTerms = terms === "accepted";
+  const requestOffers = withTerms || (body.request_offers === undefined ? consents.share_with_studios === true : body.request_offers === true);
   if (!firstName || !lastName) throw new HttpError(422, "Bitte Vor- und Nachnamen angeben.", "name");
   if (!isEmail(email)) throw new HttpError(422, "Bitte eine gültige E-Mail-Adresse angeben.", "email");
-  // Die Telefonnummer brauchen die Studios für das Angebot; ohne Angebote nur für eine gewünschte Beratung.
+  // Die Telefonnummer brauchen die Studios für das Angebot.
   if (phoneInput && !phone) throw new HttpError(422, "Bitte eine gültige Telefonnummer angeben.", "phone");
   if (requestOffers && !phone) {
     throw new HttpError(422, "Bitte eine Telefonnummer angeben – die Küchenstudios brauchen sie für Ihr Angebot.", "phone");
   }
   if (!isPostalCode(postalCode)) throw new HttpError(422, "Bitte eine gültige Postleitzahl angeben.", "postal_code");
-  if (requestOffers && consents.share_with_studios !== true) {
+  if (!withTerms && requestOffers && consents.share_with_studios !== true) {
     throw new HttpError(422, "Bitte stimmen Sie der Weitergabe an geprüfte Küchenstudios zu.", "consent");
   }
-  const consentCall = !!phone && consents.contact_by_phone === true;
+  // Der Hinweis am AGB-Haken nennt die Telefonnummer für Rückfragen der Studios; früher gab es dafür einen eigenen Haken.
+  const consentCall = !!phone && (withTerms || consents.contact_by_phone === true);
+  const consentTextVersion = withTerms ? FUNNEL_TERMS.c.version : LEGACY_CONSENT_TEXT_VERSION;
   const timeframe = TIMEFRAMES.has(Number(body.timeframe_months)) ? Number(body.timeframe_months) : null;
   const frame = leadFrameFrom(body, timeframe);
   const photoPaths = session.photo_paths ?? [];
@@ -1118,7 +1122,7 @@ async function actionSubmit(req: Request, sb: SupabaseClient, body: Record<strin
         email,
         phone,
         consent_call: consentCall,
-        consent_marketing: consents.marketing === true,
+        consent_marketing: !withTerms && consents.marketing === true,
         funnel_answers: {
           planner_session_id: session.id,
           config,
@@ -1140,12 +1144,13 @@ async function actionSubmit(req: Request, sb: SupabaseClient, body: Record<strin
         user_agent: userAgent,
       },
       [
+        ...(withTerms ? [{ purpose: "terms", granted: true }] : []),
         { purpose: "share_with_studios", granted: requestOffers },
         { purpose: "contact_by_phone", granted: consentCall },
-        { purpose: "marketing", granted: consents.marketing === true },
+        ...(withTerms ? [] : [{ purpose: "marketing", granted: consents.marketing === true }]),
         ...(photoPaths.length > 0 ? [{ purpose: "ai_training", granted: aiTraining }] : []),
       ],
-      { textVersion: CONSENT_TEXT_VERSION, userId, ip: validIp(ip), userAgent },
+      { textVersion: consentTextVersion, userId, ip: validIp(ip), userAgent },
     );
     leadId = inserted.leadId;
     alreadySubmitted = inserted.duplicate;
@@ -1199,7 +1204,7 @@ async function actionSubmit(req: Request, sb: SupabaseClient, body: Record<strin
         photoPaths,
         config,
         room,
-        consentTextVersion: CONSENT_TEXT_VERSION,
+        consentTextVersion,
       }).catch((err) => console.error("[kw-planner] training samples failed", err));
     }
   }
@@ -1226,7 +1231,7 @@ async function actionSubmit(req: Request, sb: SupabaseClient, body: Record<strin
   });
 }
 
-/** Lead ohne Ausschreibung (nur Visualisierung): Angebote nachträglich anfordern. */
+/** Lead ohne Ausschreibung (bis 30.09.2026 „nur Visualisierung“): Angebote nachfordern. */
 async function actionRequestOffers(req: Request, sb: SupabaseClient, body: Record<string, unknown>) {
   const session = await requireSession(sb, body.session_token);
   if (!session.lead_id) throw new HttpError(409, "Bitte geben Sie zuerst Ihre Kontaktdaten an.", "contact_required");
@@ -1238,6 +1243,7 @@ async function actionRequestOffers(req: Request, sb: SupabaseClient, body: Recor
   const result = await requestPlannerOffers(sb, {
     leadId: session.lead_id,
     timeframeMonths: timeframe,
+    terms: termsAnswer(body),
     contactByPhone: body.contact_by_phone === true,
     phone: body.phone,
     meta: {

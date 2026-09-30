@@ -23,12 +23,16 @@ import {
 
 export const FUNNEL_A_BASE_PATH = "/funnel/a";
 
-/** URL-Slugs in Funnel-Reihenfolge; /formular verlinkt auf kuechenform und raum. */
+/**
+ * URL-Slugs in Funnel-Reihenfolge; /formular verlinkt auf kuechenform und stil.
+ * Erst die Kernfragen, dann Ausstattung und Hintergrund als überspringbarer
+ * Block (detail), zuletzt Zeitrahmen, Budget, PLZ und Kontakt.
+ */
 export const FUNNEL_A_SLUGS = [
   "kuechenform",
-  "raum",
-  "groesse",
   "stil",
+  "groesse",
+  "raum",
   "farbe",
   "arbeitsplatte",
   "kochfeld",
@@ -65,7 +69,12 @@ interface StepBase {
   hint?: string;
   /** Pflichtschritt: „Weiter“ erst nach einer Antwort. */
   required: boolean;
+  /** Ausstattung und Hintergrund: „Details überspringen“ springt zu FUNNEL_A_AFTER_DETAILS. */
+  detail?: boolean;
 }
+
+/** Erster Schritt nach dem Detailblock. */
+export const FUNNEL_A_AFTER_DETAILS: FunnelAStepSlug = "zeitrahmen";
 
 export type FunnelAStep =
   | (StepBase & { kind: "choice"; field: ChoiceField; options: readonly FunnelAOption[] })
@@ -90,13 +99,13 @@ export const FUNNEL_A_STEPS: readonly FunnelAStep[] = [
     hint: "Wählen Sie die Form, die Ihrem Raum am nächsten kommt.",
   },
   {
-    slug: "raum",
+    slug: "stil",
     kind: "choice",
-    field: "room_type",
-    options: ROOM_TYPE_OPTIONS,
+    field: "kitchen_style",
+    options: STYLE_OPTIONS,
     required: false,
-    eyebrow: "Raum",
-    question: "Ist die Küche offen oder ein eigener Raum?",
+    eyebrow: "Stil",
+    question: "Welcher Küchenstil gefällt Ihnen?",
   },
   {
     slug: "groesse",
@@ -109,13 +118,15 @@ export const FUNNEL_A_STEPS: readonly FunnelAStep[] = [
     hint: "Eine grobe Schätzung reicht – genau ausgemessen wird später vor Ort.",
   },
   {
-    slug: "stil",
+    slug: "raum",
     kind: "choice",
-    field: "kitchen_style",
-    options: STYLE_OPTIONS,
+    field: "room_type",
+    options: ROOM_TYPE_OPTIONS,
     required: false,
-    eyebrow: "Stil",
-    question: "Welcher Küchenstil gefällt Ihnen?",
+    detail: true,
+    eyebrow: "Raum",
+    question: "Ist die Küche offen oder ein eigener Raum?",
+    hint: "Ab hier sind alle Fragen freiwillig – je mehr Sie angeben, desto genauer die Angebote.",
   },
   {
     slug: "farbe",
@@ -123,6 +134,7 @@ export const FUNNEL_A_STEPS: readonly FunnelAStep[] = [
     field: "color_preference",
     options: COLOR_OPTIONS,
     required: false,
+    detail: true,
     eyebrow: "Farbwelt",
     question: "Welche Farbwelt passt zu Ihnen?",
   },
@@ -132,6 +144,7 @@ export const FUNNEL_A_STEPS: readonly FunnelAStep[] = [
     field: "worktop_category",
     options: WORKTOP_OPTIONS,
     required: false,
+    detail: true,
     eyebrow: "Arbeitsplatte",
     question: "Welches Material soll die Arbeitsplatte haben?",
   },
@@ -141,6 +154,7 @@ export const FUNNEL_A_STEPS: readonly FunnelAStep[] = [
     field: "cooktop_type",
     options: COOKTOP_OPTIONS,
     required: false,
+    detail: true,
     eyebrow: "Kochfeld",
     question: "Worauf möchten Sie kochen?",
   },
@@ -150,6 +164,7 @@ export const FUNNEL_A_STEPS: readonly FunnelAStep[] = [
     field: "oven_placement",
     options: OVEN_OPTIONS,
     required: false,
+    detail: true,
     eyebrow: "Backofen",
     question: "Wo soll der Backofen eingebaut werden?",
   },
@@ -159,6 +174,7 @@ export const FUNNEL_A_STEPS: readonly FunnelAStep[] = [
     field: "cooling",
     options: COOLING_OPTIONS,
     required: false,
+    detail: true,
     eyebrow: "Kühlschrank",
     question: "Welcher Kühlschrank soll es sein?",
   },
@@ -168,6 +184,7 @@ export const FUNNEL_A_STEPS: readonly FunnelAStep[] = [
     field: "extra_appliances",
     options: EXTRA_APPLIANCE_OPTIONS,
     required: false,
+    detail: true,
     eyebrow: "Weitere Geräte · optional",
     question: "Welche Geräte wünschen Sie sich noch?",
     hint: "Mehrfachauswahl möglich.",
@@ -178,6 +195,7 @@ export const FUNNEL_A_STEPS: readonly FunnelAStep[] = [
     field: "services",
     options: SERVICE_OPTIONS,
     required: false,
+    detail: true,
     eyebrow: "Leistungen · optional",
     question: "Was soll das Küchenstudio übernehmen?",
     hint: "Mehrfachauswahl möglich – so rechnen alle Studios mit demselben Umfang.",
@@ -188,6 +206,7 @@ export const FUNNEL_A_STEPS: readonly FunnelAStep[] = [
     field: "cooking_style",
     options: COOKSTYLE_OPTIONS,
     required: false,
+    detail: true,
     eyebrow: "Kochstil",
     question: "Wie wird bei Ihnen gekocht?",
   },
@@ -197,6 +216,7 @@ export const FUNNEL_A_STEPS: readonly FunnelAStep[] = [
     field: "purchase_reason",
     options: OCCASION_OPTIONS,
     required: false,
+    detail: true,
     eyebrow: "Anlass",
     question: "Was ist der Anlass für die neue Küche?",
   },
@@ -206,6 +226,7 @@ export const FUNNEL_A_STEPS: readonly FunnelAStep[] = [
     field: "housing",
     options: HOUSING_OPTIONS,
     required: false,
+    detail: true,
     eyebrow: "Wohnsituation",
     question: "Wie wohnen Sie?",
   },
@@ -215,6 +236,7 @@ export const FUNNEL_A_STEPS: readonly FunnelAStep[] = [
     field: "decision_maker",
     options: DECISION_OPTIONS,
     required: false,
+    detail: true,
     eyebrow: "Entscheidung",
     question: "Wer entscheidet über die neue Küche?",
   },

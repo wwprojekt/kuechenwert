@@ -25,6 +25,7 @@ import { hasDetails } from "@/features/marketplace/lead-details";
 import { ProjectAnswers } from "@/features/marketplace/components/ProjectAnswers";
 import { ProjectOrderCard } from "@/features/marketplace/components/ProjectOrderCard";
 import { ProjectAiConsentCard } from "@/features/marketplace/components/ProjectAiConsentCard";
+import { ProjectCallsCard } from "@/features/marketplace/components/ProjectCallsCard";
 import { ProjectDataCard } from "@/features/marketplace/components/ProjectDataCard";
 import { acceptOffer, cancelProject, getProject, requestProjectOffers, type ProjectOffer, type ProjectView as ProjectData } from "@/features/marketplace/project-api";
 import { clearStoredProjectToken, storeProjectToken } from "@/features/marketplace/project-token";
@@ -45,7 +46,7 @@ function remaining(iso: string | null): string | null {
   return days > 0 ? `${days} Tag${days === 1 ? "" : "e"} ${hours} Std.` : `${hours} Std.`;
 }
 
-/** Funnel C „nur Visualisierung“: Lead ohne Ausschreibung, Angebote noch nicht angefordert. */
+/** Funnel C ohne Ausschreibung (bis 30.09.2026 „nur Visualisierung“): Angebote noch nicht angefordert. */
 const offersPending = (view: ProjectData) => !view.tender && view.lead.funnel_type === "traumkueche";
 
 function Timeline({ view }: { view: ProjectData }) {
@@ -411,6 +412,9 @@ export function ProjectView({ token }: { token: string }) {
                 </button>
               )}
             </div>
+            {view.lead.has_phone && view.lead.calls_allowed !== undefined && !closed && !noOffersYet && (
+              <ProjectCallsCard token={token} allowed={view.lead.calls_allowed} />
+            )}
             {view.ai_training && <ProjectAiConsentCard token={token} granted={view.ai_training.granted} />}
             <ProjectDataCard token={token} />
             <p className="text-center text-xs text-muted-foreground">

@@ -392,7 +392,8 @@ export default function DealerProjectDetail() {
             <div className="rounded-2xl border bg-card p-5">
               <h2 className="font-bold">Kontakt direkt freischalten</h2>
               <p className="mt-1 text-sm text-muted-foreground">
-                Sprechen Sie den Kunden persönlich an – noch {slotsLeft} von {d.max_contact_purchases} Plätzen frei.
+                Sprechen Sie den Kunden persönlich an{d.phone_included ? " – mit Telefonnummer" : ""}. Noch {slotsLeft} von{" "}
+                {d.max_contact_purchases} Plätzen frei.
               </p>
               <Button className="mt-4 w-full" variant="secondary" onClick={() => setConfirmUnlock(true)}>
                 <KeyRound className="mr-2 h-4 w-4" /> Für {euro((d.contact_price_cents ?? 0) / 100)} netto freischalten
@@ -407,7 +408,12 @@ export default function DealerProjectDetail() {
           <AlertDialogHeader>
             <AlertDialogTitle>Kontakt kostenpflichtig freischalten?</AlertDialogTitle>
             <AlertDialogDescription>
-              Sie erhalten sofort Name und E-Mail-Adresse des Kunden, die Telefonnummer, sofern der Kunde Anrufe von Studios erlaubt hat. Wir stellen{" "}
+              {d.phone_included
+                ? "Sie erhalten sofort Name, E-Mail-Adresse und Telefonnummer des Kunden."
+                : d.phone_included === false
+                  ? "Sie erhalten sofort Name und E-Mail-Adresse des Kunden; er möchte per E-Mail kontaktiert werden."
+                  : "Sie erhalten sofort Name und E-Mail-Adresse des Kunden, die Telefonnummer, sofern der Kunde Anrufe von Studios erlaubt hat."}{" "}
+              Wir stellen{" "}
               {euro((d.contact_price_cents ?? 0) / 100)} zzgl. MwSt. in Rechnung. Der Kunde wird informiert, dass Ihr Studio sich meldet. Fehlerhafte Kontakte können
               Sie innerhalb von 14 Tagen reklamieren.
             </AlertDialogDescription>

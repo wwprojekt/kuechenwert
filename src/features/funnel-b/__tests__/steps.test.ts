@@ -23,7 +23,6 @@ describe("Schrittfolge von Funnel B", () => {
       "plz",
       "name",
       "kontakt",
-      "einwilligung",
     ]);
     expect(funnelBFlow(withOffer({ offerDeliveryMethod: "now" }))).toContain("hochladen");
     const detailed = funnelBFlow(withOffer({ wantsDetails: "ja" }));
@@ -44,8 +43,9 @@ describe("Schrittfolge von Funnel B", () => {
 
   it("sagt je Schritt, was fehlt", () => {
     expect(missingIn("preis", initialFunnelBData).map((m) => m.key)).toEqual(["existing_offer_price"]);
-    expect(missingIn("kontakt", withOffer({ email: "x", phone: "12" })).map((m) => m.key)).toEqual(["email", "phone"]);
-    expect(missingIn("einwilligung", withOffer({ consentShare: true })).map((m) => m.key)).toEqual(["consent_call"]);
+    expect(missingIn("kontakt", withOffer({ email: "x", phone: "12" })).map((m) => m.key)).toEqual(["email", "phone", "accept_terms"]);
+    expect(missingIn("kontakt", withOffer({ email: "maria@beispiel.de", phone: "0511 123456" })).map((m) => m.key)).toEqual(["accept_terms"]);
+    expect(missingIn("kontakt", withOffer({ email: "maria@beispiel.de", phone: "0511 123456", acceptTerms: true }))).toEqual([]);
     expect(missingIn("zeitrahmen", withOffer())).toEqual([]);
   });
 
@@ -73,14 +73,24 @@ describe("Schrittfolge von Funnel B", () => {
     expect(parseFunnelBStep("marke")).toBe("marke");
     expect(parseFunnelBStep("muell")).toBe("extras");
     expect(parseFunnelBStep("lieferung")).toBe("zahlung");
+    expect(parseFunnelBStep("einwilligung")).toBe("kontakt");
     const fields = submissionFields(
-      withOffer({ wantsDetails: "ja", offerIncludes: ["delivery"], offerValidUntil: "2026-12-31", uploads: [{ id: "1", category: "angebot", file }] }),
+      withOffer({
+        wantsDetails: "ja",
+        offerIncludes: ["delivery"],
+        offerValidUntil: "2026-12-31",
+        acceptTerms: true,
+        uploads: [{ id: "1", category: "grundriss", file }],
+      }),
     );
     expect(fields).not.toHaveProperty("uploads");
     expect(fields).not.toHaveProperty("wantsDetails");
     expect(fields).toHaveProperty("existingOfferPriceEur", "18000");
     expect(fields).toHaveProperty("offerIncludes", ["delivery"]);
     expect(fields).toHaveProperty("offerValidUntil", "2026-12-31");
+    expect(fields).toMatchObject({ acceptTerms: true, consentShare: true, consentCall: true });
+    expect(fields).not.toHaveProperty("consentStudioCall");
+    expect(fields).not.toHaveProperty("consentMarketing");
   });
 });
 

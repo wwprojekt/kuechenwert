@@ -47,8 +47,10 @@ import {
 } from "../_shared/funnel-a-catalog.ts";
 import { loadRateCard } from "../_shared/rate-card.ts";
 import { BRAND } from "../_shared/brand-config.ts";
+import { FUNNEL_TERMS, TERMS_MISSING, termsAnswer } from "../_shared/lead-terms.ts";
 
-const CONSENT_TEXT_VERSION = "kw-anfrage-2026-09-28";
+/** Einzelne Haken für Anrufe und Werbung, bis 30.09.2026. */
+const LEGACY_CONSENT_TEXT_VERSION = "kw-anfrage-2026-09-28";
 const SALUTATIONS = new Set(["Herr", "Frau", "Divers"]);
 
 const MISSING_ANSWER_MESSAGES: Partial<Record<keyof FunnelAAnswers, string>> = {
@@ -122,7 +124,11 @@ async function actionSubmit(req: Request, sb: SupabaseClient, body: Record<strin
   if (!phone) {
     throw new HttpError(422, "Bitte eine gültige Telefonnummer angeben – die Studios brauchen sie für Rückfragen zu Ihrem Angebot.", "phone");
   }
-  if (consents.share_with_studios !== true) {
+  // Seit 30.09.2026 ein AGB-Haken; ältere Seiten schicken die einzelnen Einwilligungen.
+  const terms = termsAnswer(consents);
+  if (terms === "declined") throw new HttpError(422, TERMS_MISSING, "terms");
+  const withTerms = terms === "accepted";
+  if (!withTerms && consents.share_with_studios !== true) {
     throw new HttpError(422, "Bitte stimmen Sie der Weitergabe an geprüfte Küchenstudios zu.", "consent");
   }
 
@@ -145,8 +151,9 @@ async function actionSubmit(req: Request, sb: SupabaseClient, body: Record<strin
   const tier = (Array.isArray(tierRow) ? tierRow[0] : tierRow) ?? { tier: "standard", score: 0 };
   const userId = await userIdFromAuthHeader(sb, req);
   const userAgent = req.headers.get("user-agent")?.slice(0, 500) ?? null;
-  const consentCall = consents.contact_by_phone === true;
-  const consentMarketing = consents.marketing === true;
+  // Der Hinweis am AGB-Haken nennt die Telefonnummer für Rückfragen der Studios.
+  const consentCall = withTerms || consents.contact_by_phone === true;
+  const consentMarketing = !withTerms && consents.marketing === true;
   const salutation =
     typeof contact.salutation === "string" && SALUTATIONS.has(contact.salutation) ? contact.salutation : null;
 
@@ -186,12 +193,18 @@ async function actionSubmit(req: Request, sb: SupabaseClient, body: Record<strin
       ip_address: validIp(ip),
       user_agent: userAgent,
     },
-    [
-      { purpose: "share_with_studios", granted: true },
-      { purpose: "contact_by_phone", granted: consentCall },
-      { purpose: "marketing", granted: consentMarketing },
-    ],
-    { textVersion: CONSENT_TEXT_VERSION, userId, ip: validIp(ip), userAgent },
+    withTerms
+      ? [
+          { purpose: "terms", granted: true },
+          { purpose: "share_with_studios", granted: true },
+          { purpose: "contact_by_phone", granted: true },
+        ]
+      : [
+          { purpose: "share_with_studios", granted: true },
+          { purpose: "contact_by_phone", granted: consentCall },
+          { purpose: "marketing", granted: consentMarketing },
+        ],
+    { textVersion: withTerms ? FUNNEL_TERMS.a.version : LEGACY_CONSENT_TEXT_VERSION, userId, ip: validIp(ip), userAgent },
   );
 
   return projectLinkResponse(req, sb, leadId, estimateRange);

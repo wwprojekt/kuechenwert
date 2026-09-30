@@ -1,60 +1,42 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
+import { FUNNEL_TERMS, TERMS_LABEL, TERMS_MISSING } from "../../../../supabase/functions/_shared/lead-terms.ts";
 import { RequestOffersDialog } from "../components/RequestOffersDialog";
-import { LeadContactStep, PHONE_ERROR, phoneNeeded, validateLead, type LeadContact } from "../steps/LeadSteps";
+import { LeadContactStep, PHONE_ERROR, validateLead, type LeadContact } from "../steps/LeadSteps";
 
 const contact = (patch: Partial<LeadContact> = {}): LeadContact => ({
   first_name: "Maria",
   last_name: "Muster",
   email: "maria@beispiel.de",
-  phone: "",
-  contact_by_phone: false,
+  phone: "0511 123456",
+  accept_terms: true,
   ...patch,
 });
 
 const noop = () => undefined;
 
-const renderContactStep = (value: LeadContact, wantsOffers: boolean) =>
+const renderContactStep = (value: LeadContact) =>
   render(
-    <LeadContactStep
-      contact={value}
-      errors={{}}
-      wantsOffers={wantsOffers}
-      onChange={noop}
-      onSubmit={noop}
-      onChangeChoice={noop}
-      honeypot=""
-      onHoneypot={noop}
-      turnstileRef={noop}
-    />,
+    <LeadContactStep contact={value} errors={{}} onChange={noop} onSubmit={noop} honeypot="" onHoneypot={noop} turnstileRef={noop} />,
   );
 
-describe("Telefonnummer im Planer", () => {
-  it("ist mit Angeboten Pflicht, ohne Angebote nur für den gewünschten Beratungsanruf", () => {
-    expect(phoneNeeded(contact(), true)).toBe(true);
-    expect(phoneNeeded(contact(), false)).toBe(false);
-    expect(phoneNeeded(contact({ contact_by_phone: true }), false)).toBe(true);
-
-    expect(validateLead(contact(), true).phone).toBe(PHONE_ERROR);
-    expect(validateLead(contact(), false)).toEqual({});
-    expect(validateLead(contact({ phone: "0511 123456" }), true)).toEqual({});
-    expect(validateLead(contact({ phone: "123" }), true).phone).toBe(PHONE_ERROR);
+describe("Kontakt im Planer", () => {
+  it("verlangt Telefonnummer und AGB-Bestätigung", () => {
+    expect(validateLead(contact())).toEqual({});
+    expect(validateLead(contact({ phone: "" })).phone).toBe(PHONE_ERROR);
+    expect(validateLead(contact({ phone: "123" })).phone).toBe(PHONE_ERROR);
+    expect(validateLead(contact({ accept_terms: false })).accept_terms).toBe(TERMS_MISSING);
   });
 
-  it("fragt ohne Angebote erst nach dem Beratungswunsch nach der Nummer", () => {
-    const { unmount } = renderContactStep(contact(), false);
-    expect(screen.queryByLabelText(/Telefon/)).not.toBeInTheDocument();
-    expect(screen.getByLabelText(/kostenlose Beratung/)).toBeInTheDocument();
-    unmount();
-
-    renderContactStep(contact({ contact_by_phone: true }), false);
-    expect(screen.getByLabelText(/Telefon/)).toBeRequired();
-  });
-
-  it("fragt mit Angeboten immer nach der Nummer", () => {
-    renderContactStep(contact(), true);
+  it("zeigt Telefon als Pflichtfeld, den Hinweis zu den Angeboten und nur einen Haken – ohne Anruf-Haken", () => {
+    const { container } = renderContactStep(contact({ phone: "", accept_terms: false }));
     expect(screen.getByLabelText(/Telefon/)).toBeRequired();
     expect(screen.getByText("Für Rückfragen der Studios zu Ihrem Angebot")).toBeInTheDocument();
+    expect(screen.getByText(FUNNEL_TERMS.c.notice)).toBeInTheDocument();
+    const boxes = container.querySelectorAll('input[type="checkbox"]');
+    expect(boxes).toHaveLength(1);
+    expect(boxes[0]!.closest("div")?.textContent).toBe(TERMS_LABEL);
+    expect(screen.queryByText(/anrufen/)).not.toBeInTheDocument();
   });
 
   it("verlangt beim nachträglichen Anfordern eine Nummer, wenn keine gespeichert ist", () => {
@@ -66,14 +48,15 @@ describe("Telefonnummer im Planer", () => {
 
     fireEvent.change(screen.getByLabelText(/Telefon/), { target: { value: " 0511 123456 " } });
     fireEvent.click(screen.getByRole("button", { name: "Angebote anfordern" }));
-    expect(onConfirm).toHaveBeenCalledWith({ timeframeMonths: null, contactByPhone: false, phone: "0511 123456" });
+    expect(onConfirm).toHaveBeenCalledWith({ timeframeMonths: null, phone: "0511 123456" });
   });
 
-  it("fragt nicht erneut, wenn die Nummer schon gespeichert ist", () => {
+  it("fragt nicht erneut, wenn die Nummer schon gespeichert ist, und hat keinen Anruf-Haken", () => {
     const onConfirm = vi.fn();
     render(<RequestOffersDialog open onOpenChange={noop} busy={false} error={null} onConfirm={onConfirm} />);
     expect(screen.queryByLabelText(/Telefon/)).not.toBeInTheDocument();
+    expect(screen.queryByRole("checkbox")).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Angebote anfordern" }));
-    expect(onConfirm).toHaveBeenCalledWith({ timeframeMonths: null, contactByPhone: false });
+    expect(onConfirm).toHaveBeenCalledWith({ timeframeMonths: null });
   });
 });

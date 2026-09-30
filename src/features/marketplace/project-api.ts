@@ -91,6 +91,8 @@ export interface ProjectView {
     budget_eur: number | null;
     timeframe_months: number | null;
     has_phone: boolean;
+    /** Studios mit freigeschaltetem Kontakt dürfen anrufen (sehen die Nummer); fehlt bei älteren Function-Versionen. */
+    calls_allowed?: boolean;
     /** Aktive Studios, deren Einzugsgebiet die PLZ abdeckt; fehlt bei älteren Function-Versionen. */
     studios_in_area?: number;
   };
@@ -146,8 +148,10 @@ export const getProject = (token: string) => callFunction<ProjectView>(FN, { act
 export const acceptOffer = (token: string, bidId: string) => callFunction<ProjectView>(FN, { action: "accept", token, bid_id: bidId });
 export const cancelProject = (token: string, reason: string) => callFunction<ProjectView>(FN, { action: "cancel", token, reason });
 /** `already`: Für das Projekt war schon eine Nummer hinterlegt, sie bleibt unverändert. */
-export const addProjectPhone = (token: string, phone: string, consentCall: boolean) =>
-  callFunction<{ ok: true; already?: true }>(FN, { action: "add-phone", token, phone, consent_call: consentCall });
+export const addProjectPhone = (token: string, phone: string) =>
+  callFunction<{ ok: true; already?: true }>(FN, { action: "add-phone", token, phone });
+/** Anrufe von Studios ein- oder ausschalten (ohne: Studios erreichen den Kunden per E-Mail). */
+export const setProjectCalls = (token: string, granted: boolean) => callFunction<ProjectView>(FN, { action: "calls", token, granted });
 export const requestProjectLink = (email: string) => callFunction<{ ok: true }>(FN, { action: "resend", email });
 export const confirmOrder = (token: string) => callFunction<ProjectView>(FN, { action: "order-confirm", token });
 export const reportOrderProblem = (token: string, message: string) =>
@@ -158,16 +162,17 @@ export const exportProjectData = (token: string) => callFunction<Record<string, 
 export const deleteProjectData = (token: string, email: string) =>
   callFunction<{ ok: true }>(FN, { action: "delete-data", token, email });
 /**
- * Funnel C „nur Visualisierung“: Angebote nachträglich anfordern (gleiche
- * Einwilligung wie im Funnel; phone, falls noch keine gespeichert ist).
+ * Planung ohne Ausschreibung (bis 30.09.2026 „nur Visualisierung“): Angebote
+ * nachfordern mit dem Hinweis OFFERS_LATER_TERMS (phone, falls noch keine
+ * gespeichert ist).
  */
-export const requestProjectOffers = (token: string, input: { timeframeMonths: number | null; contactByPhone: boolean; phone?: string }) =>
+export const requestProjectOffers = (token: string, input: { timeframeMonths: number | null; phone?: string }) =>
   callFunction<ProjectView>(FN, {
     action: "request-offers",
     token,
     consent_share: true,
+    accept_terms: true,
     timeframe_months: input.timeframeMonths,
-    contact_by_phone: input.contactByPhone,
     ...(input.phone ? { phone: input.phone } : {}),
   });
 

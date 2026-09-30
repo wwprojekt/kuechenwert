@@ -69,11 +69,10 @@ export interface RenderStatus {
 
 export interface SubmitPayload {
   session_token: string;
-  /** phone leer, wenn weder Angebote noch ein Beratungsanruf gewünscht sind. */
   contact: { first_name: string; last_name: string; email: string; phone: string; postal_code: string; city?: string };
-  /** „Ja, auch Angebote“: Ausschreibung für Studios; sonst nur Visualisierung und Preis. */
-  request_offers: boolean;
-  consents: { share_with_studios: boolean; contact_by_phone: boolean; marketing: boolean; ai_training: boolean };
+  /** Jede Planung wird ausgeschrieben; accept_terms bestätigt den Hinweistext FUNNEL_TERMS.c. */
+  request_offers: true;
+  consents: { share_with_studios: true; accept_terms: true; ai_training: boolean };
   /** Gewählte Visualisierung: Titelbild für die Studios. */
   active_render_id: string | null;
   timeframe_months: number | null;
@@ -233,14 +232,14 @@ export function submitProject(payload: SubmitPayload) {
   return callFunction<SubmitResult>(FN, { action: "submit", ...payload });
 }
 
-/** Nur Visualisierung gewählt: Angebote nachträglich anfordern (phone, falls noch keine gespeichert ist). */
-export function requestOffers(input: { sessionToken: string; timeframeMonths: number | null; contactByPhone: boolean; phone?: string }) {
+/** Planung ohne Ausschreibung (bis 30.09.2026 „nur Visualisierung“): Angebote nachfordern (phone, falls noch keine gespeichert ist). */
+export function requestOffers(input: { sessionToken: string; timeframeMonths: number | null; phone?: string }) {
   return callFunction<{ ok: true; offers_requested: true; tender_status: string }>(FN, {
     action: "request-offers",
     session_token: input.sessionToken,
     consent_share: true,
+    accept_terms: true,
     timeframe_months: input.timeframeMonths,
-    contact_by_phone: input.contactByPhone,
     ...(input.phone ? { phone: input.phone } : {}),
   });
 }

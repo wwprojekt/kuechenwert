@@ -82,6 +82,8 @@ export interface DealerProjectDetail extends Omit<DealerProjectRow, "my_offer" |
   media: DealerProjectMedia[];
   /** Ergänzungen von Kunde und Experten-Check; fehlt bei älteren RPC-Versionen. */
   details?: LeadDetails | null;
+  /** Freigeschalteter Kontakt enthält die Telefonnummer (Kunde erlaubt Anrufe); fehlt bei älteren RPC-Versionen. */
+  phone_included?: boolean;
   contact: null | {
     first_name: string | null;
     last_name: string | null;

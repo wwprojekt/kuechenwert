@@ -1,53 +1,19 @@
-import { Eye, Lock, Store } from "lucide-react";
 import type { FormEvent } from "react";
 import { BudgetSliderStep } from "@/components/funnel/budget-slider-step";
 import { CardStep } from "@/components/funnel/card-step";
 import { choiceIcon } from "@/components/funnel/funnel-a-icons";
 import { FUNNEL_HEADING_ID } from "@/components/funnel/funnel-frame";
+import { TermsConsent, TermsNotice } from "@/components/funnel/terms-consent";
 import { FUNNEL_A_BUDGET, HOUSING_OPTIONS, OCCASION_OPTIONS, UNSURE } from "@/features/funnel-a/catalog";
-import { ConsentCheckbox, TextField } from "@/features/funnel-a/components/ContactFields";
+import { TextField } from "@/features/funnel-a/components/ContactFields";
 import type { ChoiceField } from "@/features/funnel-a/steps";
+import { FUNNEL_TERMS, TERMS_MISSING } from "../../../../supabase/functions/_shared/lead-terms.ts";
 import { PLANNER_TIMEFRAMES } from "../core";
-import type { OffersChoice } from "../state";
 
 export const PLANNER_NAME_FORM = "planner-name";
 export const PLANNER_CONTACT_FORM = "planner-contact";
 
-/** Einwilligungstext zu „Ja, Angebote“ (Version kw-projekt-2026-09-30b in _shared/planner-offers.ts). */
-export const OFFERS_CONSENT_TEXT =
-  "Mit „Ja“ willige ich ein, dass KüchenWert meine Planung mit Visualisierungen und Raumfotos ohne Kontaktdaten freigeschalteten Küchenstudios in meiner Region zur Angebotserstellung zeigt und meine Kontaktdaten an das von mir gewählte Studio sowie an bis zu drei Studios zur persönlichen Beratung weitergibt. Widerruf jederzeit möglich.";
-
 export const TIMEFRAMES = PLANNER_TIMEFRAMES.map((t) => ({ id: String(t.months), label: t.label }));
-
-export function OffersStep({ value, onChange, onAdvance }: { value: OffersChoice | null; onChange: (v: OffersChoice) => void; onAdvance: () => void }) {
-  return (
-    <div className="space-y-3">
-      <CardStep
-        labelledBy={FUNNEL_HEADING_ID}
-        columns={2}
-        mobileColumns={1}
-        selected={value ?? ""}
-        onSelect={(id) => onChange(id as OffersChoice)}
-        onAutoAdvance={onAdvance}
-        options={[
-          {
-            id: "ja",
-            label: "Ja, Angebote erhalten",
-            description: "Kostenlos & unverbindlich von geprüften Studios",
-            icon: <Store />,
-          },
-          {
-            id: "nein",
-            label: "Nein, nur Küche & Preis",
-            description: "Angebote später jederzeit möglich",
-            icon: <Eye />,
-          },
-        ]}
-      />
-      <p className="text-[11px] leading-snug text-muted-foreground sm:text-xs">{OFFERS_CONSENT_TEXT}</p>
-    </div>
-  );
-}
 
 export function TimeframeStep({ value, onChange, onAdvance }: { value: string; onChange: (v: string) => void; onAdvance: () => void }) {
   return (
@@ -129,10 +95,11 @@ export interface LeadContact {
   last_name: string;
   email: string;
   phone: string;
-  contact_by_phone: boolean;
+  /** AGB akzeptiert, Datenschutzerklärung gelesen (FUNNEL_TERMS.c). */
+  accept_terms: boolean;
 }
 
-export type LeadErrors = Partial<Record<"first_name" | "last_name" | "email" | "phone", string>>;
+export type LeadErrors = Partial<Record<"first_name" | "last_name" | "email" | "phone" | "accept_terms", string>>;
 
 const PHONE_OK = /^[+0][\d\s\-/()]{6,}$/;
 const EMAIL_OK = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
@@ -144,17 +111,14 @@ export function isValidPhone(phone: string): boolean {
   return PHONE_OK.test(phone.trim()) && digits >= 6 && digits <= 16;
 }
 
-/** Pflicht mit „Ja, Angebote“ (die Studios rufen zum Angebot an), sonst nur für die gewünschte Beratung per Telefon. */
-export function phoneNeeded(contact: LeadContact, wantsOffers: boolean): boolean {
-  return wantsOffers || contact.contact_by_phone;
-}
-
-export function validateLead(contact: LeadContact, needsPhone: boolean): LeadErrors {
+/** Name, E-Mail und Telefon sind Pflicht: Die Studios brauchen die Nummer für Rückfragen zum Angebot. */
+export function validateLead(contact: LeadContact): LeadErrors {
   const errors: LeadErrors = {};
   if (!contact.first_name.trim()) errors.first_name = "Bitte geben Sie Ihren Vornamen an.";
   if (!contact.last_name.trim()) errors.last_name = "Bitte geben Sie Ihren Nachnamen an.";
   if (!EMAIL_OK.test(contact.email.trim())) errors.email = "Bitte geben Sie eine gültige E-Mail-Adresse an, z. B. name@beispiel.de.";
-  if (needsPhone && !isValidPhone(contact.phone)) errors.phone = PHONE_ERROR;
+  if (!isValidPhone(contact.phone)) errors.phone = PHONE_ERROR;
+  if (!contact.accept_terms) errors.accept_terms = TERMS_MISSING;
   return errors;
 }
 
@@ -207,97 +171,61 @@ export function LeadNameStep({
 export function LeadContactStep({
   contact,
   errors,
-  wantsOffers,
   onChange,
   onSubmit,
-  onChangeChoice,
   honeypot,
   onHoneypot,
   turnstileRef,
 }: {
   contact: LeadContact;
   errors: LeadErrors;
-  wantsOffers: boolean;
   onChange: (patch: Partial<LeadContact>) => void;
   onSubmit: () => void;
-  onChangeChoice: () => void;
   honeypot: string;
   onHoneypot: (value: string) => void;
   turnstileRef: (node: HTMLDivElement | null) => void;
 }) {
-  const showPhone = phoneNeeded(contact, wantsOffers);
-  const emailField = (
-    <TextField
-      id="email"
-      label="E-Mail"
-      type="email"
-      required
-      autoComplete="email"
-      autoCapitalize="none"
-      spellCheck={false}
-      enterKeyHint={showPhone ? "next" : "send"}
-      maxLength={254}
-      value={contact.email}
-      onChange={(e) => onChange({ email: e.target.value })}
-      error={errors.email}
-    />
-  );
-  const phoneField = (
-    <TextField
-      id="phone"
-      label="Telefon"
-      type="tel"
-      required
-      autoComplete="tel"
-      enterKeyHint="send"
-      maxLength={40}
-      hint={wantsOffers && !contact.phone.trim() ? "Für Rückfragen der Studios zu Ihrem Angebot" : undefined}
-      hintClassName="short:hidden"
-      value={contact.phone}
-      onChange={(e) => onChange({ phone: e.target.value })}
-      error={errors.phone}
-    />
-  );
-
   return (
-    <form id={PLANNER_CONTACT_FORM} onSubmit={submitHandler(onSubmit)} noValidate className="space-y-4 short:space-y-3">
-      {wantsOffers ? (
-        <div className="grid gap-4 sm:grid-cols-2 short:gap-3">
-          {emailField}
-          {phoneField}
-        </div>
-      ) : (
-        emailField
-      )}
-      <ConsentCheckbox id="contact_by_phone" checked={contact.contact_by_phone} onChange={(contact_by_phone) => onChange({ contact_by_phone })}>
-        {wantsOffers
-          ? "Studios und KüchenWert dürfen mich zu meinem Projekt auch anrufen."
-          : "KüchenWert darf mich für eine kostenlose Beratung zu meiner Planung anrufen."}
-      </ConsentCheckbox>
-      {!wantsOffers && showPhone && phoneField}
+    <form id={PLANNER_CONTACT_FORM} onSubmit={submitHandler(onSubmit)} noValidate className="space-y-4 short:space-y-3 xshort:space-y-2">
+      <div className="grid gap-4 sm:grid-cols-2 short:gap-3 xshort:gap-2">
+        <TextField
+          id="email"
+          label="E-Mail"
+          type="email"
+          required
+          autoComplete="email"
+          autoCapitalize="none"
+          spellCheck={false}
+          enterKeyHint="next"
+          maxLength={254}
+          value={contact.email}
+          onChange={(e) => onChange({ email: e.target.value })}
+          error={errors.email}
+        />
+        <TextField
+          id="phone"
+          label="Telefon"
+          type="tel"
+          required
+          autoComplete="tel"
+          enterKeyHint="send"
+          maxLength={40}
+          hint={contact.phone.trim() ? undefined : "Für Rückfragen der Studios zu Ihrem Angebot"}
+          hintClassName="short:hidden"
+          value={contact.phone}
+          onChange={(e) => onChange({ phone: e.target.value })}
+          error={errors.phone}
+        />
+      </div>
 
       <div className="sr-only" aria-hidden="true">
         <label htmlFor="planner-website">Website</label>
         <input id="planner-website" type="text" name="website" tabIndex={-1} autoComplete="off" value={honeypot} onChange={(e) => onHoneypot(e.target.value)} />
       </div>
 
-      <p className="text-[11px] leading-snug text-muted-foreground sm:text-xs sm:leading-relaxed">
-        <Lock className="mr-1 inline h-3.5 w-3.5 -translate-y-px text-brand-600" aria-hidden="true" />
-        Kostenlos, zusätzlich per E-Mail.{" "}
-        <button type="button" onClick={onChangeChoice} className="font-medium text-foreground underline underline-offset-2">
-          {wantsOffers ? "Doch keine Angebote?" : "Doch Angebote erhalten?"}
-        </button>{" "}
-        Es gelten unsere{" "}
-        <a href="/agb" target="_blank" rel="noopener noreferrer" className="font-medium text-foreground underline underline-offset-2">
-          AGB
-        </a>{" "}
-        und die{" "}
-        <a href="/datenschutz" target="_blank" rel="noopener noreferrer" className="font-medium text-foreground underline underline-offset-2">
-          Datenschutzhinweise
-        </a>
-        .
-      </p>
-      {/* Hinter dem Hinweis: Braucht Turnstile doch eine Eingabe, bleibt der Hinweis über der mobilen Leiste. */}
+      <TermsNotice>{FUNNEL_TERMS.c.notice}</TermsNotice>
+      <TermsConsent id="accept_terms" checked={contact.accept_terms} onChange={(accept_terms) => onChange({ accept_terms })} error={errors.accept_terms} />
+      {/* Hinter dem Haken: Braucht Turnstile doch eine Eingabe, bleiben Hinweis und Haken über der mobilen Leiste. */}
       <div ref={turnstileRef} />
     </form>
   );

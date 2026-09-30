@@ -26,8 +26,6 @@ import { plannerRenderKey } from "./render-key";
 
 export type { PlannerStep } from "./flow";
 
-export type OffersChoice = "ja" | "nein";
-
 export interface PlannerState {
   step: PlannerStep;
   sessionToken: string | null;
@@ -38,14 +36,12 @@ export interface PlannerState {
   selectedPhotoPath: string | null;
   renders: PlannerRender[];
   activeRenderId: string | null;
-  /** Antwort auf „Möchten Sie auch Angebote?“ (vor dem Absenden). */
-  offersChoice: OffersChoice | null;
-  /** Zeitrahmen in Monaten als Text ("1", "3" …), nur mit Angeboten. */
+  /** Zeitrahmen in Monaten als Text ("1", "3" …). */
   timeframe: string;
-  /** Budget in Euro, null = „Weiß ich nicht“; zählt nur mit budgetConfirmed (nur mit Angeboten). */
+  /** Budget in Euro, null = „Weiß ich nicht“; zählt nur mit budgetConfirmed. */
   budget: number | null;
   budgetConfirmed: boolean;
-  /** Anlass und Wohnsituation (IDs aus dem Katalog von Funnel A), nur mit Angeboten. */
+  /** Anlass und Wohnsituation (IDs aus dem Katalog von Funnel A). */
   occasion: string;
   housing: string;
   /** Kontakt erfasst: Visualisierung und Preis sind freigeschaltet. */
@@ -76,7 +72,6 @@ type Action =
   | { type: "renderUpdated"; id: string; patch: Partial<PlannerRender> }
   | { type: "rendersReplaced"; renders: PlannerRender[] }
   | { type: "activeRender"; id: string }
-  | { type: "offersChoice"; value: OffersChoice }
   | { type: "timeframe"; value: string }
   | { type: "budget"; value: number | null }
   | { type: "occasion"; value: string }
@@ -99,7 +94,6 @@ function initialState(): PlannerState {
     selectedPhotoPath: null,
     renders: [],
     activeRenderId: null,
-    offersChoice: null,
     timeframe: "",
     budget: FUNNEL_A_BUDGET.default,
     budgetConfirmed: false,
@@ -181,8 +175,6 @@ function reducer(state: PlannerState, action: Action): PlannerState {
     }
     case "activeRender":
       return { ...state, activeRenderId: action.id };
-    case "offersChoice":
-      return { ...state, offersChoice: action.value };
     case "timeframe":
       return { ...state, timeframe: action.value };
     case "budget":
@@ -197,7 +189,7 @@ function reducer(state: PlannerState, action: Action): PlannerState {
       return { ...state, submitted: true, offersRequested: action.offersRequested, hasPhone: action.hasPhone, step: "ergebnis" };
     case "offersRequested":
       // Angebote gibt es nur mit Telefonnummer: der Server hat sie jetzt.
-      return { ...state, offersRequested: true, offersChoice: "ja", hasPhone: true };
+      return { ...state, offersRequested: true, hasPhone: true };
     case "reset":
       return initialState();
   }
@@ -207,8 +199,9 @@ function readStorage(): Partial<PlannerState> | null {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) return null;
-    const parsed = JSON.parse(raw) as Partial<PlannerState> & { furthestIndex?: unknown };
-    const { furthestIndex: _legacy, ...rest } = parsed;
+    const parsed = JSON.parse(raw) as Partial<PlannerState> & { furthestIndex?: unknown; offersChoice?: unknown };
+    // offersChoice: Ja/Nein zu Angeboten bis 30.09.2026; Angebote gehören seitdem zu jeder Planung.
+    const { furthestIndex: _legacy, offersChoice: _legacyChoice, ...rest } = parsed;
     const room = sanitizeRoom(parsed.room);
     return {
       ...rest,
@@ -218,7 +211,6 @@ function readStorage(): Partial<PlannerState> | null {
       // Ohne gespeicherte Angabe ist unbekannt, was der Kunde gewählt hat – nicht „alles Standard“.
       answered: "answered" in parsed ? sanitizeProvenance(parsed.answered, room) : null,
       photos: [],
-      offersChoice: parsed.offersChoice === "ja" || parsed.offersChoice === "nein" ? parsed.offersChoice : null,
       timeframe: typeof parsed.timeframe === "string" ? parsed.timeframe : "",
       budget: storedBudget(parsed.budget),
       budgetConfirmed: parsed.budgetConfirmed === true,
@@ -346,7 +338,6 @@ export function usePlanner() {
       updateRender: (id: string, patch: Partial<PlannerRender>) => dispatch({ type: "renderUpdated", id, patch }),
       replaceRenders: (renders: PlannerRender[]) => dispatch({ type: "rendersReplaced", renders }),
       setActiveRender: (id: string) => dispatch({ type: "activeRender", id }),
-      setOffersChoice: (value: OffersChoice) => dispatch({ type: "offersChoice", value }),
       setTimeframe: (value: string) => dispatch({ type: "timeframe", value }),
       setBudget: (value: number | null) => dispatch({ type: "budget", value }),
       setOccasion: (value: string) => dispatch({ type: "occasion", value }),

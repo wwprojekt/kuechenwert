@@ -36,10 +36,10 @@ export function buildSubmitBody({ answers, contact, turnstileToken, website, sub
       email: contact.email,
       phone: contact.phone,
     },
+    // accept_terms: Hinweistext FUNNEL_TERMS.a samt AGB bestätigt (validateContact lässt ohne Haken nicht absenden).
     consents: {
       share_with_studios: true,
-      contact_by_phone: contact.contact_by_phone,
-      marketing: contact.marketing,
+      accept_terms: true,
     },
     turnstile_token: turnstileToken,
     website,

@@ -41,8 +41,8 @@ describe("leadFileProblem", () => {
 });
 
 describe("leadFileCategoriesFor", () => {
-  it("fragt in Funnel B nach dem Angebot, sonst nach Grundriss und Raumfotos", () => {
-    expect(leadFileCategoriesFor("b").map((c) => c.value)).toContain("angebot");
+  it("fragt in Funnel B zuerst nach der Planung, dann nach Angebot und Fotos, sonst nach Grundriss und Raumfotos", () => {
+    expect(leadFileCategoriesFor("b").map((c) => c.value)).toEqual(["grundriss", "angebot", "kueche_bild"]);
     for (const funnel of ["a", "c"]) {
       expect(leadFileCategoriesFor(funnel).map((c) => c.value)).toEqual(["grundriss", "kueche_bild"]);
     }

@@ -7,6 +7,7 @@ import { NAME_FORM_ID, NameStep } from "@/features/funnel-a/components/NameStep"
 import { StepContent } from "@/features/funnel-a/components/StepContent";
 import { useFunnelA } from "@/features/funnel-a/state";
 import {
+  FUNNEL_A_AFTER_DETAILS,
   FUNNEL_A_SLUGS,
   canLeaveStep,
   findStep,
@@ -76,6 +77,10 @@ export function FunnelAClient({ slug }: { slug: FunnelAStepSlug }) {
     telemetry.back();
     goTo(prevSlug);
   }, [goTo, prevSlug, telemetry]);
+  const skipDetails = () => {
+    telemetry.next();
+    goTo(FUNNEL_A_AFTER_DETAILS);
+  };
 
   const submitName = () => {
     setNameAttempted(true);
@@ -192,7 +197,19 @@ export function FunnelAClient({ slug }: { slug: FunnelAStepSlug }) {
       ) : step.kind === "name" ? (
         <NameStep contact={contact} onChange={patchContact} errors={nameAttempted ? nameErrors : {}} onSubmit={submitName} />
       ) : (
-        <StepContent step={step} answers={answers} onAnswer={setAnswer} onAdvance={goNext} />
+        <>
+          <StepContent step={step} answers={answers} onAnswer={setAnswer} onAdvance={goNext} />
+          {step.detail && (
+            <button
+              type="button"
+              onClick={skipDetails}
+              title="Ausstattung und Hintergrund klärt das Studio gern mit Ihnen"
+              className="mt-3 inline-flex min-h-9 items-center text-sm font-medium text-primary underline-offset-4 hover:underline short:mt-2"
+            >
+              Details überspringen
+            </button>
+          )}
+        </>
       )}
     </FunnelShell>
   );

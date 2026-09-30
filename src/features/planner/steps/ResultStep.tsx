@@ -69,7 +69,13 @@ function RenderView({ active, beforePhotoUrl, generating, error, startedAt, onGe
   );
 }
 
-/** Ergebnis nach der Kontakterfassung: Küche, Preis und der nächste Schritt zu Angeboten. */
+const OFFER_STEPS = [
+  "Geprüfte Küchenstudios aus Ihrer Region sehen Ihre Planung – ohne Ihren Namen und Ihre Kontaktdaten.",
+  "Mehrere Studios können Ihnen ein unverbindliches Angebot machen. Jedes schicken wir Ihnen per E-Mail.",
+  "Sie vergleichen auf Ihrer Projektseite und entscheiden in Ruhe – ohne Kaufzwang.",
+];
+
+/** Ergebnis nach der Kontakterfassung: Küche, Preis und was mit den Angeboten passiert. */
 export function ResultStep(props: ResultStepProps) {
   const { renders, active, estimate, generating, outdated, offersRequested, onGenerate, onSelectRender, onFeedback, onRequestOffers, onAdjust, onNewPlanning, aiTraining } = props;
   const anyPending = renders.some((r) => r.status === "pending");
@@ -112,11 +118,16 @@ export function ResultStep(props: ResultStepProps) {
         {offersRequested ? (
           <div className="rounded-2xl border border-success/30 bg-success/5 p-4">
             <p className="flex items-center gap-2 font-semibold text-foreground">
-              <CheckCircle2 className="h-5 w-5 text-success" aria-hidden="true" /> Ihre Anfrage ist bei den Studios
+              <CheckCircle2 className="h-5 w-5 flex-none text-success" aria-hidden="true" /> Ihre kostenlosen Angebote sind angefragt
             </p>
-            <p className="mt-1 text-sm text-muted-foreground">
-              Studios aus Ihrer Region geben Angebote ab. Jedes neue Angebot schicken wir Ihnen per E-Mail; vergleichen und wählen Sie auf Ihrer Projektseite.
-            </p>
+            <ol className="mt-2 space-y-1.5 text-sm text-muted-foreground">
+              {OFFER_STEPS.map((text, i) => (
+                <li key={text} className="flex gap-2">
+                  <span className="grid h-5 w-5 flex-none place-items-center rounded-full bg-success/15 text-xs font-bold text-success">{i + 1}</span>
+                  {text}
+                </li>
+              ))}
+            </ol>
             <Button asChild className="mt-3 w-full">
               <Link to="/projekt">Zu meiner Projektseite</Link>
             </Button>

@@ -10,20 +10,21 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
-import { ConsentCheckbox, TextField } from "@/features/funnel-a/components/ContactFields";
-import { OFFERS_CONSENT_TEXT, PHONE_ERROR, TIMEFRAMES, isValidPhone } from "../steps/LeadSteps";
+import { TermsLinks, TermsNotice } from "@/components/funnel/terms-consent";
+import { TextField } from "@/features/funnel-a/components/ContactFields";
+import { OFFERS_LATER_TERMS } from "../../../../supabase/functions/_shared/lead-terms.ts";
+import { PHONE_ERROR, TIMEFRAMES, isValidPhone } from "../steps/LeadSteps";
 
 export interface OffersRequest {
   timeframeMonths: number | null;
-  contactByPhone: boolean;
   /** Nur, wenn zum Projekt noch keine Telefonnummer gespeichert ist. */
   phone?: string;
 }
 
 /**
- * Nachträglich Angebote anfordern, mit demselben Einwilligungstext wie im
- * Funnel. Angebote gibt es nur mit Telefonnummer: needsPhone fragt sie ab,
- * wenn beim Abschluss keine angegeben wurde.
+ * Angebote für eine Planung ohne Ausschreibung nachfordern (bis 30.09.2026
+ * konnten Kunden im Planer „nur Küche & Preis“ wählen). Angebote gibt es nur
+ * mit Telefonnummer: needsPhone fragt sie ab, wenn keine gespeichert ist.
  */
 export function RequestOffersDialog({
   open,
@@ -41,7 +42,6 @@ export function RequestOffersDialog({
   onConfirm: (request: OffersRequest) => void;
 }) {
   const [timeframe, setTimeframe] = useState("");
-  const [call, setCall] = useState(false);
   const [phone, setPhone] = useState("");
   const [phoneError, setPhoneError] = useState<string | undefined>();
 
@@ -51,7 +51,7 @@ export function RequestOffersDialog({
       document.getElementById("offers-phone")?.focus();
       return;
     }
-    onConfirm({ timeframeMonths: Number(timeframe) || null, contactByPhone: call, ...(needsPhone ? { phone: phone.trim() } : {}) });
+    onConfirm({ timeframeMonths: Number(timeframe) || null, ...(needsPhone ? { phone: phone.trim() } : {}) });
   };
 
   return (
@@ -60,7 +60,7 @@ export function RequestOffersDialog({
         <AlertDialogHeader>
           <AlertDialogTitle className="text-xl">Kostenlose Angebote anfordern</AlertDialogTitle>
           <AlertDialogDescription>
-            Geprüfte Küchenstudios aus Ihrer Region schicken Ihnen unverbindliche Angebote und Kostenvoranschläge für genau diese Küche.
+            Mehrere geprüfte Küchenstudios aus Ihrer Region können Ihnen unverbindliche Angebote für genau diese Küche machen.
           </AlertDialogDescription>
         </AlertDialogHeader>
         <div className="space-y-3">
@@ -84,12 +84,7 @@ export function RequestOffersDialog({
           <label htmlFor="offers-timeframe" className="block text-sm font-medium">
             Wann soll die Küche kommen? <span className="font-normal text-muted-foreground">(optional)</span>
           </label>
-          <select
-            id="offers-timeframe"
-            value={timeframe}
-            onChange={(e) => setTimeframe(e.target.value)}
-            className="input-field"
-          >
+          <select id="offers-timeframe" value={timeframe} onChange={(e) => setTimeframe(e.target.value)} className="input-field">
             <option value="">Keine Angabe</option>
             {TIMEFRAMES.map((t) => (
               <option key={t.id} value={t.id}>
@@ -97,10 +92,9 @@ export function RequestOffersDialog({
               </option>
             ))}
           </select>
-          <ConsentCheckbox id="offers-call" checked={call} onChange={setCall}>
-            Studios und KüchenWert dürfen mich zu meinem Projekt auch anrufen.
-          </ConsentCheckbox>
-          <p className="text-xs leading-snug text-muted-foreground">{OFFERS_CONSENT_TEXT.replace("Mit „Ja“", "Mit „Angebote anfordern“")}</p>
+          <TermsNotice className="text-xs">
+            {OFFERS_LATER_TERMS.notice} <TermsLinks />
+          </TermsNotice>
           {error && (
             <p role="alert" className="text-sm font-medium text-destructive">
               {error}

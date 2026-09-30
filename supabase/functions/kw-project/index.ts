@@ -5,7 +5,8 @@
  *   get            Projekt, Ausschreibung, Angebote, Visualisierungen, Auftrag
  *   accept         Angebot eines Studios annehmen (bid_id)
  *   cancel         Projekt beenden (reason); widerruft die Weitergabe an Studios
- *   add-phone      Telefonnummer nachtragen (phone, consent_call), nur solange keine hinterlegt ist
+ *   add-phone      Telefonnummer nachtragen (phone), nur solange keine hinterlegt ist
+ *   calls          Anrufe von Studios ein- oder ausschalten (granted)
  *   order-confirm  Montage bestätigen (nach Kaufvertrag)
  *   order-problem  Problem zum Auftrag melden (message)
  *   export-data    Alle gespeicherten Daten als JSON (Art. 15/20 DSGVO)
@@ -16,9 +17,10 @@
  *                  Studios am Projekt erfahren es über die Outbox (project_updated)
  *   ai-consent     Einwilligung zur KI-Verbesserung erteilen oder widerrufen (granted);
  *                  Widerruf löscht die Trainingskopien sofort
- *   request-offers Funnel C ohne Ausschreibung (nur Visualisierung): Angebote
- *                  nachträglich anfordern (consent_share, timeframe_months;
- *                  phone, falls noch keine Nummer gespeichert ist)
+ *   request-offers Funnel C ohne Ausschreibung (bis 30.09.2026 „nur
+ *                  Visualisierung“): Angebote nachfordern (consent_share,
+ *                  accept_terms, timeframe_months; phone, falls noch keine
+ *                  Nummer gespeichert ist)
  *   resend         Projektlink(s) per E-Mail neu zusenden (email) – ohne Token
  *
  * Der Token wird nie gespeichert, nur sein SHA-256-Hash (lead_access_tokens).
@@ -43,12 +45,14 @@ import { MAX_FILES_PER_LEAD, attachUploadedFiles, issueUploads, parseAnnouncedFi
 import { forgetTrainingSamples, storeTrainingSamples } from "../_shared/ai-training.ts";
 import { PLANNER_TIMEFRAMES } from "../_shared/kitchen-catalog.ts";
 import { sanitizeCustomerDetails } from "../_shared/lead-details.ts";
+import { CALLS_TERMS_VERSION, PHONE_LATER_TERMS, termsAnswer } from "../_shared/lead-terms.ts";
 import { requestPlannerOffers } from "../_shared/planner-offers.ts";
 
 const TIMEFRAMES = new Set(PLANNER_TIMEFRAMES.map((t) => t.months));
 
 const SIGNED_URL_TTL = 60 * 60;
-const CONSENT_TEXT_VERSION = "kw-telefon-2026-09-28";
+/** Telefonnummer nachtragen mit eigenem Anruf-Haken, bis 30.09.2026. */
+const LEGACY_PHONE_TEXT_VERSION = "kw-telefon-2026-09-28";
 const AI_CONSENT_TEXT_VERSION = "kw-ki-verbesserung-2026-09-28";
 const CLOSED_TENDER_STATUSES = new Set(["awarded", "cancelled", "expired"]);
 
@@ -104,8 +108,11 @@ async function projectView(sb: SupabaseClient, leadId: string) {
   const { data: order, error: orderErr } = await sb.rpc("kw_project_order", { p_lead_id: leadId });
   if (orderErr) throw orderErr;
   const upload = await uploadState(sb, leadId);
+  const { data: calls, error: callsErr } = await sb.from("leads").select("consent_call").eq("id", leadId).maybeSingle();
+  if (callsErr) throw callsErr;
   return {
     ...view,
+    lead: { ...(view.lead as Record<string, unknown>), calls_allowed: calls?.consent_call === true },
     renders,
     photos,
     ai_training: aiTraining,
@@ -245,7 +252,9 @@ async function actionAddPhone(req: Request, sb: SupabaseClient, leadId: string, 
   if (!lead) throw new HttpError(404, "Projekt nicht gefunden.", "not_found");
   if (typeof lead.phone === "string" && lead.phone.trim()) return jsonResponse(req, { ok: true, already: true });
 
-  const consentCall = body.consent_call === true;
+  // Die Karte ab 30.09.2026 sagt, wofür Studios die Nummer bekommen; ältere hatten einen eigenen Anruf-Haken.
+  const legacy = "consent_call" in body;
+  const consentCall = legacy ? body.consent_call === true : true;
   const { data: updated, error: updateErr } = await sb
     .from("leads")
     .update({ phone, consent_call: consentCall })
@@ -260,12 +269,41 @@ async function actionAddPhone(req: Request, sb: SupabaseClient, leadId: string, 
     user_id: lead.user_id ?? null,
     purpose: "contact_by_phone",
     granted: consentCall,
-    text_version: CONSENT_TEXT_VERSION,
+    text_version: legacy ? LEGACY_PHONE_TEXT_VERSION : PHONE_LATER_TERMS.version,
     ip_address: validIp(ip),
     user_agent: req.headers.get("user-agent")?.slice(0, 500) ?? null,
   });
   if (consentErr) console.error("[kw-project] consent insert failed", consentErr.message);
   return jsonResponse(req, { ok: true });
+}
+
+/**
+ * Anrufe von Studios ein- oder ausschalten. Ausgeschaltet sehen Studios mit
+ * freigeschaltetem Kontakt die Nummer nicht mehr (kw_dealer_project), erst das
+ * Studio mit Zuschlag.
+ */
+async function actionCalls(req: Request, sb: SupabaseClient, leadId: string, body: Record<string, unknown>) {
+  await enforceRateLimit(sb, `kw:calls:${leadId}`, 3600, 20);
+  const granted = body.granted === true;
+  const { data: lead, error } = await sb.from("leads").select("phone, user_id, anonymized_at").eq("id", leadId).maybeSingle();
+  if (error) throw error;
+  if (!lead || lead.anonymized_at) throw new HttpError(404, "Projekt nicht gefunden.", "not_found");
+  if (!(typeof lead.phone === "string" && lead.phone.trim())) {
+    throw new HttpError(409, "Zu diesem Projekt ist keine Telefonnummer gespeichert.", "no_phone");
+  }
+  const { error: updateErr } = await sb.from("leads").update({ consent_call: granted }).eq("id", leadId);
+  if (updateErr) throw updateErr;
+  const { error: consentErr } = await sb.from("lead_consents").insert({
+    lead_id: leadId,
+    user_id: lead.user_id ?? null,
+    purpose: "contact_by_phone",
+    granted,
+    text_version: CALLS_TERMS_VERSION,
+    ip_address: validIp(clientIp(req)),
+    user_agent: req.headers.get("user-agent")?.slice(0, 500) ?? null,
+  });
+  if (consentErr) throw consentErr;
+  return jsonResponse(req, await projectView(sb, leadId));
 }
 
 async function actionRequestOffers(req: Request, sb: SupabaseClient, leadId: string, body: Record<string, unknown>) {
@@ -276,6 +314,7 @@ async function actionRequestOffers(req: Request, sb: SupabaseClient, leadId: str
   await requestPlannerOffers(sb, {
     leadId,
     timeframeMonths: TIMEFRAMES.has(Number(body.timeframe_months)) ? Number(body.timeframe_months) : null,
+    terms: termsAnswer(body),
     contactByPhone: body.contact_by_phone === true,
     phone: body.phone,
     meta: { userId: null, ip: validIp(clientIp(req)), userAgent: req.headers.get("user-agent")?.slice(0, 500) ?? null },
@@ -373,6 +412,8 @@ serve(async (req) => {
       return actionAiConsent(req, sb, leadId, body);
     case "request-offers":
       return actionRequestOffers(req, sb, leadId, body);
+    case "calls":
+      return actionCalls(req, sb, leadId, body);
     default:
       throw new HttpError(400, "Unbekannte Aktion.", "unknown_action");
   }

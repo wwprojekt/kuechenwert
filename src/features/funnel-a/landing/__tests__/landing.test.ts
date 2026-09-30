@@ -6,13 +6,13 @@ import { LANDING_FAQ_QUESTIONS, landingFaqItems } from "../faq";
 describe("funnelEntryUrl", () => {
   it("startet mit gewählter Form bei Schritt 2 und reicht Tracking-Parameter durch", () => {
     expect(funnelEntryUrl("?utm_source=google&utm_campaign=kueche&gclid=abc", "l")).toBe(
-      "/funnel/a/raum?form=l&utm_source=google&utm_campaign=kueche&gclid=abc",
+      "/funnel/a/stil?form=l&utm_source=google&utm_campaign=kueche&gclid=abc",
     );
-    expect(funnelEntryUrl("?msclkid=m1&fbclid=f1&plz=30159", "insel")).toBe("/funnel/a/raum?form=insel&msclkid=m1&fbclid=f1&plz=30159");
+    expect(funnelEntryUrl("?msclkid=m1&fbclid=f1&plz=30159", "insel")).toBe("/funnel/a/stil?form=insel&msclkid=m1&fbclid=f1&plz=30159");
   });
 
   it("ersetzt ein ?form= aus der Landing-URL", () => {
-    expect(funnelEntryUrl("?form=u&gbraid=g1", "zeile")).toBe("/funnel/a/raum?form=zeile&gbraid=g1");
+    expect(funnelEntryUrl("?form=u&gbraid=g1", "zeile")).toBe("/funnel/a/stil?form=zeile&gbraid=g1");
   });
 
   it("startet ohne Auswahl beim ersten Schritt", () => {
@@ -22,7 +22,7 @@ describe("funnelEntryUrl", () => {
 
   it("baut für jede Küchenform einen Link", () => {
     for (const option of FORM_OPTIONS) {
-      expect(funnelEntryUrl("", option.id)).toBe(`/funnel/a/raum?form=${option.id}`);
+      expect(funnelEntryUrl("", option.id)).toBe(`/funnel/a/stil?form=${option.id}`);
     }
   });
 });

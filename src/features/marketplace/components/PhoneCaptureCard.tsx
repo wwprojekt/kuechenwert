@@ -2,13 +2,13 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { CheckCircle2, Loader2, Phone } from "lucide-react";
 import { useEffect, useRef } from "react";
-import { Controller, useForm } from "react-hook-form";
+import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
+import { PHONE_LATER_TERMS } from "../../../../supabase/functions/_shared/lead-terms.ts";
 import { errorMessage } from "../api-client";
 import { addProjectPhone } from "../project-api";
 
@@ -20,17 +20,17 @@ const phoneSchema = z.object({
     .string()
     .trim()
     .refine((v) => /^\+?[\d\s()/-]+$/.test(v) && digitCount(v) >= 6 && digitCount(v) <= 16, "Bitte eine gültige Telefonnummer angeben."),
-  consentCall: z.boolean(),
 });
 type PhoneValues = z.infer<typeof phoneSchema>;
 
+/** Telefonnummer nachtragen (ältere Anfragen ohne Nummer); der Hinweis ist PHONE_LATER_TERMS. */
 export function PhoneCaptureCard({ token, onSaved, className }: { token: string; onSaved: () => void; className?: string }) {
   const qc = useQueryClient();
   const doneRef = useRef<HTMLParagraphElement>(null);
-  const form = useForm<PhoneValues>({ resolver: zodResolver(phoneSchema), defaultValues: { phone: "", consentCall: false } });
+  const form = useForm<PhoneValues>({ resolver: zodResolver(phoneSchema), defaultValues: { phone: "" } });
   const { errors } = form.formState;
   const save = useMutation({
-    mutationFn: (v: PhoneValues) => addProjectPhone(token, v.phone, v.consentCall),
+    mutationFn: (v: PhoneValues) => addProjectPhone(token, v.phone),
     onSuccess: () => {
       onSaved();
       void qc.invalidateQueries({ queryKey: ["kw-project", token] });
@@ -51,9 +51,8 @@ export function PhoneCaptureCard({ token, onSaved, className }: { token: string;
           </p>
           {!save.data?.already && (
             <p className="mt-1 text-sm text-muted-foreground">
-              {save.variables?.consentCall
-                ? "Studios, die Ihren Kontakt freischalten, können Rückfragen jetzt kurz telefonisch mit Ihnen klären."
-                : "Studios, die Ihren Kontakt freischalten, sehen Ihre Nummer. Ohne Ihre Erlaubnis ruft Sie niemand an."}
+              Studios, die Ihren Kontakt freischalten, können Rückfragen jetzt kurz telefonisch mit Ihnen klären. Anrufe können Sie auf dieser
+              Seite jederzeit ausschalten.
             </p>
           )}
         </div>
@@ -70,8 +69,7 @@ export function PhoneCaptureCard({ token, onSaved, className }: { token: string;
         <div className="max-w-2xl">
           <h2 className="font-bold leading-snug">Telefonnummer ergänzen – schneller zum passenden Angebot</h2>
           <p className="mt-1 text-sm text-muted-foreground">
-            Studios klären Rückfragen zu Maßen und Wünschen oft in einem kurzen Telefonat. Ihre Nummer erhalten nur Studios, die Ihren Kontakt freischalten
-            (höchstens drei), und das Studio, dessen Angebot Sie annehmen.
+            Studios klären Rückfragen zu Maßen und Wünschen oft in einem kurzen Telefonat. {PHONE_LATER_TERMS.notice}
           </p>
         </div>
       </div>
@@ -93,28 +91,6 @@ export function PhoneCaptureCard({ token, onSaved, className }: { token: string;
               {errors.phone.message}
             </p>
           )}
-        </div>
-
-        <div className="space-y-1.5">
-          <div className="flex items-start gap-2.5">
-            <Controller
-              control={form.control}
-              name="consentCall"
-              render={({ field }) => (
-                <Checkbox
-                  id="project-phone-consent"
-                  ref={field.ref}
-                  checked={field.value}
-                  onCheckedChange={(v) => field.onChange(v === true)}
-                  onBlur={field.onBlur}
-                  className="mt-0.5"
-                />
-              )}
-            />
-            <Label htmlFor="project-phone-consent" className="font-normal leading-snug">
-              Küchenstudios dürfen mich zu meiner Anfrage anrufen.
-            </Label>
-          </div>
         </div>
 
         {save.isError && (

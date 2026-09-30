@@ -397,27 +397,29 @@ async function onProjectCreated(ctx: Ctx, p: Record<string, unknown>) {
   } else if (lead.email) {
     const link = await ctx.projectLink(lead.id);
     const active = tender?.status === "active";
+    const planned = lead.funnel_type === "traumkueche";
     const intro = !active
       ? "Vielen Dank für Ihre Anfrage. Unser Küchen-Team sieht sich Ihre Angaben an und gibt Ihr Projekt danach für die Küchenstudios frei. Bei Rückfragen melden wir uns."
       : covering === 0
         ? "Vielen Dank für Ihre Anfrage. Ihr Projekt ist angelegt. In Ihrer Region nimmt aktuell noch kein Partnerstudio teil – unser Team meldet sich deshalb persönlich bei Ihnen und sucht passende Studios."
-        : "Ihr Küchenprojekt ist online. Küchenstudios in Ihrer Region sehen jetzt Ihre Planung – ohne Ihre Kontaktdaten – und können Ihnen Angebote machen.";
+        : "Ihr Küchenprojekt ist online. Küchenstudios in Ihrer Region sehen jetzt Ihre Planung – ohne Ihre Kontaktdaten – und können Ihnen kostenlose, unverbindliche Angebote machen.";
     const content = [
       greeting(lead.first_name ?? undefined),
+      planned ? paragraph("Ihre Küche ist geplant: Visualisierung und Preisschätzung finden Sie jederzeit auf Ihrer Projektseite.") : "",
       paragraph(intro),
       tender ? infoBox("Ihr Projekt", summaryRows(tender.public_summary ?? {}, { min: tender.estimate_min_eur, max: tender.estimate_max_eur })) : "",
-      button("Mein Projekt & Angebote ansehen", link),
+      button(planned ? "Meine Küche & Angebote ansehen" : "Mein Projekt & Angebote ansehen", link),
       list([
         "Alle Angebote sehen Sie übersichtlich auf Ihrer Projektseite – mit Preis, Lieferzeit und Leistungsumfang.",
         "Sie entscheiden frei, welches Studio den Auftrag bekommt. Kein Kaufzwang.",
-        "Ihre Kontaktdaten erhalten nur das von Ihnen gewählte Studio und höchstens drei Studios, die Sie persönlich beraten möchten – Sie werden jeweils informiert.",
+        "Ihre Kontaktdaten mit Telefonnummer erhalten nur das von Ihnen gewählte Studio und höchstens drei Studios für Rückfragen zu Ihrem Angebot – Sie werden jeweils informiert. Anrufe können Sie auf Ihrer Projektseite ausschalten.",
       ]),
       paragraph("Bitte bewahren Sie diese E-Mail auf – der Link ist Ihr persönlicher Zugang zum Projekt."),
     ].join("");
     await ctx.send({
       to: lead.email,
-      subject: "Ihr Küchenprojekt ist angelegt – Ihr persönlicher Projektlink",
-      html: ctx.layout("Ihr Küchenprojekt ist angelegt", content),
+      subject: planned ? "Ihre Küche ist geplant – Ihre Angebote folgen" : "Ihr Küchenprojekt ist angelegt – Ihr persönlicher Projektlink",
+      html: ctx.layout(planned ? "Ihre Küche ist geplant" : "Ihr Küchenprojekt ist angelegt", content),
       type: "project_link",
       recipientName: fullName(lead),
     });

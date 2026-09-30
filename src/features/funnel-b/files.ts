@@ -1,6 +1,7 @@
 /**
  * Unterlagen zu einer Anfrage: Kategorien, Grenzen und Prüfung im Browser.
- * Funnel B startet mit dem vorhandenen Angebot, Anfrage und Planer reichen
+ * Funnel B fragt zuerst nach der Planung aus dem Studio (ein schriftliches
+ * Angebot geben die meisten Studios nicht mit), Anfrage und Planer reichen
  * Grundriss und Raumfotos auf der Projektseite nach. Spiegelt
  * supabase/functions/_shared/lead-files.ts; Grenzen dort und hier gemeinsam ändern.
  */
@@ -23,21 +24,21 @@ export interface LeadFileCategoryOption {
 
 export const LEAD_FILE_CATEGORIES: LeadFileCategoryOption[] = [
   {
-    value: "angebot",
-    label: "Schriftliches Angebot",
-    description: "PDF oder Fotos der Seiten – am besten mit Positionsliste und Preisen.",
+    value: "grundriss",
+    label: "Planung",
+    description: "Grundriss, Ansichten, Geräteliste – alles, was Ihnen das Studio mitgegeben hat.",
     accept: "application/pdf,image/*",
   },
   {
-    value: "grundriss",
-    label: "Planung",
-    description: "Grundriss, Ansichten oder Perspektiven aus dem Küchenstudio.",
+    value: "angebot",
+    label: "Angebot (falls vorhanden)",
+    description: "Schriftliches Angebot mit Positionen und Preisen.",
     accept: "application/pdf,image/*",
   },
   {
     value: "kueche_bild",
     label: "Fotos",
-    description: "Fotos der Planung, des Raums oder einer Musterküche.",
+    description: "Fotos vom Raum oder einer Musterküche.",
     accept: "image/*",
   },
 ];

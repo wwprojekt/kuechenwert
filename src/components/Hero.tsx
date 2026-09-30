@@ -18,7 +18,7 @@ const PATHS: Path[] = [
     to: "/funnel/c",
     icon: Sparkles,
     title: "Traumküche planen & visualisieren",
-    description: "KI-Vorschau im eigenen Raum und Preis in 3 Minuten",
+    description: "KI-Vorschau, Preis & Angebote",
     badge: "Neu · KI",
     featured: true,
   },
@@ -31,8 +31,8 @@ const PATHS: Path[] = [
   {
     to: "/funnel/b",
     icon: TrendingDown,
-    title: "Angebot unterbieten lassen",
-    description: "Vorhandenes Studio-Angebot günstiger bekommen",
+    title: "Preis unterbieten lassen",
+    description: "Planung vom Küchenstudio günstiger bekommen",
   },
 ];
 

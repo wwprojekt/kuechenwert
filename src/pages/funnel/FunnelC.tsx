@@ -8,10 +8,10 @@ import { captureUtmParams } from "@/lib/utm";
  * Funnel C — Traumküche planen & visualisieren (Konfigurator v3).
  *
  * Form, Maße, Foto und Ausstattung je auf einem Bildschirm → „Küche
- * visualisieren“ startet die KI im Hintergrund → Angebote gewünscht?, Name,
- * E-Mail (mit Angeboten auch Telefon) → erst dann Küche und Preisschätzung
- * (jede Visualisierung ist ein Lead; der Server gibt Bild und Preis vorher
- * nicht heraus).
+ * visualisieren“ startet die KI im Hintergrund → Fragen für die Studios,
+ * Name, E-Mail, Telefon und AGB-Haken → erst dann Küche und Preisschätzung.
+ * Jede Visualisierung ist ein Lead mit Ausschreibung; der Server gibt Bild und
+ * Preis vorher nicht heraus.
  */
 export default function FunnelC() {
   const controller = usePlannerFunnel();
@@ -24,7 +24,7 @@ export default function FunnelC() {
     <>
       <FunnelSeo
         title="Traumküche planen & visualisieren"
-        description="Laden Sie ein Foto Ihres Raums hoch, konfigurieren Sie Ihre Wunschküche und sehen Sie per KI, wie sie aussehen wird – mit realistischer Preisschätzung und Angeboten geprüfter Küchenstudios."
+        description="Laden Sie ein Foto Ihres Raums hoch, planen Sie Ihre Wunschküche und sehen Sie per KI, wie sie aussehen wird – mit Preisschätzung und kostenlosen, unverbindlichen Angeboten geprüfter Küchenstudios aus Ihrer Region."
         canonicalPath="/funnel/c"
       />
       <PlannerFunnel c={controller} />

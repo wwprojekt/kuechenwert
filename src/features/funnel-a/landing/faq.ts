@@ -5,6 +5,7 @@ export const LANDING_FAQ_QUESTIONS = [
   "Was kostet mich KüchenWert?",
   "Wie läuft die Angebotsphase ab?",
   "Bin ich zu einem Kauf verpflichtet?",
+  "Rufen mich dann viele Studios an?",
   "Was passiert mit meinen Daten?",
 ];
 

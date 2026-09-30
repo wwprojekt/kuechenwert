@@ -2,8 +2,8 @@ import { funnelProgressPercent } from "@/components/funnel/funnel-progress";
 
 /**
  * Schritte von Funnel C: je eine Frage pro Bildschirm. Nach „Küche
- * visualisieren“ läuft die KI im Hintergrund, während der Kunde die
- * Lead-Schritte ausfüllt; Küche und Preis zeigt erst das Ergebnis.
+ * visualisieren“ läuft die KI im Hintergrund, während der Kunde die Fragen
+ * für die Studio-Angebote beantwortet; Küche und Preis zeigt erst das Ergebnis.
  */
 export type PlannerStep =
   | "form"
@@ -27,7 +27,6 @@ export type PlannerStep =
   | "wuensche"
   | "plz"
   | "visualisierung"
-  | "angebote"
   | "zeitrahmen"
   | "budget"
   | "anlass"
@@ -66,7 +65,6 @@ export const PLANNER_STEPS: readonly PlannerStepDef[] = [
   { id: "wuensche", label: "Wünsche", kind: "plan", detail: true },
   { id: "plz", label: "Einbauort", kind: "plan" },
   { id: "visualisierung", label: "Visualisierung", kind: "lead" },
-  { id: "angebote", label: "Angebote", kind: "lead" },
   { id: "zeitrahmen", label: "Zeitrahmen", kind: "lead" },
   { id: "budget", label: "Budget", kind: "lead" },
   { id: "anlass", label: "Anlass", kind: "lead" },
@@ -78,20 +76,28 @@ export const PLANNER_STEPS: readonly PlannerStepDef[] = [
 
 const STEP_IDS = new Set<string>(PLANNER_STEPS.map((s) => s.id));
 
-/** Schritt-IDs bis 09/2026 (sechs lange Schritte) auf die neue Folge abbilden. */
+/**
+ * Frühere Schritt-IDs: „raum“ und „ausstattung“ aus der Fassung mit sechs
+ * langen Schritten, „angebote“ aus der Ja/Nein-Frage bis 30.09.2026.
+ */
 const LEGACY_STEPS: Record<string, PlannerStep> = {
   raum: "form",
   ausstattung: "arbeitsplatte",
-  kontakt: "angebote",
+  angebote: "zeitrahmen",
 };
 
 export function isPlannerStep(value: unknown): value is PlannerStep {
   return typeof value === "string" && STEP_IDS.has(value);
 }
 
+/** Schritt aus ?schritt= oder dem Speicher; alte IDs zeigen auf ihren Nachfolger, Unbekanntes auf null. */
+export function knownPlannerStep(value: unknown): PlannerStep | null {
+  if (isPlannerStep(value)) return value;
+  return typeof value === "string" ? (LEGACY_STEPS[value] ?? null) : null;
+}
+
 export function normalizePlannerStep(value: unknown): PlannerStep {
-  if (typeof value === "string" && LEGACY_STEPS[value]) return LEGACY_STEPS[value]!;
-  return isPlannerStep(value) ? value : "form";
+  return knownPlannerStep(value) ?? "form";
 }
 
 export function stepDef(step: PlannerStep): PlannerStepDef {
@@ -101,20 +107,11 @@ export function stepDef(step: PlannerStep): PlannerStepDef {
 export interface FlowState {
   /** Kontakt erfasst: Lead-Schritte entfallen, Visualisieren führt direkt ins Ergebnis. */
   unlocked: boolean;
-  /** Antwort auf „Möchten Sie auch Angebote?“; Zeitrahmen, Budget, Anlass und Wohnsituation folgen nur bei Ja. */
-  wantsOffers: boolean | null;
 }
 
-/** Fragen für die Studios: nur mit „Ja, Angebote“. */
-const OFFER_QUESTIONS: ReadonlySet<PlannerStep> = new Set(["zeitrahmen", "budget", "anlass", "wohnsituation"]);
-
 /** Sichtbare Schritte in Reihenfolge. */
-export function plannerFlow({ unlocked, wantsOffers }: FlowState): PlannerStep[] {
-  return PLANNER_STEPS.filter((s) => {
-    if (s.kind === "lead") return !unlocked && (!OFFER_QUESTIONS.has(s.id) || wantsOffers === true);
-    if (s.kind === "result") return unlocked;
-    return true;
-  }).map((s) => s.id);
+export function plannerFlow({ unlocked }: FlowState): PlannerStep[] {
+  return PLANNER_STEPS.filter((s) => (s.kind === "lead" ? !unlocked : s.kind === "result" ? unlocked : true)).map((s) => s.id);
 }
 
 export function nextStep(step: PlannerStep, flow: FlowState): PlannerStep {
@@ -123,8 +120,9 @@ export function nextStep(step: PlannerStep, flow: FlowState): PlannerStep {
   return steps[Math.min(i + 1, steps.length - 1)] ?? step;
 }
 
+/** Zurück überspringt den Lade-Bildschirm: Er startet sonst eine weitere Visualisierung. */
 export function previousStep(step: PlannerStep, flow: FlowState): PlannerStep | null {
-  const steps = plannerFlow(flow);
+  const steps = plannerFlow(flow).filter((s) => s !== "visualisierung" || s === step);
   const i = steps.indexOf(step);
   return i > 0 ? steps[i - 1]! : null;
 }

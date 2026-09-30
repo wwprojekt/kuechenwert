@@ -1,5 +1,6 @@
-import { Lock } from "lucide-react";
 import { useMemo, useState, type FormEvent } from "react";
+import { TermsConsent, TermsNotice } from "@/components/funnel/terms-consent";
+import { FUNNEL_TERMS } from "../../../../supabase/functions/_shared/lead-terms.ts";
 import {
   CONTACT_FIELD_ORDER,
   EMAIL_MAX,
@@ -9,14 +10,11 @@ import {
   type FunnelAContact,
   type ValidContact,
 } from "../validation";
-import { ConsentCheckbox, TextField } from "./ContactFields";
+import { TextField } from "./ContactFields";
 
 export const CONTACT_FORM_ID = "funnel-a-contact";
 
 const fieldId = (field: ContactField) => `kontakt-${field}`;
-
-const LINK_CLASS =
-  "font-medium text-foreground underline underline-offset-2 hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring";
 
 interface ContactStepProps {
   contact: FunnelAContact;
@@ -35,8 +33,8 @@ interface ContactStepProps {
 const NAME_FIELDS: ReadonlySet<ContactField> = new Set(["salutation", "first_name", "last_name"]);
 
 /**
- * E-Mail, Telefon und freiwillige Einwilligungen; der Absende-Button steht in
- * der Weiter-Position des Funnel-Rahmens (form={CONTACT_FORM_ID}).
+ * E-Mail, Telefon und AGB-Haken; der Absende-Button steht in der
+ * Weiter-Position des Funnel-Rahmens (form={CONTACT_FORM_ID}).
  */
 export function ContactStep({ contact, onChange, onSubmit, onInvalid, onMissingName, submitting, turnstileRef, missing }: ContactStepProps) {
   const [website, setWebsite] = useState("");
@@ -88,35 +86,21 @@ export function ContactStep({ contact, onChange, onSubmit, onInvalid, onMissingN
         error={errorFor("email")}
       />
 
-      <div className="space-y-2.5">
-        <TextField
-          id={fieldId("phone")}
-          label="Telefon"
-          type="tel"
-          required
-          autoComplete="tel"
-          enterKeyHint="send"
-          maxLength={PHONE_MAX}
-          hint={hasPhone ? undefined : "Für Rückfragen der Studios zu Ihrem Angebot"}
-          hintClassName="xshort:hidden"
-          value={contact.phone}
-          onChange={(e) => {
-            const phone = e.target.value;
-            onChange(phone.trim() ? { phone } : { phone, contact_by_phone: false });
-          }}
-          onBlur={(e) => touch("phone", e.target.value)}
-          error={errorFor("phone")}
-        />
-        {hasPhone && (
-          <ConsentCheckbox id="kontakt-anruf" checked={contact.contact_by_phone} onChange={(contact_by_phone) => onChange({ contact_by_phone })}>
-            Küchenstudios dürfen mich zu meiner Anfrage anrufen.
-          </ConsentCheckbox>
-        )}
-      </div>
-
-      <ConsentCheckbox id="kontakt-marketing" checked={contact.marketing} onChange={(marketing) => onChange({ marketing })}>
-        Tipps und Angebote rund um den Küchenkauf per E-Mail, jederzeit abbestellbar
-      </ConsentCheckbox>
+      <TextField
+        id={fieldId("phone")}
+        label="Telefon"
+        type="tel"
+        required
+        autoComplete="tel"
+        enterKeyHint="send"
+        maxLength={PHONE_MAX}
+        hint={hasPhone ? undefined : "Für Rückfragen der Studios zu Ihrem Angebot"}
+        hintClassName="xshort:hidden"
+        value={contact.phone}
+        onChange={(e) => onChange({ phone: e.target.value })}
+        onBlur={(e) => touch("phone", e.target.value)}
+        error={errorFor("phone")}
+      />
 
       <div className="sr-only" aria-hidden="true">
         <label htmlFor="kontakt-website">Website</label>
@@ -138,21 +122,14 @@ export function ContactStep({ contact, onChange, onSubmit, onInvalid, onMissingN
         </div>
       )}
 
-      <p className="text-[11px] leading-snug text-ink-muted sm:text-xs sm:leading-relaxed">
-        <Lock className="mr-1 inline h-3.5 w-3.5 -translate-y-px text-brand-600" aria-hidden="true" />
-        Mit Klick auf „Kostenlos Angebote erhalten“ senden wir Ihre Anfrage ohne Namen und Kontaktdaten an freigeschaltete
-        Küchenstudios in Ihrer Region. Ihre Kontaktdaten erhalten höchstens drei Studios für Rückfragen sowie das Studio,
-        dessen Angebot Sie annehmen. Es gelten unsere{" "}
-        <a href="/agb" target="_blank" rel="noopener noreferrer" className={LINK_CLASS}>
-          AGB
-        </a>
-        ; mehr in der{" "}
-        <a href="/datenschutz" target="_blank" rel="noopener noreferrer" className={LINK_CLASS}>
-          Datenschutzerklärung
-        </a>
-        .
-      </p>
-      {/* Hinter dem Hinweis: Braucht Turnstile doch eine Eingabe, bleibt der Hinweis über der mobilen Leiste. */}
+      <TermsNotice>{FUNNEL_TERMS.a.notice}</TermsNotice>
+      <TermsConsent
+        id={fieldId("accept_terms")}
+        checked={contact.accept_terms}
+        onChange={(accept_terms) => onChange({ accept_terms })}
+        error={errorFor("accept_terms")}
+      />
+      {/* Hinter dem Haken: Braucht Turnstile doch eine Eingabe, bleiben Hinweis und Haken über der mobilen Leiste. */}
       <div ref={turnstileRef} />
     </form>
   );

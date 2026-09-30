@@ -22,6 +22,7 @@ import {
   withoutHandoffParams,
 } from "../state";
 import {
+  FUNNEL_A_AFTER_DETAILS,
   FUNNEL_A_BASE_PATH,
   FUNNEL_A_FIRST_SLUG,
   FUNNEL_A_SLUGS,
@@ -51,12 +52,12 @@ beforeEach(() => {
 });
 
 describe("Schritte", () => {
-  it("hält die vereinbarten 19 Slugs in Reihenfolge (Name und Kontakt getrennt)", () => {
+  it("hält die vereinbarten 20 Slugs in Reihenfolge: Kernfragen, Detailblock, Rahmen, Kontakt", () => {
     expect(FUNNEL_A_SLUGS).toEqual([
       "kuechenform",
-      "raum",
-      "groesse",
       "stil",
+      "groesse",
+      "raum",
       "farbe",
       "arbeitsplatte",
       "kochfeld",
@@ -78,6 +79,29 @@ describe("Schritte", () => {
     expect(FUNNEL_A_FIRST_SLUG).toBe("kuechenform");
     expect(stepPath("raum")).toBe("/funnel/a/raum");
     expect(stepIndex("kontakt")).toBe(19);
+  });
+
+  it("macht Ausstattung und Hintergrund überspringbar, nie eine Pflichtfrage", () => {
+    const details = FUNNEL_A_STEPS.filter((s) => s.detail);
+    expect(details.map((s) => s.slug)).toEqual([
+      "raum",
+      "farbe",
+      "arbeitsplatte",
+      "kochfeld",
+      "backofen",
+      "kuehlen",
+      "geraete",
+      "leistungen",
+      "kochstil",
+      "anlass",
+      "wohnsituation",
+      "entscheidung",
+    ]);
+    expect(details.some((s) => s.required)).toBe(false);
+    // Der Block ist zusammenhängend und endet direkt vor dem Sprungziel.
+    const indices = details.map((s) => stepIndex(s.slug));
+    expect(indices.at(-1)! - indices[0]! + 1).toBe(details.length);
+    expect(stepIndex(FUNNEL_A_AFTER_DETAILS)).toBe(indices.at(-1)! + 1);
   });
 
   it("erkennt nur bekannte Slugs", () => {

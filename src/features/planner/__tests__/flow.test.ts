@@ -1,29 +1,24 @@
 import { describe, expect, it } from "vitest";
-import { PLANNER_STEPS, nextStep, normalizePlannerStep, plannerFlow, plannerProgress, previousStep, stepDef } from "../flow";
+import { PLANNER_STEPS, knownPlannerStep, nextStep, normalizePlannerStep, plannerFlow, plannerProgress, previousStep, stepDef } from "../flow";
 
-const open = { unlocked: false, wantsOffers: null };
+const open = { unlocked: false };
 
 describe("Schrittfolge von Funnel C", () => {
-  it("fragt nach der Visualisierung erst Angebote, dann Name und Kontakt – das Ergebnis kommt zuletzt", () => {
+  it("stellt nach der Visualisierung die Fragen für die Studios, dann Name und Kontakt – das Ergebnis kommt zuletzt", () => {
     const steps = plannerFlow(open);
-    expect(steps.slice(-5)).toEqual(["plz", "visualisierung", "angebote", "name", "kontakt"]);
+    expect(steps.slice(steps.indexOf("plz"))).toEqual(["plz", "visualisierung", "zeitrahmen", "budget", "anlass", "wohnsituation", "name", "kontakt"]);
     expect(steps).not.toContain("ergebnis");
   });
 
-  it("fragt den Zeitrahmen nur, wenn Angebote gewünscht sind", () => {
-    expect(plannerFlow({ unlocked: false, wantsOffers: true })).toContain("zeitrahmen");
-    expect(plannerFlow({ unlocked: false, wantsOffers: false })).not.toContain("zeitrahmen");
-    expect(nextStep("angebote", { unlocked: false, wantsOffers: true })).toBe("zeitrahmen");
-    expect(nextStep("angebote", { unlocked: false, wantsOffers: false })).toBe("name");
+  it("fragt nicht mehr, ob Angebote gewünscht sind: jede Planung wird ausgeschrieben", () => {
+    expect(PLANNER_STEPS.map((s) => s.id)).not.toContain("angebote");
+    expect(nextStep("visualisierung", open)).toBe("zeitrahmen");
   });
 
-  it("stellt Budget, Anlass und Wohnsituation nur mit „Ja, Angebote“", () => {
-    const yes = plannerFlow({ unlocked: false, wantsOffers: true });
-    expect(yes.slice(yes.indexOf("angebote"))).toEqual(["angebote", "zeitrahmen", "budget", "anlass", "wohnsituation", "name", "kontakt"]);
-    const no = plannerFlow({ unlocked: false, wantsOffers: false });
-    for (const step of ["zeitrahmen", "budget", "anlass", "wohnsituation"]) expect(no).not.toContain(step);
-    expect(previousStep("name", { unlocked: false, wantsOffers: true })).toBe("wohnsituation");
-    expect(previousStep("name", { unlocked: false, wantsOffers: false })).toBe("angebote");
+  it("überspringt beim Zurückgehen den Lade-Bildschirm", () => {
+    expect(previousStep("zeitrahmen", open)).toBe("plz");
+    expect(previousStep("visualisierung", open)).toBe("plz");
+    expect(previousStep("name", open)).toBe("wohnsituation");
   });
 
   it("fragt den Dunstabzug als Detail direkt nach Kochen & Kühlen", () => {
@@ -33,9 +28,9 @@ describe("Schrittfolge von Funnel C", () => {
   });
 
   it("überspringt nach der Kontakterfassung alle Lead-Fragen", () => {
-    const unlocked = { unlocked: true, wantsOffers: true };
+    const unlocked = { unlocked: true };
     const steps = plannerFlow(unlocked);
-    for (const lead of ["visualisierung", "angebote", "zeitrahmen", "budget", "anlass", "wohnsituation", "name", "kontakt"]) {
+    for (const lead of ["visualisierung", "zeitrahmen", "budget", "anlass", "wohnsituation", "name", "kontakt"]) {
       expect(steps).not.toContain(lead);
     }
     expect(nextStep("plz", unlocked)).toBe("ergebnis");
@@ -49,15 +44,19 @@ describe("Schrittfolge von Funnel C", () => {
 
   it("zeigt Fortschritt mit Vorsprung und 100 % im Ergebnis", () => {
     expect(plannerProgress("form", open).percent).toBe(10);
-    expect(plannerProgress("kontakt", { unlocked: false, wantsOffers: false }).percent).toBe(95);
-    expect(plannerProgress("ergebnis", { unlocked: true, wantsOffers: false }).percent).toBe(100);
+    expect(plannerProgress("kontakt", open).percent).toBe(95);
+    expect(plannerProgress("ergebnis", { unlocked: true }).percent).toBe(100);
   });
 
-  it("übernimmt gespeicherte Schritte der alten Fassung", () => {
+  it("übernimmt gespeicherte Schritte und Links älterer Fassungen", () => {
     expect(normalizePlannerStep("raum")).toBe("form");
     expect(normalizePlannerStep("ausstattung")).toBe("arbeitsplatte");
-    expect(normalizePlannerStep("kontakt")).toBe("angebote");
+    expect(normalizePlannerStep("angebote")).toBe("zeitrahmen");
+    expect(normalizePlannerStep("kontakt")).toBe("kontakt");
     expect(normalizePlannerStep("stil")).toBe("stil");
     expect(normalizePlannerStep("unbekannt")).toBe("form");
+    expect(knownPlannerStep("angebote")).toBe("zeitrahmen");
+    expect(knownPlannerStep("unbekannt")).toBeNull();
+    expect(knownPlannerStep(null)).toBeNull();
   });
 });

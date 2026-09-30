@@ -52,7 +52,7 @@ export function VisualizingStep({ percent, photoUrl, error }: { percent: number;
           />
         </div>
         <p className="mt-2 text-center text-sm text-muted-foreground">
-          {error ? "Ihre Preisschätzung und Angebote bekommen Sie trotzdem." : "Das dauert meist 20–40 Sekunden – gleich geht es weiter."}
+          {error ? "Ihre Preisschätzung und Angebote bekommen Sie trotzdem." : "Meist 20–40 Sekunden – währenddessen folgen kurze Fragen für Ihre Angebote."}
         </p>
       </div>
     </div>

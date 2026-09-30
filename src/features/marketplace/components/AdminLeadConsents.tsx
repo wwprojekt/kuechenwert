@@ -5,6 +5,7 @@ import { errorMessage } from "../api-client";
 import { fetchLeadConsents, type LeadConsent } from "../admin-api";
 
 const PURPOSES: Record<string, { label: string; refused: string }> = {
+  terms: { label: "AGB akzeptiert, Datenschutzerklärung gelesen", refused: "Ohne AGB-Bestätigung keine Anfrage." },
   share_with_studios: { label: "Weitergabe an Küchenstudios", refused: "Keine Ausschreibung und keine Weitergabe, auch nicht von Hand." },
   contact_by_phone: { label: "Anrufe", refused: "Nicht anrufen, auch wenn eine Telefonnummer angegeben ist." },
   kuechenwert_call: { label: "Rückruf durch KüchenWert", refused: "Nicht anrufen." },

@@ -45,7 +45,7 @@ export function PriceStep({ data, update, onAdvance }: FunnelBStepProps) {
       noValidate
       className="space-y-4 short:space-y-3"
     >
-      <Field label="Angebotspreis (brutto) *" controlId="funnel-b-offer-price">
+      <Field label="Genannter Preis (brutto) *" controlId="funnel-b-offer-price">
         <div className="relative max-w-xs">
           <input
             id="funnel-b-offer-price"
@@ -74,7 +74,7 @@ export function PriceStep({ data, update, onAdvance }: FunnelBStepProps) {
             onChange={(e) => update({ existingOfferStudio: e.target.value })}
           />
         </Field>
-        <Field label="Angebot gültig bis (optional)" controlId="funnel-b-offer-valid-until">
+        <Field label="Preis gilt bis (optional)" controlId="funnel-b-offer-valid-until">
           <input
             id="funnel-b-offer-valid-until"
             type="date"
@@ -110,7 +110,7 @@ const INCLUDE_OPTIONS = [
   return { ...o, icon: Icon ? <Icon aria-hidden="true" /> : undefined };
 });
 
-/** Leistungsumfang des Angebots; „Weiß ich nicht genau“ schließt die übrigen Punkte aus. */
+/** Leistungsumfang zum genannten Preis; „Weiß ich nicht genau“ schließt die übrigen Punkte aus. */
 export function OfferIncludesStep({ data, update }: Omit<FunnelBStepProps, "onAdvance">) {
   const change = (next: string[]) => {
     const added = next.find((id) => !data.offerIncludes.includes(id));
@@ -146,7 +146,7 @@ export function DocumentsChoiceStep({ data, update, onAdvance }: FunnelBStepProp
         onSelect={(v) => update({ offerDeliveryMethod: v as OfferDeliveryMethod })}
         onAutoAdvance={onAdvance}
         options={[
-          { id: "now", label: "Jetzt hochladen", description: "Angebot, Planung oder Fotos – als PDF oder Bild", icon: <CloudUpload /> },
+          { id: "now", label: "Ja, jetzt hochladen", description: "Fotos vom Handy oder PDF – gern auch das Angebot", icon: <CloudUpload /> },
           { id: "later", label: "Später nachreichen", description: "Über Ihren persönlichen Projektlink aus der E-Mail", icon: <Mail /> },
         ]}
       />
@@ -209,7 +209,7 @@ export function DetailsChoiceStep({ data, update, onAdvance }: FunnelBStepProps)
         options={[
           {
             id: "nein",
-            label: hasFiles ? "Nein, steht in meinen Unterlagen" : "Nein, direkt weiter",
+            label: hasFiles ? "Nein, steht in meiner Planung" : "Nein, direkt weiter",
             description: "Weiter zu Ihren Kontaktdaten",
             icon: <SkipForward />,
           },

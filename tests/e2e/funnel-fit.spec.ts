@@ -14,16 +14,16 @@ const VIEWPORTS = [
   { width: 1366, height: 657 },
 ];
 
-const A_STEPS = ['kuechenform', 'raum', 'groesse', 'stil', 'farbe', 'arbeitsplatte', 'kochfeld', 'backofen', 'kuehlen', 'geraete', 'leistungen', 'kochstil', 'anlass', 'wohnsituation', 'entscheidung', 'zeitrahmen', 'budget', 'plz', 'name', 'kontakt'];
-const B_STEPS = ['preis', 'leistungsumfang', 'unterlagen', 'hochladen', 'kuechenform', 'zeitrahmen', 'details', 'marke', 'fronten', 'griffe', 'arbeitsplatte', 'arbeitsplatte-name', 'geraete', 'spuele', 'spuele-marke', 'extras', 'notizen', 'zahlung', 'anzahlung', 'plz', 'name', 'kontakt', 'einwilligung'];
+const A_STEPS = ['kuechenform', 'stil', 'groesse', 'raum', 'farbe', 'arbeitsplatte', 'kochfeld', 'backofen', 'kuehlen', 'geraete', 'leistungen', 'kochstil', 'anlass', 'wohnsituation', 'entscheidung', 'zeitrahmen', 'budget', 'plz', 'name', 'kontakt'];
+const B_STEPS = ['preis', 'leistungsumfang', 'unterlagen', 'hochladen', 'kuechenform', 'zeitrahmen', 'details', 'marke', 'fronten', 'griffe', 'arbeitsplatte', 'arbeitsplatte-name', 'geraete', 'spuele', 'spuele-marke', 'extras', 'notizen', 'zahlung', 'anzahlung', 'plz', 'name', 'kontakt'];
 const C_PLAN = ['form', 'masse', 'foto', 'stil', 'qualitaet', 'fronten', 'farbe', 'griffe', 'arbeitsplatte', 'plattenfarbe', 'schraenke', 'spuele', 'geraeteklasse', 'kochen', 'abluft', 'geraete', 'extras', 'leistungen', 'wuensche', 'plz'];
-const C_LEAD = ['angebote', 'zeitrahmen', 'budget', 'anlass', 'wohnsituation', 'name', 'kontakt'];
+const C_LEAD = ['zeitrahmen', 'budget', 'anlass', 'wohnsituation', 'name', 'kontakt'];
 
 const TOKEN = `kw_${'a'.repeat(48)}`;
 const RENDER = { id: '11111111-1111-4111-8111-111111111111', version: 1, status: 'pending', mode: 'text', variant_label: null, image_url: null, feedback: null };
 const A_STATE = {
   answers: { kitchen_form: 'l', room_type: '', kitchen_size: '', kitchen_style: '', color_preference: '', worktop_category: '', cooktop_type: '', oven_placement: '', cooling: '', extra_appliances: [], cooking_style: '', purchase_reason: '', housing: '', decision_maker: '', timeframe: 'asap', budget_eur: 10000, postal_code: '30159' },
-  contact: { salutation: '', first_name: 'Max', last_name: 'Muster', email: '', phone: '', contact_by_phone: false, marketing: false },
+  contact: { salutation: '', first_name: 'Max', last_name: 'Muster', email: '', phone: '' },
 };
 const B_STATE = { existingOfferPriceEur: '18000', offerDeliveryMethod: 'later', wantsDetails: 'ja' };
 const plannerState = (step: string, lead: boolean) => ({
@@ -31,7 +31,6 @@ const plannerState = (step: string, lead: boolean) => ({
   sessionToken: lead ? TOKEN : null,
   postalCode: '30159',
   renders: lead ? [RENDER] : [],
-  offersChoice: 'ja',
   timeframe: '',
   submitted: false,
   offersRequested: false,

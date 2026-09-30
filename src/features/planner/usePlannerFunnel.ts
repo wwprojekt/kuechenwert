@@ -26,10 +26,10 @@ import {
 import { housingType } from "@/features/funnel-a/catalog";
 import { KITCHEN_FORMS, STYLES } from "./core";
 import { ceilingIssue, roomWallIssues } from "./estimate-gate";
-import { isPlannerStep, nextStep, plannerProgress, previousStep, stepDef, type PlannerStep } from "./flow";
+import { knownPlannerStep, nextStep, plannerProgress, previousStep, stepDef, type PlannerStep } from "./flow";
 import { plannerRenderKey } from "./render-key";
 import { fromSessionRender, usePlanner, useRenderPolling } from "./state";
-import { phoneNeeded, validateLead, type LeadContact, type LeadErrors } from "./steps/LeadSteps";
+import { validateLead, type LeadContact, type LeadErrors } from "./steps/LeadSteps";
 import type { OffersRequest } from "./components/RequestOffersDialog";
 import type { RenderPhase } from "./components/RenderProgress";
 import type { VariantRequest } from "./components/VariantPanel";
@@ -39,12 +39,16 @@ const CONTACT_KEY = "kw_planner_contact";
 /** So lange steht der Lade-Bildschirm mindestens, bevor die Lead-Fragen kommen. */
 const VISUALIZE_MIN_MS = 4500;
 
-const EMPTY_CONTACT: LeadContact = { first_name: "", last_name: "", email: "", phone: "", contact_by_phone: false };
+const EMPTY_CONTACT: LeadContact = { first_name: "", last_name: "", email: "", phone: "", accept_terms: false };
 
+/** Die AGB bestätigt der Kunde bei jedem Absenden neu; nur Name und Kontaktdaten überstehen ein Neuladen. */
 function readContact(): LeadContact {
   try {
     const raw = sessionStorage.getItem(CONTACT_KEY);
-    return raw ? { ...EMPTY_CONTACT, ...(JSON.parse(raw) as Partial<LeadContact>) } : EMPTY_CONTACT;
+    if (!raw) return EMPTY_CONTACT;
+    const stored = JSON.parse(raw) as Partial<Record<keyof LeadContact, unknown>>;
+    const text = (value: unknown) => (typeof value === "string" ? value : "");
+    return { first_name: text(stored.first_name), last_name: text(stored.last_name), email: text(stored.email), phone: text(stored.phone), accept_terms: false };
   } catch {
     return EMPTY_CONTACT;
   }
@@ -75,13 +79,14 @@ export function usePlannerFunnel() {
   const wallIssues = useMemo(() => roomWallIssues(state.room), [state.room]);
   const ceilingError = useMemo(() => ceilingIssue(state.room), [state.room]);
 
-  const flow = useMemo(() => ({ unlocked: state.submitted, wantsOffers: state.offersChoice === null ? null : state.offersChoice === "ja" }), [state.submitted, state.offersChoice]);
+  const flow = useMemo(() => ({ unlocked: state.submitted }), [state.submitted]);
   const step = state.step;
   const progress = plannerProgress(step, flow);
 
   useEffect(() => {
     try {
-      sessionStorage.setItem(CONTACT_KEY, JSON.stringify(contact));
+      const { accept_terms: _terms, ...stored } = contact;
+      sessionStorage.setItem(CONTACT_KEY, JSON.stringify(stored));
     } catch {
       /* ohne Storage bleibt der Stand im Speicher */
     }
@@ -163,7 +168,7 @@ export function usePlannerFunnel() {
   }, [searchParams, setSearchParams, patchConfig, setForm]);
 
   const rawUrlStep = searchParams.get("schritt");
-  const urlStep = rawUrlStep && isPlannerStep(rawUrlStep) ? rawUrlStep : null;
+  const urlStep = knownPlannerStep(rawUrlStep);
   const stepRef = useRef(step);
   useEffect(() => {
     stepRef.current = step;
@@ -182,8 +187,9 @@ export function usePlannerFunnel() {
       writeUrl(stepRef.current, true);
       return;
     }
+    if (urlStep !== rawUrlStep) writeUrl(urlStep, true);
     if (urlStep !== stepRef.current) setPlannerStep(urlStep);
-  }, [urlStep, searchParams, writeUrl, setPlannerStep]);
+  }, [urlStep, rawUrlStep, searchParams, writeUrl, setPlannerStep]);
 
   const navigate = useCallback(
     (target: PlannerStep, replace = false) => {
@@ -199,7 +205,7 @@ export function usePlannerFunnel() {
   useEffect(() => {
     const kind = stepDef(step).kind;
     if (state.submitted && kind === "lead") navigate("ergebnis", true);
-    else if (!state.submitted && step === "ergebnis") navigate(state.renders.length ? "angebote" : "plz", true);
+    else if (!state.submitted && step === "ergebnis") navigate(state.renders.length ? "zeitrahmen" : "plz", true);
     else if (!state.submitted && kind === "lead" && !/^\d{5}$/.test(state.postalCode)) navigate("plz", true);
   }, [step, state.submitted, state.postalCode, state.renders.length, navigate]);
 
@@ -280,7 +286,7 @@ export function usePlannerFunnel() {
     }
     if (generating) return;
     const wait = Math.max(0, VISUALIZE_MIN_MS - (Date.now() - vizEntered.current));
-    const t = window.setTimeout(() => navigate("angebote", true), genError ? Math.max(wait, 2500) : wait);
+    const t = window.setTimeout(() => navigate("zeitrahmen", true), genError ? Math.max(wait, 2500) : wait);
     return () => window.clearTimeout(t);
   }, [step, generating, genError, state.renders.length, handleGenerate, navigate]);
 
@@ -310,11 +316,6 @@ export function usePlannerFunnel() {
       navigate(state.submitted ? "ergebnis" : "visualisierung");
       return;
     }
-    if (step === "angebote" && !state.offersChoice) {
-      telemetry.validationFailed(["angebote"]);
-      setBlocked("Bitte wählen Sie Ja oder Nein.");
-      return;
-    }
     telemetry.next();
     confirmStep(step);
     navigate(nextStep(step, flow));
@@ -322,7 +323,7 @@ export function usePlannerFunnel() {
 
   const goBack = useCallback(() => {
     const { step, flow } = latestRef.current;
-    const target = step === "angebote" ? "plz" : previousStep(step, flow);
+    const target = previousStep(step, flow);
     if (!target) return;
     telemetry.back();
     navigate(target);
@@ -370,7 +371,7 @@ export function usePlannerFunnel() {
   };
 
   const submitName = () => {
-    const errors = validateLead(contact, false);
+    const errors = validateLead(contact);
     const nameErrors = { first_name: errors.first_name, last_name: errors.last_name };
     setLeadErrors(nameErrors);
     if (nameErrors.first_name || nameErrors.last_name) {
@@ -383,9 +384,7 @@ export function usePlannerFunnel() {
 
   const submitLead = async () => {
     telemetry.submitClicked();
-    const wantsOffers = state.offersChoice === "ja";
-    const needsPhone = phoneNeeded(contact, wantsOffers);
-    const errors = validateLead(contact, needsPhone);
+    const errors = validateLead(contact);
     setLeadErrors(errors);
     const failed = Object.keys(errors) as Array<keyof LeadErrors>;
     if (failed.length) {
@@ -394,7 +393,7 @@ export function usePlannerFunnel() {
       else document.getElementById(failed[0]!)?.focus();
       return;
     }
-    const phone = needsPhone ? contact.phone.trim() : "";
+    const phone = contact.phone.trim();
     setSubmitting(true);
     setSubmitError(null);
     try {
@@ -417,16 +416,16 @@ export function usePlannerFunnel() {
           phone,
           postal_code: state.postalCode,
         },
-        request_offers: wantsOffers,
-        consents: { share_with_studios: wantsOffers, contact_by_phone: !!phone && contact.contact_by_phone, marketing: false, ai_training: false },
+        request_offers: true,
+        consents: { share_with_studios: true, accept_terms: true, ai_training: false },
         active_render_id: activeRender?.status === "success" ? activeRender.id : null,
-        timeframe_months: wantsOffers ? Number(state.timeframe) || null : null,
-        // Nur mit „Ja, Angebote“ gefragt; ein unberührter Budget-Slider zählt nicht.
-        budget_eur: wantsOffers && state.budgetConfirmed ? state.budget : null,
-        budget_source: wantsOffers && state.budgetConfirmed ? (state.budget === null ? "unknown" : "slider") : null,
-        purchase_reason: wantsOffers ? state.occasion || null : null,
-        housing: wantsOffers ? state.housing || null : null,
-        housing_type: wantsOffers && state.housing ? housingType(state.housing) : "unknown",
+        timeframe_months: Number(state.timeframe) || null,
+        // Ein unberührter Budget-Slider zählt nicht.
+        budget_eur: state.budgetConfirmed ? state.budget : null,
+        budget_source: state.budgetConfirmed ? (state.budget === null ? "unknown" : "slider") : null,
+        purchase_reason: state.occasion || null,
+        housing: state.housing || null,
+        housing_type: state.housing ? housingType(state.housing) : "unknown",
         turnstile_token: turnstileToken,
         website: honeypot,
         landing_page: getEntryPath() ?? window.location.pathname,
@@ -441,11 +440,11 @@ export function usePlannerFunnel() {
             email: contact.email,
             firstName: contact.first_name,
             lastName: contact.last_name,
-            ...(phone ? { phone } : {}),
+            phone,
             postalCode: state.postalCode,
           });
           await trackKitchenFunnelLead("c", generateTransactionId("funnel_c"));
-          trackMetaLead({ content_name: "Funnel C", content_category: wantsOffers ? "Traumküche mit Angeboten" : "Traumküche Visualisierung" });
+          trackMetaLead({ content_name: "Funnel C", content_category: "Traumküche mit Angeboten" });
           trackLeadThankYou("c");
         } catch (trackingError) {
           console.error("Funnel C tracking failed", trackingError);
@@ -454,7 +453,7 @@ export function usePlannerFunnel() {
 
       telemetry.submitSucceeded();
       storeProjectToken(res.project_token);
-      planner.markSubmitted(res.offers_requested ?? wantsOffers, res.has_phone ?? !!phone);
+      planner.markSubmitted(res.offers_requested ?? true, res.has_phone ?? true);
       stepRef.current = "ergebnis";
       writeUrl("ergebnis", true);
     } catch (err) {
@@ -476,7 +475,6 @@ export function usePlannerFunnel() {
       await requestOffers({
         sessionToken: state.sessionToken,
         timeframeMonths: request.timeframeMonths,
-        contactByPhone: request.contactByPhone,
         phone: request.phone,
       });
       planner.markOffersRequested();

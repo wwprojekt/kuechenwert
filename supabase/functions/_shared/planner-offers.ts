@@ -1,23 +1,25 @@
 /**
  * Funnel C: Ausschreibung zu einer Planung eröffnen. Gemeinsam für kw-planner
- * (Abschluss mit „Ja, Angebote“, späteres Nachfordern im Ergebnis und die
- * Admin-Aktion admin-open-tender) und kw-project (Nachfordern auf der
- * Projektseite).
+ * (Abschluss, Nachfordern im Ergebnis und die Admin-Aktion admin-open-tender)
+ * und kw-project (Nachfordern auf der Projektseite).
  *
- * Studios sehen eine Planung nur mit der Einwilligung share_with_studios; wer
- * nur die Visualisierung wollte, hat einen Lead ohne Ausschreibung.
+ * Studios sehen eine Planung nur mit der Einwilligung share_with_studios. Seit
+ * dem 30.09.2026 gehört sie zu jeder Planung (AGB-Haken); Leads aus der Zeit
+ * davor mit „nur Visualisierung“ haben keine Ausschreibung und fordern
+ * Angebote hier nach.
  */
 
 import type { SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2.100.1";
 import { HttpError, normalizePhone } from "./kw-http.ts";
 import { sanitizeConfig, sanitizeRoom, type PlannerConfig, type RoomInput } from "./kitchen-catalog.ts";
 import { estimateKitchenPrice, type KitchenEstimate } from "./kitchen-pricing.ts";
+import { OFFERS_LATER_TERMS, type TermsAnswer } from "./lead-terms.ts";
 import { sanitizeProvenance, type PlannerProvenance } from "./planner-provenance.ts";
 import { buildPlannerSummary, storedLeadFrame, type PlannerLeadFrame } from "./planner-summary.ts";
 import { loadRateCard } from "./rate-card.ts";
 
-/** Einwilligungstext „Ja, Angebote“ (Funnel C, ab 30.09.2026; b nennt Visualisierungen und Raumfotos). */
-export const OFFERS_CONSENT_TEXT_VERSION = "kw-projekt-2026-09-30b";
+/** Nachfordern mit eigenem Anruf-Haken (Dialog bis 30.09.2026). */
+const LEGACY_OFFERS_TEXT_VERSION = "kw-projekt-2026-09-30b";
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
 const OPEN_TENDER_STATUSES = ["draft", "active", "completed"];
@@ -113,12 +115,17 @@ export async function hasOpenTender(sb: SupabaseClient, leadId: string): Promise
  * Outbox (project_created) informieren. Ohne gespeicherte Telefonnummer muss
  * phone mitkommen: Die Studios brauchen sie für das Angebot. Idempotent: Mit
  * offener Ausschreibung passiert nichts.
+ *
+ * Der Dialog ab 30.09.2026 (terms = "accepted") nennt im Hinweis die
+ * Telefonnummer für Rückfragen der Studios; ältere Dialoge hatten dafür einen
+ * eigenen Haken (contactByPhone).
  */
 export async function requestPlannerOffers(
   sb: SupabaseClient,
   input: {
     leadId: string;
     timeframeMonths: number | null;
+    terms: TermsAnswer;
     contactByPhone: boolean;
     phone?: unknown;
     meta: ConsentMeta;
@@ -160,9 +167,10 @@ export async function requestPlannerOffers(
   const estimate = estimateKitchenPrice(config, room, { card, postalCode: lead.postal_code, rateCardVersion, calibration });
   const timeframe = input.timeframeMonths ?? (lead.timeframe_months as number | null);
 
+  const allowCalls = input.terms === "accepted" || input.contactByPhone;
   const consents = [
     { purpose: "share_with_studios", granted: true },
-    ...(input.contactByPhone && !lead.consent_call ? [{ purpose: "contact_by_phone", granted: true }] : []),
+    ...(allowCalls && !lead.consent_call ? [{ purpose: "contact_by_phone", granted: true }] : []),
   ];
   const { error: consentErr } = await sb.from("lead_consents").insert(
     consents.map((c) => ({
@@ -170,7 +178,7 @@ export async function requestPlannerOffers(
       user_id: lead.user_id ?? input.meta.userId,
       purpose: c.purpose,
       granted: c.granted,
-      text_version: OFFERS_CONSENT_TEXT_VERSION,
+      text_version: input.terms === "accepted" ? OFFERS_LATER_TERMS.version : LEGACY_OFFERS_TEXT_VERSION,
       ip_address: input.meta.ip,
       user_agent: input.meta.userAgent,
     })),
@@ -184,7 +192,7 @@ export async function requestPlannerOffers(
       funnel_answers: { ...answers, offers_requested: true, offers_requested_at: new Date().toISOString() },
       ...(timeframe !== lead.timeframe_months ? { timeframe_months: timeframe } : {}),
       ...(newPhone ? { phone: newPhone } : {}),
-      ...(input.contactByPhone ? { consent_call: true } : {}),
+      ...(allowCalls ? { consent_call: true } : {}),
     })
     .eq("id", lead.id);
   if (updateErr) throw updateErr;

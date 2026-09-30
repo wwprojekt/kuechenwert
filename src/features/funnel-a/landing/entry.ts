@@ -1,5 +1,5 @@
 export const FUNNEL_A_FIRST_STEP = "/funnel/a/kuechenform";
-export const FUNNEL_A_AFTER_FORM_STEP = "/funnel/a/raum";
+export const FUNNEL_A_AFTER_FORM_STEP = "/funnel/a/stil";
 
 /**
  * Einstieg von /formular in Funnel A. Mit gewählter Form geht es direkt zu

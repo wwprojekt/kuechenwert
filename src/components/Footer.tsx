@@ -84,7 +84,7 @@ const Footer = () => {
                 Bereit für Ihre Traumküche?
               </h2>
               <p className="text-white/75 text-sm">
-                Raumfoto hochladen, Küche gestalten, Preis sehen – auf Wunsch machen Ihnen geprüfte Studios Angebote.
+                Raumfoto hochladen, Küche gestalten, Preis sehen – und kostenlose Angebote geprüfter Studios erhalten.
               </p>
             </div>
             <div className="flex flex-col sm:flex-row gap-3 w-full lg:w-auto">

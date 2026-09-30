@@ -2,9 +2,10 @@
  * kw-lead-b — Anfrage „Studio-Preis unterbieten“ (Funnel B)
  *
  * Aktionen (POST { action, ... }):
- *   submit        Angebot + Kontakt → Lead und Einwilligungen. Für angekündigte
- *                 Dateien (Angebot, Planung, Fotos): Upload-Token plus
- *                 signierte Upload-URLs (lead-files, siehe _shared/lead-files.ts).
+ *   submit        Genannter Preis + Kontakt + AGB-Haken → Lead und
+ *                 Einwilligungen. Für angekündigte Dateien (Planung, Angebot,
+ *                 Fotos): Upload-Token plus signierte Upload-URLs (lead-files,
+ *                 siehe _shared/lead-files.ts).
  *   attach-files  Nach dem Upload: vorhandene Dateien am Lead eintragen.
  *
  * Unterlagen lassen sich später über den Projektlink nachreichen (kw-project).
@@ -47,8 +48,10 @@ import {
 import { FORM_OPTIONS } from "../_shared/funnel-a-catalog.ts";
 import { attachUploadedFiles, issueUploads, parseAnnouncedFiles } from "../_shared/lead-files.ts";
 import { redactOptional } from "../_shared/contact-redaction.ts";
+import { FUNNEL_TERMS, TERMS_MISSING, termsAnswer } from "../_shared/lead-terms.ts";
 
-const CONSENT_TEXT_VERSION = "kw-unterbieten-2026-09-28b";
+/** Vier einzelne Haken (Weitergabe, Rückruf, Studio-Anrufe, Werbung), bis 30.09.2026. */
+const LEGACY_CONSENT_TEXT_VERSION = "kw-unterbieten-2026-09-28b";
 
 const SALUTATIONS = new Set(["frau", "herr", "divers"]);
 const WASTE_SEPARATION = new Set(["yes", "no", "unknown"]);
@@ -122,22 +125,27 @@ async function actionSubmit(req: Request, sb: SupabaseClient, body: Record<strin
   }
   if (!isEmail(email)) throw new HttpError(422, "Bitte eine gültige E-Mail-Adresse angeben.", "email");
   if (!phone) throw new HttpError(422, "Bitte eine gültige Telefonnummer angeben – wir rufen Sie für den Experten-Check an.", "phone");
-  if (d.consentCall !== true) {
+  // Seit 30.09.2026 ein AGB-Haken, dessen Hinweis Rückruf, Weitergabe und Studio-Anrufe nennt;
+  // ältere Seiten schicken die einzelnen Einwilligungen.
+  const terms = termsAnswer(d, "acceptTerms");
+  if (terms === "declined") throw new HttpError(422, TERMS_MISSING, "terms");
+  const withTerms = terms === "accepted";
+  if (!withTerms && d.consentCall !== true) {
     throw new HttpError(422, "Bitte willigen Sie in den Rückruf zum Experten-Check ein.", "consent");
   }
-  // Ältere Browser-Versionen ohne die Studio-Checkbox senden consentShare nicht:
+  // Noch ältere Seiten ohne die Studio-Checkbox senden consentShare nicht:
   // Lead annehmen, aber ohne Freigabe der Kontaktdaten an Studios.
-  if (d.consentShare === false) {
+  if (!withTerms && d.consentShare === false) {
     throw new HttpError(422, "Bitte stimmen Sie der Weitergabe Ihres Projekts an Küchenstudios zu.", "consent_share");
   }
-  const consentShare = d.consentShare === true;
-  const consentStudioCall = consentShare && d.consentStudioCall === true;
-  if (priceEur === null) throw new HttpError(422, "Bitte den Angebotspreis Ihres Küchenstudios in Euro angeben.", "price");
+  const consentShare = withTerms || d.consentShare === true;
+  const consentStudioCall = withTerms || (consentShare && d.consentStudioCall === true);
+  if (priceEur === null) throw new HttpError(422, "Bitte geben Sie den Preis in Euro an, den Ihnen das Küchenstudio genannt hat.", "price");
   if (!offerDelivery) {
-    throw new HttpError(422, "Bitte wählen Sie, ob Sie Ihre Unterlagen jetzt hochladen oder später nachreichen.", "offer_delivery");
+    throw new HttpError(422, "Bitte wählen Sie, ob Sie Ihre Planung jetzt hochladen oder später nachreichen.", "offer_delivery");
   }
   if (offerDelivery === "now" && files.length === 0) {
-    throw new HttpError(422, "Bitte laden Sie Ihr Angebot, Ihre Planung oder ein Foto hoch – oder wählen Sie „Später nachreichen“.", "files");
+    throw new HttpError(422, "Bitte laden Sie Ihre Planung, das Angebot oder ein Foto hoch – oder wählen Sie „Später nachreichen“.", "files");
   }
 
   const timeframe = typeof d.timeframe === "string" && TIMEFRAME_MONTHS.has(d.timeframe) ? d.timeframe : null;
@@ -157,7 +165,7 @@ async function actionSubmit(req: Request, sb: SupabaseClient, body: Record<strin
   const waste = slugIn(d.wasteSeparationSystem, WASTE_SEPARATION);
   const salutation = slugIn(d.salutation, SALUTATIONS);
   const priceCents = Math.round(priceEur * 100);
-  const consentMarketing = d.consentMarketing === true;
+  const consentMarketing = !withTerms && d.consentMarketing === true;
   const utm = asRecord(body.utm);
   const userId = await userIdFromAuthHeader(sb, req);
   const userAgent = req.headers.get("user-agent")?.slice(0, 500) ?? null;
@@ -238,12 +246,13 @@ async function actionSubmit(req: Request, sb: SupabaseClient, body: Record<strin
       user_agent: userAgent,
     },
     [
+      ...(withTerms ? [{ purpose: "terms", granted: true }] : []),
       { purpose: "share_with_studios", granted: consentShare },
       { purpose: "kuechenwert_call", granted: true },
       { purpose: "contact_by_phone", granted: consentStudioCall },
-      { purpose: "marketing", granted: consentMarketing },
+      ...(withTerms ? [] : [{ purpose: "marketing", granted: consentMarketing }]),
     ],
-    { textVersion: CONSENT_TEXT_VERSION, userId, ip: validIp(ip), userAgent },
+    { textVersion: withTerms ? FUNNEL_TERMS.b.version : LEGACY_CONSENT_TEXT_VERSION, userId, ip: validIp(ip), userAgent },
   );
 
   const { data: covering } = await sb.rpc("kw_studios_covering", { p_postal_code: postalCode });

@@ -40,12 +40,12 @@ export const FAQ_ITEMS: FaqItem[] = [
   {
     question: "Was unterscheidet KüchenWert von anderen Küchenportalen?",
     answer:
-      "Drei Dinge: 1) Sie sehen Ihre Küche per KI im eigenen Raum, bevor Sie mit einem Studio sprechen – inklusive Preisschätzung. 2) Studios machen Ihnen Angebote und können ein abgegebenes Angebot nur noch senken – Sie müssen nicht jedes Studio einzeln anfragen. 3) Ein vorhandenes Studio-Angebot können andere Studios 72 Stunden lang unterbieten – nach einem kurzen, kostenlosen Telefonat mit unserem Team.",
+      "Drei Dinge: 1) Sie sehen Ihre Küche per KI im eigenen Raum, bevor Sie mit einem Studio sprechen – inklusive Preisschätzung. 2) Studios machen Ihnen Angebote und können ein abgegebenes Angebot nur noch senken – Sie müssen nicht jedes Studio einzeln anfragen. 3) Den Preis, den Ihnen ein Studio für Ihre Planung genannt hat, können andere Studios 72 Stunden lang unterbieten – nach einem kurzen, kostenlosen Telefonat mit unserem Team.",
   },
   {
-    question: "Wie funktioniert das Unterbieten eines vorhandenen Angebots?",
+    question: "Wie funktioniert das Unterbieten eines Studio-Preises?",
     answer:
-      "Sie laden Ihr Studio-Angebot, ein Bild der geplanten Küche und den Angebotspreis hoch. Nach einem kurzen Telefonat mit unserem Team stellen wir das Angebot ohne Ihren Namen und ohne den Namen des Studios 72 Stunden lang geprüften Küchenstudios aus Ihrer Region vor. Diese können Ihnen ein günstigeres Angebot für dieselbe oder eine vergleichbare Ausstattung machen. Sie nehmen das beste Angebot an – oder lehnen alle ab.",
+      "Sie nennen den Preis, den Ihnen Ihr Küchenstudio genannt hat, und laden die Planung hoch – Grundriss, Ansichten oder Geräteliste; ein Handyfoto genügt, ein schriftliches Angebot brauchen Sie nicht. Nach einem kurzen Telefonat mit unserem Team stellen wir Ihre Planung ohne Ihren Namen und ohne den Namen des Studios 72 Stunden lang geprüften Küchenstudios aus Ihrer Region vor. Diese können Ihnen ein günstigeres Angebot für dieselbe oder eine vergleichbare Ausstattung machen. Sie nehmen das beste Angebot an – oder lehnen alle ab.",
   },
   {
     question: "Wie prüfen Sie die Küchenstudios?",
@@ -75,7 +75,12 @@ export const FAQ_ITEMS: FaqItem[] = [
   {
     question: "Was passiert mit meinen Daten?",
     answer:
-      "Ihre Anfrage liegt in einer Datenbank in Frankfurt (EU). Für einzelne Dienste wie die KI-Visualisierung, den E-Mail-Versand und den Bot-Schutz setzen wir Anbieter mit Sitz in den USA ein – Details in der Datenschutzerklärung. Studios sehen Ihr Projekt zunächst ohne Ihren Namen: PLZ-Bereich, Maße, Wünsche und Visualisierung. Ihre Kontaktdaten erhalten höchstens drei Studios für Rückfragen sowie das Studio, dessen Angebot Sie annehmen. Sie können jederzeit Auskunft oder Löschung verlangen.",
+      "Ihre Anfrage liegt in einer Datenbank in Frankfurt (EU). Für einzelne Dienste wie die KI-Visualisierung, den E-Mail-Versand und den Bot-Schutz setzen wir Anbieter mit Sitz in den USA ein – Details in der Datenschutzerklärung. Studios sehen Ihr Projekt zunächst ohne Ihren Namen: PLZ-Bereich, Maße, Wünsche und Visualisierung. Ihre Kontaktdaten – Name, E-Mail-Adresse und Telefonnummer – erhalten höchstens drei Studios für Rückfragen zu Ihrem Angebot sowie das Studio, dessen Angebot Sie annehmen. Sie können jederzeit Auskunft oder Löschung verlangen.",
+  },
+  {
+    question: "Rufen mich dann viele Studios an?",
+    answer:
+      "Nein. Ihre Kontaktdaten erhalten höchstens drei Studios, und die melden sich nur mit Rückfragen zu Ihrem Angebot – per E-Mail oder Telefon. Möchten Sie keine Anrufe, schalten Sie das auf Ihrer Projektseite mit einem Klick ab; die Studios erreichen Sie dann per E-Mail. Werbung schicken wir Ihnen nicht.",
   },
   {
     question: "Wie finde ich mein Projekt und meine Angebote wieder?",

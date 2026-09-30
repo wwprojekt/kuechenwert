@@ -28,11 +28,11 @@ const VARIANTS: Record<string, Variant> = {
     ],
   },
   b: {
-    title: "Ihr Angebot ist eingegangen!",
+    title: "Ihre Anfrage ist eingegangen!",
     subtitle:
-      "Wir prüfen Ihr Studio-Angebot und melden uns telefonisch. Danach haben Küchenstudios aus Ihrer Region 72 Stunden Zeit, Ihr Angebot zu unterbieten.",
+      "Wir prüfen Ihre Planung und melden uns telefonisch. Danach haben Küchenstudios aus Ihrer Region 72 Stunden Zeit, Ihren Preis zu unterbieten.",
     steps: [
-      { title: "Experten-Check", text: "Kurzer Rückruf zu Ihrem Angebot, werktags. Unterlagen können Sie jederzeit über den Projektlink aus Ihrer E-Mail nachreichen." },
+      { title: "Experten-Check", text: "Kurzer Rückruf zu Ihrer Planung, werktags. Planung oder Angebot können Sie jederzeit über den Projektlink aus Ihrer E-Mail nachreichen." },
       { title: "72 Stunden Angebotsphase", text: "Studios machen Angebote für dieselbe oder eine vergleichbare Küche. Neue Angebote melden wir per E-Mail." },
       { title: "Sie entscheiden", text: "Auf Ihrer Projektseite nehmen Sie das beste Angebot an – oder keines." },
     ],

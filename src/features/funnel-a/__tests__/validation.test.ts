@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { TERMS_MISSING } from "../../../../supabase/functions/_shared/lead-terms.ts";
 import { callFunction } from "@/features/marketplace/api-client";
 import { setEnhancedConversionFromForm, trackKitchenFunnelLead } from "@/lib/gadsConversionService";
 import { trackMetaLead } from "@/lib/metaPixelService";
@@ -22,7 +23,15 @@ vi.mock("@/lib/gadsConversionService", () => ({
 vi.mock("@/lib/metaPixelService", () => ({ trackMetaLead: vi.fn() }));
 
 function contact(patch: Partial<FunnelAContact> = {}): FunnelAContact {
-  return { ...emptyContact(), first_name: "Maria", last_name: "Muster", email: "maria@beispiel.de", phone: "0511 123456", ...patch };
+  return {
+    ...emptyContact(),
+    first_name: "Maria",
+    last_name: "Muster",
+    email: "maria@beispiel.de",
+    phone: "0511 123456",
+    accept_terms: true,
+    ...patch,
+  };
 }
 
 function valueOf(input: FunnelAContact): ValidContact {
@@ -43,14 +52,12 @@ const MISSING_PHONE = "Bitte geben Sie Ihre Telefonnummer an – die Studios bra
 
 describe("validateContact", () => {
   it("akzeptiert die Pflichtangaben ohne Anrede", () => {
-    expect(valueOf(contact({ first_name: "  Maria ", email: " maria@beispiel.de ", phone: " 0511 123456 ", marketing: true }))).toEqual({
+    expect(valueOf(contact({ first_name: "  Maria ", email: " maria@beispiel.de ", phone: " 0511 123456 " }))).toEqual({
       salutation: null,
       first_name: "Maria",
       last_name: "Muster",
       email: "maria@beispiel.de",
       phone: "0511 123456",
-      contact_by_phone: false,
-      marketing: true,
     });
   });
 
@@ -60,6 +67,7 @@ describe("validateContact", () => {
       last_name: "Bitte geben Sie Ihren Nachnamen an.",
       email: "Bitte geben Sie Ihre E-Mail-Adresse an.",
       phone: MISSING_PHONE,
+      accept_terms: TERMS_MISSING,
     });
     expect(errorsOf(contact({ phone: "   " })).phone).toBe(MISSING_PHONE);
     expect(errorsOf(contact({ last_name: "   " }))).toEqual({ last_name: "Bitte geben Sie Ihren Nachnamen an." });
@@ -102,13 +110,11 @@ describe("validateContact", () => {
     expect(errorsOf(contact({ phone: `0${"1".repeat(40)}` })).phone).toBe("Diese Telefonnummer ist zu lang.");
   });
 
-  it("übernimmt Rückrufe nur mit angehakter Einwilligung", () => {
-    expect(valueOf(contact()).contact_by_phone).toBe(false);
-    expect(valueOf(contact({ phone: " 0511 123456 ", contact_by_phone: true, salutation: "Frau" }))).toMatchObject({
-      salutation: "Frau",
-      phone: "0511 123456",
-      contact_by_phone: true,
-    });
+  it("verlangt die AGB-Bestätigung statt eigener Haken für Anrufe und Werbung", () => {
+    expect(errorsOf(contact({ accept_terms: false }))).toEqual({ accept_terms: TERMS_MISSING });
+    expect(valueOf(contact({ salutation: "Frau" }))).toMatchObject({ salutation: "Frau", phone: "0511 123456" });
+    expect(valueOf(contact())).not.toHaveProperty("contact_by_phone");
+    expect(valueOf(contact())).not.toHaveProperty("marketing");
   });
 
   it("liefert Fehler einzelner Felder für die Prüfung beim Verlassen", () => {
@@ -125,17 +131,17 @@ describe("sanitizeContact", () => {
     }
   });
 
-  it("übernimmt nur gültige Werte in erlaubter Länge", () => {
+  it("übernimmt nur gültige Werte in erlaubter Länge, die AGB-Bestätigung nie", () => {
     expect(
       sanitizeContact({
         salutation: "Dr.",
         first_name: 42,
         last_name: "x".repeat(200),
         email: "maria@beispiel.de",
-        contact_by_phone: "true",
+        accept_terms: true,
         marketing: true,
       }),
-    ).toEqual({ ...emptyContact(), last_name: "x".repeat(80), email: "maria@beispiel.de", marketing: true });
+    ).toEqual({ ...emptyContact(), last_name: "x".repeat(80), email: "maria@beispiel.de" });
     expect(sanitizeContact({ salutation: "Divers" }).salutation).toBe("Divers");
   });
 });
@@ -154,8 +160,6 @@ describe("Absenden an kw-lead", () => {
     last_name: "Muster",
     email: "maria@beispiel.de",
     phone: "0511 123456",
-    contact_by_phone: true,
-    marketing: false,
   };
   const payload: FunnelASubmitPayload = {
     answers,
@@ -184,7 +188,7 @@ describe("Absenden an kw-lead", () => {
         email: "maria@beispiel.de",
         phone: "0511 123456",
       },
-      consents: { share_with_studios: true, contact_by_phone: true, marketing: false },
+      consents: { share_with_studios: true, accept_terms: true },
       turnstile_token: "cf-token",
       website: "",
       submission_id: "4f0c2c55-8a8e-4a55-9a1c-3f1d8a0c9e21",
@@ -202,7 +206,7 @@ describe("Absenden an kw-lead", () => {
   it("überträgt fehlende Angaben als null", () => {
     const body = buildSubmitBody({
       ...payload,
-      contact: { ...valid, salutation: null, contact_by_phone: false },
+      contact: { ...valid, salutation: null },
       turnstileToken: null,
     });
     expect(body.contact).toStrictEqual({
@@ -212,7 +216,7 @@ describe("Absenden an kw-lead", () => {
       email: "maria@beispiel.de",
       phone: "0511 123456",
     });
-    expect(body.consents).toStrictEqual({ share_with_studios: true, contact_by_phone: false, marketing: false });
+    expect(body.consents).toStrictEqual({ share_with_studios: true, accept_terms: true });
     expect(body.turnstile_token).toBeNull();
   });
 
@@ -223,7 +227,7 @@ describe("Absenden an kw-lead", () => {
   });
 
   it("meldet den Lead an Ads und Meta", async () => {
-    await trackFunnelALead({ ...valid, contact_by_phone: false }, answers);
+    await trackFunnelALead(valid, answers);
     expect(setEnhancedConversionFromForm).toHaveBeenCalledWith({
       email: "maria@beispiel.de",
       firstName: "Maria",

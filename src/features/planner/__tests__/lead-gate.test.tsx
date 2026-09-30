@@ -27,18 +27,17 @@ function controller(step: PlannerStep, submitted: boolean): Controller {
     selectedPhotoPath: null,
     renders: [submitted ? RENDER : { ...RENDER, image_url: null, locked: true }],
     activeRenderId: "r1",
-    offersChoice: "ja",
     timeframe: "",
     budget: 10_000,
     budgetConfirmed: false,
     occasion: "",
     housing: "",
     submitted,
-    offersRequested: false,
-    hasPhone: false,
+    offersRequested: submitted,
+    hasPhone: submitted,
     answered: null,
   };
-  const flow = { unlocked: submitted, wantsOffers: true };
+  const flow = { unlocked: submitted };
   const fn = new Proxy({}, { get: () => noop });
   return {
     planner: fn,
@@ -50,7 +49,7 @@ function controller(step: PlannerStep, submitted: boolean): Controller {
     blocked: null,
     wallIssues: {},
     showWallErrors: false,
-    contact: { first_name: "Max", last_name: "", email: "", phone: "", contact_by_phone: false },
+    contact: { first_name: "Max", last_name: "", email: "", phone: "", accept_terms: false },
     setContact: noop,
     leadErrors: {},
     honeypot: "",
@@ -110,5 +109,18 @@ describe("Funnel C: Preis und Küche erst nach der Kontakterfassung", () => {
     const { container } = renderStep("ergebnis", true);
     expect(container.textContent).toMatch(/\d\s?€/);
     expect(container.querySelector('img[src="/k.webp"]')).not.toBeNull();
+  });
+
+  it("sagt am Ende klar, dass mehrere Studios unverbindliche Angebote machen können", () => {
+    renderStep("kontakt");
+    expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent("Wohin dürfen wir Ihre Küche und Ihre Angebote schicken?");
+    expect(screen.getByText(/können Ihnen Angebote machen/)).toBeInTheDocument();
+    expect(screen.getAllByRole("button", { name: /Küche & Angebote erhalten/ }).length).toBeGreaterThan(0);
+  });
+
+  it("bestätigt im Ergebnis, dass die Angebote angefragt sind", () => {
+    renderStep("ergebnis", true);
+    expect(screen.getByText("Ihre kostenlosen Angebote sind angefragt")).toBeInTheDocument();
+    expect(screen.getByText(/Mehrere Studios können Ihnen ein unverbindliches Angebot machen/)).toBeInTheDocument();
   });
 });

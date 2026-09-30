@@ -11,7 +11,11 @@ export interface UxAlertLink {
 /** URL des betroffenen Schritts, so wie Besucher ihn sehen. */
 export function funnelStepUrl(funnel: FunnelId | null, step: string | null, stepIndex: number | null): string | null {
   if (funnel === "a") return !step || step === "kuechenform" ? "/formular" : `/funnel/a/${step}`;
-  if (funnel === "b") return stepIndex && stepIndex > 0 ? `/funnel/b?schritt=${stepIndex + 1}` : "/funnel/b";
+  // Funnel B führt Schritte seit 30.09.2026 als Schlüssel (?schritt=preis …); ältere Ereignisse tragen Nummern.
+  if (funnel === "b") {
+    if (step && /^[a-z][a-z-]*$/.test(step)) return step === "preis" || step === "angebot" ? "/funnel/b" : `/funnel/b?schritt=${step}`;
+    return stepIndex && stepIndex > 0 ? `/funnel/b?schritt=${stepIndex + 1}` : "/funnel/b";
+  }
   if (funnel === "c") return step ? `/funnel/c?schritt=${step}` : "/funnel/c";
   return null;
 }

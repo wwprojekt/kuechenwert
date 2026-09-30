@@ -35,7 +35,9 @@ describe("funnelStepUrl", () => {
     expect(funnelStepUrl("a", "kuechenform", 0)).toBe("/formular");
     expect(funnelStepUrl("a", "zeitrahmen", 14)).toBe("/funnel/a/zeitrahmen");
     expect(funnelStepUrl("b", "angebot", 0)).toBe("/funnel/b");
-    expect(funnelStepUrl("b", "kontakt", 8)).toBe("/funnel/b?schritt=9");
+    expect(funnelStepUrl("b", "kontakt", 8)).toBe("/funnel/b?schritt=kontakt");
+    expect(funnelStepUrl("b", "preis", 0)).toBe("/funnel/b");
+    expect(funnelStepUrl("b", null, 3)).toBe("/funnel/b?schritt=4");
     expect(funnelStepUrl("c", "visualisierung", 4)).toBe("/funnel/c?schritt=visualisierung");
     expect(funnelStepUrl(null, null, null)).toBeNull();
   });

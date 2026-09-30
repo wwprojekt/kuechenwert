@@ -737,16 +737,22 @@ export interface LeadSummaryRow {
   funnel_answers: unknown;
 }
 
-/** Wie kw_lead_public_summary (SQL), aber aus einer leads-Zeile – z. B. für die Admin-Ansicht. */
+/**
+ * Wie kw_lead_public_summary (SQL), aber aus einer leads-Zeile – z. B. für die
+ * Admin-Ansicht. Funnel C heißt wie in der Planer-Zusammenfassung „c“.
+ */
 export function leadSummaryFromRow(lead: LeadSummaryRow): Record<string, unknown> {
   const answers = { ...asRecord(lead.funnel_answers) };
   delete answers.salutation;
   const estimate = asRecord(answers.estimate);
+  const planner = lead.funnel_type === "traumkueche";
   return {
-    source: lead.funnel_type,
+    source: planner ? "c" : lead.funnel_type,
     kitchen_form: lead.kitchen_form,
     kitchen_style: lead.kitchen_style,
-    budget_eur: lead.budget_midpoint,
+    // Bei älteren Funnel-C-Leads ist budget_midpoint die KI-Schätzung; das genannte Budget steht in den Antworten.
+    budget_eur: planner ? (typeof answers.budget_eur === "number" ? answers.budget_eur : null) : lead.budget_midpoint,
+    ...(planner ? { budget_source: answers.budget_source ?? null, housing: answers.housing ?? null } : {}),
     existing_offer_eur:
       lead.has_existing_offer && lead.existing_offer_price_cents !== null ? Math.round(lead.existing_offer_price_cents / 100) : null,
     timeframe_months: lead.timeframe_months,

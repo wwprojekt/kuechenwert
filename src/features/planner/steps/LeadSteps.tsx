@@ -13,9 +13,9 @@ import type { OffersChoice } from "../state";
 export const PLANNER_NAME_FORM = "planner-name";
 export const PLANNER_CONTACT_FORM = "planner-contact";
 
-/** Einwilligungstext zu „Ja, Angebote“ (Version kw-projekt-2026-09-30 in kw-planner). */
+/** Einwilligungstext zu „Ja, Angebote“ (Version kw-projekt-2026-09-30b in _shared/planner-offers.ts). */
 export const OFFERS_CONSENT_TEXT =
-  "Mit „Ja“ willige ich ein, dass KüchenWert meine Planung ohne Kontaktdaten freigeschalteten Küchenstudios in meiner Region zur Angebotserstellung zeigt und meine Kontaktdaten an das von mir gewählte Studio sowie an bis zu drei Studios zur persönlichen Beratung weitergibt. Widerruf jederzeit möglich.";
+  "Mit „Ja“ willige ich ein, dass KüchenWert meine Planung mit Visualisierungen und Raumfotos ohne Kontaktdaten freigeschalteten Küchenstudios in meiner Region zur Angebotserstellung zeigt und meine Kontaktdaten an das von mir gewählte Studio sowie an bis zu drei Studios zur persönlichen Beratung weitergibt. Widerruf jederzeit möglich.";
 
 export const TIMEFRAMES = PLANNER_TIMEFRAMES.map((t) => ({ id: String(t.months), label: t.label }));
 

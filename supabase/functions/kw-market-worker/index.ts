@@ -351,6 +351,12 @@ async function plannerEstimate(ctx: Ctx, leadId: string): Promise<{ min: number;
   return typeof estimate?.min === "number" && typeof estimate?.max === "number" ? { min: estimate.min, max: estimate.max } : null;
 }
 
+/** Jüngste Weitergabe-Einwilligung ausdrücklich abgelehnt (Funnel C „Nein, nur Küche & Preis“ oder widerrufen). */
+async function shareRefused(ctx: Ctx, leadId: string): Promise<boolean> {
+  const { data } = await ctx.sb.rpc("kw_lead_share_consent", { p_lead_id: leadId });
+  return data === false;
+}
+
 async function onProjectCreated(ctx: Ctx, p: Record<string, unknown>) {
   const lead = await ctx.lead(String(p.lead_id));
   const { data: tender } = await ctx.sb
@@ -363,7 +369,8 @@ async function onProjectCreated(ctx: Ctx, p: Record<string, unknown>) {
 
   const covering = await studiosCovering(ctx, lead.postal_code);
   // Funnel C „Nein, nur Visualisierung“: Lead ohne Ausschreibung, Studios sehen nichts.
-  const visualOnly = !tender && lead.funnel_type === "traumkueche";
+  // Ein „Ja“ ohne Ausschreibung (Anlegen gescheitert) ist keine Visualisierung, sondern ein Fall fürs Team.
+  const visualOnly = !tender && lead.funnel_type === "traumkueche" && (await shareRefused(ctx, lead.id));
 
   if (lead.email && visualOnly) {
     const link = await ctx.projectLink(lead.id);
@@ -444,7 +451,10 @@ async function onProjectCreated(ctx: Ctx, p: Record<string, unknown>) {
           detailRow("Studios im Umkreis", covering === null ? "unbekannt" : String(covering)),
         ].join(""),
       ),
-      covering === 0
+      !tender && !visualOnly
+        ? paragraph("<strong>Ausschreibung fehlt:</strong> Das automatische Anlegen hat nicht geklappt. Bitte im Admin unter Leads „Ausschreibung anlegen“.")
+        : "",
+      covering === 0 && !visualOnly
         ? paragraph("<strong>Kein aktives Studio deckt diese PLZ ab.</strong> Bitte den Kunden persönlich kontaktieren und Studios in der Region gewinnen oder das Projekt vermitteln.")
         : "",
       button("Im Admin öffnen", `${BRAND.baseUrl}/admin/leads`),

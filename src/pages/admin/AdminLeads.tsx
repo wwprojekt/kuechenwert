@@ -30,7 +30,9 @@ import {
 import { Loader2, Eye } from "lucide-react";
 import type { Database } from "@/integrations/supabase/types";
 import { formLabel, leadSummaryFromRow, styleLabel } from "@/features/funnel-a/catalog";
-import { fetchTenderStatuses } from "@/features/marketplace/admin-api";
+import { fetchShareConsents, fetchTenderStatuses } from "@/features/marketplace/admin-api";
+import { AdminLeadConsents } from "@/features/marketplace/components/AdminLeadConsents";
+import { AdminLeadPlanning } from "@/features/marketplace/components/AdminLeadPlanning";
 import { AdminTenderPanel, TenderStatusBadge } from "@/features/marketplace/components/AdminTenderPanel";
 import { ProjectAnswers } from "@/features/marketplace/components/ProjectAnswers";
 import { LEAD_STATUS_LABELS, leadStatusBadge } from "@/components/admin/leadLabels";
@@ -79,6 +81,17 @@ function formatDateTime(iso: string): string {
   });
 }
 
+const HOUSING_LABELS: Record<string, string> = { own: "Eigentum", rent: "Miete" };
+
+/** Funnel C hat kein Budget der Kund:in, sondern die KI-Preisschätzung (Spanne aus dem Abschluss). */
+function valueText(lead: Lead): string {
+  const estimate = (lead.funnel_answers as { estimate?: { min?: unknown; max?: unknown } } | null)?.estimate;
+  if (lead.funnel_type === "traumkueche" && typeof estimate?.min === "number" && typeof estimate?.max === "number") {
+    return `${formatEuro(estimate.min)} – ${formatEuro(estimate.max)}`;
+  }
+  return formatEuro(lead.budget_midpoint);
+}
+
 export default function AdminLeads() {
   const [searchParams] = useSearchParams();
   const [funnelFilter, setFunnelFilter] = useState<string>("all");
@@ -106,6 +119,11 @@ export default function AdminLeads() {
     queryFn: () => fetchTenderStatuses(leadIds),
     enabled: leadIds.length > 0,
   });
+  const { data: shareConsents } = useQuery({
+    queryKey: ["admin-lead-share-consents", leadIds],
+    queryFn: () => fetchShareConsents(leadIds),
+    enabled: leadIds.length > 0,
+  });
 
   const filtered = useMemo(() => {
     if (!leads) return [];
@@ -115,6 +133,7 @@ export default function AdminLeads() {
       if (search) {
         const s = search.toLowerCase();
         const hay = [
+          l.id,
           l.first_name,
           l.last_name,
           l.email,
@@ -228,7 +247,7 @@ export default function AdminLeads() {
                 <TableHead>Name</TableHead>
                 <TableHead>Kontakt</TableHead>
                 <TableHead>PLZ</TableHead>
-                <TableHead className="text-right">Budget</TableHead>
+                <TableHead className="text-right">Budget / Schätzung</TableHead>
                 <TableHead className="text-right">Score</TableHead>
                 <TableHead className="w-12" />
               </TableRow>
@@ -257,7 +276,7 @@ export default function AdminLeads() {
                       <Badge variant={status.variant}>{status.label}</Badge>
                     </TableCell>
                     <TableCell>
-                      <TenderStatusBadge status={tenderStatuses?.[lead.id]} />
+                      <TenderStatusBadge status={tenderStatuses?.[lead.id]} shareConsent={shareConsents?.[lead.id]} />
                     </TableCell>
                     <TableCell>
                       {lead.first_name || lead.last_name
@@ -269,8 +288,8 @@ export default function AdminLeads() {
                       {lead.phone && <div className="text-muted-foreground">{lead.phone}</div>}
                     </TableCell>
                     <TableCell>{lead.postal_code}</TableCell>
-                    <TableCell className="text-right">
-                      {formatEuro(lead.budget_midpoint)}
+                    <TableCell className="whitespace-nowrap text-right">
+                      {valueText(lead)}
                     </TableCell>
                     <TableCell className="text-right">{lead.score}</TableCell>
                     <TableCell>
@@ -298,6 +317,7 @@ export default function AdminLeads() {
               </DialogHeader>
               <div className="space-y-4 text-sm">
                 <AdminTenderPanel leadId={selected.id} funnelType={selected.funnel_type} kitchenForm={selected.kitchen_form} />
+                <AdminLeadConsents leadId={selected.id} />
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <div className="text-xs uppercase text-muted-foreground">E-Mail</div>
@@ -312,8 +332,10 @@ export default function AdminLeads() {
                     <div>{selected.postal_code}</div>
                   </div>
                   <div>
-                    <div className="text-xs uppercase text-muted-foreground">Budget</div>
-                    <div>{formatEuro(selected.budget_midpoint)}</div>
+                    <div className="text-xs uppercase text-muted-foreground">
+                      {selected.funnel_type === "traumkueche" ? "KI-Preisschätzung" : "Budget"}
+                    </div>
+                    <div>{valueText(selected)}</div>
                   </div>
                   <div>
                     <div className="text-xs uppercase text-muted-foreground">Küchenform</div>
@@ -329,7 +351,7 @@ export default function AdminLeads() {
                   </div>
                   <div>
                     <div className="text-xs uppercase text-muted-foreground">Wohnsituation</div>
-                    <div>{selected.housing_type ?? "-"}</div>
+                    <div>{(selected.housing_type && HOUSING_LABELS[selected.housing_type]) ?? "-"}</div>
                   </div>
                   <div>
                     <div className="text-xs uppercase text-muted-foreground">Zeitrahmen</div>
@@ -342,12 +364,6 @@ export default function AdminLeads() {
                   <div>
                     <div className="text-xs uppercase text-muted-foreground">Tier / Score</div>
                     <div>{selected.tier} / {selected.score}</div>
-                  </div>
-                  <div>
-                    <div className="text-xs uppercase text-muted-foreground">Consent Call / Marketing</div>
-                    <div>
-                      {selected.consent_call ? "Ja" : "Nein"} / {selected.consent_marketing ? "Ja" : "Nein"}
-                    </div>
                   </div>
                   <div>
                     <div className="text-xs uppercase text-muted-foreground">UTM</div>
@@ -368,6 +384,7 @@ export default function AdminLeads() {
                     </div>
                   </div>
                 </div>
+                {selected.funnel_type === "traumkueche" && <AdminLeadPlanning lead={selected} />}
                 <ProjectAnswers summary={leadSummaryFromRow(selected)} title="Angaben aus der Anfrage" wide />
                 <div>
                   <div className="mb-2 text-xs uppercase text-muted-foreground">

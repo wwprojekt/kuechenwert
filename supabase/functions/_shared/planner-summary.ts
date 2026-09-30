@@ -43,6 +43,22 @@ export interface PlannerLeadFrame {
   housingType: string;
 }
 
+/** Rahmen eines gespeicherten Leads (funnel_answers aus kw-planner submit). */
+export function storedLeadFrame(
+  answers: Record<string, unknown>,
+  lead: { timeframeMonths: number | null; purchaseReason: string | null; housingType: string },
+): PlannerLeadFrame {
+  const source = answers.budget_source;
+  return {
+    timeframeMonths: lead.timeframeMonths,
+    budgetEur: typeof answers.budget_eur === "number" ? answers.budget_eur : null,
+    budgetSource: source === "slider" || source === "unknown" ? source : null,
+    purchaseReason: lead.purchaseReason,
+    housing: typeof answers.housing === "string" ? answers.housing : null,
+    housingType: lead.housingType,
+  };
+}
+
 export function buildPlannerSummary(
   config: PlannerConfig,
   room: RoomInput,

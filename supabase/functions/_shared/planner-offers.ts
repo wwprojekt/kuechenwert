@@ -1,7 +1,8 @@
 /**
  * Funnel C: Ausschreibung zu einer Planung eröffnen. Gemeinsam für kw-planner
- * (Abschluss mit „Ja, Angebote“ und späteres Nachfordern im Ergebnis) und
- * kw-project (Nachfordern auf der Projektseite).
+ * (Abschluss mit „Ja, Angebote“, späteres Nachfordern im Ergebnis und die
+ * Admin-Aktion admin-open-tender) und kw-project (Nachfordern auf der
+ * Projektseite).
  *
  * Studios sehen eine Planung nur mit der Einwilligung share_with_studios; wer
  * nur die Visualisierung wollte, hat einen Lead ohne Ausschreibung.
@@ -12,11 +13,11 @@ import { HttpError } from "./kw-http.ts";
 import { sanitizeConfig, sanitizeRoom, type PlannerConfig, type RoomInput } from "./kitchen-catalog.ts";
 import { estimateKitchenPrice, type KitchenEstimate } from "./kitchen-pricing.ts";
 import { sanitizeProvenance, type PlannerProvenance } from "./planner-provenance.ts";
-import { buildPlannerSummary, type PlannerLeadFrame } from "./planner-summary.ts";
+import { buildPlannerSummary, storedLeadFrame, type PlannerLeadFrame } from "./planner-summary.ts";
 import { loadRateCard } from "./rate-card.ts";
 
-/** Einwilligungstext „Ja, Angebote“ (Funnel C, ab 30.09.2026). */
-export const OFFERS_CONSENT_TEXT_VERSION = "kw-projekt-2026-09-30";
+/** Einwilligungstext „Ja, Angebote“ (Funnel C, ab 30.09.2026; b nennt Visualisierungen und Raumfotos). */
+export const OFFERS_CONSENT_TEXT_VERSION = "kw-projekt-2026-09-30b";
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
 const OPEN_TENDER_STATUSES = ["draft", "active", "completed"];
@@ -66,10 +67,15 @@ export async function openPlannerTender(
     cover: { bucket: string; path: string } | null;
     provenance: PlannerProvenance | null;
     botUnverified: boolean;
+    /** false legt immer einen Entwurf an (Admin); ohne Angabe entscheiden Einstellung und Bot-Prüfung. */
+    publish?: boolean;
   },
 ): Promise<"active" | "draft"> {
-  const { data: settings } = await sb.from("kw_marketplace_settings").select("auto_publish_funnel_c").maybeSingle();
-  const publish = settings?.auto_publish_funnel_c !== false && !input.botUnverified;
+  let publish = input.publish;
+  if (publish === undefined) {
+    const { data: settings } = await sb.from("kw_marketplace_settings").select("auto_publish_funnel_c").maybeSingle();
+    publish = settings?.auto_publish_funnel_c !== false && !input.botUnverified;
+  }
   const summary = buildPlannerSummary(input.config, input.room, input.estimate, {
     ...input.frame,
     photoCount: input.photoCount,
@@ -87,22 +93,6 @@ export async function openPlannerTender(
   });
   if (error) throw error;
   return publish ? "active" : "draft";
-}
-
-/** Rahmen eines gespeicherten Leads (funnel_answers aus kw-planner submit). */
-export function storedLeadFrame(
-  answers: Record<string, unknown>,
-  lead: { timeframeMonths: number | null; purchaseReason: string | null; housingType: string },
-): PlannerLeadFrame {
-  const source = answers.budget_source;
-  return {
-    timeframeMonths: lead.timeframeMonths,
-    budgetEur: typeof answers.budget_eur === "number" ? answers.budget_eur : null,
-    budgetSource: source === "slider" || source === "unknown" ? source : null,
-    purchaseReason: lead.purchaseReason,
-    housing: typeof answers.housing === "string" ? answers.housing : null,
-    housingType: lead.housingType,
-  };
 }
 
 export async function hasOpenTender(sb: SupabaseClient, leadId: string): Promise<boolean> {
@@ -210,5 +200,69 @@ export async function requestPlannerOffers(
   });
   const { error: enqueueErr } = await sb.rpc("kw_enqueue", { p_event_type: "project_created", p_payload: { lead_id: lead.id, funnel: "c" } });
   if (enqueueErr) console.error("[planner-offers] project_created enqueue failed", enqueueErr.message);
+  return { tenderStatus, alreadyOpen: false };
+}
+
+/**
+ * Admin: Ausschreibung zu einer Planung als Entwurf anlegen, etwa wenn das
+ * automatische Anlegen beim Abschluss scheiterte. Protokolliert keine
+ * Einwilligung; ohne Weitergabe-Einwilligung verweigert kw_open_tender.
+ */
+export async function openPlannerTenderAsAdmin(
+  sb: SupabaseClient,
+  input: { leadId: string; notifyCustomer: boolean },
+): Promise<{ tenderStatus: string; alreadyOpen: boolean }> {
+  const { data: lead, error: leadErr } = await sb
+    .from("leads")
+    .select("id, funnel_type, postal_code, housing_type, purchase_reason, timeframe_months, bot_check, funnel_answers")
+    .eq("id", input.leadId)
+    .maybeSingle();
+  if (leadErr) throw leadErr;
+  if (!lead) throw new HttpError(404, "Lead nicht gefunden.", "not_found");
+  if (lead.funnel_type !== "traumkueche") {
+    throw new HttpError(409, "Nur für Planungen aus dem Traumküchen-Planer.", "not_planner_lead");
+  }
+  if (await hasOpenTender(sb, lead.id)) {
+    const { data: t } = await sb.from("lead_auctions").select("status").eq("lead_id", lead.id).order("created_at", { ascending: false }).limit(1).maybeSingle();
+    return { tenderStatus: (t?.status as string | undefined) ?? "draft", alreadyOpen: true };
+  }
+
+  const { data: session, error: sessionErr } = await sb
+    .from("planner_sessions")
+    .select("id, spec, room, provenance, photo_paths, current_render_id")
+    .eq("lead_id", lead.id)
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (sessionErr) throw sessionErr;
+  if (!session) throw new HttpError(409, "Zu diesem Lead gibt es keine Planung.", "no_planning");
+
+  const config = sanitizeConfig(session.spec);
+  const room = sanitizeRoom(session.room);
+  const { card, version: rateCardVersion, calibration } = await loadRateCard(sb);
+  const estimate = estimateKitchenPrice(config, room, { card, postalCode: lead.postal_code, rateCardVersion, calibration });
+  const cover = await plannerCover(sb, session, null);
+  const answers = (lead.funnel_answers && typeof lead.funnel_answers === "object" ? lead.funnel_answers : {}) as Record<string, unknown>;
+  const tenderStatus = await openPlannerTender(sb, {
+    leadId: lead.id,
+    sessionId: session.id,
+    config,
+    room,
+    estimate,
+    frame: storedLeadFrame(answers, {
+      timeframeMonths: (lead.timeframe_months as number | null) ?? null,
+      purchaseReason: (lead.purchase_reason as string | null) ?? null,
+      housingType: (lead.housing_type as string | null) ?? "unknown",
+    }),
+    photoCount: (session.photo_paths ?? []).length,
+    cover: cover ? { bucket: cover.bucket, path: cover.path } : null,
+    provenance: sanitizeProvenance(session.provenance, room),
+    botUnverified: lead.bot_check === "unverified",
+    publish: false,
+  });
+  if (input.notifyCustomer) {
+    const { error: notifyErr } = await sb.rpc("kw_enqueue", { p_event_type: "project_created", p_payload: { lead_id: lead.id, funnel: "c" } });
+    if (notifyErr) console.error("[planner-offers] project_created enqueue failed", notifyErr.message);
+  }
   return { tenderStatus, alreadyOpen: false };
 }

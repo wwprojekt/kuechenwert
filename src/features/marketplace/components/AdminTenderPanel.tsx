@@ -10,15 +10,30 @@ import { AdminComplaintsSection } from "./AdminComplaintsSection";
 import { AdminLeadFilesSection } from "./AdminLeadFilesSection";
 import { AdminTenderActions } from "./AdminTenderActions";
 import { AdminTenderBriefing } from "./AdminTenderBriefing";
-import { TENDER_STATUS_LABELS, fetchAdminTender, openTenderAsAdmin, publishTenderAsAdmin } from "../admin-api";
+import {
+  TENDER_STATUS_LABELS,
+  fetchAdminTender,
+  fetchLeadConsents,
+  latestConsent,
+  openTenderAsAdmin,
+  publishTenderAsAdmin,
+} from "../admin-api";
 
 const dateTime = (iso: string | null) =>
   iso ? new Date(iso).toLocaleString("de-DE", { dateStyle: "short", timeStyle: "short" }) : "–";
 const euro = (n: number | null) =>
   n == null ? "–" : new Intl.NumberFormat("de-DE", { style: "currency", currency: "EUR", maximumFractionDigits: 0 }).format(n);
 
-export function TenderStatusBadge({ status }: { status: string | undefined }) {
-  if (!status) return <span className="text-xs text-muted-foreground">keine</span>;
+export function TenderStatusBadge({ status, shareConsent }: { status: string | undefined; shareConsent?: boolean }) {
+  if (!status) {
+    return shareConsent === false ? (
+      <Badge variant="outline" className="font-normal text-muted-foreground" title="Keine Einwilligung zur Weitergabe an Studios">
+        nicht erlaubt
+      </Badge>
+    ) : (
+      <span className="text-xs text-muted-foreground">keine</span>
+    );
+  }
   const meta = TENDER_STATUS_LABELS[status] ?? { label: status, tone: "muted" as const };
   const cls =
     meta.tone === "warning"
@@ -44,15 +59,18 @@ export function AdminTenderPanel({ leadId, funnelType, kitchenForm }: { leadId: 
   const qc = useQueryClient();
   const [notify, setNotify] = useState(false);
   const tender = useQuery({ queryKey: ["admin-lead-tender", leadId], queryFn: () => fetchAdminTender(leadId) });
+  const consents = useQuery({ queryKey: ["admin-lead-consents", leadId], queryFn: () => fetchLeadConsents(leadId) });
+  const shareRefused = latestConsent(consents.data, "share_with_studios") === false;
 
   const refresh = () => {
     void qc.invalidateQueries({ queryKey: ["admin-lead-tender", leadId] });
+    void qc.invalidateQueries({ queryKey: ["admin-lead-consents", leadId] });
     void qc.invalidateQueries({ queryKey: ["admin-lead-tenders"] });
     void qc.invalidateQueries({ queryKey: ["admin-leads"] });
   };
 
   const open = useMutation({
-    mutationFn: () => openTenderAsAdmin(leadId, notify),
+    mutationFn: () => openTenderAsAdmin(leadId, funnelType, notify),
     onSuccess: () => {
       toast.success("Ausschreibung als Entwurf angelegt.");
       refresh();
@@ -79,10 +97,16 @@ export function AdminTenderPanel({ leadId, funnelType, kitchenForm }: { leadId: 
           {t && <TenderStatusBadge status={t.status} />}
         </div>
 
-        {tender.isLoading ? (
+        {tender.isLoading || consents.isLoading ? (
           <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
         ) : tender.isError ? (
           <p className="text-sm text-destructive">{errorMessage(tender.error)}</p>
+        ) : !t && shareRefused ? (
+          <p className="text-sm text-muted-foreground">
+            {funnelType === "traumkueche"
+              ? "Keine Ausschreibung möglich: Die Kund:in wollte nur Visualisierung und Preis oder hat die Weitergabe mit „Projekt beenden“ widerrufen. Angebote kann sie jederzeit selbst im Ergebnis des Planers oder auf ihrer Projektseite anfordern, dann startet die Ausschreibung automatisch. Planung und Kontaktdaten nicht an Studios weitergeben."
+              : "Keine Ausschreibung möglich: Die Kund:in hat der Weitergabe an Küchenstudios nicht zugestimmt oder sie mit „Projekt beenden“ widerrufen. Eine neue Ausschreibung braucht eine neue Anfrage der Kund:in."}
+          </p>
         ) : !t ? (
           <div className="space-y-3">
             <p className="text-sm text-muted-foreground">
@@ -131,6 +155,11 @@ export function AdminTenderPanel({ leadId, funnelType, kitchenForm }: { leadId: 
                 </dd>
               </div>
             </dl>
+            {t.status === "draft" && shareRefused && (
+              <p className="text-xs text-destructive">
+                Nicht veröffentlichen: Die Kund:in hat der Weitergabe an Küchenstudios nicht zugestimmt oder sie widerrufen.
+              </p>
+            )}
             {t.status === "draft" && (
               <div className="flex flex-col gap-2 rounded-md bg-amber-50 p-3 text-amber-900 sm:flex-row sm:items-center sm:justify-between">
                 <p className="text-xs">
@@ -138,7 +167,7 @@ export function AdminTenderPanel({ leadId, funnelType, kitchenForm }: { leadId: 
                     ? "Nach dem Experten-Check veröffentlichen: Ergebnis unten im Briefing festhalten. Unterlagen sehen Studios nur, wenn Sie sie unten einzeln freigeben."
                     : "Nach Prüfung freigeben, damit Studios im Umkreis Angebote abgeben können."}
                 </p>
-                <Button size="sm" onClick={() => publish.mutate(t.id)} disabled={publish.isPending} className="flex-none">
+                <Button size="sm" onClick={() => publish.mutate(t.id)} disabled={publish.isPending || shareRefused} className="flex-none">
                   {publish.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Megaphone className="mr-2 h-4 w-4" />}
                   Veröffentlichen
                 </Button>

@@ -29,6 +29,7 @@ import { ContactComplaintCard } from "@/features/marketplace/components/ContactC
 import { DealerOrderPanel } from "@/features/marketplace/components/DealerOrderPanel";
 import { DealerProjectDocuments } from "@/features/marketplace/components/DealerProjectDocuments";
 import { projectTitle, projectValue, timeLeft } from "@/features/marketplace/components/DealerProjectCard";
+import { PlannerSummaryCards, summaryRoom } from "@/features/marketplace/components/PlannerSummaryCards";
 import { DetailGroupsCard, ProjectAnswers } from "@/features/marketplace/components/ProjectAnswers";
 import { describeLeadDetails, detailsRoom } from "@/features/marketplace/lead-details";
 import {
@@ -41,40 +42,10 @@ import {
   withdrawOffer,
   type DealerProjectDetail as Detail,
 } from "@/features/marketplace/dealer-api";
-import { OFFER_INCLUDE_LABELS, type OfferIncludes, type ProjectSummaryLabels } from "@/features/marketplace/project-api";
+import { OFFER_INCLUDE_LABELS, type OfferIncludes } from "@/features/marketplace/project-api";
 import { BeforeAfterSlider } from "@/features/planner/components/BeforeAfterSlider";
-import { FloorPlanSketch } from "@/features/planner/components/FloorPlanSketch";
-import { VENTILATION_OPTIONS, describeRoom, sanitizeRoom, type ChoiceSource, type DimensionsSource } from "@/features/planner/core";
 
 const euro = (n: number) => `${Math.round(n).toLocaleString("de-DE")} €`;
-
-const CHOICE_NOTE: Record<ChoiceSource, string> = { default: "Standard", partial: "teils Standard" };
-
-const DIMENSIONS_NOTE: Record<DimensionsSource, string> = {
-  customer: "Angaben des Kunden, bitte vor Ort aufmessen",
-  partial: "teils Beispielmaße des Planers, vom Kunden nicht angepasst; bitte vor Ort aufmessen",
-  example: "Beispielmaße des Planers, vom Kunden nicht angepasst; bitte vor Ort aufmessen",
-};
-
-type ConfigRow = [key: keyof ProjectSummaryLabels, label: string, value: string | undefined];
-
-function configRows(labels: ProjectSummaryLabels): ConfigRow[] {
-  const rows: ConfigRow[] = [
-    ["quality", "Qualität", labels.quality],
-    ["style", "Stil", labels.style],
-    ["front", "Fronten", labels.front],
-    ["handle", "Griffe", labels.handle],
-    ["wall_cabinets", "Oberschränke", labels.wall_cabinets],
-    ["tall_units", "Hochschränke", labels.tall_units != null ? String(labels.tall_units) : undefined],
-    ["worktop", "Arbeitsplatte", labels.worktop],
-    ["sink", "Spüle & Armatur", [labels.sink, labels.tap].filter(Boolean).join(", ")],
-    ["appliance_level", "Geräte", labels.appliance_level],
-    ["appliances", "Gerätewünsche", (labels.appliances ?? []).join(", ")],
-    ["extras", "Extras", (labels.extras ?? []).join(", ")],
-    ["services", "Leistungen", (labels.services ?? []).join(", ")],
-  ];
-  return rows.filter(([, , value]) => !!value);
-}
 
 const offerSchema = z.object({
   price: z.coerce.number({ invalid_type_error: "Bitte einen Preis angeben" }).min(500, "Bitte einen realistischen Preis angeben").max(1_999_999),
@@ -254,19 +225,15 @@ export default function DealerProjectDetail() {
 
   const d = detailQuery.data;
   const s = d.summary ?? {};
-  const labels = s.labels;
-  const defaults = s.defaults ?? {};
-  const choiceRows = labels ? configRows(labels) : [];
   const renders = d.media.filter((m) => m.kind === "render");
   const photos = d.media.filter((m) => m.kind === "photo");
-  const renderUrl = renders[0] ? media.data?.[renders[0].path] : undefined;
+  const mainRender = renders.find((r) => r.path === s.cover?.path) ?? renders[0];
+  const renderUrl = mainRender ? media.data?.[mainRender.path] : undefined;
   const photoUrl = photos[0] ? media.data?.[photos[0].path] : undefined;
-  const plannedRoom = s.room?.form && s.room.walls ? sanitizeRoom(s.room) : null;
   // Ohne Planung (Funnel A/B): Wandlängen, die der Kunde nachgetragen hat.
-  const addedRoom = plannedRoom ? null : detailsRoom(d.details, s.kitchen_form);
-  const room = plannedRoom ?? (addedRoom ? sanitizeRoom(addedRoom) : null);
+  const addedRoom = s.room?.form && s.room.walls ? null : detailsRoom(d.details, s.kitchen_form);
+  const room = summaryRoom(s, addedRoom);
   const detailGroups = describeLeadDetails(d.details, s.kitchen_form);
-  const ventilationLabel = VENTILATION_OPTIONS.find((o) => o.id === s.room?.ventilation)?.label;
   const slotsLeft = Math.max(0, d.max_contact_purchases - d.contact_purchases);
   const canUnlock = !d.contact_unlocked && !d.awarded_to_me && ["active", "completed"].includes(d.status) && slotsLeft > 0 && (d.contact_price_cents ?? 0) > 0;
   const left = timeLeft(d.ends_at);
@@ -327,7 +294,7 @@ export default function DealerProjectDetail() {
         <div className="space-y-6">
           {(renderUrl || photoUrl) && (
             <div className="overflow-hidden rounded-2xl border bg-card">
-              {renderUrl && photoUrl && renders[0]?.mode === "edit" ? (
+              {renderUrl && photoUrl && mainRender?.mode === "edit" ? (
                 <BeforeAfterSlider before={photoUrl} after={renderUrl} beforeLabel="Raum heute" afterLabel="Wunschküche (KI)" className="aspect-[4/3]" />
               ) : (
                 <div className="relative">
@@ -350,58 +317,7 @@ export default function DealerProjectDetail() {
             full={d.contact_unlocked || d.awarded_to_me}
           />
 
-          {labels && (
-            <div className="rounded-2xl border bg-card p-5">
-              <h2 className="font-bold">Wunschkonfiguration</h2>
-              <dl className="mt-3 grid gap-x-6 gap-y-2 text-sm sm:grid-cols-2">
-                {choiceRows.map(([key, label, value]) => {
-                  const note = defaults[key];
-                  return (
-                    <div key={key} className="flex gap-3">
-                      <dt className="w-28 flex-none text-muted-foreground">{label}</dt>
-                      <dd className="font-medium">
-                        {value}
-                        {note && <span className="ml-1.5 font-normal text-muted-foreground">({CHOICE_NOTE[note]})</span>}
-                      </dd>
-                    </div>
-                  );
-                })}
-              </dl>
-              {choiceRows.some(([key]) => defaults[key]) && (
-                <p className="mt-3 text-xs text-muted-foreground">
-                  „Standard“: Diesen Schritt hat der Kunde übersprungen, der Wert ist die Voreinstellung des Planers.
-                </p>
-              )}
-              {s.wishes && (
-                <p className="mt-4 rounded-lg bg-muted/60 p-3 text-sm">
-                  <span className="font-semibold">Hinweis des Kunden:</span> {s.wishes}
-                </p>
-              )}
-            </div>
-          )}
-
-          {room && (
-            <div className="grid gap-4 rounded-2xl border bg-card p-5 sm:grid-cols-[1fr_1.2fr]">
-              <div>
-                <h2 className="font-bold">Raum & Maße</h2>
-                <p className="mt-1 text-sm text-muted-foreground">
-                  {plannedRoom
-                    ? `${s.room?.description ?? describeRoom(room)} (${DIMENSIONS_NOTE[s.room?.dimensions_source ?? "customer"]})`
-                    : `${describeRoom(room)} (vom Kunden nachgetragen, bitte vor Ort aufmessen)`}
-                </p>
-                {(s.layout || s.room?.ceiling_height_cm || ventilationLabel) && (
-                  <ul className="mt-3 space-y-1 text-sm">
-                    {s.layout && <li>Schrankzeile: {(s.layout.runCm / 100).toLocaleString("de-DE")} m</li>}
-                    {s.layout && <li>Arbeitsplatte: ca. {(s.layout.worktopCm / 100).toLocaleString("de-DE")} m</li>}
-                    {s.layout && s.layout.islandCm > 0 && <li>Insel: {(s.layout.islandCm / 100).toLocaleString("de-DE")} m</li>}
-                    {s.room?.ceiling_height_cm && <li>Raumhöhe: {(s.room.ceiling_height_cm / 100).toLocaleString("de-DE")} m</li>}
-                    {ventilationLabel && <li>Dunstabzug: {ventilationLabel}</li>}
-                  </ul>
-                )}
-              </div>
-              <FloorPlanSketch room={room} className="h-52 w-full" />
-            </div>
-          )}
+          <PlannerSummaryCards summary={s} addedRoom={addedRoom} />
 
           <ProjectAnswers summary={s} title="Angaben aus der Anfrage" wide />
           <DetailGroupsCard groups={detailGroups} title="Ergänzungen" wide />

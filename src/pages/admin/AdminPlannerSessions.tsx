@@ -27,7 +27,7 @@ import {
   DialogDescription,
 } from "@/components/ui/dialog";
 import { Loader2, Eye, ExternalLink } from "lucide-react";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import { KITCHEN_FORMS, STYLES, labelOf } from "@/features/planner/core";
 import { falModel } from "../../../supabase/functions/_shared/fal-models.ts";
 
@@ -164,8 +164,9 @@ async function signRenderUrls(rows: Array<{ image_path: string | null; storage_b
 }
 
 export default function AdminPlannerSessions() {
+  const [searchParams] = useSearchParams();
   const [statusFilter, setStatusFilter] = useState<string>("all");
-  const [search, setSearch] = useState("");
+  const [search, setSearch] = useState(() => searchParams.get("q") ?? "");
   const [selected, setSelected] = useState<SessionWithRel | null>(null);
 
   const { data, isLoading, error } = useQuery<SessionWithRel[]>({
@@ -247,6 +248,7 @@ export default function AdminPlannerSessions() {
       if (search) {
         const q = search.toLowerCase();
         const hay = [
+          s.id,
           s.session_token,
           s.lead?.first_name,
           s.lead?.last_name,
@@ -566,7 +568,7 @@ function SessionDetail({ session }: { session: SessionWithRel }) {
                   {session.lead.consent_marketing ? "✓" : "✗"}
                 </div>
                 <a
-                  href={`/admin/leads?q=${encodeURIComponent(session.lead.email ?? "")}`}
+                  href={`/admin/leads?q=${session.lead.id}`}
                   className="inline-flex items-center text-primary hover:underline mt-1"
                   target="_blank"
                   rel="noreferrer"

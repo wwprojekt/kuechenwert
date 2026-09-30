@@ -26,9 +26,28 @@ export interface AdminTender {
   decision_deadline_at: string | null;
   contact_price_cents: number | null;
   max_contact_purchases: number | null;
+  /** Was Studios sehen (ohne Kontaktdaten, Freitext gefiltert); Aufbau wie ProjectSummary in dealer-api. */
+  public_summary: Record<string, unknown> | null;
   offer_count: number;
   lowest_offer_eur: number | null;
   contact_purchases: number;
+}
+
+export interface LeadConsent {
+  id: string;
+  purpose: string;
+  granted: boolean;
+  text_version: string;
+  created_at: string;
+}
+
+/** Jüngste Entscheidung je Zweck; undefined, wenn nie gefragt. */
+export function latestConsent(consents: LeadConsent[] | undefined, purpose: string): boolean | undefined {
+  let latest: LeadConsent | undefined;
+  for (const c of consents ?? []) {
+    if (c.purpose === purpose && (!latest || c.created_at >= latest.created_at)) latest = c;
+  }
+  return latest?.granted;
 }
 
 export interface AdminLeadFile {
@@ -98,11 +117,75 @@ export async function fetchTenderStatuses(leadIds: string[]): Promise<Record<str
   return map;
 }
 
+/** Jüngste Weitergabe-Einwilligung je Lead (fehlt, wenn nie protokolliert). */
+export async function fetchShareConsents(leadIds: string[]): Promise<Record<string, boolean>> {
+  if (leadIds.length === 0) return {};
+  await requireSession();
+  const { data, error } = await supabase
+    .from("lead_consents")
+    .select("lead_id, granted, created_at")
+    .eq("purpose", "share_with_studios")
+    .in("lead_id", leadIds)
+    .order("created_at", { ascending: true });
+  if (error) fail(error);
+  const map: Record<string, boolean> = {};
+  for (const row of data ?? []) if (row.lead_id) map[row.lead_id] = row.granted;
+  return map;
+}
+
+export async function fetchLeadConsents(leadId: string): Promise<LeadConsent[]> {
+  await requireSession();
+  const { data, error } = await supabase
+    .from("lead_consents")
+    .select("id, purpose, granted, text_version, created_at")
+    .eq("lead_id", leadId)
+    .order("created_at", { ascending: true });
+  if (error) fail(error);
+  return data ?? [];
+}
+
+export interface AdminLeadPlanner {
+  sessionId: string;
+  photoCount: number;
+  renderCount: number;
+  /** Gewählte Visualisierung (sonst die neueste), signiert für 1 h. */
+  renderUrl: string | null;
+}
+
+/** Planung eines Funnel-C-Leads mit Titelbild für den Admin-Dialog. */
+export async function fetchLeadPlanner(leadId: string): Promise<AdminLeadPlanner | null> {
+  await requireSession();
+  const { data: session, error } = await supabase
+    .from("planner_sessions")
+    .select("id, current_render_id, photo_paths")
+    .eq("lead_id", leadId)
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (error) fail(error);
+  if (!session) return null;
+  const { data: renders, error: renderErr } = await supabase
+    .from("planner_renders")
+    .select("id, image_path, storage_bucket")
+    .eq("session_id", session.id)
+    .eq("status", "success")
+    .order("version", { ascending: false });
+  if (renderErr) fail(renderErr);
+  const list = (renders ?? []).filter((r) => r.image_path);
+  const cover = list.find((r) => r.id === session.current_render_id) ?? list[0];
+  let renderUrl: string | null = null;
+  if (cover?.image_path) {
+    const { data } = await supabase.storage.from(cover.storage_bucket || "planner-media").createSignedUrl(cover.image_path, 60 * 60);
+    renderUrl = data?.signedUrl ?? null;
+  }
+  return { sessionId: session.id, photoCount: (session.photo_paths ?? []).length, renderCount: list.length, renderUrl };
+}
+
 export async function fetchAdminTender(leadId: string): Promise<AdminTender | null> {
   await requireSession();
   const { data: tender, error } = await supabase
     .from("lead_auctions")
-    .select("id, status, duration_hours, published_at, ends_at, decision_deadline_at, contact_price_cents, max_contact_purchases")
+    .select("id, status, duration_hours, published_at, ends_at, decision_deadline_at, contact_price_cents, max_contact_purchases, public_summary")
     .eq("lead_id", leadId)
     .order("created_at", { ascending: false })
     .limit(1)
@@ -119,6 +202,7 @@ export async function fetchAdminTender(leadId: string): Promise<AdminTender | nu
   const active = (bids.data ?? []).filter((b) => b.status !== "withdrawn");
   return {
     ...tender,
+    public_summary: (tender.public_summary ?? null) as Record<string, unknown> | null,
     offer_count: active.length,
     lowest_offer_eur: active.length ? Math.min(...active.map((b) => Number(b.price_eur))) : null,
     contact_purchases: contacts.count ?? 0,
@@ -188,11 +272,21 @@ export async function uploadRedactedLeadFile(leadId: string, category: string, f
   }
 }
 
-export async function openTenderAsAdmin(leadId: string, notifyCustomer: boolean): Promise<string> {
+/**
+ * Ausschreibung als Entwurf anlegen. Planungen aus Funnel C schreibt kw-planner
+ * aus der Planung aus (Konfiguration, Maße, Bilder), alle anderen die RPC.
+ */
+export async function openTenderAsAdmin(leadId: string, funnelType: string, notifyCustomer: boolean): Promise<void> {
   await requireSession();
-  const { data, error } = await supabase.rpc("kw_admin_open_tender", { p_lead_id: leadId, p_notify_customer: notifyCustomer });
+  if (funnelType === "traumkueche") {
+    const { error } = await invokeWithAuth("kw-planner", {
+      body: { action: "admin-open-tender", lead_id: leadId, notify_customer: notifyCustomer },
+    });
+    if (error) throw new ApiError(error.message, (error as { httpStatus?: number }).httpStatus);
+    return;
+  }
+  const { error } = await supabase.rpc("kw_admin_open_tender", { p_lead_id: leadId, p_notify_customer: notifyCustomer });
   if (error) fail(error);
-  return data as string;
 }
 
 export async function publishTenderAsAdmin(auctionId: string): Promise<void> {

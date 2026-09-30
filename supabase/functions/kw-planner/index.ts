@@ -19,13 +19,16 @@
  *   request-offers  Lead ohne Ausschreibung: Angebote nachträglich anfordern
  *   sweep         Cron kw-planner-sweep: Visualisierungen abschließen, die
  *                 kein Browser mehr abfragt (Tab geschlossen, Handy im Standby)
+ *   admin-open-tender  Admin: Ausschreibung zu einer Planung als Entwurf
+ *                 anlegen (lead_id, notify_customer); nur mit Einwilligung
  *
  * Jede Visualisierung ist ein Lead: Bild-URLs und Preisschätzung liefert der
  * Server erst, wenn Name, E-Mail und Telefon erfasst sind (session.lead_id).
  *
  * Modelle, A/B-Vergleich und Tageslimit stehen in kw_ai_settings
  * (_shared/fal-models.ts). Auth: anonym über session_token (kw_ + 48 hex),
- * sweep nur mit Cron-Geheimnis, Service-Role oder Admin.
+ * sweep nur mit Cron-Geheimnis, Service-Role oder Admin, admin-open-tender nur
+ * mit Service-Role oder Admin.
  * Rate-Limits pro IP (IPv6 je /64) und Session. Ohne gültiges Turnstile-Token
  * beim Abschluss wird die Ausschreibung nicht automatisch veröffentlicht.
  * Ungeprüfte Besucher (vor der Anfrage oder ohne bestandene Bot-Prüfung)
@@ -63,7 +66,13 @@ import {
   type RoomInput,
 } from "../_shared/kitchen-catalog.ts";
 import { estimateKitchenPrice, type KitchenEstimate } from "../_shared/kitchen-pricing.ts";
-import { OFFERS_CONSENT_TEXT_VERSION, openPlannerTender, plannerCover, requestPlannerOffers } from "../_shared/planner-offers.ts";
+import {
+  OFFERS_CONSENT_TEXT_VERSION,
+  openPlannerTender,
+  openPlannerTenderAsAdmin,
+  plannerCover,
+  requestPlannerOffers,
+} from "../_shared/planner-offers.ts";
 import { dimensionsSource, sanitizeProvenance, type PlannerProvenance } from "../_shared/planner-provenance.ts";
 import type { PlannerLeadFrame } from "../_shared/planner-summary.ts";
 import { FUNNEL_A_BUDGET, HOUSING_OPTIONS, OCCASION_OPTIONS, housingType as housingTypeOf } from "../_shared/funnel-a-catalog.ts";
@@ -71,7 +80,7 @@ import { redactOptional } from "../_shared/contact-redaction.ts";
 import { loadRateCard } from "../_shared/rate-card.ts";
 import { PROMPT_VERSION, buildRenderPrompt, buildVariantPrompt } from "../_shared/kitchen-prompt.ts";
 import { sanitizeFeedbackReasons } from "../_shared/render-feedback.ts";
-import { checkCronOrServiceRoleOrAdmin } from "../_shared/auth.ts";
+import { checkCronOrServiceRoleOrAdmin, checkServiceRoleOrAdmin } from "../_shared/auth.ts";
 import {
   MAX_ATTEMPTS,
   abGroup,
@@ -1222,6 +1231,16 @@ async function actionRequestOffers(req: Request, sb: SupabaseClient, body: Recor
   return jsonResponse(req, { ok: true, offers_requested: true, tender_status: result.tenderStatus, already_open: result.alreadyOpen });
 }
 
+/** Admin: Ausschreibung als Entwurf aus der Planung anlegen, damit Studios Konfiguration, Maße und Bilder sehen. */
+async function actionAdminOpenTender(req: Request, sb: SupabaseClient, body: Record<string, unknown>) {
+  const auth = await checkServiceRoleOrAdmin(req);
+  if (!auth.authorized) throw new HttpError(401, "Nur für Admins.", "unauthorized");
+  const leadId = String(body.lead_id ?? "");
+  if (!UUID_RE.test(leadId)) throw new HttpError(400, "Ungültiger Lead.", "invalid_lead");
+  const result = await openPlannerTenderAsAdmin(sb, { leadId, notifyCustomer: body.notify_customer === true });
+  return jsonResponse(req, { ok: true, tender_status: result.tenderStatus, already_open: result.alreadyOpen });
+}
+
 serve(async (req) => {
   const body = await readJson(req);
   const sb = serviceClient();
@@ -1248,6 +1267,8 @@ serve(async (req) => {
       return actionRequestOffers(req, sb, body);
     case "sweep":
       return actionSweep(req, sb);
+    case "admin-open-tender":
+      return actionAdminOpenTender(req, sb, body);
     default:
       throw new HttpError(400, "Unbekannte Aktion.", "unknown_action");
   }

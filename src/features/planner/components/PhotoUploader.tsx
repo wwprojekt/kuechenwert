@@ -128,8 +128,8 @@ export function PhotoUploader({
       )}
 
       <p className="text-xs leading-snug text-muted-foreground">
-        Für die Visualisierung geht Ihr Foto an unseren KI-Dienstleister fal.ai (USA). Bitte keine Personen
-        fotografieren. Details in der{" "}
+        Für die Visualisierung geht Ihr Foto an unseren KI-Dienstleister fal.ai (USA), bei Angeboten auch an die Studios. Bitte
+        keine Personen fotografieren. Details in der{" "}
         <a href="/datenschutz#ki-visualisierung" className="underline underline-offset-2 hover:text-foreground">
           Datenschutzerklärung
         </a>

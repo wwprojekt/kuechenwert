@@ -4,7 +4,7 @@
  * Aktionen (POST { action, token, ... }):
  *   get            Projekt, Ausschreibung, Angebote, Visualisierungen, Auftrag
  *   accept         Angebot eines Studios annehmen (bid_id)
- *   cancel         Projekt beenden (reason)
+ *   cancel         Projekt beenden (reason); widerruft die Weitergabe an Studios
  *   add-phone      Telefonnummer nachtragen (phone, consent_call), nur solange keine hinterlegt ist
  *   order-confirm  Montage bestätigen (nach Kaufvertrag)
  *   order-problem  Problem zum Auftrag melden (message)
@@ -335,7 +335,12 @@ serve(async (req) => {
       return jsonResponse(req, await projectView(sb, leadId));
     }
     case "cancel": {
-      const { error } = await sb.rpc("kw_project_cancel", { p_lead_id: leadId, p_reason: cleanText(body.reason, 500) });
+      const { error } = await sb.rpc("kw_project_cancel", {
+        p_lead_id: leadId,
+        p_reason: cleanText(body.reason, 500),
+        p_ip: validIp(clientIp(req)),
+        p_user_agent: req.headers.get("user-agent")?.slice(0, 500) ?? null,
+      });
       if (error) throw error;
       return jsonResponse(req, await projectView(sb, leadId));
     }

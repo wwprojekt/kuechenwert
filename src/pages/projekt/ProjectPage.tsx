@@ -454,7 +454,11 @@ export function ProjectView({ token }: { token: string }) {
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Projekt beenden?</AlertDialogTitle>
-            <AlertDialogDescription>Die Studios werden informiert und können keine Angebote mehr abgeben. Verraten Sie uns kurz den Grund?</AlertDialogDescription>
+            {/* Widerruf der Weitergabe, Textversion kw-projekt-beenden-2026-09-30 (kw_project_cancel) */}
+            <AlertDialogDescription>
+              Die Studios werden informiert und können keine Angebote mehr abgeben. Ohne neue Anfrage von Ihnen schreiben wir Ihr Projekt danach
+              nicht erneut aus. Verraten Sie uns kurz den Grund?
+            </AlertDialogDescription>
           </AlertDialogHeader>
           <label htmlFor="cancel-reason" className="sr-only">
             Grund für das Beenden (optional)

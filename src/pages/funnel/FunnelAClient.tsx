@@ -2,7 +2,8 @@ import { useCallback, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { FunnelShell } from "@/components/funnel/funnel-shell";
 import { submitFunnelA, trackFunnelALead } from "@/features/funnel-a/api";
-import { ContactStep } from "@/features/funnel-a/components/ContactStep";
+import { CONTACT_FORM_ID, ContactStep } from "@/features/funnel-a/components/ContactStep";
+import { NAME_FORM_ID, NameStep } from "@/features/funnel-a/components/NameStep";
 import { StepContent } from "@/features/funnel-a/components/StepContent";
 import { useFunnelA } from "@/features/funnel-a/state";
 import {
@@ -16,13 +17,14 @@ import {
   stepPath,
   type FunnelAStepSlug,
 } from "@/features/funnel-a/steps";
-import type { ValidContact } from "@/features/funnel-a/validation";
+import { validateContact, type ContactErrors, type ValidContact } from "@/features/funnel-a/validation";
 import { ApiError, errorMessage } from "@/features/marketplace/api-client";
 import { storeProjectToken } from "@/features/marketplace/project-token";
 import { useFunnelTelemetry } from "@/hooks/useFunnelTelemetry";
 import { useTurnstile } from "@/hooks/useTurnstile";
 import { getConsentedClickIds } from "@/lib/clickIdService";
 import { trackFunnelStep, trackFunnelSubmitError } from "@/lib/funnelAnalytics";
+import { trackLeadThankYou } from "@/lib/funnelThankYou";
 import { clearSubmissionId, submissionIdFor } from "@/lib/submissionId";
 
 const THANK_YOU_PATH = "/funnel/danke?funnel=a";
@@ -37,6 +39,7 @@ export function FunnelAClient({ slug }: { slug: FunnelAStepSlug }) {
   const { waitForToken, resetTurnstile, turnstileCallbackRef } = useTurnstile();
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
+  const [nameAttempted, setNameAttempted] = useState(false);
 
   const step = findStep(slug);
   const index = stepIndex(slug);
@@ -51,8 +54,15 @@ export function FunnelAClient({ slug }: { slug: FunnelAStepSlug }) {
     totalSteps: FUNNEL_A_SLUGS.length,
   });
 
+  const contactCheck = validateContact(contact);
+  const nameErrors: ContactErrors = contactCheck.ok
+    ? {}
+    : { first_name: contactCheck.errors.first_name, last_name: contactCheck.errors.last_name };
+  const nameValid = !nameErrors.first_name && !nameErrors.last_name;
+
   useEffect(() => {
     trackFunnelStep("a", slug, index, FUNNEL_A_SLUGS.length);
+    setSubmitError(null);
   }, [slug, index]);
 
   const goTo = useCallback((target: FunnelAStepSlug) => navigate(stepPath(target)), [navigate]);
@@ -66,6 +76,16 @@ export function FunnelAClient({ slug }: { slug: FunnelAStepSlug }) {
     telemetry.back();
     goTo(prevSlug);
   }, [goTo, prevSlug, telemetry]);
+
+  const submitName = () => {
+    setNameAttempted(true);
+    if (!nameValid) {
+      telemetry.validationFailed(Object.keys(nameErrors).filter((k) => nameErrors[k as keyof ContactErrors]));
+      document.getElementById(nameErrors.first_name ? "kontakt-first_name" : "kontakt-last_name")?.focus();
+      return;
+    }
+    goNext();
+  };
 
   // Fotos des nächsten Schritts vorladen, damit die Kacheln sofort vollständig erscheinen.
   useEffect(() => {
@@ -104,6 +124,7 @@ export function FunnelAClient({ slug }: { slug: FunnelAStepSlug }) {
         return;
       }
       await trackFunnelALead(valid, answers);
+      trackLeadThankYou("a");
       storeProjectToken(result.project_token);
       navigate("/projekt?neu=1", { replace: true });
     } catch (err) {
@@ -127,20 +148,28 @@ export function FunnelAClient({ slug }: { slug: FunnelAStepSlug }) {
 
   const nextLabel = step.kind === "choice" && !step.required && !isStepAnswered(step, answers) ? "Überspringen" : "Weiter";
   const blockedHint = step.kind === "plz" ? "Bitte geben Sie Ihre fünfstellige Postleitzahl ein." : "Bitte wählen Sie eine Antwort aus.";
+  const submit =
+    step.kind === "contact"
+      ? { form: CONTACT_FORM_ID, label: "Kostenlos Angebote erhalten", busy: submitting, busyLabel: "Wird gesendet …" }
+      : step.kind === "name"
+        ? { form: NAME_FORM_ID, label: "Weiter", busy: false, busyLabel: "" }
+        : undefined;
 
   return (
     <FunnelShell
       currentStep={index}
       totalSteps={FUNNEL_A_SLUGS.length}
-      eyebrow={step.eyebrow}
       question={step.question}
       hint={step.hint}
+      hintAlways={step.kind === "plz"}
       onBack={goBack}
-      onNext={step.kind === "contact" ? undefined : goNext}
+      onNext={submit ? undefined : goNext}
       canProceed={canLeaveStep(step, answers)}
       blockedHint={blockedHint}
-      onBlocked={() => telemetry.validationFailed([step.kind === "contact" ? slug : step.field])}
+      onBlocked={() => telemetry.validationFailed([step.kind === "contact" || step.kind === "name" ? slug : step.field])}
       nextLabel={nextLabel}
+      submit={submit}
+      error={step.kind === "contact" ? submitError : null}
     >
       {step.kind === "contact" ? (
         <ContactStep
@@ -151,11 +180,16 @@ export function FunnelAClient({ slug }: { slug: FunnelAStepSlug }) {
             telemetry.submitClicked();
             telemetry.validationFailed(fields);
           }}
+          onMissingName={() => {
+            setNameAttempted(true);
+            goTo("name");
+          }}
           submitting={submitting}
-          error={submitError}
           turnstileRef={turnstileCallbackRef}
           missing={missingSlug ? { label: findStep(missingSlug).eyebrow, onFix: () => goTo(missingSlug) } : null}
         />
+      ) : step.kind === "name" ? (
+        <NameStep contact={contact} onChange={patchContact} errors={nameAttempted ? nameErrors : {}} onSubmit={submitName} />
       ) : (
         <StepContent step={step} answers={answers} onAnswer={setAnswer} onAdvance={goNext} />
       )}

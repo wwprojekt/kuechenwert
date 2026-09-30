@@ -41,6 +41,7 @@ export const FUNNEL_A_SLUGS = [
   "zeitrahmen",
   "budget",
   "plz",
+  "name",
   "kontakt",
 ] as const;
 
@@ -68,6 +69,7 @@ export type FunnelAStep =
   | (StepBase & { kind: "multi"; field: "extra_appliances"; options: readonly ChoiceOption<ExtraApplianceId>[] })
   | (StepBase & { kind: "budget"; field: "budget_eur" })
   | (StepBase & { kind: "plz"; field: "postal_code" })
+  | (StepBase & { kind: "name" })
   | (StepBase & { kind: "contact" });
 
 export type FunnelAChoiceStep = Extract<FunnelAStep, { kind: "choice" }>;
@@ -231,6 +233,14 @@ export const FUNNEL_A_STEPS: readonly FunnelAStep[] = [
     hint: "Ihre Postleitzahl nutzen wir nur, um Küchenstudios in Ihrer Nähe zu finden.",
   },
   {
+    slug: "name",
+    kind: "name",
+    required: true,
+    eyebrow: "Name",
+    question: "Wie dürfen wir Sie ansprechen?",
+    hint: "Damit die Studios Ihnen ein persönliches Angebot schreiben können.",
+  },
+  {
     slug: "kontakt",
     kind: "contact",
     required: true,
@@ -270,6 +280,7 @@ export function isStepAnswered(step: FunnelAStep, answers: FunnelAAnswers): bool
       return true;
     case "plz":
       return /^\d{5}$/.test(answers.postal_code);
+    case "name":
     case "contact":
       return false;
   }

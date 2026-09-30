@@ -88,7 +88,7 @@ export function FunnelHeader({
 
   return (
     <header className="sticky top-0 z-40 border-b border-border bg-card/95 backdrop-blur">
-      <div className={cn(containerClassName, "flex h-14 items-center justify-between gap-3 sm:h-16")}>
+      <div className={cn(containerClassName, "flex h-14 items-center justify-between gap-3 sm:h-16 xshort:h-12 sm:short:h-14")}>
         <Link to="/" onClick={onLogoClick} className={cn("rounded-lg transition-opacity hover:opacity-90", FOCUS_RING)}>
           <SiteLogo variant="icon-text-compact" asLink={false} iconSize="h-8 w-8 sm:h-9 sm:w-9" />
         </Link>

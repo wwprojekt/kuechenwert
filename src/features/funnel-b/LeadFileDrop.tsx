@@ -51,7 +51,7 @@ export function LeadFileDrop({ option, count, remaining, onFiles, disabled = fal
           if (!disabled && !full) accept(e.dataTransfer.files);
         }}
         className={cn(
-          "flex items-center gap-3 rounded-lg border-2 border-dashed p-4 transition",
+          "flex items-center gap-3 rounded-xl border-2 border-dashed p-3.5 transition short:py-2.5 xshort:py-2",
           disabled || full ? "cursor-not-allowed opacity-60" : "cursor-pointer",
           count > 0
             ? "border-brand-400 bg-brand-50"
@@ -70,7 +70,7 @@ export function LeadFileDrop({ option, count, remaining, onFiles, disabled = fal
             {option.label}
             {count > 0 && <span className="ml-2 text-xs font-normal text-brand-700">{count} ausgewählt</span>}
           </div>
-          <div id={descriptionId} className="text-xs text-ink-muted">
+          <div id={descriptionId} className="text-xs text-ink-muted xshort:sr-only">
             {option.description}
           </div>
         </div>

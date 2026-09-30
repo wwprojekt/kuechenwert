@@ -16,7 +16,7 @@ const QUESTION_ID = "funnel-question";
 export type AnswerSetter = <K extends keyof FunnelAAnswers>(key: K, value: FunnelAAnswers[K]) => void;
 
 interface StepContentProps {
-  step: Exclude<FunnelAStep, { kind: "contact" }>;
+  step: Exclude<FunnelAStep, { kind: "contact" | "name" }>;
   answers: FunnelAAnswers;
   onAnswer: AnswerSetter;
   /** Weiter zum nächsten Schritt (Auto-Advance, Enter in der PLZ). */

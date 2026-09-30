@@ -20,15 +20,15 @@ export function BudgetStep({ answers, onChange }: BudgetStepProps) {
   );
 
   return (
-    <div className="space-y-7">
-      <div className="flex items-start gap-3 rounded-xl border border-brand-200 bg-brand-50 px-4 py-3 sm:px-5">
+    <div className="space-y-5 short:space-y-3.5">
+      <div className="flex items-start gap-3 rounded-xl border border-brand-200 bg-brand-50 px-3.5 py-2.5 sm:px-5 sm:py-3">
         <Calculator className="mt-0.5 h-5 w-5 flex-none text-brand-600" aria-hidden="true" />
         <p className="text-sm leading-snug text-foreground">
           Typisch für Ihre Auswahl:{" "}
           <strong className="whitespace-nowrap font-semibold tabular-nums text-brand-800">
             {NUMBER.format(estimate.min)} – {NUMBER.format(estimate.max)} €
           </strong>
-          <span className="mt-0.5 block text-xs text-ink-muted">Markenküche inkl. Geräte, Lieferung &amp; Montage</span>
+          <span className="mt-0.5 block text-xs text-ink-muted xshort:hidden">Markenküche inkl. Geräte, Lieferung &amp; Montage</span>
         </p>
       </div>
 

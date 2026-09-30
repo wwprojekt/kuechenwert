@@ -65,6 +65,12 @@ describe("FunnelFooter", () => {
     for (const link of links) expect(link).toHaveAttribute("target", "_blank");
     expect(screen.getByRole("button", { name: "Cookie-Einstellungen" })).toBeInTheDocument();
   });
+
+  it("passt kompakt in die mobile Leiste", () => {
+    renderAt(<FunnelFooter compact />);
+    expect(screen.getAllByRole("link")).toHaveLength(4);
+    expect(screen.getByRole("button", { name: "Cookies" })).toBeInTheDocument();
+  });
 });
 
 describe("FunnelShell", () => {
@@ -72,7 +78,6 @@ describe("FunnelShell", () => {
     <FunnelShell
       currentStep={1}
       totalSteps={18}
-      eyebrow="Raum"
       question="Wo steht die Küche?"
       onBack={() => undefined}
       onNext={() => undefined}
@@ -82,10 +87,13 @@ describe("FunnelShell", () => {
     </FunnelShell>
   );
 
-  it("zeigt den Fortschritt in Prozent mit Vorsprung", () => {
+  it("zeigt nur einen Fortschrittsbalken in Prozent mit Vorsprung", () => {
     renderAt(shell());
-    expect(screen.getByRole("progressbar")).toHaveAttribute("aria-valuetext", "Schritt 2 von 18");
-    expect(screen.getByText(/^15 %/)).toBeInTheDocument();
+    const bar = screen.getByRole("progressbar");
+    expect(bar).toHaveAttribute("aria-valuenow", "15");
+    expect(bar).toHaveAttribute("aria-valuetext", "15 % geschafft, Schritt 2 von 18");
+    expect(screen.getByText("15 %")).toBeInTheDocument();
+    expect(screen.queryByText(/Schritt 2 von 18/)).not.toBeInTheDocument();
   });
 
   it("sagt ohne Pflichtantwort, was fehlt, statt weiterzugehen", () => {
@@ -96,10 +104,16 @@ describe("FunnelShell", () => {
     fireEvent.click(desktopNext!);
     expect(onNext).not.toHaveBeenCalled();
     expect(onBlocked).toHaveBeenCalledTimes(1);
-    // Einmal in der Karte (Desktop), einmal über der mobilen Weiter-Leiste; CSS blendet je eines aus.
+    // Einmal unter dem Inhalt (Desktop), einmal über der mobilen Weiter-Leiste; CSS blendet je eines aus.
     const alerts = screen.getAllByRole("alert");
     expect(alerts).toHaveLength(2);
     for (const alert of alerts) expect(alert).toHaveTextContent("Bitte wählen Sie eine Antwort aus.");
+  });
+
+  it("zeigt einen Absendefehler direkt über dem Button", () => {
+    renderAt(shell({ onNext: undefined, submit: { form: "f", label: "Absenden", busy: false, busyLabel: "" }, error: "Das hat nicht geklappt." }));
+    for (const button of screen.getAllByRole("button", { name: /Absenden/ })) expect(button).toHaveAttribute("type", "submit");
+    expect(screen.getAllByRole("alert")[0]).toHaveTextContent("Das hat nicht geklappt.");
   });
 
   it("geht mit Antwort weiter", () => {

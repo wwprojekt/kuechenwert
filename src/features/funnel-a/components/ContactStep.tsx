@@ -1,16 +1,17 @@
-import { AlertCircle, ArrowRight, Loader2 } from "lucide-react";
+import { Lock } from "lucide-react";
 import { useMemo, useState, type FormEvent } from "react";
 import {
   CONTACT_FIELD_ORDER,
   EMAIL_MAX,
-  NAME_MAX,
   PHONE_MAX,
   validateContact,
   type ContactField,
   type FunnelAContact,
   type ValidContact,
 } from "../validation";
-import { ConsentCheckbox, SalutationField, TextField } from "./ContactFields";
+import { ConsentCheckbox, TextField } from "./ContactFields";
+
+export const CONTACT_FORM_ID = "funnel-a-contact";
 
 const fieldId = (field: ContactField) => `kontakt-${field}`;
 
@@ -23,14 +24,21 @@ interface ContactStepProps {
   onSubmit: (contact: ValidContact, website: string) => void;
   /** Absenden mit Fehlern: Feldschlüssel für die Funnel-Telemetrie. */
   onInvalid?: (fields: ContactField[]) => void;
+  /** Name fehlt (z. B. direkt aufgerufen): zurück zum Namensschritt. */
+  onMissingName: () => void;
   submitting: boolean;
-  error: string | null;
   turnstileRef: (node: HTMLDivElement | null) => void;
   /** Fehlende Pflichtangabe aus einem früheren Schritt. */
   missing: { label: string; onFix: () => void } | null;
 }
 
-export function ContactStep({ contact, onChange, onSubmit, onInvalid, submitting, error, turnstileRef, missing }: ContactStepProps) {
+const NAME_FIELDS: ReadonlySet<ContactField> = new Set(["salutation", "first_name", "last_name"]);
+
+/**
+ * E-Mail, Telefon und freiwillige Einwilligungen; der Absende-Button steht in
+ * der Weiter-Position des Funnel-Rahmens (form={CONTACT_FORM_ID}).
+ */
+export function ContactStep({ contact, onChange, onSubmit, onInvalid, onMissingName, submitting, turnstileRef, missing }: ContactStepProps) {
   const [website, setWebsite] = useState("");
   const [attempted, setAttempted] = useState(false);
   const [touched, setTouched] = useState<Partial<Record<ContactField, boolean>>>({});
@@ -52,6 +60,10 @@ export function ContactStep({ contact, onChange, onSubmit, onInvalid, submitting
     if (!validation.ok) {
       const failed = CONTACT_FIELD_ORDER.filter((field) => validation.errors[field]);
       onInvalid?.(failed);
+      if (failed.some((field) => NAME_FIELDS.has(field))) {
+        onMissingName();
+        return;
+      }
       if (failed[0]) document.getElementById(fieldId(failed[0]))?.focus();
       return;
     }
@@ -59,34 +71,7 @@ export function ContactStep({ contact, onChange, onSubmit, onInvalid, submitting
   };
 
   return (
-    <form onSubmit={handleSubmit} noValidate className="mx-auto max-w-xl space-y-5">
-      <SalutationField value={contact.salutation} onChange={(salutation) => onChange({ salutation })} />
-
-      <div className="grid gap-5 sm:grid-cols-2 sm:gap-4">
-        <TextField
-          id={fieldId("first_name")}
-          label="Vorname"
-          required
-          autoComplete="given-name"
-          maxLength={NAME_MAX}
-          value={contact.first_name}
-          onChange={(e) => onChange({ first_name: e.target.value })}
-          onBlur={(e) => touch("first_name", e.target.value)}
-          error={errorFor("first_name")}
-        />
-        <TextField
-          id={fieldId("last_name")}
-          label="Nachname"
-          required
-          autoComplete="family-name"
-          maxLength={NAME_MAX}
-          value={contact.last_name}
-          onChange={(e) => onChange({ last_name: e.target.value })}
-          onBlur={(e) => touch("last_name", e.target.value)}
-          error={errorFor("last_name")}
-        />
-      </div>
-
+    <form id={CONTACT_FORM_ID} onSubmit={handleSubmit} noValidate className="mx-auto max-w-xl space-y-4 short:space-y-3">
       <TextField
         id={fieldId("email")}
         label="E-Mail"
@@ -95,6 +80,7 @@ export function ContactStep({ contact, onChange, onSubmit, onInvalid, submitting
         autoComplete="email"
         autoCapitalize="none"
         spellCheck={false}
+        enterKeyHint="next"
         maxLength={EMAIL_MAX}
         value={contact.email}
         onChange={(e) => onChange({ email: e.target.value })}
@@ -102,14 +88,16 @@ export function ContactStep({ contact, onChange, onSubmit, onInvalid, submitting
         error={errorFor("email")}
       />
 
-      <div className="space-y-3">
+      <div className="space-y-2.5">
         <TextField
           id={fieldId("phone")}
-          label="Telefon"
+          label="Telefon (optional)"
           type="tel"
           autoComplete="tel"
+          enterKeyHint="send"
           maxLength={PHONE_MAX}
-          hint="Optional – für schnellere Rückfragen der Studios"
+          hint={hasPhone ? undefined : "Für schnellere Rückfragen der Studios"}
+          hintClassName="xshort:hidden"
           value={contact.phone}
           onChange={(e) => {
             const phone = e.target.value;
@@ -119,11 +107,7 @@ export function ContactStep({ contact, onChange, onSubmit, onInvalid, submitting
           error={errorFor("phone")}
         />
         {hasPhone && (
-          <ConsentCheckbox
-            id="kontakt-anruf"
-            checked={contact.contact_by_phone}
-            onChange={(contact_by_phone) => onChange({ contact_by_phone })}
-          >
+          <ConsentCheckbox id="kontakt-anruf" checked={contact.contact_by_phone} onChange={(contact_by_phone) => onChange({ contact_by_phone })}>
             Küchenstudios dürfen mich zu meiner Anfrage anrufen.
           </ConsentCheckbox>
         )}
@@ -135,24 +119,9 @@ export function ContactStep({ contact, onChange, onSubmit, onInvalid, submitting
 
       <div className="sr-only" aria-hidden="true">
         <label htmlFor="kontakt-website">Website</label>
-        <input
-          id="kontakt-website"
-          type="text"
-          name="website"
-          tabIndex={-1}
-          autoComplete="off"
-          value={website}
-          onChange={(e) => setWebsite(e.target.value)}
-        />
+        <input id="kontakt-website" type="text" name="website" tabIndex={-1} autoComplete="off" value={website} onChange={(e) => setWebsite(e.target.value)} />
       </div>
       <div ref={turnstileRef} />
-
-      <p className="text-xs text-ink-muted">
-        <span aria-hidden="true" className="text-destructive">
-          *
-        </span>{" "}
-        Pflichtangabe
-      </p>
 
       {missing && (
         <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-border bg-surface-soft px-4 py-3 text-sm">
@@ -169,40 +138,20 @@ export function ContactStep({ contact, onChange, onSubmit, onInvalid, submitting
         </div>
       )}
 
-      <div className="space-y-3 border-t border-border pt-5">
-        <p className="text-xs leading-relaxed text-ink-muted">
-          Mit Klick auf „Kostenlos Angebote erhalten“ senden wir Ihre Anfrage ohne Namen und Kontaktdaten an freigeschaltete
-          Küchenstudios in Ihrer Region. Ihre Kontaktdaten erhalten höchstens drei Studios für Rückfragen sowie das Studio,
-          dessen Angebot Sie annehmen. Es gelten unsere{" "}
-          <a href="/agb" target="_blank" rel="noopener noreferrer" className={LINK_CLASS}>
-            AGB
-          </a>
-          ; Hinweise zum Datenschutz in der{" "}
-          <a href="/datenschutz" target="_blank" rel="noopener noreferrer" className={LINK_CLASS}>
-            Datenschutzerklärung
-          </a>
-          .
-        </p>
-        <button type="submit" disabled={submitting} className="btn-primary-lg w-full gap-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2">
-          {submitting ? (
-            <>
-              <Loader2 className="h-5 w-5 animate-spin" aria-hidden="true" />
-              Wird gesendet …
-            </>
-          ) : (
-            <>
-              Kostenlos Angebote erhalten
-              <ArrowRight className="h-5 w-5" aria-hidden="true" />
-            </>
-          )}
-        </button>
-        {error && (
-          <p role="alert" className="flex items-start gap-2 rounded-lg bg-destructive/10 px-3 py-2.5 text-sm text-destructive">
-            <AlertCircle className="mt-0.5 h-4 w-4 flex-none" aria-hidden="true" />
-            {error}
-          </p>
-        )}
-      </div>
+      <p className="text-[11px] leading-snug text-ink-muted sm:text-xs sm:leading-relaxed">
+        <Lock className="mr-1 inline h-3.5 w-3.5 -translate-y-px text-brand-600" aria-hidden="true" />
+        Mit Klick auf „Kostenlos Angebote erhalten“ senden wir Ihre Anfrage ohne Namen und Kontaktdaten an freigeschaltete
+        Küchenstudios in Ihrer Region. Ihre Kontaktdaten erhalten höchstens drei Studios für Rückfragen sowie das Studio,
+        dessen Angebot Sie annehmen. Es gelten unsere{" "}
+        <a href="/agb" target="_blank" rel="noopener noreferrer" className={LINK_CLASS}>
+          AGB
+        </a>
+        ; mehr in der{" "}
+        <a href="/datenschutz" target="_blank" rel="noopener noreferrer" className={LINK_CLASS}>
+          Datenschutzerklärung
+        </a>
+        .
+      </p>
     </form>
   );
 }

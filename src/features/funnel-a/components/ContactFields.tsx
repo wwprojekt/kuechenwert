@@ -7,16 +7,17 @@ type TextFieldProps = Omit<InputHTMLAttributes<HTMLInputElement>, "id" | "classN
   id: string;
   label: string;
   hint?: string;
+  hintClassName?: string;
   error?: string;
 };
 
-export function TextField({ id, label, hint, error, required, ...inputProps }: TextFieldProps) {
+export function TextField({ id, label, hint, hintClassName, error, required, ...inputProps }: TextFieldProps) {
   const hintId = hint ? `${id}-hint` : undefined;
   const errorId = error ? `${id}-error` : undefined;
   const describedBy = [hintId, errorId].filter(Boolean).join(" ") || undefined;
   return (
     <div>
-      <label htmlFor={id} className="mb-1.5 block text-sm font-medium text-foreground">
+      <label htmlFor={id} className="mb-1 block text-sm font-medium text-foreground xshort:text-[13px]">
         {label}
         {required && (
           <span aria-hidden="true" className="text-destructive">
@@ -30,11 +31,11 @@ export function TextField({ id, label, hint, error, required, ...inputProps }: T
         required={required}
         aria-invalid={error ? true : undefined}
         aria-describedby={describedBy}
-        className={cn("input-field", error && "border-destructive focus-visible:ring-destructive")}
+        className={cn("input-field xshort:h-11", error && "border-destructive focus-visible:ring-destructive")}
         {...inputProps}
       />
       {hint && (
-        <p id={hintId} className="mt-1.5 text-xs text-ink-muted">
+        <p id={hintId} className={cn("mt-1 text-xs text-ink-muted", hintClassName)}>
           {hint}
         </p>
       )}

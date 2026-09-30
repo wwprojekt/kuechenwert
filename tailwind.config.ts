@@ -17,6 +17,13 @@ export default {
       },
     },
     extend: {
+      // Höhen-Stufen für die Funnels: Jeder Schritt passt ohne Scrollen auf den
+      // Bildschirm (iPhone SE mit Safari-Leisten ≈ 375 × 548, Laptop ≈ 1366 × 657).
+      screens: {
+        short: { raw: "(max-height: 699px)" },
+        xshort: { raw: "(max-height: 599px)" },
+        tall: { raw: "(min-height: 760px)" },
+      },
       fontFamily: {
         sans: ['Fira Sans', 'system-ui', 'sans-serif'],
         display: ['Fira Sans', 'system-ui', 'sans-serif'],
@@ -166,6 +173,10 @@ export default {
           "0%": { opacity: "0", transform: "translateY(8px)" },
           "100%": { opacity: "1", transform: "translateY(0)" }
         },
+        scan: {
+          "0%": { transform: "translateY(-100%)" },
+          "100%": { transform: "translateY(300%)" }
+        },
       },
       animation: {
         "accordion-down": "accordion-down 0.2s ease-out",
@@ -180,6 +191,7 @@ export default {
         "timer-blink": "timer-blink 1s ease-in-out infinite",
         "timer-pulse": "timer-pulse 2.5s ease-in-out infinite",
         "step-in": "step-in 0.3s ease-out both",
+        scan: "scan 2.4s ease-in-out infinite",
       },
       typography: {
         DEFAULT: {

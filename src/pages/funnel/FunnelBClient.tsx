@@ -1,316 +1,81 @@
-import { cloneElement, isValidElement, useState, useMemo, useCallback, useEffect, useId, useRef, type RefObject } from "react";
+import { BadgeEuro, Clock3, ShieldCheck } from "lucide-react";
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { clsx } from "clsx";
 import { toast } from "sonner";
+import { FunnelFrame } from "@/components/funnel/funnel-frame";
+import { FunnelTrustStrip } from "@/components/funnel/funnel-shell";
 import { submitFunnelB } from "@/features/funnel-b/api";
-import { LEAD_FILE_CATEGORIES, MAX_LEAD_FILES, type LeadFileCategory, type PendingLeadFile } from "@/features/funnel-b/files";
-import { LeadFileDrop } from "@/features/funnel-b/LeadFileDrop";
-import { PendingFileList } from "@/features/funnel-b/PendingFileList";
+import { loadFunnelB, serializeFunnelB, submissionFields, FUNNEL_B_STORAGE_KEY, type FunnelBData } from "@/features/funnel-b/state";
+import { funnelBFlow, funnelBStep, guardFunnelBStep, isSkippable, missingIn, parseFunnelBStep, type FunnelBStepKey } from "@/features/funnel-b/steps";
+import { ConsentStep, ContactStep, NameStep, PlzCityStep } from "@/features/funnel-b/steps/ContactSteps";
+import {
+  AppliancesStep,
+  BrandStep,
+  DeliveryStep,
+  DownPaymentStep,
+  ExtrasStep,
+  FrontStep,
+  HandleStep,
+  NotesStep,
+  PaymentStep,
+  SinkBrandStep,
+  SinkStep,
+  WasteStep,
+  WorktopNameStep,
+  WorktopStep,
+} from "@/features/funnel-b/steps/DetailSteps";
+import { DetailsChoiceStep, DocumentsChoiceStep, PriceStep, TimeframeStep, UploadStep } from "@/features/funnel-b/steps/OfferSteps";
 import { ApiError, errorMessage } from "@/features/marketplace/api-client";
 import { useFunnelTelemetry } from "@/hooks/useFunnelTelemetry";
-import { useTurnstile } from "@/hooks/useTurnstile";
 import { useSupportPhone } from "@/hooks/useSupportPhone";
-import { BRAND } from "@/lib/brand";
+import { useTurnstile } from "@/hooks/useTurnstile";
 import { getConsentedClickIds } from "@/lib/clickIdService";
 import { trackFunnelStep, trackFunnelSubmitError } from "@/lib/funnelAnalytics";
-import { trackActiveFunnelEvent } from "@/lib/funnelTelemetry";
+import { generateTransactionId, setEnhancedConversionFromForm, trackKitchenFunnelLead } from "@/lib/gadsConversionService";
+import { trackMetaLead } from "@/lib/metaPixelService";
 import { clearSubmissionId, submissionIdFor } from "@/lib/submissionId";
 import { getEntryPath, getStoredUtm } from "@/lib/utm";
-import {
-  generateTransactionId,
-  setEnhancedConversionFromForm,
-  trackKitchenFunnelLead,
-} from "@/lib/gadsConversionService";
-import { trackMetaLead } from "@/lib/metaPixelService";
-import {
-  Plus,
-  Trash2,
-  ShieldCheck,
-  Lightbulb,
-  Phone,
-  Mail,
-  CloudUpload,
-} from "lucide-react";
-import { FunnelBShell } from "@/components/funnel/funnel-b-shell";
-import { Combobox, type ComboboxOption } from "@/components/funnel/combobox";
-import {
-  TIMEFRAME_ICONS_B,
-  HANDLE_TYPE_ICONS,
-  WORKTOP_ICONS,
-  SINK_MATERIAL_ICONS,
-  WASTE_SEP_ICONS,
-  DELIVERY_ICONS,
-  FINANCING_ICONS,
-  APPLIANCE_CATEGORY_ICON,
-} from "@/components/funnel/funnel-b-icons";
-import {
-  KITCHEN_BRANDS,
-  FRONT_MATERIALS,
-  FRONT_CATEGORY_LABEL,
-  HANDLE_TYPES,
-  WORKTOP_MATERIALS,
-  WORKTOP_DESIGNS,
-  APPLIANCE_CATEGORIES,
-  APPLIANCE_BRANDS,
-  SINK_BRANDS,
-  SINK_MATERIALS,
-  EXTRAS_OPTIONS,
-  TIMEFRAMES,
-  DELIVERY_MODES,
-  FINANCING_OPTIONS,
-} from "@/config/funnel-b-stammdaten";
 
-/* ====================================================================== */
-/* STATE                                                                    */
-/* ====================================================================== */
-
-type OfferDeliveryMethod = "" | "now" | "later";
-
-type FunnelBData = {
-  timeframe: string;
-
-  brand: string;
-  brandCustom: string;
-  frontName: string;
-  frontMaterialName: string;
-  handleType: string;
-
-  worktopMaterial: string;
-  worktopDesign: string;
-  worktopDesignCustom: string;
-
-  appliances: {
-    id: string;
-    categorySlug: string;
-    brandSlug: string;
-    model: string;
-  }[];
-
-  sinkBrand: string;
-  sinkMaterial: string;
-  sinkDesignation: string;
-  wasteSeparationSystem: "yes" | "no" | "unknown" | "";
-
-  extras: string[];
-  extrasNotes: string;
-
-  deliveryMode: string;
-  paymentDownPaymentPercent: string;
-  paymentFinancing: string;
-  paymentFinancingApr: string;
-  paymentFinancingMonths: string;
-
-  existingOfferStudio: string;
-  existingOfferPriceEur: string;
-  /** Unterlagen: "now" = jetzt hochladen, "later" = später über den Projektlink nachreichen */
-  offerDeliveryMethod: OfferDeliveryMethod;
-  uploads: PendingLeadFile[];
-
-  postalCode: string;
-  city: string;
-  firstName: string;
-  lastName: string;
-  email: string;
-  phone: string;
-  salutation: "frau" | "herr" | "divers" | "";
-  /** Weitergabe an Studios (Pflicht, Einwilligungszweck share_with_studios). */
-  consentShare: boolean;
-  /** Rückruf durch KüchenWert zum Experten-Check (Pflicht). */
-  consentCall: boolean;
-  /** Anrufe durch Studios, die den Kontakt erhalten (optional). */
-  consentStudioCall: boolean;
-  consentMarketing: boolean;
-};
-
-const initialData: FunnelBData = {
-  timeframe: "",
-  brand: "",
-  brandCustom: "",
-  frontName: "",
-  frontMaterialName: "",
-  handleType: "",
-  worktopMaterial: "",
-  worktopDesign: "",
-  worktopDesignCustom: "",
-  appliances: [],
-  sinkBrand: "",
-  sinkMaterial: "",
-  sinkDesignation: "",
-  wasteSeparationSystem: "",
-  extras: [],
-  extrasNotes: "",
-  deliveryMode: "",
-  paymentDownPaymentPercent: "",
-  paymentFinancing: "",
-  paymentFinancingApr: "",
-  paymentFinancingMonths: "",
-  existingOfferStudio: "",
-  existingOfferPriceEur: "",
-  offerDeliveryMethod: "",
-  uploads: [],
-  postalCode: "",
-  city: "",
-  firstName: "",
-  lastName: "",
-  email: "",
-  phone: "",
-  salutation: "",
-  consentShare: false,
-  consentCall: false,
-  consentStudioCall: false,
-  consentMarketing: false,
-};
-
-/** key: Schritt in der Funnel-Telemetrie. */
-const STEPS = [
-  { key: "angebot", label: "Ihr Angebot", description: "Was kostet Ihr Angebot – und haben Sie Angebot oder Planung zur Hand?" },
-  { key: "situation", label: "Ihre Situation", description: "Wann soll die Küche geliefert oder montiert werden?" },
-  { key: "fronten", label: "Korpus & Fronten", description: "Welche Marke, welches Material, welcher Grifftyp?" },
-  { key: "arbeitsplatte", label: "Arbeitsplatte", description: "Material und – falls bekannt – die genaue Bezeichnung." },
-  { key: "geraete", label: "Geräte", description: "Welche Geräte sind im Angebot? Marke und Modell, falls bekannt." },
-  { key: "sanitaer", label: "Sanitär & Müllsystem", description: "Spüle, Material, Mülltrennsystem ja/nein." },
-  { key: "ausstattung", label: "Ausstattung & Zubehör", description: "Steckdosen, Beleuchtung, Besteckeinsatz, Sonstiges." },
-  { key: "zahlung", label: "Lieferung & Zahlung", description: "Liefermodus, Anzahlung, Finanzierungswunsch." },
-  { key: "kontakt", label: "Ihre Kontaktdaten", description: "Damit wir uns für den Experten-Check melden können." },
+const TRUST = [
+  { icon: BadgeEuro, label: "Kostenlos & unverbindlich" },
+  { icon: Clock3, label: "In ca. 3 Minuten fertig" },
+  { icon: ShieldCheck, label: "Nur freigeschaltete Küchenstudios" },
 ];
 
-const TOTAL = STEPS.length;
-
-/** ?schritt=1…9 → Index 0…8; alles andere → erster Schritt. */
-function parseStep(raw: string | null): number {
-  const n = Number(raw);
-  return Number.isInteger(n) && n >= 1 && n <= TOTAL ? n - 1 : 0;
-}
-
-const STORAGE_KEY = "kw_funnel_b";
-/** Persist nur JSON-serialisierbare Felder, keine File-Objekte. */
-function serializeForStorage(data: FunnelBData): string {
-  const { uploads: _u, ...rest } = data;
-  void _u;
-  return JSON.stringify(rest);
-}
-
-/** Schritt „Ihr Angebot“ vollständig: Preis und entweder Unterlagen oder „später nachreichen“. */
-function isOfferReady(data: FunnelBData): boolean {
-  if (!(Number(data.existingOfferPriceEur) > 0)) return false;
-  if (data.offerDeliveryMethod === "later") return true;
-  return data.offerDeliveryMethod === "now" && data.uploads.length > 0;
-}
-
-interface MissingField {
-  /** Feldschlüssel für die Funnel-Telemetrie. */
-  key: string;
-  label: string;
-  /** Element, das „Jetzt ergänzen“ anspringt. */
-  target: string;
-}
-
-/** Pflichtangaben, die im Schritt noch fehlen (Angebot und Kontakt). */
-function missingFields(step: number, data: FunnelBData): MissingField[] {
-  const missing: MissingField[] = [];
-  if (step === 0) {
-    if (!(Number(data.existingOfferPriceEur) > 0)) {
-      missing.push({ key: "existing_offer_price", label: "Angebotspreis Ihres Küchenstudios", target: "funnel-b-offer-price" });
-    }
-    if (data.offerDeliveryMethod === "") {
-      missing.push({ key: "offer_delivery", label: "Unterlagen jetzt hochladen oder später nachreichen", target: "funnel-b-offer-delivery" });
-    } else if (data.offerDeliveryMethod === "now" && data.uploads.length === 0) {
-      missing.push({ key: "uploads", label: "Mindestens eine Datei hochladen – oder „Später nachreichen“ wählen", target: "funnel-b-offer-delivery" });
-    }
-  }
-  if (step === TOTAL - 1) {
-    if (!/^\d{5}$/.test(data.postalCode)) missing.push({ key: "postal_code", label: "Postleitzahl (5 Ziffern)", target: "funnel-b-postal-code" });
-    if (data.firstName.trim().length <= 1) missing.push({ key: "first_name", label: "Vorname", target: "funnel-b-first-name" });
-    if (data.lastName.trim().length <= 1) missing.push({ key: "last_name", label: "Nachname", target: "funnel-b-last-name" });
-    if (!/\S+@\S+\.\S+/.test(data.email)) missing.push({ key: "email", label: "E-Mail-Adresse", target: "funnel-b-email" });
-    if (data.phone.trim().length < 6) missing.push({ key: "phone", label: "Telefonnummer", target: "funnel-b-phone" });
-    if (!data.consentShare) {
-      missing.push({ key: "consent_share", label: "Einwilligung zur Weitergabe an Küchenstudios", target: "funnel-b-consent-share" });
-    }
-    if (!data.consentCall) {
-      missing.push({ key: "consent_call", label: "Einwilligung zum Rückruf (Experten-Check)", target: "funnel-b-consent-call" });
-    }
-  }
-  return missing;
-}
-
-function focusField(id: string): void {
-  const el = document.getElementById(id);
-  if (!el) return;
-  const target = el.matches("input, button, select, textarea") ? el : el.querySelector<HTMLElement>("input, button, select, textarea");
-  el.scrollIntoView({ block: "center", behavior: "smooth" });
-  target?.focus({ preventScroll: true });
-}
-
-function MissingSummary({ items, summaryRef }: { items: MissingField[]; summaryRef: RefObject<HTMLDivElement> }) {
-  return (
-    <div
-      ref={summaryRef}
-      role="alert"
-      tabIndex={-1}
-      className="mt-6 rounded-xl border border-destructive/30 bg-destructive/5 p-4 text-sm outline-none"
-    >
-      <p className="font-semibold text-destructive">Bitte ergänzen Sie noch:</p>
-      <ul className="mt-2 space-y-1">
-        {items.map((item) => (
-          <li key={item.key}>
-            <button
-              type="button"
-              onClick={() => focusField(item.target)}
-              className="min-h-8 rounded text-left font-medium text-foreground underline underline-offset-2 hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-            >
-              {item.label}
-            </button>
-          </li>
-        ))}
-      </ul>
-    </div>
-  );
-}
-
-function loadSaved(): Partial<FunnelBData> {
-  if (typeof window === "undefined") return {};
-  try {
-    const raw = sessionStorage.getItem(STORAGE_KEY);
-    return raw ? JSON.parse(raw) : {};
-  } catch {
-    return {};
-  }
-}
-
-/* ====================================================================== */
-/* PAGE                                                                     */
-/* ====================================================================== */
-
+/**
+ * Funnel B („Angebot unterbieten“): eine Frage pro Bildschirm, Schritt in
+ * ?schritt=<schlüssel>. Detailfragen nur auf Wunsch; Absenden über kw-lead-b,
+ * danach Dateien über signierte URLs und die Danke-Seite.
+ */
 export default function FunnelBClient() {
   const navigate = useNavigate();
   const phone = useSupportPhone();
   const [searchParams, setSearchParams] = useSearchParams();
-  const [data, setData] = useState<FunnelBData>(() => ({
-    ...initialData,
-    ...loadSaved(),
-    uploads: [], // nie aus storage rehydrieren
-  }));
+  const [data, setData] = useState<FunnelBData>(loadFunnelB);
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [uploadProgress, setUploadProgress] = useState<{ done: number; total: number } | null>(null);
   const [honeypot, setHoneypot] = useState("");
-  const [showMissing, setShowMissing] = useState(false);
+  const [blocked, setBlocked] = useState<string | null>(null);
   const { waitForToken, resetTurnstile, turnstileCallbackRef } = useTurnstile();
-  const errorRef = useRef<HTMLParagraphElement>(null);
-  const missingRef = useRef<HTMLDivElement>(null);
 
-  // Schritt steht in der URL, damit Zurück-Geste und Neuladen im Funnel bleiben.
-  // Kontaktdaten erst, wenn das Angebot vollständig ist (Uploads überstehen kein Neuladen).
-  const requestedStep = parseStep(searchParams.get("schritt"));
-  const step = requestedStep === TOTAL - 1 && !isOfferReady(data) ? 0 : requestedStep;
+  const requested = parseFunnelBStep(searchParams.get("schritt"));
+  const guarded = guardFunnelBStep(requested, data);
+  const flow = useMemo(() => funnelBFlow(data), [data]);
+  // Ein Schritt, der im aktuellen Pfad nicht vorkommt (z. B. Details bei „Nein“), führt zum nächsten passenden.
+  const step: FunnelBStepKey = flow.includes(guarded) ? guarded : (flow.find((k) => k === "plz") ?? "preis");
+  const index = Math.max(0, flow.indexOf(step));
+  const total = flow.length;
+  const def = funnelBStep(step);
+
   const goToStep = useCallback(
-    (next: number, replace = false) => {
+    (next: FunnelBStepKey, replace = false) => {
+      setBlocked(null);
       setSearchParams(
         (prev) => {
           const params = new URLSearchParams(prev);
-          if (next <= 0) params.delete("schritt");
-          else params.set("schritt", String(next + 1));
+          if (next === "preis") params.delete("schritt");
+          else params.set("schritt", next);
           return params;
         },
         { replace },
@@ -320,114 +85,70 @@ export default function FunnelBClient() {
   );
 
   useEffect(() => {
-    if (step !== requestedStep) goToStep(step, true);
-  }, [step, requestedStep, goToStep]);
+    if (step !== requested) goToStep(step, true);
+  }, [step, requested, goToStep]);
 
-  const telemetry = useFunnelTelemetry({
-    funnel: "b",
-    step: STEPS[step].key,
-    stepIndex: step,
-    stepLabel: STEPS[step].label,
-    totalSteps: TOTAL,
-  });
+  const telemetry = useFunnelTelemetry({ funnel: "b", step, stepIndex: index, stepLabel: def.question, totalSteps: total });
 
   useEffect(() => {
-    trackFunnelStep("b", STEPS[step].label, step, TOTAL);
-  }, [step]);
-
-  const shownStep = useRef(step);
-  useEffect(() => {
-    if (shownStep.current === step) return;
-    shownStep.current = step;
-    setShowMissing(false);
-    window.scrollTo({ top: 0, behavior: "smooth" });
-  }, [step]);
+    trackFunnelStep("b", step, index, total);
+    setSubmitError(null);
+  }, [step, index, total]);
 
   useEffect(() => {
-    if (submitError) errorRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
-  }, [submitError]);
-
-  // auto-persist bei jeder Aenderung (File-Objekte ausgeschlossen)
-  useEffect(() => {
-    if (typeof window === "undefined") return;
     try {
-      sessionStorage.setItem(STORAGE_KEY, serializeForStorage(data));
+      sessionStorage.setItem(FUNNEL_B_STORAGE_KEY, serializeFunnelB(data));
     } catch {
       /* quota / privacy mode */
     }
   }, [data]);
 
-  const update = useCallback((patch: Partial<FunnelBData>) => {
-    setData((prev) => ({ ...prev, ...patch }));
-  }, []);
+  const update = useCallback((patch: Partial<FunnelBData>) => setData((prev) => ({ ...prev, ...patch })), []);
+  const hasProgress = step !== "preis" || Number(data.existingOfferPriceEur) > 0 || data.uploads.length > 0;
 
-  const missing = useMemo(() => missingFields(step, data), [step, data]);
-  const hasProgress = step > 0 || Number(data.existingOfferPriceEur) > 0 || data.uploads.length > 0;
+  // Auto-Weiter feuert kurz nach der Auswahl: dann gelten Stand und Pfad von jetzt, nicht vom Klick.
+  const latest = useRef({ step, data });
+  latest.current = { step, data };
 
-  const handleNext = useCallback(async () => {
-    if (step === TOTAL - 1) telemetry.submitClicked();
-    // Wie bei CaravanWert: Der Button bleibt klickbar und zeigt, was noch fehlt.
-    if (missing.length > 0) {
-      setShowMissing(true);
-      telemetry.validationFailed(missing.map((m) => m.key));
-      window.requestAnimationFrame(() => {
-        missingRef.current?.scrollIntoView({ block: "center", behavior: "smooth" });
-        missingRef.current?.focus({ preventScroll: true });
-      });
-      return;
-    }
-    if (step < TOTAL - 1) {
-      telemetry.next();
-      goToStep(step + 1);
-      return;
-    }
-
+  const submit = useCallback(async () => {
+    const current = latest.current.data;
     setSubmitting(true);
     setSubmitError(null);
     try {
-      const { uploads, ...fields } = data;
       const turnstileToken = await waitForToken();
-      setUploadProgress(uploads.length > 0 ? { done: 0, total: uploads.length } : null);
+      setUploadProgress(current.uploads.length > 0 ? { done: 0, total: current.uploads.length } : null);
       const { failedUploads, studiosInArea, reviewRequired } = await submitFunnelB({
-        data: fields,
-        uploads,
-        onUploadProgress: (done, total) => setUploadProgress({ done, total }),
+        data: submissionFields(current),
+        uploads: current.uploads,
+        onUploadProgress: (done, count) => setUploadProgress({ done, total: count }),
         turnstileToken,
         website: honeypot,
         submissionId: submissionIdFor("b"),
         clickIds: getConsentedClickIds(),
         utm: getStoredUtm(),
-        landingPage: getEntryPath() ?? (typeof window !== "undefined" ? window.location.pathname : null),
+        landingPage: getEntryPath() ?? window.location.pathname,
       });
       clearSubmissionId("b");
       telemetry.submitSucceeded();
-
       try {
-        sessionStorage.removeItem(STORAGE_KEY);
+        sessionStorage.removeItem(FUNNEL_B_STORAGE_KEY);
       } catch {
         /* storage not available */
       }
-
-      // Die Anfrage ist gespeichert: Tracking darf ab hier nichts mehr blockieren,
-      // sonst sendet der Nutzer nach einer Fehlermeldung ein zweites Mal ab.
+      // Die Anfrage ist gespeichert: Tracking darf ab hier nichts mehr blockieren.
       try {
-        const transactionId = generateTransactionId("funnel_b");
         await setEnhancedConversionFromForm({
-          email: data.email,
-          firstName: data.firstName,
-          lastName: data.lastName,
-          phone: data.phone,
-          postalCode: data.postalCode,
+          email: current.email,
+          firstName: current.firstName,
+          lastName: current.lastName,
+          phone: current.phone,
+          postalCode: current.postalCode,
         });
-        await trackKitchenFunnelLead("b", transactionId);
-        trackMetaLead({
-          content_name: "Funnel B",
-          content_category: "Angebot unterbieten",
-        });
+        await trackKitchenFunnelLead("b", generateTransactionId("funnel_b"));
+        trackMetaLead({ content_name: "Funnel B", content_category: "Angebot unterbieten" });
       } catch (trackingError) {
         console.error("Funnel B tracking failed", trackingError);
       }
-
       if (failedUploads > 0) {
         toast.warning(
           "Ihre Anfrage ist angekommen, aber nicht alle Dateien konnten hochgeladen werden. Sie können sie über den Projektlink aus Ihrer E-Mail nachreichen.",
@@ -453,1150 +174,104 @@ export default function FunnelBClient() {
       setSubmitting(false);
       setUploadProgress(null);
     }
-  }, [step, data, missing, telemetry, navigate, goToStep, phone.display, waitForToken, honeypot, resetTurnstile]);
+  }, [waitForToken, honeypot, telemetry, navigate, resetTurnstile, phone.display]);
+
+  const handleNext = useCallback(() => {
+    const { step: current, data: now } = latest.current;
+    if (current === "einwilligung") telemetry.submitClicked();
+    const missing = missingIn(current, now);
+    if (missing.length > 0) {
+      setBlocked(missing[0]!.message);
+      telemetry.validationFailed(missing.map((m) => m.key));
+      const el = document.getElementById(missing[0]!.target);
+      (el?.matches("input, button, select, textarea") ? el : el?.querySelector<HTMLElement>("input, button, select, textarea"))?.focus();
+      return;
+    }
+    if (current === "einwilligung") {
+      void submit();
+      return;
+    }
+    const path = funnelBFlow(now);
+    const next = path[path.indexOf(current) + 1];
+    if (!next) return;
+    telemetry.next();
+    goToStep(next);
+  }, [telemetry, submit, goToStep]);
 
   const handleBack = useCallback(() => {
+    const { step: current, data: now } = latest.current;
+    const path = funnelBFlow(now);
+    const prev = path[path.indexOf(current) - 1];
+    if (!prev) return;
     telemetry.back();
-    goToStep(Math.max(0, step - 1));
-  }, [goToStep, step, telemetry]);
+    goToStep(prev);
+  }, [telemetry, goToStep]);
 
-  const goNext = useCallback(() => {
+  const skipDetails = () => {
     telemetry.next();
-    goToStep(Math.min(TOTAL - 1, step + 1));
-  }, [goToStep, step, telemetry]);
+    goToStep("plz");
+  };
 
-  const sidebar = (
-    <>
-      <div className="rounded-2xl border border-border bg-card p-5 text-sm shadow-card">
-        <div className="flex items-center gap-2 text-brand-700">
-          <Lightbulb className="h-4 w-4" />
-          <span className="font-semibold text-ink">Tipp</span>
-        </div>
-        <p className="mt-2 text-ink-muted">{TIPS[step]}</p>
-      </div>
-      <div className="rounded-2xl border border-border bg-card p-5 text-sm shadow-card">
-        <div className="flex items-center gap-2 text-brand-700">
-          <ShieldCheck className="h-4 w-4" aria-hidden="true" />
-          <span className="font-semibold text-ink">So geht es weiter</span>
-        </div>
-        <p className="mt-2 text-ink-muted">
-          Nach Ihrer Anfrage besprechen wir Ihr Angebot kurz telefonisch. Danach stellen wir es ohne
-          Ihren Namen 72&nbsp;Stunden lang freigeschalteten Küchenstudios aus Ihrer Region vor, die es
-          unterbieten können – Ihre Unterlagen nur ohne Namen und Kontaktdaten. Ob Sie ein Angebot
-          annehmen, entscheiden Sie frei.
-        </p>
-      </div>
-      <div className="rounded-2xl border border-border bg-card p-5 text-sm shadow-card">
-        <div className="flex items-center gap-2 text-brand-700">
-          <Phone className="h-4 w-4" aria-hidden="true" />
-          <span className="font-semibold text-ink">Brauchen Sie Hilfe?</span>
-        </div>
-        <p className="mt-2 text-ink-muted">
-          Rufen Sie uns an:{" "}
-          <a
-            href={phone.href}
-            onClick={() => trackActiveFunnelEvent("help_clicked", { channel: "phone", place: "sidebar" })}
-            className="link-inline text-brand-700 decoration-brand-700/70 hover:decoration-brand-700"
-          >
-            {phone.display}
-          </a>
-        </p>
-      </div>
-    </>
-  );
+  const props = { data, update, onAdvance: handleNext };
+  const CONTENT: Record<FunnelBStepKey, ReactNode> = {
+    preis: <PriceStep {...props} />,
+    unterlagen: <DocumentsChoiceStep {...props} />,
+    hochladen: <UploadStep {...props} />,
+    zeitrahmen: <TimeframeStep {...props} />,
+    details: <DetailsChoiceStep {...props} />,
+    marke: <BrandStep {...props} />,
+    fronten: <FrontStep {...props} />,
+    griffe: <HandleStep {...props} />,
+    arbeitsplatte: <WorktopStep {...props} />,
+    "arbeitsplatte-name": <WorktopNameStep {...props} />,
+    geraete: <AppliancesStep {...props} />,
+    spuele: <SinkStep {...props} />,
+    "spuele-marke": <SinkBrandStep {...props} />,
+    muell: <WasteStep {...props} />,
+    extras: <ExtrasStep {...props} />,
+    notizen: <NotesStep {...props} />,
+    lieferung: <DeliveryStep {...props} />,
+    zahlung: <PaymentStep {...props} />,
+    anzahlung: <DownPaymentStep {...props} />,
+    plz: <PlzCityStep {...props} />,
+    name: <NameStep {...props} />,
+    kontakt: <ContactStep {...props} />,
+    einwilligung: <ConsentStep {...props} honeypot={honeypot} onHoneypot={setHoneypot} turnstileRef={turnstileCallbackRef} />,
+  };
 
-  const stepDef = STEPS[step];
+  const optionalEmpty = isSkippable(step, data);
+  const progressHint = submitting && uploadProgress ? `Unterlagen werden hochgeladen … ${uploadProgress.done} von ${uploadProgress.total}` : null;
+
   return (
-    <FunnelBShell
-      currentStep={step}
-      totalSteps={TOTAL}
-      stepLabel={stepDef.label}
-      stepDescription={stepDef.description}
-      onBack={handleBack}
-      onNext={handleNext}
-      isFinalStep={step === TOTAL - 1}
-      isSubmitting={submitting}
+    <FunnelFrame
+      stepKey={step}
+      current={index}
+      total={total}
+      heading={def.question}
+      hint={def.hint}
+      hintAlways={step === "preis" || step === "kontakt"}
       guardExit={hasProgress}
       guardUnload={hasProgress}
-      sidebar={sidebar}
+      nav={{
+        onBack: index > 0 ? handleBack : undefined,
+        onNext: handleNext,
+        nextLabel: step === "einwilligung" ? "Anfrage absenden" : optionalEmpty ? "Überspringen" : "Weiter",
+        busy: submitting,
+        busyLabel: progressHint ?? "Wird gesendet …",
+        blockedHint: submitError ?? blocked,
+      }}
+      below={<FunnelTrustStrip items={TRUST} />}
     >
-      {step > 0 && step < TOTAL - 1 && (
-        <SkipDetails
-          hasFiles={data.uploads.length > 0}
-          onSkip={() => {
-            telemetry.next();
-            goToStep(TOTAL - 1);
-          }}
-        />
+      {CONTENT[step]}
+      {def.detail && (
+        <button
+          type="button"
+          onClick={skipDetails}
+          className="mt-3 inline-flex min-h-9 items-center text-sm font-medium text-primary underline-offset-4 hover:underline short:mt-2"
+        >
+          Details überspringen
+        </button>
       )}
-      {step === 0 && <OfferStep data={data} update={update} />}
-      {step === 1 && <Step0 data={data} update={update} goNext={goNext} />}
-      {step === 2 && <Step1 data={data} update={update} />}
-      {step === 3 && <Step2 data={data} update={update} />}
-      {step === 4 && <Step3 data={data} update={update} />}
-      {step === 5 && <Step4 data={data} update={update} />}
-      {step === 6 && <Step5 data={data} update={update} />}
-      {step === 7 && <Step6 data={data} update={update} />}
-      {step === 8 && (
-        <Step8
-          data={data}
-          update={update}
-          honeypot={honeypot}
-          onHoneypot={setHoneypot}
-          turnstileRef={turnstileCallbackRef}
-        />
-      )}
-
-      {showMissing && missing.length > 0 && <MissingSummary items={missing} summaryRef={missingRef} />}
-
-      {submitting && uploadProgress && (
-        <p role="status" className="mt-4 text-sm text-ink-muted">
-          Unterlagen werden hochgeladen … {uploadProgress.done} von {uploadProgress.total} fertig
-        </p>
-      )}
-
-      {submitError && (
-        <p ref={errorRef} role="alert" className="mt-4 rounded-xl border border-destructive/30 bg-destructive/5 p-3 text-sm font-medium text-destructive">
-          {submitError}
-        </p>
-      )}
-    </FunnelBShell>
-  );
-}
-
-const TIPS = [
-  "Viele Studios geben Angebot und Planung als PDF mit. Handyfotos der Seiten reichen auch – Hauptsache, Positionen, Maße und Preise sind lesbar.",
-  "Je konkreter der Zeitrahmen, desto besser können Küchenstudios Liefertermin und Montage kalkulieren. Ein fester Liefertermin steigert oft den Rabatt.",
-  "Wenn Sie Marke oder Material nicht sicher wissen: einfach 'Sonstiger / weiß ich nicht' wählen. Unser Experte ergänzt das im Telefonat.",
-  "Die Bezeichnung der Arbeitsplatte (z. B. „Calacatta Roma\") finden Sie meist auf Ihrem schriftlichen Angebot. Optional!",
-  "Marke + Modell pro Gerät steigert die Vergleichbarkeit. Beispiele: „Bosch HBG675BS1\", „Miele DGC 7460\".",
-  "Spülen-Material und -Marke beeinflussen den Preis stark. Mülltrennsysteme sind oft separat kalkuliert.",
-  "Beleuchtung und Steckdosen-Lösungen sind häufige „versteckte\" Posten – hier verlangen Studios oft hohe Aufschläge.",
-  "Anzahlung und Finanzierungsbedingungen sind verhandelbar. Geben Sie an, was Ihr Studio Ihnen angeboten hat.",
-  "Wir rufen Sie werktags an, bevor wir Ihr Angebot Küchenstudios vorstellen. Passt Ihnen eine bestimmte Uhrzeit, schreiben Sie uns gern eine E-Mail.",
-];
-
-/* ====================================================================== */
-/* STEP COMPONENTS                                                          */
-/* ====================================================================== */
-
-type StepProps = {
-  data: FunnelBData;
-  update: (patch: Partial<FunnelBData>) => void;
-};
-
-function Step0({ data, update, goNext }: StepProps & { goNext: () => void }) {
-  return (
-    <div className="space-y-6">
-      <Field
-        label="Wann soll die Küche geliefert/montiert werden?"
-        hint="Optional – hilft bei Verfügbarkeitsprüfung."
-      >
-        <CardGroup
-          columns={2}
-          options={TIMEFRAMES.map((t) => ({
-            value: t.slug,
-            label: t.name,
-            icon: TIMEFRAME_ICONS_B[t.slug],
-          }))}
-          value={data.timeframe}
-          onChange={(v) => update({ timeframe: v })}
-          onAutoAdvance={goNext}
-        />
-      </Field>
-    </div>
-  );
-}
-
-function Step1({ data, update }: StepProps) {
-  const brandOptions: ComboboxOption[] = KITCHEN_BRANDS.map((b) => ({
-    value: b.slug,
-    label: b.name,
-  }));
-
-  const frontMaterialOptions: ComboboxOption[] = FRONT_MATERIALS.map((f) => ({
-    value: f.name,
-    label: f.name,
-    description: f.description,
-    group: FRONT_CATEGORY_LABEL[f.category],
-  }));
-
-  return (
-    <div className="space-y-6">
-      <Field
-        label="Hersteller / Marke der Küche"
-        hint={'Optional. Suchbar – tippen Sie z. B. „Nobilia".'}
-      >
-        <Combobox
-          options={brandOptions}
-          value={data.brand}
-          onChange={(v) => update({ brand: v })}
-          placeholder="– Bitte wählen –"
-        />
-        {data.brand === "sonstiger" && (
-          <input
-            type="text"
-            placeholder="Marke (Freitext)"
-            className="input-field mt-2"
-            value={data.brandCustom}
-            onChange={(e) => update({ brandCustom: e.target.value })}
-          />
-        )}
-      </Field>
-
-      <Field
-        label="Name der Front"
-        hint={'Optional. Bezeichnung der Front laut Angebot, z. B. „Riva", „Sylt", „Flash".'}
-      >
-        <input
-          type="text"
-          className="input-field"
-          placeholder="z. B. Riva, Sylt, Flash"
-          value={data.frontName}
-          onChange={(e) => update({ frontName: e.target.value })}
-        />
-      </Field>
-
-      <Field
-        label="Frontmaterial"
-        hint="Optional. Nach Kategorien gruppiert (Kunststoff, Lack, Echtholz …)."
-      >
-        <Combobox
-          options={frontMaterialOptions}
-          value={data.frontMaterialName}
-          onChange={(v) => update({ frontMaterialName: v })}
-          placeholder="– Bitte wählen –"
-        />
-      </Field>
-
-      <Field label="Grifftyp" hint="Optional.">
-        <CardGroup
-          columns={2}
-          options={HANDLE_TYPES.map((h) => ({
-            value: h.slug,
-            label: h.name,
-            description: h.description,
-            icon: HANDLE_TYPE_ICONS[h.slug],
-          }))}
-          value={data.handleType}
-          onChange={(v) => update({ handleType: v })}
-        />
-      </Field>
-    </div>
-  );
-}
-
-function Step2({ data, update }: StepProps) {
-  const designs = useMemo(() => {
-    if (!data.worktopMaterial) return [];
-    return WORKTOP_DESIGNS.filter((d) => d.materialSlug === data.worktopMaterial);
-  }, [data.worktopMaterial]);
-
-  const designOptions: ComboboxOption[] = designs.map((d) => ({
-    value: d.name,
-    label: d.name,
-    badge: d.manufacturer,
-  }));
-
-  return (
-    <div className="space-y-6">
-      <Field label="Material der Arbeitsplatte" hint="Optional.">
-        <CardGroup
-          columns={2}
-          options={WORKTOP_MATERIALS.map((m) => ({
-            value: m.slug,
-            label: m.name,
-            description: m.description,
-            icon: WORKTOP_ICONS[m.slug],
-          }))}
-          value={data.worktopMaterial}
-          onChange={(v) =>
-            update({ worktopMaterial: v, worktopDesign: "", worktopDesignCustom: "" })
-          }
-        />
-      </Field>
-
-      {data.worktopMaterial && designs.length > 0 && (
-        <Field label="Bekannte Bezeichnungen" hint="Optional – wählen oder unten Freitext.">
-          <Combobox
-            options={designOptions}
-            value={data.worktopDesign}
-            onChange={(v) => update({ worktopDesign: v })}
-            placeholder="– Keine Auswahl –"
-          />
-        </Field>
-      )}
-
-      <Field
-        label="Eigene Bezeichnung / Notiz"
-        hint={'Optional. Z. B. „Eiche massiv geölt" oder spezifischer Code vom Studio.'}
-      >
-        <input
-          type="text"
-          className="input-field"
-          placeholder="z. B. Calacatta Roma 12 mm"
-          value={data.worktopDesignCustom}
-          onChange={(e) => update({ worktopDesignCustom: e.target.value })}
-        />
-      </Field>
-    </div>
-  );
-}
-
-function Step3({ data, update }: StepProps) {
-  const addAppliance = () => {
-    update({
-      appliances: [
-        ...data.appliances,
-        {
-          id: `app-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
-          categorySlug: "",
-          brandSlug: "",
-          model: "",
-        },
-      ],
-    });
-  };
-  const remove = (id: string) => {
-    update({ appliances: data.appliances.filter((a) => a.id !== id) });
-  };
-  const upd = (id: string, patch: Partial<(typeof data.appliances)[number]>) => {
-    update({
-      appliances: data.appliances.map((a) => (a.id === id ? { ...a, ...patch } : a)),
-    });
-  };
-
-  const categoryOptions: ComboboxOption[] = APPLIANCE_CATEGORIES.map((c) => ({
-    value: c.slug,
-    label: c.name,
-  }));
-  const brandOptions: ComboboxOption[] = APPLIANCE_BRANDS.map((b) => ({
-    value: b.slug,
-    label: b.name,
-  }));
-
-  return (
-    <div className="space-y-6">
-      <p className="text-sm text-ink-muted">
-        Geräte sind komplett optional. Klicken Sie auf{" "}
-        <span className="font-medium">„Gerät hinzufügen"</span>, um eine Position einzutragen.
-      </p>
-
-      <div className="space-y-3">
-        {data.appliances.map((a, i) => (
-          <div key={a.id} className="rounded-xl border border-border bg-surface-soft p-4">
-            <div className="mb-3 flex items-center justify-between">
-              <span className="flex items-center gap-2 text-xs font-semibold uppercase text-ink-subtle">
-                {APPLIANCE_CATEGORY_ICON} Gerät {i + 1}
-              </span>
-              <button
-                type="button"
-                onClick={() => remove(a.id)}
-                className="inline-flex min-h-9 items-center gap-1 rounded-lg px-1 text-xs font-medium text-destructive hover:underline"
-              >
-                <Trash2 className="h-3.5 w-3.5" /> Entfernen
-              </button>
-            </div>
-            <div className="grid gap-3 md:grid-cols-3">
-              <div>
-                <label className="label-field">Typ</label>
-                <Combobox
-                  options={categoryOptions}
-                  value={a.categorySlug}
-                  onChange={(v) => upd(a.id, { categorySlug: v })}
-                  placeholder="– Wählen –"
-                />
-              </div>
-              <div>
-                <label className="label-field">Marke</label>
-                <Combobox
-                  options={brandOptions}
-                  value={a.brandSlug}
-                  onChange={(v) => upd(a.id, { brandSlug: v })}
-                  placeholder="– Wählen –"
-                />
-              </div>
-              <div>
-                <label className="label-field">Modell / Bezeichnung</label>
-                <input
-                  type="text"
-                  className="input-field"
-                  placeholder="z. B. HBG675BS1"
-                  value={a.model}
-                  onChange={(e) => upd(a.id, { model: e.target.value })}
-                />
-              </div>
-            </div>
-          </div>
-        ))}
-      </div>
-
-      <button type="button" onClick={addAppliance} className="btn-secondary">
-        <Plus className="h-4 w-4" /> Gerät hinzufügen
-      </button>
-    </div>
-  );
-}
-
-function Step4({ data, update }: StepProps) {
-  const sinkBrandOptions: ComboboxOption[] = SINK_BRANDS.map((b) => ({
-    value: b.slug,
-    label: b.name,
-  }));
-
-  return (
-    <div className="space-y-6">
-      <div className="grid gap-4 md:grid-cols-2">
-        <Field label="Spülen-Marke" hint="Optional.">
-          <Combobox
-            options={sinkBrandOptions}
-            value={data.sinkBrand}
-            onChange={(v) => update({ sinkBrand: v })}
-            placeholder="– Wählen –"
-          />
-        </Field>
-
-        <Field label="Bezeichnung / Modell" hint={'Optional. z. B. „Blanco Subline 500-U".'}>
-          <input
-            type="text"
-            className="input-field"
-            value={data.sinkDesignation}
-            onChange={(e) => update({ sinkDesignation: e.target.value })}
-          />
-        </Field>
-      </div>
-
-      <Field label="Spülen-Material" hint="Optional.">
-        <CardGroup
-          columns={2}
-          options={SINK_MATERIALS.map((m) => ({
-            value: m.slug,
-            label: m.name,
-            icon: SINK_MATERIAL_ICONS[m.slug],
-          }))}
-          value={data.sinkMaterial}
-          onChange={(v) => update({ sinkMaterial: v })}
-        />
-      </Field>
-
-      <Field label="Mülltrennsystem" hint="Optional.">
-        <CardGroup
-          columns={3}
-          options={[
-            { value: "yes", label: "Ja, vorgesehen", icon: WASTE_SEP_ICONS.yes },
-            { value: "no", label: "Nein, kein System", icon: WASTE_SEP_ICONS.no },
-            { value: "unknown", label: "Weiß ich nicht", icon: WASTE_SEP_ICONS.unknown },
-          ]}
-          value={data.wasteSeparationSystem}
-          onChange={(v) =>
-            update({ wasteSeparationSystem: v as FunnelBData["wasteSeparationSystem"] })
-          }
-        />
-      </Field>
-    </div>
-  );
-}
-
-function Step5({ data, update }: StepProps) {
-  const toggle = (slug: string) => {
-    if (data.extras.includes(slug)) {
-      update({ extras: data.extras.filter((s) => s !== slug) });
-    } else {
-      update({ extras: [...data.extras, slug] });
-    }
-  };
-  return (
-    <div className="space-y-6">
-      <Field
-        label="Welche Extras sind im Angebot enthalten?"
-        hint="Mehrfachauswahl möglich – alles optional."
-      >
-        <div className="grid gap-2 sm:grid-cols-2">
-          {EXTRAS_OPTIONS.map((e) => {
-            const selected = data.extras.includes(e.slug);
-            return (
-              <label
-                key={e.slug}
-                className={`card-clickable !p-4 ${selected ? "is-selected" : ""}`}
-                data-selected={selected}
-              >
-                <input
-                  type="checkbox"
-                  className="sr-only"
-                  checked={selected}
-                  onChange={() => toggle(e.slug)}
-                />
-                <div className="flex items-start gap-3">
-                  <div
-                    className={`mt-0.5 h-5 w-5 flex-none rounded border-2 ${
-                      selected ? "border-brand-700 bg-brand-700" : "border-input bg-card"
-                    }`}
-                    aria-hidden="true"
-                  >
-                    {selected && (
-                      <svg className="h-full w-full text-white" viewBox="0 0 12 12" fill="none">
-                        <path
-                          d="M2.5 6.5L5 9L9.5 4"
-                          stroke="currentColor"
-                          strokeWidth="2"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                        />
-                      </svg>
-                    )}
-                  </div>
-                  <div>
-                    <div className="text-sm font-medium text-ink">{e.name}</div>
-                    {e.description && (
-                      <div className="mt-0.5 text-xs text-ink-muted">{e.description}</div>
-                    )}
-                  </div>
-                </div>
-              </label>
-            );
-          })}
-        </div>
-      </Field>
-
-      <Field label="Sonstige Komponenten / Notizen" hint="Optional. Alles, was wir noch wissen sollten.">
-        <textarea
-          rows={3}
-          className="input-field"
-          placeholder="z. B. Spritzschutz aus Glas, USB-Dosen in Schublade, ..."
-          value={data.extrasNotes}
-          onChange={(e) => update({ extrasNotes: e.target.value })}
-        />
-      </Field>
-    </div>
-  );
-}
-
-function Step6({ data, update }: StepProps) {
-  return (
-    <div className="space-y-6">
-      <Field label="Wie soll geliefert werden?" hint="Optional.">
-        <CardGroup
-          columns={2}
-          options={[
-            ...DELIVERY_MODES.map((d) => ({
-              value: d.slug,
-              label: d.name,
-              icon: DELIVERY_ICONS[d.slug],
-            })),
-            {
-              value: "unknown",
-              label: "Weiß ich nicht",
-              icon: DELIVERY_ICONS.unknown,
-            },
-          ]}
-          value={data.deliveryMode}
-          onChange={(v) => update({ deliveryMode: v })}
-        />
-      </Field>
-
-      <div className="grid gap-4 md:grid-cols-2">
-        <Field label="Anzahlung in %" hint="Optional. Was Ihr Studio fordert (z. B. 30 %).">
-          <input
-            type="number"
-            min={0}
-            max={100}
-            step={1}
-            className="input-field"
-            placeholder="z. B. 30"
-            value={data.paymentDownPaymentPercent}
-            onChange={(e) => update({ paymentDownPaymentPercent: e.target.value })}
-          />
-        </Field>
-
-        <Field label="Zahlungsmodalitäten" hint="Optional.">
-          <CardGroup
-            columns={1}
-            options={FINANCING_OPTIONS.map((f) => ({
-              value: f.slug,
-              label: f.name,
-              icon: FINANCING_ICONS[f.slug],
-            }))}
-            value={data.paymentFinancing}
-            onChange={(v) => update({ paymentFinancing: v })}
-          />
-        </Field>
-      </div>
-
-      {data.paymentFinancing === "with_interest" && (
-        <div className="grid gap-4 md:grid-cols-2">
-          <Field label="Effektivzins (% p. a.)" hint="Optional.">
-            <input
-              type="number"
-              min={0}
-              step={0.1}
-              className="input-field"
-              placeholder="z. B. 4.9"
-              value={data.paymentFinancingApr}
-              onChange={(e) => update({ paymentFinancingApr: e.target.value })}
-            />
-          </Field>
-          <Field label="Laufzeit (Monate)" hint="Optional.">
-            <input
-              type="number"
-              min={1}
-              step={1}
-              className="input-field"
-              placeholder="z. B. 36"
-              value={data.paymentFinancingMonths}
-              onChange={(e) => update({ paymentFinancingMonths: e.target.value })}
-            />
-          </Field>
-        </div>
-      )}
-    </div>
-  );
-}
-
-function OfferStep({ data, update }: StepProps) {
-  const remaining = MAX_LEAD_FILES - data.uploads.length;
-  const addFiles = (category: LeadFileCategory, files: File[]) => {
-    update({
-      uploads: [
-        ...data.uploads,
-        ...files.map((file) => ({
-          id: `f-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
-          category,
-          file,
-        })),
-      ],
-    });
-  };
-  const remove = (id: string) => {
-    update({ uploads: data.uploads.filter((u) => u.id !== id) });
-  };
-
-  return (
-    <div className="space-y-6">
-      <Field
-        label="Angebotspreis Ihres Küchenstudios *"
-        hint="Pflicht. Bruttopreis in Euro – diesen Preis sollen die Küchenstudios unterbieten."
-        controlId="funnel-b-offer-price"
-      >
-        <div className="relative max-w-xs">
-          <input
-            id="funnel-b-offer-price"
-            name="existing_offer_price"
-            type="number"
-            inputMode="numeric"
-            min={1}
-            step={1}
-            className="input-field pr-10"
-            placeholder="z. B. 18000"
-            value={data.existingOfferPriceEur}
-            onChange={(e) => update({ existingOfferPriceEur: e.target.value })}
-          />
-          <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-sm text-ink-muted">
-            €
-          </span>
-        </div>
-      </Field>
-
-      <Field
-        label="Name des Küchenstudios"
-        hint="Optional. Hilft uns beim Vergleich, wird den Küchenstudios nicht gezeigt."
-      >
-        <input
-          type="text"
-          name="existing_offer_studio"
-          className="input-field"
-          placeholder="z. B. Küchen Müller GmbH, Musterstadt"
-          value={data.existingOfferStudio}
-          onChange={(e) => update({ existingOfferStudio: e.target.value })}
-        />
-      </Field>
-
-      <Field
-        id="funnel-b-offer-delivery"
-        label="Angebot und Planung *"
-        hint="Mit Ihren Unterlagen können wir genau vergleichen – und Sie können die Detailfragen danach überspringen."
-      >
-        <CardGroup
-          columns={2}
-          options={[
-            {
-              value: "now",
-              label: "Jetzt hochladen",
-              description: "Angebot, Planung oder Fotos – als PDF oder Bild",
-              icon: <CloudUpload className="h-5 w-5" />,
-            },
-            {
-              value: "later",
-              label: "Später nachreichen",
-              description: "Über Ihren persönlichen Projektlink aus der E-Mail",
-              icon: <Mail className="h-5 w-5" />,
-            },
-          ]}
-          value={data.offerDeliveryMethod}
-          onChange={(v) => update({ offerDeliveryMethod: v as OfferDeliveryMethod })}
-        />
-      </Field>
-
-      {data.offerDeliveryMethod === "now" && (
-        <div className="space-y-3">
-          {LEAD_FILE_CATEGORIES.map((option) => (
-            <LeadFileDrop
-              key={option.value}
-              option={option}
-              count={data.uploads.filter((u) => u.category === option.value).length}
-              remaining={remaining}
-              onFiles={(files) => addFiles(option.value, files)}
-            />
-          ))}
-          <PendingFileList files={data.uploads} onRemove={remove} />
-          <p className="text-xs text-ink-muted">
-            Mindestens eine Datei, höchstens {MAX_LEAD_FILES}, je bis 20 MB (PDF, JPG, PNG, HEIC). Ihre Unterlagen
-            sieht zuerst nur unser Team. Küchenstudios zeigen wir sie erst, wenn darauf keine Namen und
-            Kontaktdaten mehr zu sehen sind.
-          </p>
-        </div>
-      )}
-
-      {data.offerDeliveryMethod === "later" && (
-        <div className="flex items-start gap-3 rounded-lg border border-brand-200 bg-brand-50 p-4 text-sm">
-          <Mail className="mt-0.5 h-5 w-5 flex-none text-brand-700" aria-hidden="true" />
-          <div className="text-ink-muted">
-            <div className="font-medium text-ink">Unterlagen später nachreichen</div>
-            <p className="mt-1">
-              Nach dem Absenden bekommen Sie per E-Mail Ihren persönlichen Projektlink. Dort können Sie Angebot,
-              Planung oder Fotos jederzeit hochladen – auch bequem vom Computer aus. Küchenstudios stellen wir Ihr
-              Angebot vor, nachdem wir es im Experten-Check mit Ihnen besprochen haben.
-            </p>
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
-
-/** Die Detailschritte sind freiwillig; wer alles in den Unterlagen hat, springt direkt zu den Kontaktdaten. */
-function SkipDetails({ hasFiles, onSkip }: { hasFiles: boolean; onSkip: () => void }) {
-  return (
-    <div className="mb-6 flex flex-col gap-3 rounded-lg border border-brand-200 bg-brand-50 p-4 text-sm sm:flex-row sm:items-center sm:justify-between">
-      <p className="text-ink-muted">
-        {hasFiles
-          ? "Alle weiteren Fragen sind freiwillig. Stehen die Details in Ihren Unterlagen, können Sie direkt weiter."
-          : "Alle weiteren Fragen sind freiwillig. Was Sie nicht wissen, klären wir im Experten-Check."}
-      </p>
-      <button type="button" onClick={onSkip} className="btn-ghost flex-none text-sm font-medium text-brand-800">
-        Direkt zu den Kontaktdaten
-      </button>
-    </div>
-  );
-}
-
-function Step8({
-  data,
-  update,
-  honeypot,
-  onHoneypot,
-  turnstileRef,
-}: StepProps & {
-  honeypot: string;
-  onHoneypot: (value: string) => void;
-  turnstileRef: (node: HTMLDivElement | null) => void;
-}) {
-  return (
-    <div className="space-y-6">
-      <div className="grid gap-4 md:grid-cols-2">
-        <Field label="PLZ *">
-          <input
-            id="funnel-b-postal-code"
-            name="postal_code"
-            type="text"
-            inputMode="numeric"
-            pattern="\d{5}"
-            maxLength={5}
-            autoComplete="postal-code"
-            className="input-field"
-            placeholder="12345"
-            value={data.postalCode}
-            onChange={(e) =>
-              update({ postalCode: e.target.value.replace(/\D/g, "").slice(0, 5) })
-            }
-          />
-        </Field>
-        <Field label="Stadt" hint="Optional, ergänzen wir aus PLZ.">
-          <input
-            name="city"
-            type="text"
-            autoComplete="address-level2"
-            className="input-field"
-            value={data.city}
-            onChange={(e) => update({ city: e.target.value })}
-          />
-        </Field>
-      </div>
-
-      <Field label="Anrede" hint="Optional.">
-        <CardGroup
-          columns={3}
-          options={[
-            { value: "frau", label: "Frau" },
-            { value: "herr", label: "Herr" },
-            { value: "divers", label: "Divers" },
-          ]}
-          value={data.salutation}
-          onChange={(v) => update({ salutation: v as FunnelBData["salutation"] })}
-        />
-      </Field>
-
-      <div className="grid gap-4 md:grid-cols-2">
-        <Field label="Vorname *">
-          <input
-            id="funnel-b-first-name"
-            name="first_name"
-            type="text"
-            autoComplete="given-name"
-            className="input-field"
-            value={data.firstName}
-            onChange={(e) => update({ firstName: e.target.value })}
-          />
-        </Field>
-        <Field label="Nachname *">
-          <input
-            id="funnel-b-last-name"
-            name="last_name"
-            type="text"
-            autoComplete="family-name"
-            className="input-field"
-            value={data.lastName}
-            onChange={(e) => update({ lastName: e.target.value })}
-          />
-        </Field>
-      </div>
-
-      <div className="grid gap-4 md:grid-cols-2">
-        <Field label="E-Mail *">
-          <input
-            id="funnel-b-email"
-            name="email"
-            type="email"
-            autoComplete="email"
-            className="input-field"
-            value={data.email}
-            onChange={(e) => update({ email: e.target.value })}
-          />
-        </Field>
-        <Field label="Telefon *" hint="Wir rufen Sie für den Experten-Check an.">
-          <input
-            id="funnel-b-phone"
-            name="phone"
-            type="tel"
-            autoComplete="tel"
-            className="input-field"
-            value={data.phone}
-            onChange={(e) => update({ phone: e.target.value })}
-          />
-        </Field>
-      </div>
-
-      <div className="space-y-3 rounded-xl border border-border bg-surface-soft p-4 text-sm">
-        <label className="flex items-start gap-3">
-          <input
-            id="funnel-b-consent-share"
-            name="consent_share"
-            type="checkbox"
-            className="mt-0.5 h-4 w-4 flex-none accent-brand-700"
-            checked={data.consentShare}
-            onChange={(e) =>
-              update(
-                e.target.checked
-                  ? { consentShare: true }
-                  : { consentShare: false, consentStudioCall: false },
-              )
-            }
-          />
-          <span className="text-ink-muted">
-            <strong className="text-ink">Pflicht:</strong> KüchenWert darf mein Angebot und meine
-            Unterlagen ohne Namen und Kontaktdaten an Küchenstudios in meiner Region weitergeben,
-            damit sie es unterbieten. Meine Kontaktdaten und die vollständigen Unterlagen erhalten
-            höchstens drei Studios für Rückfragen sowie das Studio, dessen Angebot ich annehme.
-          </span>
-        </label>
-        <label className="flex items-start gap-3">
-          <input
-            id="funnel-b-consent-call"
-            name="consent_call"
-            type="checkbox"
-            className="mt-0.5 h-4 w-4 flex-none accent-brand-700"
-            checked={data.consentCall}
-            onChange={(e) => update({ consentCall: e.target.checked })}
-          />
-          <span className="text-ink-muted">
-            <strong className="text-ink">Pflicht:</strong> KüchenWert darf mich zur Klärung meines
-            Angebots anrufen (Experten-Check).
-          </span>
-        </label>
-        <label className="flex items-start gap-3">
-          <input
-            name="consent_studio_call"
-            type="checkbox"
-            className="mt-0.5 h-4 w-4 flex-none accent-brand-700"
-            checked={data.consentStudioCall}
-            disabled={!data.consentShare}
-            onChange={(e) => update({ consentStudioCall: e.target.checked })}
-          />
-          <span className="text-ink-muted">
-            Optional: Küchenstudios, die meine Kontaktdaten erhalten, dürfen mich auch
-            telefonisch kontaktieren.
-          </span>
-        </label>
-        <label className="flex items-start gap-3">
-          <input
-            name="marketing"
-            type="checkbox"
-            className="mt-0.5 h-4 w-4 flex-none accent-brand-700"
-            checked={data.consentMarketing}
-            onChange={(e) => update({ consentMarketing: e.target.checked })}
-          />
-          <span className="text-ink-muted">
-            Optional: KüchenWert darf mir Tipps und Marktinformationen rund um meinen
-            Küchenkauf per E-Mail schicken.
-          </span>
-        </label>
-        <p className="text-xs text-ink-subtle">
-          Einwilligungen können Sie jederzeit widerrufen, z. B. per E-Mail an{" "}
-          <a href={`mailto:${BRAND.supportEmail}`} className="underline">
-            {BRAND.supportEmail}
-          </a>
-          . Es gelten unsere{" "}
-          <a href="/agb" className="underline">
-            AGB
-          </a>
-          . Wie wir Ihre Daten verarbeiten, erklärt die{" "}
-          <a href="/datenschutz" className="underline">
-            Datenschutzerklärung
-          </a>
-          .
-        </p>
-      </div>
-
-      <div className="sr-only" aria-hidden="true">
-        <label htmlFor="funnel-b-website">Website</label>
-        <input
-          id="funnel-b-website"
-          type="text"
-          name="website"
-          tabIndex={-1}
-          autoComplete="off"
-          value={honeypot}
-          onChange={(e) => onHoneypot(e.target.value)}
-        />
-      </div>
-      <div ref={turnstileRef} />
-    </div>
-  );
-}
-
-/* ====================================================================== */
-/* SHARED FIELD HELPERS                                                     */
-/* ====================================================================== */
-
-const LABELLED_CONTROLS = new Set(["input", "select", "textarea"]);
-
-/**
- * Beschriftetes Feld. Ein einzelnes input/select/textarea bekommt Label und Hinweis
- * per id; steckt das Feld in einem Wrapper, verweist controlId auf das innere Feld.
- * Alles andere (Kachelgruppen, Combobox) wird als benannte Gruppe ausgezeichnet.
- */
-function Field({
-  id,
-  label,
-  hint,
-  controlId,
-  children,
-}: {
-  /** id der Gruppe (Kachelgruppen), z. B. als Sprungziel für fehlende Angaben. */
-  id?: string;
-  label: string;
-  hint?: string;
-  controlId?: string;
-  children: React.ReactNode;
-}) {
-  const baseId = useId();
-  const hintId = hint ? `${baseId}-hint` : undefined;
-  const hintNode = hint && (
-    <p id={hintId} className="helper-text">
-      {hint}
-    </p>
-  );
-  const control =
-    !controlId && isValidElement<{ id?: string; "aria-describedby"?: string }>(children) &&
-    typeof children.type === "string" && LABELLED_CONTROLS.has(children.type)
-      ? children
-      : null;
-
-  if (control || controlId) {
-    const id = controlId ?? control?.props.id ?? `${baseId}-control`;
-    return (
-      <div>
-        <label htmlFor={id} className="label-field">
-          {label}
-        </label>
-        {control ? cloneElement(control, { id, "aria-describedby": hintId }) : children}
-        {hintNode}
-      </div>
-    );
-  }
-
-  return (
-    <div id={id} role="group" aria-labelledby={`${baseId}-label`} aria-describedby={hintId}>
-      <p id={`${baseId}-label`} className="label-field">
-        {label}
-      </p>
-      {children}
-      {hintNode}
-    </div>
-  );
-}
-
-interface CardGroupOption {
-  value: string;
-  label: string;
-  description?: string;
-  icon?: React.ReactNode;
-}
-
-interface CardGroupProps {
-  options: CardGroupOption[];
-  value: string;
-  onChange: (v: string) => void;
-  columns?: 1 | 2 | 3;
-  /** Auto-Advance Delay in ms; default 250. Nur aktiv wenn onAutoAdvance gesetzt. */
-  autoAdvanceMs?: number;
-  onAutoAdvance?: () => void;
-}
-
-function CardGroup({
-  options,
-  value,
-  onChange,
-  columns = 1,
-  autoAdvanceMs = 250,
-  onAutoAdvance,
-}: CardGroupProps) {
-  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  // Auf schmalen Spalten (columns=1) behalten wir Icon links + Text rechts —
-  // bei mehreren Spalten schalten wir auf "Quiz-Card": Icon-Bubble zentriert oben,
-  // Text darunter — identischer Look wie Funnel A (kuechenportal-Style).
-  const colClass =
-    columns === 3
-      ? "grid-cols-2 sm:grid-cols-3"
-      : columns === 2
-        ? "grid-cols-2"
-        : "";
-  const isVertical = columns !== 1;
-
-  function handleClick(v: string) {
-    onChange(v);
-    if (onAutoAdvance && autoAdvanceMs > 0) {
-      if (timerRef.current) clearTimeout(timerRef.current);
-      timerRef.current = setTimeout(onAutoAdvance, autoAdvanceMs);
-    }
-  }
-
-  return (
-    <div className={clsx("grid gap-3 sm:gap-4", colClass)}>
-      {options.map((o) => {
-        const selected = o.value === value;
-
-        if (isVertical) {
-          return (
-            <button
-              type="button"
-              key={`${o.value}-${o.label}`}
-              onClick={() => handleClick(o.value)}
-              aria-pressed={selected}
-              className={clsx(
-                "group flex flex-col items-center justify-center gap-3 rounded-2xl border-2 px-4 py-6 text-center transition-all",
-                selected
-                  ? "border-brand-500 bg-brand-50 shadow-card-active ring-4 ring-brand-500/15"
-                  : "border-border bg-card hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-card-hover",
-              )}
-            >
-              {o.icon && (
-                <div
-                  className={clsx(
-                    "grid h-14 w-14 place-items-center rounded-full transition",
-                    selected
-                      ? "bg-brand-500 text-white"
-                      : "bg-brand-50 text-brand-600 group-hover:bg-brand-100",
-                  )}
-                >
-                  <span className="[&>svg]:h-7 [&>svg]:w-7">{o.icon}</span>
-                </div>
-              )}
-              <div className="flex flex-col gap-1">
-                <span
-                  className={clsx(
-                    "font-display text-[15px] font-bold leading-tight sm:text-base",
-                    selected ? "text-brand-900" : "text-foreground",
-                  )}
-                >
-                  {o.label}
-                </span>
-                {o.description && (
-                  <span className="text-xs leading-relaxed text-ink-muted">
-                    {o.description}
-                  </span>
-                )}
-              </div>
-            </button>
-          );
-        }
-
-        // 1-Spalten-Layout: kompakter, horizontal — fuer Listen wie
-        // Wohnsituation-Sub-Optionen. Icon links, Text rechts,
-        // aber modernisiert ohne den alten Check-Haken.
-        return (
-          <button
-            type="button"
-            key={`${o.value}-${o.label}`}
-            onClick={() => handleClick(o.value)}
-            aria-pressed={selected}
-            className={clsx(
-              "group flex items-center gap-4 rounded-2xl border-2 px-4 py-4 text-left transition-all",
-              selected
-                ? "border-brand-500 bg-brand-50 shadow-card-active ring-4 ring-brand-500/15"
-                : "border-border bg-card hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-card-hover",
-            )}
-          >
-            {o.icon && (
-              <div
-                className={clsx(
-                  "grid h-12 w-12 flex-none place-items-center rounded-full transition",
-                  selected
-                    ? "bg-brand-500 text-white"
-                    : "bg-brand-50 text-brand-600 group-hover:bg-brand-100",
-                )}
-              >
-                <span className="[&>svg]:h-6 [&>svg]:w-6">{o.icon}</span>
-              </div>
-            )}
-            <div className="min-w-0 flex-1">
-              <div
-                className={clsx(
-                  "font-display text-[15px] font-bold leading-tight",
-                  selected ? "text-brand-900" : "text-foreground",
-                )}
-              >
-                {o.label}
-              </div>
-              {o.description && (
-                <div className="mt-0.5 text-xs leading-relaxed text-ink-muted">
-                  {o.description}
-                </div>
-              )}
-            </div>
-          </button>
-        );
-      })}
-    </div>
+    </FunnelFrame>
   );
 }

@@ -51,7 +51,7 @@ beforeEach(() => {
 });
 
 describe("Schritte", () => {
-  it("hält die vereinbarten 18 Slugs in Reihenfolge", () => {
+  it("hält die vereinbarten 19 Slugs in Reihenfolge (Name und Kontakt getrennt)", () => {
     expect(FUNNEL_A_SLUGS).toEqual([
       "kuechenform",
       "raum",
@@ -70,12 +70,13 @@ describe("Schritte", () => {
       "zeitrahmen",
       "budget",
       "plz",
+      "name",
       "kontakt",
     ]);
     expect(FUNNEL_A_STEPS.map((s) => s.slug)).toEqual([...FUNNEL_A_SLUGS]);
     expect(FUNNEL_A_FIRST_SLUG).toBe("kuechenform");
     expect(stepPath("raum")).toBe("/funnel/a/raum");
-    expect(stepIndex("kontakt")).toBe(17);
+    expect(stepIndex("kontakt")).toBe(18);
   });
 
   it("erkennt nur bekannte Slugs", () => {
@@ -86,11 +87,12 @@ describe("Schritte", () => {
     expect(() => findStep("gibtsnicht" as FunnelAStepSlug)).toThrow();
   });
 
-  it("verlangt nur Küchenform, Zeitrahmen, PLZ und Kontakt", () => {
+  it("verlangt nur Küchenform, Zeitrahmen, PLZ, Name und Kontakt", () => {
     expect(FUNNEL_A_STEPS.filter((s) => s.required).map((s) => s.slug)).toEqual([
       "kuechenform",
       "zeitrahmen",
       "plz",
+      "name",
       "kontakt",
     ]);
     for (const field of FUNNEL_A_REQUIRED) {

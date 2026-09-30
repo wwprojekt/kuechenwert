@@ -98,17 +98,17 @@ export function BudgetSliderStep({ value, onChange, min, max, step, defaultValue
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-5 short:space-y-3.5">
       <style>{RANGE_CSS}</style>
 
       <div className="text-center">
         {unknown ? (
           <>
-            <p className="font-display text-3xl font-bold tracking-tight-2 text-foreground sm:text-4xl">Budget offen</p>
-            <p className="mt-1.5 text-sm text-ink-muted">Die Studios beraten Sie zu einem passenden Budget.</p>
+            <p className="font-display text-3xl font-bold tracking-tight-2 text-foreground sm:text-4xl short:text-2xl">Budget offen</p>
+            <p className="mt-1 text-sm text-ink-muted">Die Studios beraten Sie zu einem passenden Budget.</p>
           </>
         ) : (
-          <p className="font-display text-4xl font-bold tabular-nums tracking-tight-2 text-brand-700 sm:text-5xl">
+          <p className="font-display text-4xl font-bold tabular-nums tracking-tight-2 text-brand-700 sm:text-5xl short:text-3xl">
             {formatAmount(shown, max)}
           </p>
         )}
@@ -128,13 +128,13 @@ export function BudgetSliderStep({ value, onChange, min, max, step, defaultValue
           className="kw-budget-range"
           style={{ "--pct": `${percentage}%` } as CSSProperties}
         />
-        <div className="mt-3 flex justify-between text-xs font-medium text-ink-muted" aria-hidden="true">
+        <div className="mt-2 flex justify-between text-xs font-medium text-ink-muted" aria-hidden="true">
           <span>{EUR.format(min)}</span>
           <span>{EUR.format(max)}+</span>
         </div>
       </div>
 
-      <div className="flex flex-wrap justify-center gap-2">
+      <div className="grid grid-cols-5 gap-1.5 sm:flex sm:flex-wrap sm:justify-center sm:gap-2">
         {QUICK_PICKS.map((amount) => {
           const active = value === amount;
           return (
@@ -144,7 +144,7 @@ export function BudgetSliderStep({ value, onChange, min, max, step, defaultValue
               onClick={() => setAmount(amount)}
               aria-pressed={active}
               className={cn(
-                "min-h-11 rounded-full border px-4 py-2 text-xs font-semibold tabular-nums transition-colors",
+                "min-h-11 whitespace-nowrap rounded-full border px-1 py-2 text-[11px] font-semibold tabular-nums transition-colors sm:px-4 sm:text-xs",
                 "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
                 active
                   ? "border-primary bg-primary text-primary-foreground shadow-sm"
@@ -183,7 +183,7 @@ export function BudgetSliderStep({ value, onChange, min, max, step, defaultValue
         </button>
       </div>
 
-      <p className="text-center text-xs leading-relaxed text-ink-subtle">
+      <p className="text-center text-xs leading-relaxed text-ink-subtle short:hidden">
         Unverbindliche Angabe – die Studios helfen Ihnen, das Beste aus Ihrem Budget herauszuholen.
       </p>
     </div>

@@ -319,6 +319,12 @@ html, body, #root {
     content-visibility: auto;
     contain-intrinsic-size: auto 500px;
   }
+
+  /* Volle sichtbare Höhe; 100dvh folgt den ein- und ausfahrenden Browserleisten. */
+  .min-h-viewport {
+    min-height: 100vh;
+    min-height: 100dvh;
+  }
 }
 
 /* Einheitliche Formen: Buttons und Formularfelder rounded-xl, Karten

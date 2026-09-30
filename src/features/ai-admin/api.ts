@@ -233,8 +233,15 @@ export async function labUploadPhoto(file: File): Promise<string> {
   return path;
 }
 
-export const labRun = (input: { photoPath: string; models: string[]; style: string; form: string }) =>
-  lab<LabRun>({ action: "run", photo_path: input.photoPath, models: input.models, style: input.style, form: input.form });
+export const labRun = (input: { photoPath: string; models: string[]; style: string; form: string; frontColor: string }) =>
+  lab<LabRun>({
+    action: "run",
+    photo_path: input.photoPath,
+    models: input.models,
+    style: input.style,
+    form: input.form,
+    config: { frontColor: input.frontColor },
+  });
 
 export const labStatus = (runId: string) => lab<LabRun>({ action: "status", run_id: runId });
 

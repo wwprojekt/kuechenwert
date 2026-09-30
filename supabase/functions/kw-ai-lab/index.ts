@@ -6,7 +6,8 @@
  * Aktionen (POST { action, ... }); nur Admin, Service-Role oder
  * Cron-Geheimnis (Agenten starten Vergleiche per SQL wie bei kw-google-ads):
  *   upload-url  signierte Upload-URL für ein Testfoto (planner-media/ai-lab/photos)
- *   run         Testlauf: Foto, bis zu 4 Bildbearbeitungsmodelle der Registry, Stil und Form
+ *   run         Testlauf: Foto, bis zu 4 Bildbearbeitungsmodelle der Registry, Küchenform und
+ *               Planung (config wie im Planer, fehlende Werte = Standard)
  *   status      offene Bilder eines Laufs weiterführen; alle Bilder mit signierten URLs
  *   list        letzte Läufe
  *
@@ -131,7 +132,8 @@ async function actionRun(req: Request, sb: SupabaseClient, body: Record<string, 
   await sanitizePhoto(sb, photoPath);
   const style = STYLES.find((s) => s.id === body.style)?.id;
   const form = KITCHEN_FORMS.find((f) => f.id === body.form)?.id ?? "l";
-  const config = sanitizeConfig(style ? { style } : {});
+  const planned = body.config && typeof body.config === "object" ? (body.config as Record<string, unknown>) : {};
+  const config = sanitizeConfig({ ...planned, ...(style ? { style } : {}), wishes: null });
   const room = sanitizeRoom({ form });
   const prompt = buildRenderPrompt(config, room, { mode: "edit" }).prompt;
   const { data: photo } = await sb.storage.from(LAB_BUCKET).createSignedUrl(photoPath, 900);

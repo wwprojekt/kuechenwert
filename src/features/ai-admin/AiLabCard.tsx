@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { errorMessage } from "@/features/marketplace/api-client";
-import { KITCHEN_FORMS, STYLES } from "@/features/planner/core";
+import { FRONT_COLORS, KITCHEN_FORMS, STYLES } from "@/features/planner/core";
 import { FAL_MODELS, falModel } from "../../../supabase/functions/_shared/fal-models.ts";
 import { fetchAiSettings, labList, labRun, labStatus, labUploadPhoto, rateLabRender, type LabRun } from "./api";
 import { LabResults } from "./LabResults";
@@ -25,6 +25,7 @@ export function AiLabCard() {
   const [file, setFile] = useState<File | null>(null);
   const [style, setStyle] = useState("modern");
   const [form, setForm] = useState("l");
+  const [frontColor, setFrontColor] = useState("salbei");
   const [picked, setPicked] = useState<string[] | null>(null);
   const [activeId, setActiveId] = useState<string | null>(null);
 
@@ -53,7 +54,7 @@ export function AiLabCard() {
     mutationFn: async (): Promise<LabRun> => {
       const photoPath = file ? await labUploadPhoto(file) : active.data?.photo_path;
       if (!photoPath) throw new Error("Bitte ein Testfoto wählen.");
-      return labRun({ photoPath, models, style, form });
+      return labRun({ photoPath, models, style, form, frontColor });
     },
     onSuccess: (run) => {
       qc.setQueryData(["admin-ai-lab-run", run.run_id], run);
@@ -83,7 +84,7 @@ export function AiLabCard() {
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-5">
-        <div className="grid gap-4 sm:grid-cols-3">
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <div className="space-y-1.5">
             <Label htmlFor="lab-photo">Testfoto</Label>
             <Input id="lab-photo" type="file" accept="image/jpeg,image/png,image/webp" onChange={(e) => setFile(e.target.files?.[0] ?? null)} />
@@ -114,6 +115,21 @@ export function AiLabCard() {
                 {KITCHEN_FORMS.map((f) => (
                   <SelectItem key={f.id} value={f.id}>
                     {f.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="lab-color">Frontfarbe</Label>
+            <Select value={frontColor} onValueChange={setFrontColor}>
+              <SelectTrigger id="lab-color">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {FRONT_COLORS.map((c) => (
+                  <SelectItem key={c.id} value={c.id}>
+                    {c.label}
                   </SelectItem>
                 ))}
               </SelectContent>

@@ -401,199 +401,6 @@ export type Database = {
         }
         Relationships: []
       }
-      appointments: {
-        Row: {
-          appointment_date: string
-          created_at: string | null
-          duration_minutes: number | null
-          handover_protocol_url: string | null
-          id: string
-          kitchen_id: string
-          notes: string | null
-          payment_amount: number | null
-          payment_method: string | null
-          payment_status: string | null
-          pin_generated_at: string | null
-          release_pin: string | null
-          reminder_sent: boolean | null
-          seller_id: string
-          station_id: string
-          status: string
-          updated_at: string | null
-        }
-        Insert: {
-          appointment_date: string
-          created_at?: string | null
-          duration_minutes?: number | null
-          handover_protocol_url?: string | null
-          id?: string
-          kitchen_id: string
-          notes?: string | null
-          payment_amount?: number | null
-          payment_method?: string | null
-          payment_status?: string | null
-          pin_generated_at?: string | null
-          release_pin?: string | null
-          reminder_sent?: boolean | null
-          seller_id: string
-          station_id: string
-          status?: string
-          updated_at?: string | null
-        }
-        Update: {
-          appointment_date?: string
-          created_at?: string | null
-          duration_minutes?: number | null
-          handover_protocol_url?: string | null
-          id?: string
-          kitchen_id?: string
-          notes?: string | null
-          payment_amount?: number | null
-          payment_method?: string | null
-          payment_status?: string | null
-          pin_generated_at?: string | null
-          release_pin?: string | null
-          reminder_sent?: boolean | null
-          seller_id?: string
-          station_id?: string
-          status?: string
-          updated_at?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "appointments_kitchen_id_fkey"
-            columns: ["kitchen_id"]
-            isOneToOne: false
-            referencedRelation: "kitchens"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "appointments_station_id_fkey"
-            columns: ["station_id"]
-            isOneToOne: false
-            referencedRelation: "purchase_stations"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      auction_addenda: {
-        Row: {
-          auction_id: string
-          content: string
-          created_at: string
-          id: string
-          seller_id: string
-        }
-        Insert: {
-          auction_id: string
-          content: string
-          created_at?: string
-          id?: string
-          seller_id: string
-        }
-        Update: {
-          auction_id?: string
-          content?: string
-          created_at?: string
-          id?: string
-          seller_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "auction_addenda_auction_id_fkey"
-            columns: ["auction_id"]
-            isOneToOne: false
-            referencedRelation: "auctions"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      auctions: {
-        Row: {
-          agb_version_at_start: string | null
-          auction_round: number
-          auto_relist: boolean
-          created_at: string
-          current_bid: number | null
-          dynamic_pricing: boolean
-          end_time: string | null
-          festpreis_admin_notified_at: string | null
-          id: string
-          kaufchance_expires_at: string | null
-          kaufchance_min_price: number | null
-          kitchen_id: string
-          last_price_reduction_at: string | null
-          marketing_phase_max_until: string | null
-          marketing_phase_started_at: string | null
-          reserve_price: number | null
-          seller_initial_instant_price: number | null
-          seller_initial_reserve: number | null
-          soft_close_extension_minutes: number
-          start_time: string | null
-          starting_bid: number
-          status: Database["public"]["Enums"]["auction_status"]
-          updated_at: string
-        }
-        Insert: {
-          agb_version_at_start?: string | null
-          auction_round?: number
-          auto_relist?: boolean
-          created_at?: string
-          current_bid?: number | null
-          dynamic_pricing?: boolean
-          end_time?: string | null
-          festpreis_admin_notified_at?: string | null
-          id?: string
-          kaufchance_expires_at?: string | null
-          kaufchance_min_price?: number | null
-          kitchen_id: string
-          last_price_reduction_at?: string | null
-          marketing_phase_max_until?: string | null
-          marketing_phase_started_at?: string | null
-          reserve_price?: number | null
-          seller_initial_instant_price?: number | null
-          seller_initial_reserve?: number | null
-          soft_close_extension_minutes?: number
-          start_time?: string | null
-          starting_bid: number
-          status?: Database["public"]["Enums"]["auction_status"]
-          updated_at?: string
-        }
-        Update: {
-          agb_version_at_start?: string | null
-          auction_round?: number
-          auto_relist?: boolean
-          created_at?: string
-          current_bid?: number | null
-          dynamic_pricing?: boolean
-          end_time?: string | null
-          festpreis_admin_notified_at?: string | null
-          id?: string
-          kaufchance_expires_at?: string | null
-          kaufchance_min_price?: number | null
-          kitchen_id?: string
-          last_price_reduction_at?: string | null
-          marketing_phase_max_until?: string | null
-          marketing_phase_started_at?: string | null
-          reserve_price?: number | null
-          seller_initial_instant_price?: number | null
-          seller_initial_reserve?: number | null
-          soft_close_extension_minutes?: number
-          start_time?: string | null
-          starting_bid?: number
-          status?: Database["public"]["Enums"]["auction_status"]
-          updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "auctions_kitchen_id_fkey"
-            columns: ["kitchen_id"]
-            isOneToOne: true
-            referencedRelation: "kitchens"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       audit_logs: {
         Row: {
           accept_language: string | null
@@ -641,149 +448,6 @@ export type Database = {
           user_id?: string | null
         }
         Relationships: []
-      }
-      bids: {
-        Row: {
-          amount: number
-          auction_id: string
-          bidder_id: string
-          created_at: string
-          id: string
-          is_autobid: boolean
-          max_autobid_amount: number | null
-        }
-        Insert: {
-          amount: number
-          auction_id: string
-          bidder_id: string
-          created_at?: string
-          id?: string
-          is_autobid?: boolean
-          max_autobid_amount?: number | null
-        }
-        Update: {
-          amount?: number
-          auction_id?: string
-          bidder_id?: string
-          created_at?: string
-          id?: string
-          is_autobid?: boolean
-          max_autobid_amount?: number | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "bids_auction_id_fkey"
-            columns: ["auction_id"]
-            isOneToOne: false
-            referencedRelation: "auctions"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "bids_bidder_id_fkey"
-            columns: ["bidder_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      bing_oauth_state: {
-        Row: {
-          access_token: string | null
-          access_token_expires_at: string | null
-          created_at: string
-          id: string
-          last_error: string | null
-          last_error_at: string | null
-          last_refreshed_at: string
-          lock_holder_until: string | null
-          refresh_token: string
-          rotation_count: number
-          updated_at: string
-        }
-        Insert: {
-          access_token?: string | null
-          access_token_expires_at?: string | null
-          created_at?: string
-          id: string
-          last_error?: string | null
-          last_error_at?: string | null
-          last_refreshed_at?: string
-          lock_holder_until?: string | null
-          refresh_token: string
-          rotation_count?: number
-          updated_at?: string
-        }
-        Update: {
-          access_token?: string | null
-          access_token_expires_at?: string | null
-          created_at?: string
-          id?: string
-          last_error?: string | null
-          last_error_at?: string | null
-          last_refreshed_at?: string
-          lock_holder_until?: string | null
-          refresh_token?: string
-          rotation_count?: number
-          updated_at?: string
-        }
-        Relationships: []
-      }
-      bing_offline_conversions_log: {
-        Row: {
-          auction_id: string | null
-          conversion_currency: string
-          conversion_name: string
-          conversion_time: string
-          conversion_value: number
-          error_message: string | null
-          http_status: number | null
-          id: string
-          kitchen_id: string
-          msclkid: string | null
-          source: string
-          status: string
-          uploaded_at: string
-        }
-        Insert: {
-          auction_id?: string | null
-          conversion_currency?: string
-          conversion_name: string
-          conversion_time: string
-          conversion_value: number
-          error_message?: string | null
-          http_status?: number | null
-          id?: string
-          kitchen_id: string
-          msclkid?: string | null
-          source: string
-          status: string
-          uploaded_at?: string
-        }
-        Update: {
-          auction_id?: string | null
-          conversion_currency?: string
-          conversion_name?: string
-          conversion_time?: string
-          conversion_value?: number
-          error_message?: string | null
-          http_status?: number | null
-          id?: string
-          kitchen_id?: string
-          msclkid?: string | null
-          source?: string
-          status?: string
-          uploaded_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "bing_offline_conversions_log_kitchen_id_fkey"
-            columns: ["kitchen_id"]
-            isOneToOne: false
-            referencedRelation: "kitchens"
-            referencedColumns: ["id"]
-          },
-        ]
       }
       blog_posts: {
         Row: {
@@ -1078,318 +742,6 @@ export type Database = {
         }
         Relationships: []
       }
-      claim_photos: {
-        Row: {
-          claim_id: string
-          display_order: number | null
-          file_size: number | null
-          id: string
-          photo_description: string
-          photo_type: string | null
-          photo_url: string
-          uploaded_at: string | null
-          uploaded_by: string | null
-        }
-        Insert: {
-          claim_id: string
-          display_order?: number | null
-          file_size?: number | null
-          id?: string
-          photo_description: string
-          photo_type?: string | null
-          photo_url: string
-          uploaded_at?: string | null
-          uploaded_by?: string | null
-        }
-        Update: {
-          claim_id?: string
-          display_order?: number | null
-          file_size?: number | null
-          id?: string
-          photo_description?: string
-          photo_type?: string | null
-          photo_url?: string
-          uploaded_at?: string | null
-          uploaded_by?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "claim_photos_claim_id_fkey"
-            columns: ["claim_id"]
-            isOneToOne: false
-            referencedRelation: "claims"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      claim_status_history: {
-        Row: {
-          change_reason: string | null
-          changed_at: string | null
-          changed_by: string
-          claim_id: string
-          id: string
-          new_status: string
-          notes: string | null
-          previous_status: string | null
-        }
-        Insert: {
-          change_reason?: string | null
-          changed_at?: string | null
-          changed_by: string
-          claim_id: string
-          id?: string
-          new_status: string
-          notes?: string | null
-          previous_status?: string | null
-        }
-        Update: {
-          change_reason?: string | null
-          changed_at?: string | null
-          changed_by?: string
-          claim_id?: string
-          id?: string
-          new_status?: string
-          notes?: string | null
-          previous_status?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "claim_status_history_claim_id_fkey"
-            columns: ["claim_id"]
-            isOneToOne: false
-            referencedRelation: "claims"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      claims: {
-        Row: {
-          admin_notes: string | null
-          approved_amount: number | null
-          assigned_to: string | null
-          auction_id: string
-          claim_amount: number | null
-          claim_type: string
-          commission_charge_amount: number | null
-          commission_charged_to_seller: boolean | null
-          created_at: string | null
-          dealer_id: string
-          description: string
-          id: string
-          kitchen_id: string
-          priority: string
-          resolution_notes: string | null
-          resolved_at: string | null
-          reviewed_at: string | null
-          reviewed_by: string | null
-          status: string
-          submitted_at: string | null
-          title: string
-          updated_at: string | null
-        }
-        Insert: {
-          admin_notes?: string | null
-          approved_amount?: number | null
-          assigned_to?: string | null
-          auction_id: string
-          claim_amount?: number | null
-          claim_type: string
-          commission_charge_amount?: number | null
-          commission_charged_to_seller?: boolean | null
-          created_at?: string | null
-          dealer_id: string
-          description: string
-          id?: string
-          kitchen_id: string
-          priority?: string
-          resolution_notes?: string | null
-          resolved_at?: string | null
-          reviewed_at?: string | null
-          reviewed_by?: string | null
-          status?: string
-          submitted_at?: string | null
-          title: string
-          updated_at?: string | null
-        }
-        Update: {
-          admin_notes?: string | null
-          approved_amount?: number | null
-          assigned_to?: string | null
-          auction_id?: string
-          claim_amount?: number | null
-          claim_type?: string
-          commission_charge_amount?: number | null
-          commission_charged_to_seller?: boolean | null
-          created_at?: string | null
-          dealer_id?: string
-          description?: string
-          id?: string
-          kitchen_id?: string
-          priority?: string
-          resolution_notes?: string | null
-          resolved_at?: string | null
-          reviewed_at?: string | null
-          reviewed_by?: string | null
-          status?: string
-          submitted_at?: string | null
-          title?: string
-          updated_at?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "claims_auction_id_fkey"
-            columns: ["auction_id"]
-            isOneToOne: false
-            referencedRelation: "auctions"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "claims_dealer_id_fkey"
-            columns: ["dealer_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "claims_kitchen_id_fkey"
-            columns: ["kitchen_id"]
-            isOneToOne: false
-            referencedRelation: "kitchens"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      commission_calculations: {
-        Row: {
-          auction_id: string
-          base_commission_rate: number
-          calculation_details: Json | null
-          commission_amount: number
-          created_at: string | null
-          dealer_id: string
-          final_commission_rate: number
-          id: string
-          sale_amount: number
-          tier_used_id: string | null
-          volume_discount_rate: number | null
-        }
-        Insert: {
-          auction_id: string
-          base_commission_rate: number
-          calculation_details?: Json | null
-          commission_amount: number
-          created_at?: string | null
-          dealer_id: string
-          final_commission_rate: number
-          id?: string
-          sale_amount: number
-          tier_used_id?: string | null
-          volume_discount_rate?: number | null
-        }
-        Update: {
-          auction_id?: string
-          base_commission_rate?: number
-          calculation_details?: Json | null
-          commission_amount?: number
-          created_at?: string | null
-          dealer_id?: string
-          final_commission_rate?: number
-          id?: string
-          sale_amount?: number
-          tier_used_id?: string | null
-          volume_discount_rate?: number | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "commission_calculations_auction_id_fkey"
-            columns: ["auction_id"]
-            isOneToOne: false
-            referencedRelation: "auctions"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "commission_calculations_dealer_id_fkey"
-            columns: ["dealer_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "commission_calculations_tier_used_id_fkey"
-            columns: ["tier_used_id"]
-            isOneToOne: false
-            referencedRelation: "commission_tiers"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      commission_tier_changes: {
-        Row: {
-          changed_at: string
-          changed_by: string | null
-          id: string
-          new_row: Json | null
-          old_row: Json | null
-          operation: string
-          tier_id: string
-        }
-        Insert: {
-          changed_at?: string
-          changed_by?: string | null
-          id?: string
-          new_row?: Json | null
-          old_row?: Json | null
-          operation: string
-          tier_id: string
-        }
-        Update: {
-          changed_at?: string
-          changed_by?: string | null
-          id?: string
-          new_row?: Json | null
-          old_row?: Json | null
-          operation?: string
-          tier_id?: string
-        }
-        Relationships: []
-      }
-      commission_tiers: {
-        Row: {
-          created_at: string | null
-          id: string
-          is_active: boolean | null
-          max_amount: number
-          min_amount: number
-          min_commission: number | null
-          rate_type: string
-          rate_value: number
-          updated_at: string | null
-        }
-        Insert: {
-          created_at?: string | null
-          id?: string
-          is_active?: boolean | null
-          max_amount: number
-          min_amount: number
-          min_commission?: number | null
-          rate_type: string
-          rate_value: number
-          updated_at?: string | null
-        }
-        Update: {
-          created_at?: string | null
-          id?: string
-          is_active?: boolean | null
-          max_amount?: number
-          min_amount?: number
-          min_commission?: number | null
-          rate_type?: string
-          rate_value?: number
-          updated_at?: string | null
-        }
-        Relationships: []
-      }
       contact_messages: {
         Row: {
           admin_response: string | null
@@ -1503,53 +855,6 @@ export type Database = {
           locked_at?: string
         }
         Relationships: []
-      }
-      damage_photos: {
-        Row: {
-          created_at: string | null
-          damage_description: string
-          damage_location: string | null
-          damage_severity: string | null
-          display_order: number | null
-          file_size: number | null
-          id: string
-          kitchen_id: string
-          photo_url: string
-          uploaded_by: string | null
-        }
-        Insert: {
-          created_at?: string | null
-          damage_description: string
-          damage_location?: string | null
-          damage_severity?: string | null
-          display_order?: number | null
-          file_size?: number | null
-          id?: string
-          kitchen_id: string
-          photo_url: string
-          uploaded_by?: string | null
-        }
-        Update: {
-          created_at?: string | null
-          damage_description?: string
-          damage_location?: string | null
-          damage_severity?: string | null
-          display_order?: number | null
-          file_size?: number | null
-          id?: string
-          kitchen_id?: string
-          photo_url?: string
-          uploaded_by?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "damage_photos_kitchen_id_fkey"
-            columns: ["kitchen_id"]
-            isOneToOne: false
-            referencedRelation: "kitchens"
-            referencedColumns: ["id"]
-          },
-        ]
       }
       dealer_applications: {
         Row: {
@@ -1695,104 +1000,8 @@ export type Database = {
         }
         Relationships: []
       }
-      dealer_instant_buy_alerts: {
-        Row: {
-          body_types: string[]
-          countries: string[]
-          created_at: string
-          enabled: boolean
-          last_alert_at: string | null
-          manufacturers: string[]
-          max_mileage: number | null
-          max_price: number | null
-          max_year: number | null
-          min_price: number | null
-          min_year: number | null
-          updated_at: string
-          user_id: string
-        }
-        Insert: {
-          body_types?: string[]
-          countries?: string[]
-          created_at?: string
-          enabled?: boolean
-          last_alert_at?: string | null
-          manufacturers?: string[]
-          max_mileage?: number | null
-          max_price?: number | null
-          max_year?: number | null
-          min_price?: number | null
-          min_year?: number | null
-          updated_at?: string
-          user_id: string
-        }
-        Update: {
-          body_types?: string[]
-          countries?: string[]
-          created_at?: string
-          enabled?: boolean
-          last_alert_at?: string | null
-          manufacturers?: string[]
-          max_mileage?: number | null
-          max_price?: number | null
-          max_year?: number | null
-          min_price?: number | null
-          min_year?: number | null
-          updated_at?: string
-          user_id?: string
-        }
-        Relationships: []
-      }
-      dealer_levels: {
-        Row: {
-          created_at: string | null
-          dealer_id: string
-          id: string
-          level: string
-          level_updated_at: string | null
-          points: number
-          total_bids: number
-          total_volume: number
-          updated_at: string | null
-          won_auctions: number
-        }
-        Insert: {
-          created_at?: string | null
-          dealer_id: string
-          id?: string
-          level?: string
-          level_updated_at?: string | null
-          points?: number
-          total_bids?: number
-          total_volume?: number
-          updated_at?: string | null
-          won_auctions?: number
-        }
-        Update: {
-          created_at?: string | null
-          dealer_id?: string
-          id?: string
-          level?: string
-          level_updated_at?: string | null
-          points?: number
-          total_bids?: number
-          total_volume?: number
-          updated_at?: string | null
-          won_auctions?: number
-        }
-        Relationships: [
-          {
-            foreignKeyName: "dealer_levels_dealer_id_fkey"
-            columns: ["dealer_id"]
-            isOneToOne: true
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       dealer_notifications: {
         Row: {
-          auction_id: string | null
           created_at: string
           id: string
           is_read: boolean
@@ -1804,7 +1013,6 @@ export type Database = {
           user_id: string
         }
         Insert: {
-          auction_id?: string | null
           created_at?: string
           id?: string
           is_read?: boolean
@@ -1816,7 +1024,6 @@ export type Database = {
           user_id: string
         }
         Update: {
-          auction_id?: string | null
           created_at?: string
           id?: string
           is_read?: boolean
@@ -1828,13 +1035,6 @@ export type Database = {
           user_id?: string
         }
         Relationships: [
-          {
-            foreignKeyName: "dealer_notifications_auction_id_fkey"
-            columns: ["auction_id"]
-            isOneToOne: false
-            referencedRelation: "auctions"
-            referencedColumns: ["id"]
-          },
           {
             foreignKeyName: "dealer_notifications_lead_auction_id_fkey"
             columns: ["lead_auction_id"]
@@ -1897,185 +1097,6 @@ export type Database = {
             columns: ["invoice_id"]
             isOneToOne: false
             referencedRelation: "invoices"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      dealer_rating_summary: {
-        Row: {
-          average_rating: number | null
-          avg_communication: number | null
-          avg_professionalism: number | null
-          avg_reliability: number | null
-          dealer_id: string
-          last_calculated_at: string | null
-          rating_1_count: number | null
-          rating_2_count: number | null
-          rating_3_count: number | null
-          rating_4_count: number | null
-          rating_5_count: number | null
-          total_reviews: number | null
-        }
-        Insert: {
-          average_rating?: number | null
-          avg_communication?: number | null
-          avg_professionalism?: number | null
-          avg_reliability?: number | null
-          dealer_id: string
-          last_calculated_at?: string | null
-          rating_1_count?: number | null
-          rating_2_count?: number | null
-          rating_3_count?: number | null
-          rating_4_count?: number | null
-          rating_5_count?: number | null
-          total_reviews?: number | null
-        }
-        Update: {
-          average_rating?: number | null
-          avg_communication?: number | null
-          avg_professionalism?: number | null
-          avg_reliability?: number | null
-          dealer_id?: string
-          last_calculated_at?: string | null
-          rating_1_count?: number | null
-          rating_2_count?: number | null
-          rating_3_count?: number | null
-          rating_4_count?: number | null
-          rating_5_count?: number | null
-          total_reviews?: number | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "dealer_rating_summary_dealer_id_fkey"
-            columns: ["dealer_id"]
-            isOneToOne: true
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      dealer_reviews: {
-        Row: {
-          auction_id: string
-          comment: string | null
-          communication_rating: number
-          created_at: string | null
-          dealer_id: string
-          id: string
-          moderated_at: string | null
-          moderated_by: string | null
-          moderation_reason: string | null
-          professionalism_rating: number
-          rating: number
-          reliability_rating: number
-          review_text: string
-          reviewer_id: string
-          status: string
-          title: string | null
-          updated_at: string | null
-        }
-        Insert: {
-          auction_id: string
-          comment?: string | null
-          communication_rating: number
-          created_at?: string | null
-          dealer_id: string
-          id?: string
-          moderated_at?: string | null
-          moderated_by?: string | null
-          moderation_reason?: string | null
-          professionalism_rating: number
-          rating: number
-          reliability_rating: number
-          review_text: string
-          reviewer_id: string
-          status?: string
-          title?: string | null
-          updated_at?: string | null
-        }
-        Update: {
-          auction_id?: string
-          comment?: string | null
-          communication_rating?: number
-          created_at?: string | null
-          dealer_id?: string
-          id?: string
-          moderated_at?: string | null
-          moderated_by?: string | null
-          moderation_reason?: string | null
-          professionalism_rating?: number
-          rating?: number
-          reliability_rating?: number
-          review_text?: string
-          reviewer_id?: string
-          status?: string
-          title?: string | null
-          updated_at?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "dealer_reviews_auction_id_fkey"
-            columns: ["auction_id"]
-            isOneToOne: false
-            referencedRelation: "auctions"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "dealer_reviews_dealer_id_fkey"
-            columns: ["dealer_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "dealer_reviews_reviewer_id_fkey"
-            columns: ["reviewer_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      dealer_volume_discounts: {
-        Row: {
-          active_until: string | null
-          approved_by: string | null
-          created_at: string | null
-          dealer_id: string
-          discount_rate: number
-          id: string
-          is_active: boolean | null
-          purchase_volume: number | null
-          reason: string | null
-        }
-        Insert: {
-          active_until?: string | null
-          approved_by?: string | null
-          created_at?: string | null
-          dealer_id: string
-          discount_rate: number
-          id?: string
-          is_active?: boolean | null
-          purchase_volume?: number | null
-          reason?: string | null
-        }
-        Update: {
-          active_until?: string | null
-          approved_by?: string | null
-          created_at?: string | null
-          dealer_id?: string
-          discount_rate?: number
-          id?: string
-          is_active?: boolean | null
-          purchase_volume?: number | null
-          reason?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "dealer_volume_discounts_dealer_id_fkey"
-            columns: ["dealer_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
         ]
@@ -2290,155 +1311,6 @@ export type Database = {
         }
         Relationships: []
       }
-      google_offline_conversions_log: {
-        Row: {
-          auction_id: string | null
-          conversion_action_id: string
-          conversion_currency: string
-          conversion_time: string
-          conversion_value: number
-          error_message: string | null
-          gbraid: string | null
-          gclid: string | null
-          http_status: number | null
-          id: string
-          kitchen_id: string
-          order_id: string | null
-          skip_reason: string | null
-          source: string
-          status: string
-          uploaded_at: string
-          wbraid: string | null
-        }
-        Insert: {
-          auction_id?: string | null
-          conversion_action_id: string
-          conversion_currency?: string
-          conversion_time: string
-          conversion_value: number
-          error_message?: string | null
-          gbraid?: string | null
-          gclid?: string | null
-          http_status?: number | null
-          id?: string
-          kitchen_id: string
-          order_id?: string | null
-          skip_reason?: string | null
-          source: string
-          status: string
-          uploaded_at?: string
-          wbraid?: string | null
-        }
-        Update: {
-          auction_id?: string | null
-          conversion_action_id?: string
-          conversion_currency?: string
-          conversion_time?: string
-          conversion_value?: number
-          error_message?: string | null
-          gbraid?: string | null
-          gclid?: string | null
-          http_status?: number | null
-          id?: string
-          kitchen_id?: string
-          order_id?: string | null
-          skip_reason?: string | null
-          source?: string
-          status?: string
-          uploaded_at?: string
-          wbraid?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "google_offline_conversions_log_kitchen_id_fkey"
-            columns: ["kitchen_id"]
-            isOneToOne: false
-            referencedRelation: "kitchens"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      google_review_requests: {
-        Row: {
-          click_count: number
-          clicked_at: string | null
-          created_at: string
-          delivery_error: string | null
-          delivery_status: string
-          email: string
-          enqueued_at: string
-          id: string
-          recipient_name: string | null
-          resend_message_id: string | null
-          scheduled_for: string
-          sent_at: string | null
-          source: string
-          source_first_seen_at: string | null
-          source_user_id: string | null
-          unsubscribe_token: string
-          unsubscribed_at: string | null
-          updated_at: string
-        }
-        Insert: {
-          click_count?: number
-          clicked_at?: string | null
-          created_at?: string
-          delivery_error?: string | null
-          delivery_status?: string
-          email: string
-          enqueued_at?: string
-          id?: string
-          recipient_name?: string | null
-          resend_message_id?: string | null
-          scheduled_for?: string
-          sent_at?: string | null
-          source: string
-          source_first_seen_at?: string | null
-          source_user_id?: string | null
-          unsubscribe_token?: string
-          unsubscribed_at?: string | null
-          updated_at?: string
-        }
-        Update: {
-          click_count?: number
-          clicked_at?: string | null
-          created_at?: string
-          delivery_error?: string | null
-          delivery_status?: string
-          email?: string
-          enqueued_at?: string
-          id?: string
-          recipient_name?: string | null
-          resend_message_id?: string | null
-          scheduled_for?: string
-          sent_at?: string | null
-          source?: string
-          source_first_seen_at?: string | null
-          source_user_id?: string | null
-          unsubscribe_token?: string
-          unsubscribed_at?: string | null
-          updated_at?: string
-        }
-        Relationships: []
-      }
-      instant_buy_alerts_sent: {
-        Row: {
-          auction_id: string
-          sent_at: string
-          user_id: string
-        }
-        Insert: {
-          auction_id: string
-          sent_at?: string
-          user_id: string
-        }
-        Update: {
-          auction_id?: string
-          sent_at?: string
-          user_id?: string
-        }
-        Relationships: []
-      }
       invoice_items: {
         Row: {
           created_at: string | null
@@ -2495,7 +1367,6 @@ export type Database = {
       invoices: {
         Row: {
           amount_paid: number | null
-          auction_id: string | null
           created_at: string | null
           customer_number: string | null
           dealer_country: string | null
@@ -2506,7 +1377,6 @@ export type Database = {
           invoice_date: string
           invoice_number: string
           invoice_type: string
-          kitchen_id: string | null
           lead_auction_id: string | null
           lead_id: string | null
           net_amount: number
@@ -2518,7 +1388,6 @@ export type Database = {
           payment_status: string | null
           payment_terms_days: number | null
           pdf_url: string | null
-          penalty_reason: string | null
           reverse_charge: boolean
           sent_at: string | null
           sepa_mandate_reference: string | null
@@ -2531,7 +1400,6 @@ export type Database = {
         }
         Insert: {
           amount_paid?: number | null
-          auction_id?: string | null
           created_at?: string | null
           customer_number?: string | null
           dealer_country?: string | null
@@ -2541,8 +1409,7 @@ export type Database = {
           id?: string
           invoice_date?: string
           invoice_number: string
-          invoice_type?: string
-          kitchen_id?: string | null
+          invoice_type: string
           lead_auction_id?: string | null
           lead_id?: string | null
           net_amount: number
@@ -2554,7 +1421,6 @@ export type Database = {
           payment_status?: string | null
           payment_terms_days?: number | null
           pdf_url?: string | null
-          penalty_reason?: string | null
           reverse_charge?: boolean
           sent_at?: string | null
           sepa_mandate_reference?: string | null
@@ -2567,7 +1433,6 @@ export type Database = {
         }
         Update: {
           amount_paid?: number | null
-          auction_id?: string | null
           created_at?: string | null
           customer_number?: string | null
           dealer_country?: string | null
@@ -2578,7 +1443,6 @@ export type Database = {
           invoice_date?: string
           invoice_number?: string
           invoice_type?: string
-          kitchen_id?: string | null
           lead_auction_id?: string | null
           lead_id?: string | null
           net_amount?: number
@@ -2590,7 +1454,6 @@ export type Database = {
           payment_status?: string | null
           payment_terms_days?: number | null
           pdf_url?: string | null
-          penalty_reason?: string | null
           reverse_charge?: boolean
           sent_at?: string | null
           sepa_mandate_reference?: string | null
@@ -2603,24 +1466,10 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: "invoices_auction_id_fkey"
-            columns: ["auction_id"]
-            isOneToOne: false
-            referencedRelation: "auctions"
-            referencedColumns: ["id"]
-          },
-          {
             foreignKeyName: "invoices_dealer_id_fkey"
             columns: ["dealer_id"]
             isOneToOne: false
             referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "invoices_kitchen_id_fkey"
-            columns: ["kitchen_id"]
-            isOneToOne: false
-            referencedRelation: "kitchens"
             referencedColumns: ["id"]
           },
           {
@@ -2635,91 +1484,6 @@ export type Database = {
             columns: ["lead_id"]
             isOneToOne: false
             referencedRelation: "leads"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      kaufchance_invitations: {
-        Row: {
-          auction_id: string
-          bidder_id: string
-          highest_bid: number
-          id: string
-          invited_at: string | null
-          rank: number
-        }
-        Insert: {
-          auction_id: string
-          bidder_id: string
-          highest_bid: number
-          id?: string
-          invited_at?: string | null
-          rank: number
-        }
-        Update: {
-          auction_id?: string
-          bidder_id?: string
-          highest_bid?: number
-          id?: string
-          invited_at?: string | null
-          rank?: number
-        }
-        Relationships: [
-          {
-            foreignKeyName: "kaufchance_invitations_auction_id_fkey"
-            columns: ["auction_id"]
-            isOneToOne: false
-            referencedRelation: "auctions"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      kitchen_photos: {
-        Row: {
-          card_url: string | null
-          created_at: string | null
-          display_order: number | null
-          id: string
-          is_primary: boolean | null
-          kitchen_id: string
-          medium_url: string | null
-          processed_at: string | null
-          processing_attempts: number
-          processing_error: string | null
-          url: string
-        }
-        Insert: {
-          card_url?: string | null
-          created_at?: string | null
-          display_order?: number | null
-          id?: string
-          is_primary?: boolean | null
-          kitchen_id: string
-          medium_url?: string | null
-          processed_at?: string | null
-          processing_attempts?: number
-          processing_error?: string | null
-          url: string
-        }
-        Update: {
-          card_url?: string | null
-          created_at?: string | null
-          display_order?: number | null
-          id?: string
-          is_primary?: boolean | null
-          kitchen_id?: string
-          medium_url?: string | null
-          processed_at?: string | null
-          processing_attempts?: number
-          processing_error?: string | null
-          url?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "kitchen_photos_kitchen_id_fkey"
-            columns: ["kitchen_id"]
-            isOneToOne: false
-            referencedRelation: "kitchens"
             referencedColumns: ["id"]
           },
         ]
@@ -2849,394 +1613,6 @@ export type Database = {
           {
             foreignKeyName: "kitchen_pricing_rate_cards_created_by_fkey"
             columns: ["created_by"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      kitchen_questions: {
-        Row: {
-          answer: string | null
-          answered_at: string | null
-          answered_by: string | null
-          created_at: string | null
-          id: string
-          is_public: boolean | null
-          kitchen_id: string | null
-          question: string
-          questioner_email: string
-          questioner_id: string | null
-          questioner_name: string | null
-        }
-        Insert: {
-          answer?: string | null
-          answered_at?: string | null
-          answered_by?: string | null
-          created_at?: string | null
-          id?: string
-          is_public?: boolean | null
-          kitchen_id?: string | null
-          question: string
-          questioner_email: string
-          questioner_id?: string | null
-          questioner_name?: string | null
-        }
-        Update: {
-          answer?: string | null
-          answered_at?: string | null
-          answered_by?: string | null
-          created_at?: string | null
-          id?: string
-          is_public?: boolean | null
-          kitchen_id?: string | null
-          question?: string
-          questioner_email?: string
-          questioner_id?: string | null
-          questioner_name?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "kitchen_questions_kitchen_id_fkey"
-            columns: ["kitchen_id"]
-            isOneToOne: false
-            referencedRelation: "kitchens"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      kitchens: {
-        Row: {
-          accident_free: boolean | null
-          account_type: string | null
-          additional_equipment: string | null
-          air_conditioning_type:
-            | Database["public"]["Enums"]["air_conditioning_type"]
-            | null
-          available_from: string | null
-          awning_length_m: number | null
-          base_vehicle: string | null
-          battery_capacity_ah: number | null
-          beds_description: string | null
-          body_type: Database["public"]["Enums"]["kitchen_body_type"]
-          city: string | null
-          condition: Database["public"]["Enums"]["kitchen_condition"]
-          contract_number: string | null
-          contract_url: string | null
-          country: string | null
-          created_at: string | null
-          damage_summary: string | null
-          description: string | null
-          emission_class: Database["public"]["Enums"]["emission_class"] | null
-          engine_displacement_ccm: number | null
-          engine_power_hp: number | null
-          first_registration: string | null
-          fuel_tank_capacity_liters: number | null
-          fuel_type: Database["public"]["Enums"]["fuel_type"] | null
-          gas_system: string | null
-          gbraid: string | null
-          gclid: string | null
-          grey_water_capacity_liters: number | null
-          has_air_conditioning: boolean | null
-          has_airbag: boolean | null
-          has_alarm: boolean | null
-          has_awning: boolean | null
-          has_awning_tent: boolean | null
-          has_backup_camera: boolean | null
-          has_bathroom: boolean | null
-          has_bike_rack: boolean | null
-          has_central_locking: boolean | null
-          has_cruise_control: boolean | null
-          has_damage: boolean | null
-          has_esp: boolean | null
-          has_garage: boolean | null
-          has_heating: boolean | null
-          has_inverter: boolean | null
-          has_kitchen: boolean | null
-          has_markise: boolean | null
-          has_navigation: boolean | null
-          has_parking_sensors: boolean | null
-          has_roof_ac: boolean | null
-          has_satellite: boolean | null
-          has_shower: boolean | null
-          has_solar: boolean | null
-          has_stand_ac: boolean | null
-          has_swivel_seats: boolean | null
-          has_toilet: boolean | null
-          has_tuev: boolean | null
-          has_tv: boolean | null
-          heating_type: Database["public"]["Enums"]["heating_type"] | null
-          height_m: number | null
-          id: string
-          instant_price: number | null
-          instant_price_floor: number | null
-          is_archived: boolean
-          last_tuev_date: string | null
-          length_m: number | null
-          license_plate: string | null
-          listing_number: string | null
-          location: string | null
-          main_tires: string | null
-          manufacturer: string
-          mileage: number
-          model: string
-          msclkid: string | null
-          mwst_ausweisbar: boolean | null
-          non_smoker: boolean | null
-          number_of_axles: number | null
-          payload_kg: number | null
-          postal_code: string | null
-          power_kw: number | null
-          previous_owners: number | null
-          price: number | null
-          refrigerator_type:
-            | Database["public"]["Enums"]["refrigerator_type"]
-            | null
-          reserve_price: number | null
-          reserve_price_floor: number | null
-          sale_channel: Database["public"]["Enums"]["sale_channel"] | null
-          sale_type: string | null
-          seats: number | null
-          second_tires: string | null
-          seller_id: string
-          service_history_available: boolean | null
-          sleeping_places: number | null
-          solar_power_watts: number | null
-          sold_at: string | null
-          sold_to: string | null
-          status: string
-          transmission: Database["public"]["Enums"]["transmission_type"] | null
-          tuev_valid_until: string | null
-          updated_at: string | null
-          vehicle_identification_number: string | null
-          water_tank_liters: number | null
-          wbraid: string | null
-          weight_kg: number | null
-          width_m: number | null
-          year: number
-        }
-        Insert: {
-          accident_free?: boolean | null
-          account_type?: string | null
-          additional_equipment?: string | null
-          air_conditioning_type?:
-            | Database["public"]["Enums"]["air_conditioning_type"]
-            | null
-          available_from?: string | null
-          awning_length_m?: number | null
-          base_vehicle?: string | null
-          battery_capacity_ah?: number | null
-          beds_description?: string | null
-          body_type: Database["public"]["Enums"]["kitchen_body_type"]
-          city?: string | null
-          condition: Database["public"]["Enums"]["kitchen_condition"]
-          contract_number?: string | null
-          contract_url?: string | null
-          country?: string | null
-          created_at?: string | null
-          damage_summary?: string | null
-          description?: string | null
-          emission_class?: Database["public"]["Enums"]["emission_class"] | null
-          engine_displacement_ccm?: number | null
-          engine_power_hp?: number | null
-          first_registration?: string | null
-          fuel_tank_capacity_liters?: number | null
-          fuel_type?: Database["public"]["Enums"]["fuel_type"] | null
-          gas_system?: string | null
-          gbraid?: string | null
-          gclid?: string | null
-          grey_water_capacity_liters?: number | null
-          has_air_conditioning?: boolean | null
-          has_airbag?: boolean | null
-          has_alarm?: boolean | null
-          has_awning?: boolean | null
-          has_awning_tent?: boolean | null
-          has_backup_camera?: boolean | null
-          has_bathroom?: boolean | null
-          has_bike_rack?: boolean | null
-          has_central_locking?: boolean | null
-          has_cruise_control?: boolean | null
-          has_damage?: boolean | null
-          has_esp?: boolean | null
-          has_garage?: boolean | null
-          has_heating?: boolean | null
-          has_inverter?: boolean | null
-          has_kitchen?: boolean | null
-          has_markise?: boolean | null
-          has_navigation?: boolean | null
-          has_parking_sensors?: boolean | null
-          has_roof_ac?: boolean | null
-          has_satellite?: boolean | null
-          has_shower?: boolean | null
-          has_solar?: boolean | null
-          has_stand_ac?: boolean | null
-          has_swivel_seats?: boolean | null
-          has_toilet?: boolean | null
-          has_tuev?: boolean | null
-          has_tv?: boolean | null
-          heating_type?: Database["public"]["Enums"]["heating_type"] | null
-          height_m?: number | null
-          id?: string
-          instant_price?: number | null
-          instant_price_floor?: number | null
-          is_archived?: boolean
-          last_tuev_date?: string | null
-          length_m?: number | null
-          license_plate?: string | null
-          listing_number?: string | null
-          location?: string | null
-          main_tires?: string | null
-          manufacturer: string
-          mileage: number
-          model: string
-          msclkid?: string | null
-          mwst_ausweisbar?: boolean | null
-          non_smoker?: boolean | null
-          number_of_axles?: number | null
-          payload_kg?: number | null
-          postal_code?: string | null
-          power_kw?: number | null
-          previous_owners?: number | null
-          price?: number | null
-          refrigerator_type?:
-            | Database["public"]["Enums"]["refrigerator_type"]
-            | null
-          reserve_price?: number | null
-          reserve_price_floor?: number | null
-          sale_channel?: Database["public"]["Enums"]["sale_channel"] | null
-          sale_type?: string | null
-          seats?: number | null
-          second_tires?: string | null
-          seller_id: string
-          service_history_available?: boolean | null
-          sleeping_places?: number | null
-          solar_power_watts?: number | null
-          sold_at?: string | null
-          sold_to?: string | null
-          status?: string
-          transmission?: Database["public"]["Enums"]["transmission_type"] | null
-          tuev_valid_until?: string | null
-          updated_at?: string | null
-          vehicle_identification_number?: string | null
-          water_tank_liters?: number | null
-          wbraid?: string | null
-          weight_kg?: number | null
-          width_m?: number | null
-          year: number
-        }
-        Update: {
-          accident_free?: boolean | null
-          account_type?: string | null
-          additional_equipment?: string | null
-          air_conditioning_type?:
-            | Database["public"]["Enums"]["air_conditioning_type"]
-            | null
-          available_from?: string | null
-          awning_length_m?: number | null
-          base_vehicle?: string | null
-          battery_capacity_ah?: number | null
-          beds_description?: string | null
-          body_type?: Database["public"]["Enums"]["kitchen_body_type"]
-          city?: string | null
-          condition?: Database["public"]["Enums"]["kitchen_condition"]
-          contract_number?: string | null
-          contract_url?: string | null
-          country?: string | null
-          created_at?: string | null
-          damage_summary?: string | null
-          description?: string | null
-          emission_class?: Database["public"]["Enums"]["emission_class"] | null
-          engine_displacement_ccm?: number | null
-          engine_power_hp?: number | null
-          first_registration?: string | null
-          fuel_tank_capacity_liters?: number | null
-          fuel_type?: Database["public"]["Enums"]["fuel_type"] | null
-          gas_system?: string | null
-          gbraid?: string | null
-          gclid?: string | null
-          grey_water_capacity_liters?: number | null
-          has_air_conditioning?: boolean | null
-          has_airbag?: boolean | null
-          has_alarm?: boolean | null
-          has_awning?: boolean | null
-          has_awning_tent?: boolean | null
-          has_backup_camera?: boolean | null
-          has_bathroom?: boolean | null
-          has_bike_rack?: boolean | null
-          has_central_locking?: boolean | null
-          has_cruise_control?: boolean | null
-          has_damage?: boolean | null
-          has_esp?: boolean | null
-          has_garage?: boolean | null
-          has_heating?: boolean | null
-          has_inverter?: boolean | null
-          has_kitchen?: boolean | null
-          has_markise?: boolean | null
-          has_navigation?: boolean | null
-          has_parking_sensors?: boolean | null
-          has_roof_ac?: boolean | null
-          has_satellite?: boolean | null
-          has_shower?: boolean | null
-          has_solar?: boolean | null
-          has_stand_ac?: boolean | null
-          has_swivel_seats?: boolean | null
-          has_toilet?: boolean | null
-          has_tuev?: boolean | null
-          has_tv?: boolean | null
-          heating_type?: Database["public"]["Enums"]["heating_type"] | null
-          height_m?: number | null
-          id?: string
-          instant_price?: number | null
-          instant_price_floor?: number | null
-          is_archived?: boolean
-          last_tuev_date?: string | null
-          length_m?: number | null
-          license_plate?: string | null
-          listing_number?: string | null
-          location?: string | null
-          main_tires?: string | null
-          manufacturer?: string
-          mileage?: number
-          model?: string
-          msclkid?: string | null
-          mwst_ausweisbar?: boolean | null
-          non_smoker?: boolean | null
-          number_of_axles?: number | null
-          payload_kg?: number | null
-          postal_code?: string | null
-          power_kw?: number | null
-          previous_owners?: number | null
-          price?: number | null
-          refrigerator_type?:
-            | Database["public"]["Enums"]["refrigerator_type"]
-            | null
-          reserve_price?: number | null
-          reserve_price_floor?: number | null
-          sale_channel?: Database["public"]["Enums"]["sale_channel"] | null
-          sale_type?: string | null
-          seats?: number | null
-          second_tires?: string | null
-          seller_id?: string
-          service_history_available?: boolean | null
-          sleeping_places?: number | null
-          solar_power_watts?: number | null
-          sold_at?: string | null
-          sold_to?: string | null
-          status?: string
-          transmission?: Database["public"]["Enums"]["transmission_type"] | null
-          tuev_valid_until?: string | null
-          updated_at?: string | null
-          vehicle_identification_number?: string | null
-          water_tank_liters?: number | null
-          wbraid?: string | null
-          weight_kg?: number | null
-          width_m?: number | null
-          year?: number
-        }
-        Relationships: [
-          {
-            foreignKeyName: "kitchens_seller_id_fkey"
-            columns: ["seller_id"]
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
@@ -5232,41 +3608,6 @@ export type Database = {
           },
         ]
       }
-      pin_attempts: {
-        Row: {
-          appointment_id: string
-          attempted_pin: string
-          created_at: string | null
-          id: string
-          ip_address: string | null
-          success: boolean
-        }
-        Insert: {
-          appointment_id: string
-          attempted_pin: string
-          created_at?: string | null
-          id?: string
-          ip_address?: string | null
-          success?: boolean
-        }
-        Update: {
-          appointment_id?: string
-          attempted_pin?: string
-          created_at?: string | null
-          id?: string
-          ip_address?: string | null
-          success?: boolean
-        }
-        Relationships: [
-          {
-            foreignKeyName: "pin_attempts_appointment_id_fkey"
-            columns: ["appointment_id"]
-            isOneToOne: false
-            referencedRelation: "appointments"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       planner_rate_limits: {
         Row: {
           bucket_key: string
@@ -5516,148 +3857,6 @@ export type Database = {
           },
         ]
       }
-      post_auction_offers: {
-        Row: {
-          auction_id: string
-          auction_round: number
-          buyer_id: string
-          counter_offer_amount: number | null
-          created_at: string | null
-          expires_at: string | null
-          id: string
-          is_invited: boolean | null
-          message: string | null
-          offer_amount: number
-          responded_at: string | null
-          seller_response: string | null
-          status: string
-          updated_at: string | null
-        }
-        Insert: {
-          auction_id: string
-          auction_round?: number
-          buyer_id: string
-          counter_offer_amount?: number | null
-          created_at?: string | null
-          expires_at?: string | null
-          id?: string
-          is_invited?: boolean | null
-          message?: string | null
-          offer_amount: number
-          responded_at?: string | null
-          seller_response?: string | null
-          status?: string
-          updated_at?: string | null
-        }
-        Update: {
-          auction_id?: string
-          auction_round?: number
-          buyer_id?: string
-          counter_offer_amount?: number | null
-          created_at?: string | null
-          expires_at?: string | null
-          id?: string
-          is_invited?: boolean | null
-          message?: string | null
-          offer_amount?: number
-          responded_at?: string | null
-          seller_response?: string | null
-          status?: string
-          updated_at?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "post_auction_offers_auction_id_fkey"
-            columns: ["auction_id"]
-            isOneToOne: false
-            referencedRelation: "auctions"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      price_change_requests: {
-        Row: {
-          admin_note: string | null
-          auction_id: string | null
-          created_at: string
-          current_instant: number | null
-          current_reserve: number | null
-          id: string
-          kitchen_id: string
-          processed_at: string | null
-          processed_by: string | null
-          reason: string
-          requested_instant: number | null
-          requested_reserve: number | null
-          seller_id: string
-          status: string
-          updated_at: string
-        }
-        Insert: {
-          admin_note?: string | null
-          auction_id?: string | null
-          created_at?: string
-          current_instant?: number | null
-          current_reserve?: number | null
-          id?: string
-          kitchen_id: string
-          processed_at?: string | null
-          processed_by?: string | null
-          reason: string
-          requested_instant?: number | null
-          requested_reserve?: number | null
-          seller_id: string
-          status?: string
-          updated_at?: string
-        }
-        Update: {
-          admin_note?: string | null
-          auction_id?: string | null
-          created_at?: string
-          current_instant?: number | null
-          current_reserve?: number | null
-          id?: string
-          kitchen_id?: string
-          processed_at?: string | null
-          processed_by?: string | null
-          reason?: string
-          requested_instant?: number | null
-          requested_reserve?: number | null
-          seller_id?: string
-          status?: string
-          updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "price_change_requests_auction_id_fkey"
-            columns: ["auction_id"]
-            isOneToOne: false
-            referencedRelation: "auctions"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "price_change_requests_kitchen_id_fkey"
-            columns: ["kitchen_id"]
-            isOneToOne: false
-            referencedRelation: "kitchens"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "price_change_requests_processed_by_fkey"
-            columns: ["processed_by"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "price_change_requests_seller_id_fkey"
-            columns: ["seller_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       profiles: {
         Row: {
           account_restricted: boolean | null
@@ -5784,194 +3983,6 @@ export type Database = {
         }
         Relationships: []
       }
-      purchase_contracts: {
-        Row: {
-          auction_id: string | null
-          blank_protocol_storage_path: string | null
-          blank_protocol_url: string | null
-          buyer_contract_url: string | null
-          buyer_customer_number: string | null
-          buyer_id: string | null
-          buyer_name: string | null
-          buyer_storage_path: string | null
-          cancellation_reason: string | null
-          cancelled_at: string | null
-          contract_number: string
-          contract_url: string | null
-          created_at: string | null
-          id: string
-          item_description: string | null
-          kitchen_id: string | null
-          notes: string | null
-          sale_price: number
-          seller_id: string | null
-          seller_name: string | null
-          status: string
-          storage_path: string | null
-          updated_at: string | null
-        }
-        Insert: {
-          auction_id?: string | null
-          blank_protocol_storage_path?: string | null
-          blank_protocol_url?: string | null
-          buyer_contract_url?: string | null
-          buyer_customer_number?: string | null
-          buyer_id?: string | null
-          buyer_name?: string | null
-          buyer_storage_path?: string | null
-          cancellation_reason?: string | null
-          cancelled_at?: string | null
-          contract_number: string
-          contract_url?: string | null
-          created_at?: string | null
-          id?: string
-          item_description?: string | null
-          kitchen_id?: string | null
-          notes?: string | null
-          sale_price: number
-          seller_id?: string | null
-          seller_name?: string | null
-          status?: string
-          storage_path?: string | null
-          updated_at?: string | null
-        }
-        Update: {
-          auction_id?: string | null
-          blank_protocol_storage_path?: string | null
-          blank_protocol_url?: string | null
-          buyer_contract_url?: string | null
-          buyer_customer_number?: string | null
-          buyer_id?: string | null
-          buyer_name?: string | null
-          buyer_storage_path?: string | null
-          cancellation_reason?: string | null
-          cancelled_at?: string | null
-          contract_number?: string
-          contract_url?: string | null
-          created_at?: string | null
-          id?: string
-          item_description?: string | null
-          kitchen_id?: string | null
-          notes?: string | null
-          sale_price?: number
-          seller_id?: string | null
-          seller_name?: string | null
-          status?: string
-          storage_path?: string | null
-          updated_at?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "purchase_contracts_auction_id_fkey"
-            columns: ["auction_id"]
-            isOneToOne: false
-            referencedRelation: "auctions"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "purchase_contracts_buyer_id_fkey"
-            columns: ["buyer_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "purchase_contracts_kitchen_id_fkey"
-            columns: ["kitchen_id"]
-            isOneToOne: false
-            referencedRelation: "kitchens"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "purchase_contracts_seller_id_fkey"
-            columns: ["seller_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      purchase_stations: {
-        Row: {
-          accepts_cash_payment: boolean | null
-          accepts_sepa_instant: boolean | null
-          address: string
-          city: string
-          created_at: string | null
-          email: string
-          id: string
-          is_active: boolean | null
-          manager_name: string | null
-          name: string
-          opening_hours: Json | null
-          phone: string
-          postal_code: string
-          updated_at: string | null
-        }
-        Insert: {
-          accepts_cash_payment?: boolean | null
-          accepts_sepa_instant?: boolean | null
-          address: string
-          city: string
-          created_at?: string | null
-          email: string
-          id?: string
-          is_active?: boolean | null
-          manager_name?: string | null
-          name: string
-          opening_hours?: Json | null
-          phone: string
-          postal_code: string
-          updated_at?: string | null
-        }
-        Update: {
-          accepts_cash_payment?: boolean | null
-          accepts_sepa_instant?: boolean | null
-          address?: string
-          city?: string
-          created_at?: string | null
-          email?: string
-          id?: string
-          is_active?: boolean | null
-          manager_name?: string | null
-          name?: string
-          opening_hours?: Json | null
-          phone?: string
-          postal_code?: string
-          updated_at?: string | null
-        }
-        Relationships: []
-      }
-      push_subscriptions: {
-        Row: {
-          auth: string
-          created_at: string | null
-          endpoint: string
-          id: string
-          p256dh: string
-          user_agent: string | null
-          user_id: string
-        }
-        Insert: {
-          auth: string
-          created_at?: string | null
-          endpoint: string
-          id?: string
-          p256dh: string
-          user_agent?: string | null
-          user_id: string
-        }
-        Update: {
-          auth?: string
-          created_at?: string | null
-          endpoint?: string
-          id?: string
-          p256dh?: string
-          user_agent?: string | null
-          user_id?: string
-        }
-        Relationships: []
-      }
       rate_limits: {
         Row: {
           count: number
@@ -6001,152 +4012,6 @@ export type Database = {
           window_start?: string
         }
         Relationships: []
-      }
-      review_responses: {
-        Row: {
-          created_at: string | null
-          id: string
-          responder_id: string
-          response_text: string
-          review_id: string
-          updated_at: string | null
-        }
-        Insert: {
-          created_at?: string | null
-          id?: string
-          responder_id: string
-          response_text: string
-          review_id: string
-          updated_at?: string | null
-        }
-        Update: {
-          created_at?: string | null
-          id?: string
-          responder_id?: string
-          response_text?: string
-          review_id?: string
-          updated_at?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "review_responses_responder_id_fkey"
-            columns: ["responder_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "review_responses_review_id_fkey"
-            columns: ["review_id"]
-            isOneToOne: true
-            referencedRelation: "dealer_reviews"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      search_alert_matches: {
-        Row: {
-          alert_id: string
-          id: string
-          kitchen_id: string
-          matched_at: string | null
-          notification_sent: boolean | null
-          notification_sent_at: string | null
-        }
-        Insert: {
-          alert_id: string
-          id?: string
-          kitchen_id: string
-          matched_at?: string | null
-          notification_sent?: boolean | null
-          notification_sent_at?: string | null
-        }
-        Update: {
-          alert_id?: string
-          id?: string
-          kitchen_id?: string
-          matched_at?: string | null
-          notification_sent?: boolean | null
-          notification_sent_at?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "search_alert_matches_alert_id_fkey"
-            columns: ["alert_id"]
-            isOneToOne: false
-            referencedRelation: "search_alerts"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "search_alert_matches_kitchen_id_fkey"
-            columns: ["kitchen_id"]
-            isOneToOne: false
-            referencedRelation: "kitchens"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      search_alerts: {
-        Row: {
-          alert_frequency: string | null
-          alert_name: string
-          created_at: string | null
-          dealer_id: string
-          email_enabled: boolean | null
-          id: string
-          is_active: boolean | null
-          last_sent_at: string | null
-          last_triggered_at: string | null
-          match_count: number | null
-          max_price: number | null
-          max_year: number | null
-          min_year: number | null
-          search_criteria: Json
-          updated_at: string | null
-        }
-        Insert: {
-          alert_frequency?: string | null
-          alert_name: string
-          created_at?: string | null
-          dealer_id: string
-          email_enabled?: boolean | null
-          id?: string
-          is_active?: boolean | null
-          last_sent_at?: string | null
-          last_triggered_at?: string | null
-          match_count?: number | null
-          max_price?: number | null
-          max_year?: number | null
-          min_year?: number | null
-          search_criteria: Json
-          updated_at?: string | null
-        }
-        Update: {
-          alert_frequency?: string | null
-          alert_name?: string
-          created_at?: string | null
-          dealer_id?: string
-          email_enabled?: boolean | null
-          id?: string
-          is_active?: boolean | null
-          last_sent_at?: string | null
-          last_triggered_at?: string | null
-          match_count?: number | null
-          max_price?: number | null
-          max_year?: number | null
-          min_year?: number | null
-          search_criteria?: Json
-          updated_at?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "search_alerts_dealer_id_fkey"
-            columns: ["dealer_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-        ]
       }
       sepa_mandate_templates: {
         Row: {
@@ -6248,20 +4113,15 @@ export type Database = {
       }
       site_settings: {
         Row: {
-          autobid_enabled: boolean
           bank_bic: string | null
           bank_iban: string | null
           bank_name: string | null
-          buy_now_enabled: boolean
-          commission_rate_percent: number
           company_address: string | null
           company_city: string | null
           company_country: string | null
           company_postal_code: string | null
           contact_email: string
           created_at: string
-          dark_mode_enabled: boolean
-          default_auction_duration_days: number
           dunning_auto_enabled: boolean | null
           dunning_level1_days: number | null
           dunning_level1_fee: number | null
@@ -6270,29 +4130,18 @@ export type Database = {
           dunning_level3_days: number | null
           dunning_level3_fee: number | null
           dunning_restrict_at_level: number | null
-          favicon_url: string | null
           from_email: string
-          google_analytics_id: string | null
-          google_tag_manager_id: string | null
           hrb_number: string | null
           id: string
           invoice_footer_text: string | null
           invoice_payment_terms_days: number | null
           lead_forward_email: string | null
-          logo_url: string | null
           maintenance_mode: boolean
           managing_director: string | null
           meta_description: string
           meta_keywords: string
           meta_title: string
-          min_bid_increment_percent: number
-          notify_new_auction: boolean
-          notify_new_bid: boolean
           notify_new_registration: boolean
-          openai_api_key: string | null
-          primary_color: string
-          reserve_price_required: boolean
-          secondary_color: string
           site_description: string
           site_name: string
           site_tagline: string
@@ -6301,30 +4150,23 @@ export type Database = {
           smtp_password: string | null
           smtp_port: number | null
           smtp_user: string | null
-          soft_close_extension_minutes: number
           support_phone: string
           tax_number: string | null
           tracking_config: Json
-          tuv_badge_url: string | null
           updated_at: string
           ust_id: string | null
           whatsapp_number: string | null
         }
         Insert: {
-          autobid_enabled?: boolean
           bank_bic?: string | null
           bank_iban?: string | null
           bank_name?: string | null
-          buy_now_enabled?: boolean
-          commission_rate_percent?: number
           company_address?: string | null
           company_city?: string | null
           company_country?: string | null
           company_postal_code?: string | null
           contact_email?: string
           created_at?: string
-          dark_mode_enabled?: boolean
-          default_auction_duration_days?: number
           dunning_auto_enabled?: boolean | null
           dunning_level1_days?: number | null
           dunning_level1_fee?: number | null
@@ -6333,29 +4175,18 @@ export type Database = {
           dunning_level3_days?: number | null
           dunning_level3_fee?: number | null
           dunning_restrict_at_level?: number | null
-          favicon_url?: string | null
           from_email?: string
-          google_analytics_id?: string | null
-          google_tag_manager_id?: string | null
           hrb_number?: string | null
           id?: string
           invoice_footer_text?: string | null
           invoice_payment_terms_days?: number | null
           lead_forward_email?: string | null
-          logo_url?: string | null
           maintenance_mode?: boolean
           managing_director?: string | null
           meta_description?: string
           meta_keywords?: string
           meta_title?: string
-          min_bid_increment_percent?: number
-          notify_new_auction?: boolean
-          notify_new_bid?: boolean
           notify_new_registration?: boolean
-          openai_api_key?: string | null
-          primary_color?: string
-          reserve_price_required?: boolean
-          secondary_color?: string
           site_description?: string
           site_name?: string
           site_tagline?: string
@@ -6364,30 +4195,23 @@ export type Database = {
           smtp_password?: string | null
           smtp_port?: number | null
           smtp_user?: string | null
-          soft_close_extension_minutes?: number
           support_phone?: string
           tax_number?: string | null
           tracking_config?: Json
-          tuv_badge_url?: string | null
           updated_at?: string
           ust_id?: string | null
           whatsapp_number?: string | null
         }
         Update: {
-          autobid_enabled?: boolean
           bank_bic?: string | null
           bank_iban?: string | null
           bank_name?: string | null
-          buy_now_enabled?: boolean
-          commission_rate_percent?: number
           company_address?: string | null
           company_city?: string | null
           company_country?: string | null
           company_postal_code?: string | null
           contact_email?: string
           created_at?: string
-          dark_mode_enabled?: boolean
-          default_auction_duration_days?: number
           dunning_auto_enabled?: boolean | null
           dunning_level1_days?: number | null
           dunning_level1_fee?: number | null
@@ -6396,29 +4220,18 @@ export type Database = {
           dunning_level3_days?: number | null
           dunning_level3_fee?: number | null
           dunning_restrict_at_level?: number | null
-          favicon_url?: string | null
           from_email?: string
-          google_analytics_id?: string | null
-          google_tag_manager_id?: string | null
           hrb_number?: string | null
           id?: string
           invoice_footer_text?: string | null
           invoice_payment_terms_days?: number | null
           lead_forward_email?: string | null
-          logo_url?: string | null
           maintenance_mode?: boolean
           managing_director?: string | null
           meta_description?: string
           meta_keywords?: string
           meta_title?: string
-          min_bid_increment_percent?: number
-          notify_new_auction?: boolean
-          notify_new_bid?: boolean
           notify_new_registration?: boolean
-          openai_api_key?: string | null
-          primary_color?: string
-          reserve_price_required?: boolean
-          secondary_color?: string
           site_description?: string
           site_name?: string
           site_tagline?: string
@@ -6427,89 +4240,14 @@ export type Database = {
           smtp_password?: string | null
           smtp_port?: number | null
           smtp_user?: string | null
-          soft_close_extension_minutes?: number
           support_phone?: string
           tax_number?: string | null
           tracking_config?: Json
-          tuv_badge_url?: string | null
           updated_at?: string
           ust_id?: string | null
           whatsapp_number?: string | null
         }
         Relationships: []
-      }
-      station_availability: {
-        Row: {
-          created_at: string | null
-          day_of_week: number
-          end_time: string
-          id: string
-          is_available: boolean | null
-          start_time: string
-          station_id: string
-          updated_at: string | null
-        }
-        Insert: {
-          created_at?: string | null
-          day_of_week: number
-          end_time: string
-          id?: string
-          is_available?: boolean | null
-          start_time: string
-          station_id: string
-          updated_at?: string | null
-        }
-        Update: {
-          created_at?: string | null
-          day_of_week?: number
-          end_time?: string
-          id?: string
-          is_available?: boolean | null
-          start_time?: string
-          station_id?: string
-          updated_at?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "station_availability_station_id_fkey"
-            columns: ["station_id"]
-            isOneToOne: false
-            referencedRelation: "purchase_stations"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      station_blocked_dates: {
-        Row: {
-          blocked_date: string
-          created_at: string | null
-          id: string
-          reason: string | null
-          station_id: string
-        }
-        Insert: {
-          blocked_date: string
-          created_at?: string | null
-          id?: string
-          reason?: string | null
-          station_id: string
-        }
-        Update: {
-          blocked_date?: string
-          created_at?: string | null
-          id?: string
-          reason?: string | null
-          station_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "station_blocked_dates_station_id_fkey"
-            columns: ["station_id"]
-            isOneToOne: false
-            referencedRelation: "purchase_stations"
-            referencedColumns: ["id"]
-          },
-        ]
       }
       support_messages: {
         Row: {
@@ -6574,66 +4312,14 @@ export type Database = {
         }
         Relationships: []
       }
-      user_favorites: {
-        Row: {
-          alert_enabled: boolean | null
-          created_at: string | null
-          id: string
-          kitchen_id: string | null
-          last_notified_price: number | null
-          user_id: string | null
-        }
-        Insert: {
-          alert_enabled?: boolean | null
-          created_at?: string | null
-          id?: string
-          kitchen_id?: string | null
-          last_notified_price?: number | null
-          user_id?: string | null
-        }
-        Update: {
-          alert_enabled?: boolean | null
-          created_at?: string | null
-          id?: string
-          kitchen_id?: string | null
-          last_notified_price?: number | null
-          user_id?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "user_favorites_kitchen_id_fkey"
-            columns: ["kitchen_id"]
-            isOneToOne: false
-            referencedRelation: "kitchens"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       user_notification_preferences: {
         Row: {
-          audio_auction_won: boolean | null
-          audio_enabled: boolean | null
-          audio_new_bid: boolean | null
-          audio_outbid: boolean | null
-          audio_volume: number | null
           broadcast_emails_enabled: boolean | null
           created_at: string | null
-          digest_frequency: string | null
-          email_auction_ending: boolean | null
-          email_auction_won: boolean | null
-          email_new_auction: boolean | null
-          email_new_bid: boolean | null
-          email_outbid: boolean | null
           email_payment_reminder: boolean | null
-          email_price_alerts: boolean | null
           id: string
-          last_digest_sent_at: string | null
           newsletter_enabled: boolean | null
           promotional_emails: boolean | null
-          push_auction_ending: boolean | null
-          push_enabled: boolean | null
-          push_new_bid: boolean | null
-          push_outbid: boolean | null
           quiet_hours_end: string | null
           quiet_hours_start: string | null
           timezone: string | null
@@ -6641,29 +4327,12 @@ export type Database = {
           user_id: string
         }
         Insert: {
-          audio_auction_won?: boolean | null
-          audio_enabled?: boolean | null
-          audio_new_bid?: boolean | null
-          audio_outbid?: boolean | null
-          audio_volume?: number | null
           broadcast_emails_enabled?: boolean | null
           created_at?: string | null
-          digest_frequency?: string | null
-          email_auction_ending?: boolean | null
-          email_auction_won?: boolean | null
-          email_new_auction?: boolean | null
-          email_new_bid?: boolean | null
-          email_outbid?: boolean | null
           email_payment_reminder?: boolean | null
-          email_price_alerts?: boolean | null
           id?: string
-          last_digest_sent_at?: string | null
           newsletter_enabled?: boolean | null
           promotional_emails?: boolean | null
-          push_auction_ending?: boolean | null
-          push_enabled?: boolean | null
-          push_new_bid?: boolean | null
-          push_outbid?: boolean | null
           quiet_hours_end?: string | null
           quiet_hours_start?: string | null
           timezone?: string | null
@@ -6671,29 +4340,12 @@ export type Database = {
           user_id: string
         }
         Update: {
-          audio_auction_won?: boolean | null
-          audio_enabled?: boolean | null
-          audio_new_bid?: boolean | null
-          audio_outbid?: boolean | null
-          audio_volume?: number | null
           broadcast_emails_enabled?: boolean | null
           created_at?: string | null
-          digest_frequency?: string | null
-          email_auction_ending?: boolean | null
-          email_auction_won?: boolean | null
-          email_new_auction?: boolean | null
-          email_new_bid?: boolean | null
-          email_outbid?: boolean | null
           email_payment_reminder?: boolean | null
-          email_price_alerts?: boolean | null
           id?: string
-          last_digest_sent_at?: string | null
           newsletter_enabled?: boolean | null
           promotional_emails?: boolean | null
-          push_auction_ending?: boolean | null
-          push_enabled?: boolean | null
-          push_new_bid?: boolean | null
-          push_outbid?: boolean | null
           quiet_hours_end?: string | null
           quiet_hours_start?: string | null
           timezone?: string | null
@@ -6739,170 +4391,6 @@ export type Database = {
           },
         ]
       }
-      wizard_sessions: {
-        Row: {
-          admin_called_at: string | null
-          admin_estimated_value: number | null
-          admin_notes: string | null
-          anonymous_id: string | null
-          completed_at: string | null
-          created_at: string | null
-          current_step: number
-          customer_email: string | null
-          customer_name: string | null
-          customer_phone: string | null
-          disposition: string | null
-          done_email_count: number | null
-          done_email_last_sent: string | null
-          followup_email_sent_at: string | null
-          form_data: Json
-          gbraid: string | null
-          gclid: string | null
-          id: string
-          is_viewed: boolean
-          kitchen_summary: string | null
-          last_activity_at: string | null
-          max_step_reached: number
-          msclkid: string | null
-          no_answer_email_count: number | null
-          no_answer_email_last_sent: string | null
-          resume_email_sent_at: string | null
-          resume_token: string
-          status: string
-          step_name: string | null
-          total_steps: number
-          updated_at: string | null
-          user_id: string | null
-          wbraid: string | null
-          wrong_number_email_count: number | null
-          wrong_number_email_last_sent: string | null
-        }
-        Insert: {
-          admin_called_at?: string | null
-          admin_estimated_value?: number | null
-          admin_notes?: string | null
-          anonymous_id?: string | null
-          completed_at?: string | null
-          created_at?: string | null
-          current_step?: number
-          customer_email?: string | null
-          customer_name?: string | null
-          customer_phone?: string | null
-          disposition?: string | null
-          done_email_count?: number | null
-          done_email_last_sent?: string | null
-          followup_email_sent_at?: string | null
-          form_data?: Json
-          gbraid?: string | null
-          gclid?: string | null
-          id?: string
-          is_viewed?: boolean
-          kitchen_summary?: string | null
-          last_activity_at?: string | null
-          max_step_reached?: number
-          msclkid?: string | null
-          no_answer_email_count?: number | null
-          no_answer_email_last_sent?: string | null
-          resume_email_sent_at?: string | null
-          resume_token?: string
-          status?: string
-          step_name?: string | null
-          total_steps?: number
-          updated_at?: string | null
-          user_id?: string | null
-          wbraid?: string | null
-          wrong_number_email_count?: number | null
-          wrong_number_email_last_sent?: string | null
-        }
-        Update: {
-          admin_called_at?: string | null
-          admin_estimated_value?: number | null
-          admin_notes?: string | null
-          anonymous_id?: string | null
-          completed_at?: string | null
-          created_at?: string | null
-          current_step?: number
-          customer_email?: string | null
-          customer_name?: string | null
-          customer_phone?: string | null
-          disposition?: string | null
-          done_email_count?: number | null
-          done_email_last_sent?: string | null
-          followup_email_sent_at?: string | null
-          form_data?: Json
-          gbraid?: string | null
-          gclid?: string | null
-          id?: string
-          is_viewed?: boolean
-          kitchen_summary?: string | null
-          last_activity_at?: string | null
-          max_step_reached?: number
-          msclkid?: string | null
-          no_answer_email_count?: number | null
-          no_answer_email_last_sent?: string | null
-          resume_email_sent_at?: string | null
-          resume_token?: string
-          status?: string
-          step_name?: string | null
-          total_steps?: number
-          updated_at?: string | null
-          user_id?: string | null
-          wbraid?: string | null
-          wrong_number_email_count?: number | null
-          wrong_number_email_last_sent?: string | null
-        }
-        Relationships: []
-      }
-      wizard_step_events: {
-        Row: {
-          created_at: string
-          device_type: string | null
-          error_fields: string[] | null
-          event: string
-          field_name: string | null
-          id: number
-          metadata: Json | null
-          session_id: string
-          step: number
-          time_on_step_ms: number | null
-          viewport_width: number | null
-        }
-        Insert: {
-          created_at?: string
-          device_type?: string | null
-          error_fields?: string[] | null
-          event: string
-          field_name?: string | null
-          id?: number
-          metadata?: Json | null
-          session_id: string
-          step: number
-          time_on_step_ms?: number | null
-          viewport_width?: number | null
-        }
-        Update: {
-          created_at?: string
-          device_type?: string | null
-          error_fields?: string[] | null
-          event?: string
-          field_name?: string | null
-          id?: number
-          metadata?: Json | null
-          session_id?: string
-          step?: number
-          time_on_step_ms?: number | null
-          viewport_width?: number | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "wizard_step_events_session_id_fkey"
-            columns: ["session_id"]
-            isOneToOne: false
-            referencedRelation: "wizard_sessions"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
     }
     Views: {
       analytics_daily_summary: {
@@ -6916,51 +4404,6 @@ export type Database = {
           unique_visitors: number | null
         }
         Relationships: []
-      }
-      bids_public: {
-        Row: {
-          amount: number | null
-          auction_id: string | null
-          bidder_id: string | null
-          created_at: string | null
-          id: string | null
-          is_autobid: boolean | null
-          max_autobid_amount: number | null
-        }
-        Insert: {
-          amount?: number | null
-          auction_id?: string | null
-          bidder_id?: string | null
-          created_at?: string | null
-          id?: string | null
-          is_autobid?: boolean | null
-          max_autobid_amount?: never
-        }
-        Update: {
-          amount?: number | null
-          auction_id?: string | null
-          bidder_id?: string | null
-          created_at?: string | null
-          id?: string | null
-          is_autobid?: boolean | null
-          max_autobid_amount?: never
-        }
-        Relationships: [
-          {
-            foreignKeyName: "bids_auction_id_fkey"
-            columns: ["auction_id"]
-            isOneToOne: false
-            referencedRelation: "auctions"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "bids_bidder_id_fkey"
-            columns: ["bidder_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-        ]
       }
       error_logs_grouped: {
         Row: {
@@ -6996,127 +4439,82 @@ export type Database = {
       }
       public_site_settings: {
         Row: {
-          autobid_enabled: boolean | null
-          buy_now_enabled: boolean | null
-          commission_rate_percent: number | null
           company_address: string | null
           company_city: string | null
           company_country: string | null
           company_postal_code: string | null
           contact_email: string | null
           created_at: string | null
-          dark_mode_enabled: boolean | null
-          default_auction_duration_days: number | null
-          favicon_url: string | null
-          google_analytics_id: string | null
-          google_tag_manager_id: string | null
           hrb_number: string | null
           id: string | null
           invoice_footer_text: string | null
           invoice_payment_terms_days: number | null
-          logo_url: string | null
           maintenance_mode: boolean | null
           managing_director: string | null
           meta_description: string | null
           meta_keywords: string | null
           meta_title: string | null
-          min_bid_increment_percent: number | null
-          primary_color: string | null
-          reserve_price_required: boolean | null
-          secondary_color: string | null
           site_description: string | null
           site_name: string | null
           site_tagline: string | null
           sitemap_enabled: boolean | null
-          soft_close_extension_minutes: number | null
           support_phone: string | null
           tax_number: string | null
           tracking_config: Json | null
-          tuv_badge_url: string | null
           updated_at: string | null
           ust_id: string | null
           whatsapp_number: string | null
         }
         Insert: {
-          autobid_enabled?: boolean | null
-          buy_now_enabled?: boolean | null
-          commission_rate_percent?: number | null
           company_address?: string | null
           company_city?: string | null
           company_country?: string | null
           company_postal_code?: string | null
           contact_email?: string | null
           created_at?: string | null
-          dark_mode_enabled?: boolean | null
-          default_auction_duration_days?: number | null
-          favicon_url?: string | null
-          google_analytics_id?: string | null
-          google_tag_manager_id?: string | null
           hrb_number?: string | null
           id?: string | null
           invoice_footer_text?: string | null
           invoice_payment_terms_days?: number | null
-          logo_url?: string | null
           maintenance_mode?: boolean | null
           managing_director?: string | null
           meta_description?: string | null
           meta_keywords?: string | null
           meta_title?: string | null
-          min_bid_increment_percent?: number | null
-          primary_color?: string | null
-          reserve_price_required?: boolean | null
-          secondary_color?: string | null
           site_description?: string | null
           site_name?: string | null
           site_tagline?: string | null
           sitemap_enabled?: boolean | null
-          soft_close_extension_minutes?: number | null
           support_phone?: string | null
           tax_number?: string | null
           tracking_config?: Json | null
-          tuv_badge_url?: string | null
           updated_at?: string | null
           ust_id?: string | null
           whatsapp_number?: string | null
         }
         Update: {
-          autobid_enabled?: boolean | null
-          buy_now_enabled?: boolean | null
-          commission_rate_percent?: number | null
           company_address?: string | null
           company_city?: string | null
           company_country?: string | null
           company_postal_code?: string | null
           contact_email?: string | null
           created_at?: string | null
-          dark_mode_enabled?: boolean | null
-          default_auction_duration_days?: number | null
-          favicon_url?: string | null
-          google_analytics_id?: string | null
-          google_tag_manager_id?: string | null
           hrb_number?: string | null
           id?: string | null
           invoice_footer_text?: string | null
           invoice_payment_terms_days?: number | null
-          logo_url?: string | null
           maintenance_mode?: boolean | null
           managing_director?: string | null
           meta_description?: string | null
           meta_keywords?: string | null
           meta_title?: string | null
-          min_bid_increment_percent?: number | null
-          primary_color?: string | null
-          reserve_price_required?: boolean | null
-          secondary_color?: string | null
           site_description?: string | null
           site_name?: string | null
           site_tagline?: string | null
           sitemap_enabled?: boolean | null
-          soft_close_extension_minutes?: number | null
           support_phone?: string | null
           tax_number?: string | null
           tracking_config?: Json | null
-          tuv_badge_url?: string | null
           updated_at?: string | null
           ust_id?: string | null
           whatsapp_number?: string | null
@@ -7125,19 +4523,10 @@ export type Database = {
       }
     }
     Functions: {
-      accept_kaufchance_offer_atomic: {
-        Args: {
-          p_expected_auction_status: Database["public"]["Enums"]["auction_status"]
-          p_offer_id: string
-          p_user_id: string
-        }
-        Returns: Json
-      }
       admin_add_email_suppression: {
         Args: { p_email: string; p_notes?: string; p_reason?: string }
         Returns: boolean
       }
-      admin_delete_bid: { Args: { p_bid_id: string }; Returns: Json }
       admin_get_cron_jobs_health: {
         Args: { p_hours?: number }
         Returns: {
@@ -7200,35 +4589,9 @@ export type Database = {
           timed_out: boolean
         }[]
       }
-      admin_search_listings: {
-        Args: { search_term?: string }
-        Returns: {
-          created_at: string
-          listing_id: string
-          listing_number: string
-          manufacturer: string
-          model: string
-          seller_email: string
-          seller_name: string
-          status: string
-          year: number
-        }[]
-      }
       approve_dealer_application: {
         Args: { application_id_param: string }
         Returns: undefined
-      }
-      bing_oauth_release_lock: { Args: { p_id: string }; Returns: undefined }
-      bing_oauth_try_acquire_lock: { Args: { p_id: string }; Returns: boolean }
-      calculate_commission: {
-        Args: { dealer_id_param?: string; sale_amount: number }
-        Returns: {
-          base_rate: number
-          commission_amount: number
-          final_rate: number
-          tier_id: string
-          volume_discount: number
-        }[]
       }
       calculate_lead_commission_cents: {
         Args: { p_order_value_cents: number }
@@ -7241,19 +4604,6 @@ export type Database = {
         }
         Returns: number
       }
-      check_search_criteria_match: {
-        Args: { criteria: Json; motorhome_record: Record<string, unknown> }
-        Returns: boolean
-      }
-      claim_google_review_batch: {
-        Args: { p_limit?: number }
-        Returns: {
-          email: string
-          id: string
-          recipient_name: string
-          unsubscribe_token: string
-        }[]
-      }
       clean_old_analytics_data: {
         Args: { retention_days?: number }
         Returns: number
@@ -7262,47 +4612,6 @@ export type Database = {
       cleanup_expired_sessions: { Args: never; Returns: number }
       cleanup_old_error_logs: { Args: never; Returns: undefined }
       cleanup_old_notifications: { Args: never; Returns: undefined }
-      compute_random_starting_bid: {
-        Args: { p_reserve_price: number }
-        Returns: number
-      }
-      create_auction_invoice: {
-        Args: { auction_id_param: string; dealer_id_param: string }
-        Returns: string
-      }
-      create_instant_buy_invoice: {
-        Args: {
-          auction_id_param: string
-          dealer_id_param: string
-          sale_price_param: number
-        }
-        Returns: string
-      }
-      create_seller_penalty_invoice: {
-        Args: {
-          auction_id_param?: string
-          motorhome_id_param?: string
-          notes_param?: string
-          penalty_reason_param?: string
-          seller_id_param: string
-        }
-        Returns: string
-      }
-      create_wizard_session: {
-        Args: {
-          p_anonymous_id: string
-          p_customer_email?: string
-          p_customer_name?: string
-          p_customer_phone?: string
-          p_total_steps?: number
-          p_user_id?: string
-        }
-        Returns: string
-      }
-      enqueue_google_review_for_email: {
-        Args: { p_email: string }
-        Returns: Json
-      }
       ensure_profile_exists: {
         Args: {
           p_email: string
@@ -7313,136 +4622,8 @@ export type Database = {
         }
         Returns: undefined
       }
-      find_wizard_session_by_anonymous_id: {
-        Args: { p_anonymous_id: string }
-        Returns: {
-          admin_called_at: string | null
-          admin_estimated_value: number | null
-          admin_notes: string | null
-          anonymous_id: string | null
-          completed_at: string | null
-          created_at: string | null
-          current_step: number
-          customer_email: string | null
-          customer_name: string | null
-          customer_phone: string | null
-          disposition: string | null
-          done_email_count: number | null
-          done_email_last_sent: string | null
-          followup_email_sent_at: string | null
-          form_data: Json
-          gbraid: string | null
-          gclid: string | null
-          id: string
-          is_viewed: boolean
-          kitchen_summary: string | null
-          last_activity_at: string | null
-          max_step_reached: number
-          msclkid: string | null
-          no_answer_email_count: number | null
-          no_answer_email_last_sent: string | null
-          resume_email_sent_at: string | null
-          resume_token: string
-          status: string
-          step_name: string | null
-          total_steps: number
-          updated_at: string | null
-          user_id: string | null
-          wbraid: string | null
-          wrong_number_email_count: number | null
-          wrong_number_email_last_sent: string | null
-        }[]
-        SetofOptions: {
-          from: "*"
-          to: "wizard_sessions"
-          isOneToOne: false
-          isSetofReturn: true
-        }
-      }
-      find_wizard_session_by_resume_token: {
-        Args: { p_resume_token: string }
-        Returns: {
-          admin_called_at: string | null
-          admin_estimated_value: number | null
-          admin_notes: string | null
-          anonymous_id: string | null
-          completed_at: string | null
-          created_at: string | null
-          current_step: number
-          customer_email: string | null
-          customer_name: string | null
-          customer_phone: string | null
-          disposition: string | null
-          done_email_count: number | null
-          done_email_last_sent: string | null
-          followup_email_sent_at: string | null
-          form_data: Json
-          gbraid: string | null
-          gclid: string | null
-          id: string
-          is_viewed: boolean
-          kitchen_summary: string | null
-          last_activity_at: string | null
-          max_step_reached: number
-          msclkid: string | null
-          no_answer_email_count: number | null
-          no_answer_email_last_sent: string | null
-          resume_email_sent_at: string | null
-          resume_token: string
-          status: string
-          step_name: string | null
-          total_steps: number
-          updated_at: string | null
-          user_id: string | null
-          wbraid: string | null
-          wrong_number_email_count: number | null
-          wrong_number_email_last_sent: string | null
-        }[]
-        SetofOptions: {
-          from: "*"
-          to: "wizard_sessions"
-          isOneToOne: false
-          isSetofReturn: true
-        }
-      }
-      generate_contract_number: { Args: never; Returns: string }
       generate_customer_number: { Args: never; Returns: string }
       generate_invoice_number: { Args: never; Returns: string }
-      generate_listing_number: { Args: never; Returns: string }
-      generate_release_pin: { Args: never; Returns: string }
-      generate_sepa_reference: { Args: never; Returns: string }
-      get_auction_marketing_anchors: {
-        Args: { p_motorhome_id: string }
-        Returns: {
-          auction_id: string
-          seller_initial_instant_price: number
-          seller_initial_reserve: number
-        }[]
-      }
-      get_auction_owner_meta: {
-        Args: { p_auction_id: string }
-        Returns: {
-          agb_version_at_start: string
-          auction_id: string
-          auto_relist: boolean
-          dynamic_pricing: boolean
-          marketing_phase_max_until: string
-          seller_initial_instant_price: number
-          seller_initial_reserve: number
-        }[]
-      }
-      get_auctions_owner_meta_bulk: {
-        Args: { p_auction_ids: string[] }
-        Returns: {
-          agb_version_at_start: string
-          auction_id: string
-          auto_relist: boolean
-          dynamic_pricing: boolean
-          marketing_phase_max_until: string
-          seller_initial_instant_price: number
-          seller_initial_reserve: number
-        }[]
-      }
       get_current_agb_version: { Args: never; Returns: string }
       get_dealer_tax_info: {
         Args: { p_dealer_id: string }
@@ -7452,24 +4633,11 @@ export type Database = {
           tax_rate: number
         }[]
       }
-      get_google_review_stats: { Args: never; Returns: Json }
       get_primary_role: {
         Args: { user_id_param: string }
         Returns: Database["public"]["Enums"]["app_role"]
       }
-      get_public_platform_stats: { Args: never; Returns: Json }
       get_public_site_settings: { Args: never; Returns: Json }
-      get_request_anonymous_id: { Args: never; Returns: string }
-      get_vapid_keys: { Args: never; Returns: Json }
-      handle_autobid_atomic: {
-        Args: {
-          p_auction_id: string
-          p_min_increment?: number
-          p_new_bid_amount: number
-          p_new_bidder_id: string
-        }
-        Returns: Json
-      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
@@ -7477,7 +4645,6 @@ export type Database = {
         }
         Returns: boolean
       }
-      hash_review_ip: { Args: { p_ip: string }; Returns: string }
       kw_admin_ai_stats: { Args: { p_days?: number }; Returns: Json }
       kw_admin_decide_complaint: {
         Args: { p_accept: boolean; p_complaint_id: string; p_note?: string }
@@ -7846,7 +5013,6 @@ export type Database = {
         Args: { dealer_id_param: string }
         Returns: boolean
       }
-      link_wizard_sessions_to_confirmed_user: { Args: never; Returns: number }
       log_audit_event: {
         Args: {
           p_action: string
@@ -7893,25 +5059,6 @@ export type Database = {
         Args: { p_user_id: string }
         Returns: undefined
       }
-      mark_google_review_delivered: {
-        Args: { p_email: string; p_resend_id?: string }
-        Returns: boolean
-      }
-      mark_google_review_failed: {
-        Args: { p_error: string; p_id: string; p_status?: string }
-        Returns: boolean
-      }
-      place_bid_atomic: {
-        Args: {
-          p_auction_id: string
-          p_bid_amount: number
-          p_bidder_id: string
-          p_is_autobid?: boolean
-          p_max_autobid_amount?: number
-          p_min_increment?: number
-        }
-        Returns: Json
-      }
       planner_rate_limit_increment: {
         Args: { p_key: string; p_limit: number; p_window_seconds: number }
         Returns: {
@@ -7923,22 +5070,6 @@ export type Database = {
       planner_rate_limits_cleanup: {
         Args: { p_older_than_hours?: number }
         Returns: number
-      }
-      process_approved_claim: {
-        Args: { claim_id_param: string }
-        Returns: undefined
-      }
-      process_google_review_unsubscribe: {
-        Args: { p_token: string }
-        Returns: Json
-      }
-      process_search_alerts_for_kitchen: {
-        Args: { motorhome_id_param: string }
-        Returns: number
-      }
-      reactivate_wizard_session_by_resume_token: {
-        Args: { p_resume_token: string }
-        Returns: string
       }
       reapply_dealer_application: {
         Args: { application_id_param: string }
@@ -7958,62 +5089,8 @@ export type Database = {
         Args: { dealer_id_param: string; reason?: string }
         Returns: boolean
       }
-      seller_archive_listing: {
-        Args: { p_motorhome_id: string }
-        Returns: Json
-      }
-      seller_restart_listing: {
-        Args: {
-          p_motorhome_id: string
-          p_new_instant?: number
-          p_new_reserve?: number
-        }
-        Returns: Json
-      }
-      seller_unarchive_listing: {
-        Args: { p_motorhome_id: string }
-        Returns: Json
-      }
-      toggle_auto_relist: {
-        Args: { p_auction_id: string; p_value: boolean }
-        Returns: boolean
-      }
-      toggle_dynamic_pricing: {
-        Args: { p_auction_id: string; p_value: boolean }
-        Returns: boolean
-      }
-      track_google_review_click: { Args: { p_token: string }; Returns: boolean }
       try_acquire_cron_lock: {
         Args: { p_key: string; p_ttl_minutes?: number }
-        Returns: boolean
-      }
-      update_dealer_level: { Args: { p_dealer_id: string }; Returns: undefined }
-      update_dealer_rating_summary: {
-        Args: { dealer_id_param: string }
-        Returns: undefined
-      }
-      update_kitchen_damage_status: {
-        Args: { motorhome_id_param: string }
-        Returns: undefined
-      }
-      update_listing_prices_in_draft: {
-        Args: {
-          p_motorhome_id: string
-          p_new_instant: number
-          p_new_reserve: number
-        }
-        Returns: Json
-      }
-      update_wizard_session_by_anonymous_id: {
-        Args: { p_anonymous_id: string; p_session_id: string; p_updates: Json }
-        Returns: undefined
-      }
-      verify_wizard_session_ownership: {
-        Args: {
-          p_anonymous_id?: string
-          p_session_id: string
-          p_user_id?: string
-        }
         Returns: boolean
       }
       webhook_add_email_suppression: {
@@ -8025,55 +5102,9 @@ export type Database = {
         }
         Returns: boolean
       }
-      webhook_mark_google_review_delivered: {
-        Args: { p_resend_message_id: string }
-        Returns: boolean
-      }
     }
     Enums: {
-      air_conditioning_type: "Keine" | "Fahrerhaus" | "Wohnraum" | "Beides"
       app_role: "admin" | "dealer" | "seller" | "consumer"
-      auction_status:
-        | "draft"
-        | "active"
-        | "ended"
-        | "sold"
-        | "cancelled"
-        | "kaufchance"
-      emission_class:
-        | "Euro 3"
-        | "Euro 4"
-        | "Euro 5"
-        | "Euro 6"
-        | "Euro 6c"
-        | "Euro 6d-TEMP"
-        | "Euro 6d"
-      fuel_type: "Diesel" | "Benzin" | "Elektro" | "Hybrid"
-      heating_type: "Gas" | "Diesel" | "Elektrisch" | "Kombiniert"
-      kitchen_body_type:
-        | "Teilintegriert"
-        | "Alkoven"
-        | "Vollintegriert"
-        | "Kastenwagen"
-        | "Campingbus"
-        | "Wohnwagen"
-        | "Faltcaravan"
-        | "Mobilheim"
-        | "L-Form"
-        | "U-Form"
-        | "Kochinsel"
-        | "Einzelzeile"
-        | "Zweizeilig"
-        | "G-Form"
-      kitchen_condition:
-        | "Neuwertig"
-        | "Sehr gut"
-        | "Gut"
-        | "Befriedigend"
-        | "Reparaturbedürftig"
-        | "Sehr gepflegt"
-        | "Gepflegt"
-        | "Gebrauchsspuren"
       kitchen_form_enum: "zeile" | "l" | "u" | "insel" | "parallel" | "g"
       lead_funnel_type: "a" | "b" | "traumkueche"
       lead_status:
@@ -8090,10 +5121,7 @@ export type Database = {
         | "closed_lost"
         | "disputed"
       lead_tier: "standard" | "qualified" | "premium" | "hot"
-      refrigerator_type: "Kompressor" | "Absorber" | "Thermoelektrisch"
-      sale_channel: "instant_price" | "auction" | "station"
       style_segment_enum: "budget" | "mittel" | "premium" | "luxus"
-      transmission_type: "Schaltgetriebe" | "Automatik"
       worktop_tier_enum: "basic" | "mid" | "premium"
     }
     CompositeTypes: {
@@ -8222,53 +5250,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
-      air_conditioning_type: ["Keine", "Fahrerhaus", "Wohnraum", "Beides"],
       app_role: ["admin", "dealer", "seller", "consumer"],
-      auction_status: [
-        "draft",
-        "active",
-        "ended",
-        "sold",
-        "cancelled",
-        "kaufchance",
-      ],
-      emission_class: [
-        "Euro 3",
-        "Euro 4",
-        "Euro 5",
-        "Euro 6",
-        "Euro 6c",
-        "Euro 6d-TEMP",
-        "Euro 6d",
-      ],
-      fuel_type: ["Diesel", "Benzin", "Elektro", "Hybrid"],
-      heating_type: ["Gas", "Diesel", "Elektrisch", "Kombiniert"],
-      kitchen_body_type: [
-        "Teilintegriert",
-        "Alkoven",
-        "Vollintegriert",
-        "Kastenwagen",
-        "Campingbus",
-        "Wohnwagen",
-        "Faltcaravan",
-        "Mobilheim",
-        "L-Form",
-        "U-Form",
-        "Kochinsel",
-        "Einzelzeile",
-        "Zweizeilig",
-        "G-Form",
-      ],
-      kitchen_condition: [
-        "Neuwertig",
-        "Sehr gut",
-        "Gut",
-        "Befriedigend",
-        "Reparaturbedürftig",
-        "Sehr gepflegt",
-        "Gepflegt",
-        "Gebrauchsspuren",
-      ],
       kitchen_form_enum: ["zeile", "l", "u", "insel", "parallel", "g"],
       lead_funnel_type: ["a", "b", "traumkueche"],
       lead_status: [
@@ -8286,10 +5268,7 @@ export const Constants = {
         "disputed",
       ],
       lead_tier: ["standard", "qualified", "premium", "hot"],
-      refrigerator_type: ["Kompressor", "Absorber", "Thermoelektrisch"],
-      sale_channel: ["instant_price", "auction", "station"],
       style_segment_enum: ["budget", "mittel", "premium", "luxus"],
-      transmission_type: ["Schaltgetriebe", "Automatik"],
       worktop_tier_enum: ["basic", "mid", "premium"],
     },
   },

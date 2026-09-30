@@ -6,7 +6,7 @@
 - Supabase project ID: `gzqayoalwtmypndrmqes`
 - Stack: React 18 + TypeScript + Vite 5 + Tailwind + shadcn/ui + Supabase
 - **Primary product:** Funnels A/B/C + Küchenrechner + dealer marketplace. Do NOT implement new Wohnmobil/Caravan features. User-facing copy must say Küche, never Fahrzeug/Wohnmobil.
-- Caravan frontend code and Edge Functions were removed or tombstoned on 2026-09-28. The caravan tables (`auctions`, `bids`, `kitchens`, `kaufchance_invitations`, `post_auction_offers`, `appointments`, `wizard_sessions`, …) still exist in the DB as unused legacy — do not build on them.
+- Caravan frontend code and Edge Functions were removed or tombstoned on 2026-09-28; the caravan tables, functions and types were dropped on 2026-09-30 (`20260930120643_kw_drop_caravan_legacy`). Not caravan leftovers: the internal names of the KüchenWert tender (`lead_auctions`, `lead_bids`, `lead_status` `in_auction`) and the role `seller` (see Dealer System).
 
 ## Do
 - Use React functional components with hooks
@@ -193,8 +193,7 @@ Before every commit:
 6. SessionExpiredDialog (last fallback: prompt user to login)
 
 ### Dealer System
-- Roles: admin, dealer, seller (enum `app_role`)
-- Dealer levels: Bronze → Silber → Gold → Platin (points-based)
+- Roles (enum `app_role`): admin, dealer (Küchenstudio), seller (default role of consumers; historical name, kept because about 150 policies and `has_role` use the enum)
 - `profiles.role` does NOT exist – ALWAYS check roles via `user_roles` table
 - Dealer approval syncs company data to profiles via `approve_dealer_application()` RPC
 
@@ -211,7 +210,7 @@ Before every commit:
 ### Invoices & Tax
 - Studio fees: contact unlock (`lead_pricing_rules`) and commission tiers (`lead_commission_tiers`), see "Marketplace, Orders & Billing"
 - 19% MwSt for DE, 0% reverse charge for EU
-- The caravan RPC `calculate_commission(sale_amount, dealer_id)` is legacy and has no caller
+- `invoices.invoice_type` allows only `lead_purchase` and `lead_commission`; the only writer is `kw_create_market_invoice`
 
 ## Critical Rules (Learned from Production Bugs)
 
@@ -221,7 +220,7 @@ Before every commit:
 
 ### Column-Level Grants
 - Tables with column-level grants reject `select('*')` (directly or as relationship embed) with **`42501 permission denied`**, including `select('*', { count: 'exact', head: true })`. Select explicit columns; for counts select a single granted column (`select("id", { count: "exact", head: true })`).
-- Legacy example: `public.auctions` grants each public column individually (Migrations `20260420260000` + `20260420290100`). The frontend no longer queries it; the former helper `AUCTION_PUBLIC_COLUMNS` was removed with the caravan code.
+- Current column grants are UPDATE-only (`kw_ux_alerts`, `kw_ai_lab_renders`: admins may change the status fields only); no table restricts SELECT per column. A new per-column SELECT grant brings back the `select('*')` failure above.
 
 ### Edge Functions
 - `verify_jwt` matrix:
@@ -304,7 +303,8 @@ Note: Supabase serves storage via its own Cloudflare with Bot Management (`Set-C
 
 ## Known Remaining Items
 - Blog and Ratgeber: pages exist, 0 articles; both overview pages are `noindex` until content exists.
-- Caravan tables, functions, triggers and buckets still exist in the DB; drop them by migration once nothing accesses them anymore.
+- Empty legacy storage buckets `kitchen-photos`, `branding`, `purchase-contracts`, `handover-protocols` and `planner-renders` (no policies left): delete them in the Supabase dashboard (Storage); SQL deletes are blocked by `storage.protect_delete`.
+- Extension `btree_gist` has no user since the caravan tables are gone (advisor „extension in public“): check and disable it in the dashboard (Database → Extensions).
 - 60 tombstoned Edge Functions: delete in the Supabase dashboard after an observation period, then remove the directories and `config.toml` entries.
 - Funnel A `kontakt` is 1–8 px too tall at 375 × 548 once Fira Sans is loaded: the last line of the legal notice sits under the bottom bar and `funnel-fit` fails there (also against production). The notice must stay visible; win the space elsewhere (e.g. the Turnstile container between the checkboxes and the notice adds a `space-y` gap even while it is empty).
 
@@ -316,6 +316,7 @@ Note: Supabase serves storage via its own Cloudflare with Bot Management (`Set-C
 - `_shared`: auction, appointment and wizard mail templates (`email-templates/`, `email-components.tsx`), handover protocol, contract notification, Bing/Google sale conversions, quiet hours, marketing config, `invoke-with-retry`; caravan helpers in `email-builder.ts`; seller penalties in invoices, PDF and dunning.
 - Frontend: SPA routes and pages for old caravan URLs (nginx 301s them), branding/TÜV/OpenAI settings, dealer levels, SEPA display, dealer ratings, wizard counters in the admin dashboard, server-side tracking settings of `track-conversion`.
 - Repo: Cloudflare worker `worker/` and its workflow, one-off migration scripts, `supabase/seed-kuechen/`, Bing/Microsoft Ads guides, `.openhands/`.
+- Database (`20260930120643_kw_drop_caravan_legacy`): 39 caravan tables, 74 functions, 10 enums, 2 sequences, caravan columns on `invoices`, `dealer_notifications`, `site_settings` (incl. unused branding, OpenAI and old tracking-ID columns) and `user_notification_preferences`, caravan values in check constraints, storage policies of the legacy buckets. Security advisor findings 57 → 40, performance 834 → 452.
 
 ## Google Tracking
 - Custom analytics: `analytics_sessions`, `analytics_page_views`, `analytics_events`

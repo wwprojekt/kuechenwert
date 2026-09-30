@@ -39,6 +39,8 @@ export interface PlannerSessionState {
   submitted: boolean;
   unlocked?: boolean;
   offers_requested?: boolean;
+  /** Zum Lead ist eine Telefonnummer gespeichert; fehlt bei älteren Function-Versionen. */
+  has_phone?: boolean;
   config: Partial<PlannerConfig>;
   room: Partial<RoomInput>;
   estimate: KitchenEstimate | null;
@@ -67,6 +69,7 @@ export interface RenderStatus {
 
 export interface SubmitPayload {
   session_token: string;
+  /** phone leer, wenn weder Angebote noch ein Beratungsanruf gewünscht sind. */
   contact: { first_name: string; last_name: string; email: string; phone: string; postal_code: string; city?: string };
   /** „Ja, auch Angebote“: Ausschreibung für Studios; sonst nur Visualisierung und Preis. */
   request_offers: boolean;
@@ -95,6 +98,7 @@ export interface SubmitResult {
   already_submitted?: boolean;
   tender_status: string | null;
   offers_requested?: boolean;
+  has_phone?: boolean;
   project_token: string;
   project_url: string;
   estimate: { min: number; max: number; mid: number };
@@ -229,13 +233,14 @@ export function submitProject(payload: SubmitPayload) {
   return callFunction<SubmitResult>(FN, { action: "submit", ...payload });
 }
 
-/** Nur Visualisierung gewählt: Angebote nachträglich anfordern. */
-export function requestOffers(input: { sessionToken: string; timeframeMonths: number | null; contactByPhone: boolean }) {
+/** Nur Visualisierung gewählt: Angebote nachträglich anfordern (phone, falls noch keine gespeichert ist). */
+export function requestOffers(input: { sessionToken: string; timeframeMonths: number | null; contactByPhone: boolean; phone?: string }) {
   return callFunction<{ ok: true; offers_requested: true; tender_status: string }>(FN, {
     action: "request-offers",
     session_token: input.sessionToken,
     consent_share: true,
     timeframe_months: input.timeframeMonths,
     contact_by_phone: input.contactByPhone,
+    ...(input.phone ? { phone: input.phone } : {}),
   });
 }

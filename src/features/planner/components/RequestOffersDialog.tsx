@@ -10,30 +10,49 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
-import { ConsentCheckbox } from "@/features/funnel-a/components/ContactFields";
-import { OFFERS_CONSENT_TEXT, TIMEFRAMES } from "../steps/LeadSteps";
+import { ConsentCheckbox, TextField } from "@/features/funnel-a/components/ContactFields";
+import { OFFERS_CONSENT_TEXT, PHONE_ERROR, TIMEFRAMES, isValidPhone } from "../steps/LeadSteps";
 
 export interface OffersRequest {
   timeframeMonths: number | null;
   contactByPhone: boolean;
+  /** Nur, wenn zum Projekt noch keine Telefonnummer gespeichert ist. */
+  phone?: string;
 }
 
-/** Nachträglich Angebote anfordern, mit demselben Einwilligungstext wie im Funnel. */
+/**
+ * Nachträglich Angebote anfordern, mit demselben Einwilligungstext wie im
+ * Funnel. Angebote gibt es nur mit Telefonnummer: needsPhone fragt sie ab,
+ * wenn beim Abschluss keine angegeben wurde.
+ */
 export function RequestOffersDialog({
   open,
   onOpenChange,
   busy,
   error,
+  needsPhone = false,
   onConfirm,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   busy: boolean;
   error: string | null;
+  needsPhone?: boolean;
   onConfirm: (request: OffersRequest) => void;
 }) {
   const [timeframe, setTimeframe] = useState("");
   const [call, setCall] = useState(false);
+  const [phone, setPhone] = useState("");
+  const [phoneError, setPhoneError] = useState<string | undefined>();
+
+  const confirm = () => {
+    if (needsPhone && !isValidPhone(phone)) {
+      setPhoneError(PHONE_ERROR);
+      document.getElementById("offers-phone")?.focus();
+      return;
+    }
+    onConfirm({ timeframeMonths: Number(timeframe) || null, contactByPhone: call, ...(needsPhone ? { phone: phone.trim() } : {}) });
+  };
 
   return (
     <AlertDialog open={open} onOpenChange={(next) => !busy && onOpenChange(next)}>
@@ -45,6 +64,23 @@ export function RequestOffersDialog({
           </AlertDialogDescription>
         </AlertDialogHeader>
         <div className="space-y-3">
+          {needsPhone && (
+            <TextField
+              id="offers-phone"
+              label="Telefon"
+              type="tel"
+              required
+              autoComplete="tel"
+              maxLength={40}
+              hint="Für Rückfragen der Studios zu Ihrem Angebot"
+              value={phone}
+              onChange={(e) => {
+                setPhone(e.target.value);
+                setPhoneError(undefined);
+              }}
+              error={phoneError}
+            />
+          )}
           <label htmlFor="offers-timeframe" className="block text-sm font-medium">
             Wann soll die Küche kommen? <span className="font-normal text-muted-foreground">(optional)</span>
           </label>
@@ -73,7 +109,7 @@ export function RequestOffersDialog({
         </div>
         <AlertDialogFooter className="gap-2">
           <AlertDialogCancel disabled={busy}>Abbrechen</AlertDialogCancel>
-          <Button onClick={() => onConfirm({ timeframeMonths: Number(timeframe) || null, contactByPhone: call })} disabled={busy}>
+          <Button onClick={confirm} disabled={busy}>
             {busy && <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden="true" />}
             Angebote anfordern
           </Button>

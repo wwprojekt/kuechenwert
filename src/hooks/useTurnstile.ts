@@ -107,6 +107,8 @@ export function useTurnstile(): TurnstileState {
       try {
         widgetIdRef.current = api.render(container, {
           sitekey: SITE_KEY,
+          // Sichtbar nur, wenn Cloudflare eine Eingabe braucht; sonst verdrängt die Box den Rechtshinweis unter die mobile Leiste.
+          appearance: "interaction-only",
           callback: (newToken: string) => {
             tokenRef.current = newToken;
             setToken(newToken);

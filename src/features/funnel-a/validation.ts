@@ -33,7 +33,7 @@ export interface ValidContact {
   first_name: string;
   last_name: string;
   email: string;
-  phone: string | null;
+  phone: string;
   contact_by_phone: boolean;
   marketing: boolean;
 }
@@ -94,10 +94,11 @@ const contactSchema = z.object({
   phone: z
     .string()
     .trim()
+    .min(1, "Bitte geben Sie Ihre Telefonnummer an – die Studios brauchen sie für Rückfragen zu Ihrem Angebot.")
     .max(PHONE_MAX, "Diese Telefonnummer ist zu lang.")
     .refine(
-      (value) => value === "" || (PHONE_PATTERN.test(value) && countDigits(value) >= 6 && countDigits(value) <= 16),
-      "Bitte geben Sie eine gültige Telefonnummer mit Vorwahl an, z. B. 0511 123456 – oder lassen Sie das Feld leer.",
+      (value) => PHONE_PATTERN.test(value) && countDigits(value) >= 6 && countDigits(value) <= 16,
+      "Bitte geben Sie eine gültige Telefonnummer mit Vorwahl an, z. B. 0511 123456.",
     ),
   contact_by_phone: z.boolean(),
   marketing: z.boolean(),
@@ -120,7 +121,6 @@ export function validateContact(contact: FunnelAContact): ContactValidation {
     return { ok: false, errors };
   }
   const v = result.data;
-  const phone = v.phone === "" ? null : v.phone;
   return {
     ok: true,
     value: {
@@ -128,8 +128,8 @@ export function validateContact(contact: FunnelAContact): ContactValidation {
       first_name: v.first_name,
       last_name: v.last_name,
       email: v.email,
-      phone,
-      contact_by_phone: phone !== null && v.contact_by_phone,
+      phone: v.phone,
+      contact_by_phone: v.contact_by_phone,
       marketing: v.marketing,
     },
   };

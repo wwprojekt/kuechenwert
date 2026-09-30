@@ -9,7 +9,7 @@
  */
 
 import type { SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2.100.1";
-import { HttpError } from "./kw-http.ts";
+import { HttpError, normalizePhone } from "./kw-http.ts";
 import { sanitizeConfig, sanitizeRoom, type PlannerConfig, type RoomInput } from "./kitchen-catalog.ts";
 import { estimateKitchenPrice, type KitchenEstimate } from "./kitchen-pricing.ts";
 import { sanitizeProvenance, type PlannerProvenance } from "./planner-provenance.ts";
@@ -110,8 +110,9 @@ export async function hasOpenTender(sb: SupabaseClient, leadId: string): Promise
 /**
  * Nachträglich Angebote anfordern (Lead ohne Ausschreibung, Funnel C):
  * Einwilligung protokollieren, Ausschreibung eröffnen, Kunde und Team per
- * Outbox (project_created) informieren. Idempotent: Mit offener Ausschreibung
- * passiert nichts.
+ * Outbox (project_created) informieren. Ohne gespeicherte Telefonnummer muss
+ * phone mitkommen: Die Studios brauchen sie für das Angebot. Idempotent: Mit
+ * offener Ausschreibung passiert nichts.
  */
 export async function requestPlannerOffers(
   sb: SupabaseClient,
@@ -119,12 +120,13 @@ export async function requestPlannerOffers(
     leadId: string;
     timeframeMonths: number | null;
     contactByPhone: boolean;
+    phone?: unknown;
     meta: ConsentMeta;
   },
 ): Promise<{ tenderStatus: string; alreadyOpen: boolean }> {
   const { data: lead, error: leadErr } = await sb
     .from("leads")
-    .select("id, funnel_type, postal_code, housing_type, purchase_reason, timeframe_months, bot_check, consent_call, funnel_answers, user_id")
+    .select("id, funnel_type, postal_code, housing_type, purchase_reason, timeframe_months, bot_check, consent_call, funnel_answers, user_id, phone")
     .eq("id", input.leadId)
     .maybeSingle();
   if (leadErr) throw leadErr;
@@ -135,6 +137,11 @@ export async function requestPlannerOffers(
   if (await hasOpenTender(sb, lead.id)) {
     const { data: t } = await sb.from("lead_auctions").select("status").eq("lead_id", lead.id).order("created_at", { ascending: false }).limit(1).maybeSingle();
     return { tenderStatus: (t?.status as string | undefined) ?? "draft", alreadyOpen: true };
+  }
+  const storedPhone = typeof lead.phone === "string" && lead.phone.trim() !== "";
+  const newPhone = storedPhone ? null : normalizePhone(input.phone);
+  if (!storedPhone && !newPhone) {
+    throw new HttpError(422, "Bitte eine Telefonnummer angeben – die Küchenstudios brauchen sie für Ihr Angebot.", "phone");
   }
 
   const { data: session, error: sessionErr } = await sb
@@ -176,6 +183,7 @@ export async function requestPlannerOffers(
     .update({
       funnel_answers: { ...answers, offers_requested: true, offers_requested_at: new Date().toISOString() },
       ...(timeframe !== lead.timeframe_months ? { timeframe_months: timeframe } : {}),
+      ...(newPhone ? { phone: newPhone } : {}),
       ...(input.contactByPhone ? { consent_call: true } : {}),
     })
     .eq("id", lead.id);

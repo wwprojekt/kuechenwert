@@ -35,6 +35,7 @@ function controller(step: PlannerStep, submitted: boolean): Controller {
     housing: "",
     submitted,
     offersRequested: false,
+    hasPhone: false,
     answered: null,
   };
   const flow = { unlocked: submitted, wantsOffers: true };

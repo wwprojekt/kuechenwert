@@ -9,8 +9,9 @@ import { captureUtmParams } from "@/lib/utm";
  *
  * Form, Maße, Foto und Ausstattung je auf einem Bildschirm → „Küche
  * visualisieren“ startet die KI im Hintergrund → Angebote gewünscht?, Name,
- * E-Mail und Telefon → erst dann Küche und Preisschätzung (jede
- * Visualisierung ist ein Lead; der Server gibt Bild und Preis vorher nicht heraus).
+ * E-Mail (mit Angeboten auch Telefon) → erst dann Küche und Preisschätzung
+ * (jede Visualisierung ist ein Lead; der Server gibt Bild und Preis vorher
+ * nicht heraus).
  */
 export default function FunnelC() {
   const controller = usePlannerFunnel();

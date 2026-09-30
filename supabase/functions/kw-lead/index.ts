@@ -116,12 +116,11 @@ async function actionSubmit(req: Request, sb: SupabaseClient, body: Record<strin
   const firstName = cleanText(contact.first_name, 80);
   const lastName = cleanText(contact.last_name, 80);
   const email = typeof contact.email === "string" ? contact.email.trim().toLowerCase() : "";
-  const phoneInput = typeof contact.phone === "string" ? contact.phone.trim() : "";
-  const phone = phoneInput ? normalizePhone(phoneInput) : null;
+  const phone = normalizePhone(contact.phone);
   if (!firstName || !lastName) throw new HttpError(422, "Bitte Vor- und Nachnamen angeben.", "name");
   if (!isEmail(email)) throw new HttpError(422, "Bitte eine gültige E-Mail-Adresse angeben.", "email");
-  if (phoneInput && !phone) {
-    throw new HttpError(422, "Bitte eine gültige Telefonnummer angeben oder das Feld leer lassen.", "phone");
+  if (!phone) {
+    throw new HttpError(422, "Bitte eine gültige Telefonnummer angeben – die Studios brauchen sie für Rückfragen zu Ihrem Angebot.", "phone");
   }
   if (consents.share_with_studios !== true) {
     throw new HttpError(422, "Bitte stimmen Sie der Weitergabe an geprüfte Küchenstudios zu.", "consent");
@@ -139,14 +138,14 @@ async function actionSubmit(req: Request, sb: SupabaseClient, body: Record<strin
   const { data: tierRow } = await sb.rpc("kw_lead_tier_score", {
     p_has_photo: false,
     p_has_dimensions: false,
-    p_has_phone: !!phone,
+    p_has_phone: true,
     p_timeframe_months: months,
     p_value_eur: budget ?? estimate.mid,
   });
   const tier = (Array.isArray(tierRow) ? tierRow[0] : tierRow) ?? { tier: "standard", score: 0 };
   const userId = await userIdFromAuthHeader(sb, req);
   const userAgent = req.headers.get("user-agent")?.slice(0, 500) ?? null;
-  const consentCall = !!phone && consents.contact_by_phone === true;
+  const consentCall = consents.contact_by_phone === true;
   const consentMarketing = consents.marketing === true;
   const salutation =
     typeof contact.salutation === "string" && SALUTATIONS.has(contact.salutation) ? contact.salutation : null;

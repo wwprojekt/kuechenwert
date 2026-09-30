@@ -29,7 +29,7 @@ import { ceilingIssue, roomWallIssues } from "./estimate-gate";
 import { isPlannerStep, nextStep, plannerProgress, previousStep, stepDef, type PlannerStep } from "./flow";
 import { plannerRenderKey } from "./render-key";
 import { fromSessionRender, usePlanner, useRenderPolling } from "./state";
-import { validateLead, type LeadContact, type LeadErrors } from "./steps/LeadSteps";
+import { phoneNeeded, validateLead, type LeadContact, type LeadErrors } from "./steps/LeadSteps";
 import type { OffersRequest } from "./components/RequestOffersDialog";
 import type { RenderPhase } from "./components/RenderProgress";
 import type { VariantRequest } from "./components/VariantPanel";
@@ -370,7 +370,7 @@ export function usePlannerFunnel() {
   };
 
   const submitName = () => {
-    const errors = validateLead(contact);
+    const errors = validateLead(contact, false);
     const nameErrors = { first_name: errors.first_name, last_name: errors.last_name };
     setLeadErrors(nameErrors);
     if (nameErrors.first_name || nameErrors.last_name) {
@@ -383,7 +383,9 @@ export function usePlannerFunnel() {
 
   const submitLead = async () => {
     telemetry.submitClicked();
-    const errors = validateLead(contact);
+    const wantsOffers = state.offersChoice === "ja";
+    const needsPhone = phoneNeeded(contact, wantsOffers);
+    const errors = validateLead(contact, needsPhone);
     setLeadErrors(errors);
     const failed = Object.keys(errors) as Array<keyof LeadErrors>;
     if (failed.length) {
@@ -392,7 +394,7 @@ export function usePlannerFunnel() {
       else document.getElementById(failed[0]!)?.focus();
       return;
     }
-    const wantsOffers = state.offersChoice === "ja";
+    const phone = needsPhone ? contact.phone.trim() : "";
     setSubmitting(true);
     setSubmitError(null);
     try {
@@ -412,11 +414,11 @@ export function usePlannerFunnel() {
           first_name: contact.first_name.trim(),
           last_name: contact.last_name.trim(),
           email: contact.email.trim(),
-          phone: contact.phone.trim(),
+          phone,
           postal_code: state.postalCode,
         },
         request_offers: wantsOffers,
-        consents: { share_with_studios: wantsOffers, contact_by_phone: contact.contact_by_phone, marketing: false, ai_training: false },
+        consents: { share_with_studios: wantsOffers, contact_by_phone: !!phone && contact.contact_by_phone, marketing: false, ai_training: false },
         active_render_id: activeRender?.status === "success" ? activeRender.id : null,
         timeframe_months: wantsOffers ? Number(state.timeframe) || null : null,
         // Nur mit „Ja, Angebote“ gefragt; ein unberührter Budget-Slider zählt nicht.
@@ -439,7 +441,7 @@ export function usePlannerFunnel() {
             email: contact.email,
             firstName: contact.first_name,
             lastName: contact.last_name,
-            phone: contact.phone,
+            ...(phone ? { phone } : {}),
             postalCode: state.postalCode,
           });
           await trackKitchenFunnelLead("c", generateTransactionId("funnel_c"));
@@ -452,7 +454,7 @@ export function usePlannerFunnel() {
 
       telemetry.submitSucceeded();
       storeProjectToken(res.project_token);
-      planner.markSubmitted(res.offers_requested ?? wantsOffers);
+      planner.markSubmitted(res.offers_requested ?? wantsOffers, res.has_phone ?? !!phone);
       stepRef.current = "ergebnis";
       writeUrl("ergebnis", true);
     } catch (err) {
@@ -471,7 +473,12 @@ export function usePlannerFunnel() {
     setOffersBusy(true);
     setOffersError(null);
     try {
-      await requestOffers({ sessionToken: state.sessionToken, timeframeMonths: request.timeframeMonths, contactByPhone: request.contactByPhone });
+      await requestOffers({
+        sessionToken: state.sessionToken,
+        timeframeMonths: request.timeframeMonths,
+        contactByPhone: request.contactByPhone,
+        phone: request.phone,
+      });
       planner.markOffersRequested();
       setOffersDialog(false);
       toast.success("Geschafft! Studios aus Ihrer Region erstellen jetzt Ihre Angebote.");

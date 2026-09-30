@@ -52,6 +52,8 @@ export interface PlannerState {
   submitted: boolean;
   /** Für diese Planung holen Studios Angebote ein. */
   offersRequested: boolean;
+  /** Zum Lead ist eine Telefonnummer gespeichert (für spätere Angebote nötig). */
+  hasPhone: boolean;
   /**
    * Vom Kunden beantwortete Schritte und eingegebene Wandlängen; alles andere
    * sind Standardwerte. null = unbekannt (Planung aus einer älteren Version).
@@ -80,7 +82,7 @@ type Action =
   | { type: "occasion"; value: string }
   | { type: "housing"; value: string }
   | { type: "hydrate"; state: Partial<PlannerState> }
-  | { type: "submitted"; offersRequested: boolean }
+  | { type: "submitted"; offersRequested: boolean; hasPhone: boolean }
   | { type: "offersRequested" }
   | { type: "reset" };
 
@@ -105,6 +107,7 @@ function initialState(): PlannerState {
     housing: "",
     submitted: false,
     offersRequested: false,
+    hasPhone: false,
     answered: emptyProvenance(),
   };
 }
@@ -191,9 +194,10 @@ function reducer(state: PlannerState, action: Action): PlannerState {
     case "hydrate":
       return { ...state, ...action.state };
     case "submitted":
-      return { ...state, submitted: true, offersRequested: action.offersRequested, step: "ergebnis" };
+      return { ...state, submitted: true, offersRequested: action.offersRequested, hasPhone: action.hasPhone, step: "ergebnis" };
     case "offersRequested":
-      return { ...state, offersRequested: true, offersChoice: "ja" };
+      // Angebote gibt es nur mit Telefonnummer: der Server hat sie jetzt.
+      return { ...state, offersRequested: true, offersChoice: "ja", hasPhone: true };
     case "reset":
       return initialState();
   }
@@ -222,6 +226,7 @@ function readStorage(): Partial<PlannerState> | null {
       housing: HOUSING_IDS.has(String(parsed.housing)) ? String(parsed.housing) : "",
       submitted: parsed.submitted === true,
       offersRequested: parsed.offersRequested === true,
+      hasPhone: parsed.hasPhone === true,
       // Bild-URLs laufen ab und kommen frisch vom Server (erst nach der Kontakterfassung).
       renders: (parsed.renders ?? []).map((r) => ({ ...r, image_url: null })),
     };
@@ -280,7 +285,7 @@ export function usePlanner() {
         if (!session) {
           dispatch({
             type: "hydrate",
-            state: { sessionToken: null, renders: [], photos: [], selectedPhotoPath: null, submitted: false, offersRequested: false },
+            state: { sessionToken: null, renders: [], photos: [], selectedPhotoPath: null, submitted: false, offersRequested: false, hasPhone: false },
           });
           return;
         }
@@ -291,6 +296,7 @@ export function usePlanner() {
             photos: session.photos,
             submitted: session.submitted,
             offersRequested: session.offers_requested === true,
+            ...(typeof session.has_phone === "boolean" ? { hasPhone: session.has_phone } : {}),
           },
         });
         dispatch({ type: "photos", photos: session.photos });
@@ -345,7 +351,7 @@ export function usePlanner() {
       setBudget: (value: number | null) => dispatch({ type: "budget", value }),
       setOccasion: (value: string) => dispatch({ type: "occasion", value }),
       setHousing: (value: string) => dispatch({ type: "housing", value }),
-      markSubmitted: (offersRequested: boolean) => dispatch({ type: "submitted", offersRequested }),
+      markSubmitted: (offersRequested: boolean, hasPhone: boolean) => dispatch({ type: "submitted", offersRequested, hasPhone }),
       markOffersRequested: () => dispatch({ type: "offersRequested" }),
       reset: () => {
         clearPlannerStorage();

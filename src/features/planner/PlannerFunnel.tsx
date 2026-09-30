@@ -290,7 +290,14 @@ export function PlannerFunnel({ c }: { c: Controller }) {
       >
         {content}
       </FunnelFrame>
-      <RequestOffersDialog open={c.offersDialog} onOpenChange={c.setOffersDialog} busy={c.offersBusy} error={c.offersError} onConfirm={actions.confirmOffers} />
+      <RequestOffersDialog
+        open={c.offersDialog}
+        onOpenChange={c.setOffersDialog}
+        busy={c.offersBusy}
+        error={c.offersError}
+        needsPhone={!state.hasPhone}
+        onConfirm={actions.confirmOffers}
+      />
     </>
   );
 }

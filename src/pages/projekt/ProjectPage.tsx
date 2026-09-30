@@ -491,6 +491,7 @@ export function ProjectView({ token }: { token: string }) {
         onOpenChange={setOffersOpen}
         busy={requestOffers.isPending}
         error={requestOffers.error ? errorMessage(requestOffers.error) : null}
+        needsPhone={view.lead.has_phone === false}
         onConfirm={(input) => requestOffers.mutate(input)}
       />
     </PageLayout>

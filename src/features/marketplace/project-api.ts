@@ -157,17 +157,21 @@ export const exportProjectData = (token: string) => callFunction<Record<string, 
 /** Projekt beenden und personenbezogene Daten löschen; `email` bestätigt die Anfrage. */
 export const deleteProjectData = (token: string, email: string) =>
   callFunction<{ ok: true }>(FN, { action: "delete-data", token, email });
-/** KI-Verbesserung erlauben oder widerrufen; ein Widerruf löscht die Trainingskopien sofort. */
-/** Funnel C „nur Visualisierung“: Angebote nachträglich anfordern (gleiche Einwilligung wie im Funnel). */
-export const requestProjectOffers = (token: string, input: { timeframeMonths: number | null; contactByPhone: boolean }) =>
+/**
+ * Funnel C „nur Visualisierung“: Angebote nachträglich anfordern (gleiche
+ * Einwilligung wie im Funnel; phone, falls noch keine gespeichert ist).
+ */
+export const requestProjectOffers = (token: string, input: { timeframeMonths: number | null; contactByPhone: boolean; phone?: string }) =>
   callFunction<ProjectView>(FN, {
     action: "request-offers",
     token,
     consent_share: true,
     timeframe_months: input.timeframeMonths,
     contact_by_phone: input.contactByPhone,
+    ...(input.phone ? { phone: input.phone } : {}),
   });
 
+/** KI-Verbesserung erlauben oder widerrufen; ein Widerruf löscht die Trainingskopien sofort. */
 export const setProjectAiConsent = (token: string, granted: boolean) =>
   callFunction<ProjectView>(FN, { action: "ai-consent", token, granted });
 

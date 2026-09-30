@@ -22,7 +22,7 @@ vi.mock("@/lib/gadsConversionService", () => ({
 vi.mock("@/lib/metaPixelService", () => ({ trackMetaLead: vi.fn() }));
 
 function contact(patch: Partial<FunnelAContact> = {}): FunnelAContact {
-  return { ...emptyContact(), first_name: "Maria", last_name: "Muster", email: "maria@beispiel.de", ...patch };
+  return { ...emptyContact(), first_name: "Maria", last_name: "Muster", email: "maria@beispiel.de", phone: "0511 123456", ...patch };
 }
 
 function valueOf(input: FunnelAContact): ValidContact {
@@ -38,17 +38,17 @@ function errorsOf(input: FunnelAContact) {
 }
 
 const INVALID_EMAIL = "Bitte geben Sie eine gültige E-Mail-Adresse an, z. B. name@beispiel.de.";
-const INVALID_PHONE =
-  "Bitte geben Sie eine gültige Telefonnummer mit Vorwahl an, z. B. 0511 123456 – oder lassen Sie das Feld leer.";
+const INVALID_PHONE = "Bitte geben Sie eine gültige Telefonnummer mit Vorwahl an, z. B. 0511 123456.";
+const MISSING_PHONE = "Bitte geben Sie Ihre Telefonnummer an – die Studios brauchen sie für Rückfragen zu Ihrem Angebot.";
 
 describe("validateContact", () => {
-  it("akzeptiert die Pflichtangaben ohne Anrede und Telefon", () => {
-    expect(valueOf(contact({ first_name: "  Maria ", email: " maria@beispiel.de ", marketing: true }))).toEqual({
+  it("akzeptiert die Pflichtangaben ohne Anrede", () => {
+    expect(valueOf(contact({ first_name: "  Maria ", email: " maria@beispiel.de ", phone: " 0511 123456 ", marketing: true }))).toEqual({
       salutation: null,
       first_name: "Maria",
       last_name: "Muster",
       email: "maria@beispiel.de",
-      phone: null,
+      phone: "0511 123456",
       contact_by_phone: false,
       marketing: true,
     });
@@ -59,7 +59,9 @@ describe("validateContact", () => {
       first_name: "Bitte geben Sie Ihren Vornamen an.",
       last_name: "Bitte geben Sie Ihren Nachnamen an.",
       email: "Bitte geben Sie Ihre E-Mail-Adresse an.",
+      phone: MISSING_PHONE,
     });
+    expect(errorsOf(contact({ phone: "   " })).phone).toBe(MISSING_PHONE);
     expect(errorsOf(contact({ last_name: "   " }))).toEqual({ last_name: "Bitte geben Sie Ihren Nachnamen an." });
   });
 
@@ -100,8 +102,8 @@ describe("validateContact", () => {
     expect(errorsOf(contact({ phone: `0${"1".repeat(40)}` })).phone).toBe("Diese Telefonnummer ist zu lang.");
   });
 
-  it("erlaubt Rückrufe nur mit Telefonnummer", () => {
-    expect(valueOf(contact({ contact_by_phone: true })).contact_by_phone).toBe(false);
+  it("übernimmt Rückrufe nur mit angehakter Einwilligung", () => {
+    expect(valueOf(contact()).contact_by_phone).toBe(false);
     expect(valueOf(contact({ phone: " 0511 123456 ", contact_by_phone: true, salutation: "Frau" }))).toMatchObject({
       salutation: "Frau",
       phone: "0511 123456",
@@ -200,7 +202,7 @@ describe("Absenden an kw-lead", () => {
   it("überträgt fehlende Angaben als null", () => {
     const body = buildSubmitBody({
       ...payload,
-      contact: { ...valid, salutation: null, phone: null, contact_by_phone: false },
+      contact: { ...valid, salutation: null, contact_by_phone: false },
       turnstileToken: null,
     });
     expect(body.contact).toStrictEqual({
@@ -208,7 +210,7 @@ describe("Absenden an kw-lead", () => {
       first_name: "Maria",
       last_name: "Muster",
       email: "maria@beispiel.de",
-      phone: null,
+      phone: "0511 123456",
     });
     expect(body.consents).toStrictEqual({ share_with_studios: true, contact_by_phone: false, marketing: false });
     expect(body.turnstile_token).toBeNull();
@@ -221,12 +223,13 @@ describe("Absenden an kw-lead", () => {
   });
 
   it("meldet den Lead an Ads und Meta", async () => {
-    await trackFunnelALead({ ...valid, phone: null, contact_by_phone: false }, answers);
+    await trackFunnelALead({ ...valid, contact_by_phone: false }, answers);
     expect(setEnhancedConversionFromForm).toHaveBeenCalledWith({
       email: "maria@beispiel.de",
       firstName: "Maria",
       lastName: "Muster",
       postalCode: "30159",
+      phone: "0511 123456",
     });
     expect(trackKitchenFunnelLead).toHaveBeenCalledWith("a", "funnel_a_tx");
     expect(trackMetaLead).toHaveBeenCalledWith({ content_name: "Funnel A", content_category: "Küchenanfrage" });

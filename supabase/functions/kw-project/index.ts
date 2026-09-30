@@ -17,7 +17,8 @@
  *   ai-consent     Einwilligung zur KI-Verbesserung erteilen oder widerrufen (granted);
  *                  Widerruf löscht die Trainingskopien sofort
  *   request-offers Funnel C ohne Ausschreibung (nur Visualisierung): Angebote
- *                  nachträglich anfordern (consent_share, timeframe_months)
+ *                  nachträglich anfordern (consent_share, timeframe_months;
+ *                  phone, falls noch keine Nummer gespeichert ist)
  *   resend         Projektlink(s) per E-Mail neu zusenden (email) – ohne Token
  *
  * Der Token wird nie gespeichert, nur sein SHA-256-Hash (lead_access_tokens).
@@ -276,6 +277,7 @@ async function actionRequestOffers(req: Request, sb: SupabaseClient, leadId: str
     leadId,
     timeframeMonths: TIMEFRAMES.has(Number(body.timeframe_months)) ? Number(body.timeframe_months) : null,
     contactByPhone: body.contact_by_phone === true,
+    phone: body.phone,
     meta: { userId: null, ip: validIp(clientIp(req)), userAgent: req.headers.get("user-agent")?.slice(0, 500) ?? null },
   });
   return jsonResponse(req, await projectView(sb, leadId));

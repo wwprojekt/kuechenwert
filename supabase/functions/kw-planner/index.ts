@@ -17,13 +17,15 @@
  *                 + Projektlink; liefert die freigeschalteten Visualisierungen
  *                 und startet eine, falls vorher keine zustande kam
  *   request-offers  Lead ohne Ausschreibung: Angebote nachträglich anfordern
+ *                 (phone, falls beim Abschluss keine Nummer angegeben wurde)
  *   sweep         Cron kw-planner-sweep: Visualisierungen abschließen, die
  *                 kein Browser mehr abfragt (Tab geschlossen, Handy im Standby)
  *   admin-open-tender  Admin: Ausschreibung zu einer Planung als Entwurf
  *                 anlegen (lead_id, notify_customer); nur mit Einwilligung
  *
  * Jede Visualisierung ist ein Lead: Bild-URLs und Preisschätzung liefert der
- * Server erst, wenn Name, E-Mail und Telefon erfasst sind (session.lead_id).
+ * Server erst, wenn Name und E-Mail erfasst sind (session.lead_id); die
+ * Telefonnummer ist nur mit „Ja, Angebote“ Pflicht.
  *
  * Modelle, A/B-Vergleich und Tageslimit stehen in kw_ai_settings
  * (_shared/fal-models.ts). Auth: anonym über session_token (kw_ + 48 hex),
@@ -277,6 +279,13 @@ async function offersRequested(sb: SupabaseClient, leadId: string | null): Promi
   return !!data;
 }
 
+/** Ohne Telefonnummer fragt das spätere Anfordern von Angeboten sie ab. */
+async function leadHasPhone(sb: SupabaseClient, leadId: string | null): Promise<boolean> {
+  if (!leadId) return false;
+  const { data } = await sb.from("leads").select("phone").eq("id", leadId).maybeSingle();
+  return typeof data?.phone === "string" && data.phone.trim() !== "";
+}
+
 /** Visualisierungen der Planung; Bild-URLs nur mit erfasstem Kontakt. */
 async function sessionRenders(sb: SupabaseClient, session: Session) {
   const { data: renders } = await sb
@@ -325,6 +334,7 @@ async function actionSession(req: Request, sb: SupabaseClient, body: Record<stri
       submitted: open,
       unlocked: open,
       offers_requested: await offersRequested(sb, session.lead_id),
+      has_phone: await leadHasPhone(sb, session.lead_id),
       config: session.spec,
       room: session.room,
       estimate: open ? session.estimate : null,
@@ -1032,18 +1042,24 @@ async function actionSubmit(req: Request, sb: SupabaseClient, body: Record<strin
   const firstName = cleanText(c.first_name, 80);
   const lastName = cleanText(c.last_name, 80);
   const email = typeof c.email === "string" ? c.email.trim().toLowerCase() : "";
-  const phone = normalizePhone(c.phone);
+  const phoneInput = typeof c.phone === "string" ? c.phone.trim() : "";
+  const phone = phoneInput ? normalizePhone(phoneInput) : null;
   const postalCode = typeof c.postal_code === "string" ? c.postal_code.trim() : "";
   const city = cleanText(c.city, 80);
-  if (!firstName || !lastName) throw new HttpError(422, "Bitte Vor- und Nachnamen angeben.", "name");
-  if (!isEmail(email)) throw new HttpError(422, "Bitte eine gültige E-Mail-Adresse angeben.", "email");
-  if (!phone) throw new HttpError(422, "Bitte eine gültige Telefonnummer angeben.", "phone");
-  if (!isPostalCode(postalCode)) throw new HttpError(422, "Bitte eine gültige Postleitzahl angeben.", "postal_code");
   // Ältere Clients kennen request_offers nicht und schicken immer die Einwilligung mit.
   const requestOffers = body.request_offers === undefined ? consents.share_with_studios === true : body.request_offers === true;
+  if (!firstName || !lastName) throw new HttpError(422, "Bitte Vor- und Nachnamen angeben.", "name");
+  if (!isEmail(email)) throw new HttpError(422, "Bitte eine gültige E-Mail-Adresse angeben.", "email");
+  // Die Telefonnummer brauchen die Studios für das Angebot; ohne Angebote nur für eine gewünschte Beratung.
+  if (phoneInput && !phone) throw new HttpError(422, "Bitte eine gültige Telefonnummer angeben.", "phone");
+  if (requestOffers && !phone) {
+    throw new HttpError(422, "Bitte eine Telefonnummer angeben – die Küchenstudios brauchen sie für Ihr Angebot.", "phone");
+  }
+  if (!isPostalCode(postalCode)) throw new HttpError(422, "Bitte eine gültige Postleitzahl angeben.", "postal_code");
   if (requestOffers && consents.share_with_studios !== true) {
     throw new HttpError(422, "Bitte stimmen Sie der Weitergabe an geprüfte Küchenstudios zu.", "consent");
   }
+  const consentCall = !!phone && consents.contact_by_phone === true;
   const timeframe = TIMEFRAMES.has(Number(body.timeframe_months)) ? Number(body.timeframe_months) : null;
   const frame = leadFrameFrom(body, timeframe);
   const photoPaths = session.photo_paths ?? [];
@@ -1066,7 +1082,7 @@ async function actionSubmit(req: Request, sb: SupabaseClient, body: Record<strin
     const { data: tierRow } = await sb.rpc("kw_lead_tier_score", {
       p_has_photo: photoPaths.length > 0,
       p_has_dimensions: provenance ? dimensionsSource(provenance, room) !== "example" : true,
-      p_has_phone: true,
+      p_has_phone: !!phone,
       p_timeframe_months: timeframe,
       p_value_eur: estimate.mid,
     });
@@ -1101,7 +1117,7 @@ async function actionSubmit(req: Request, sb: SupabaseClient, body: Record<strin
         last_name: lastName,
         email,
         phone,
-        consent_call: consents.contact_by_phone === true,
+        consent_call: consentCall,
         consent_marketing: consents.marketing === true,
         funnel_answers: {
           planner_session_id: session.id,
@@ -1125,7 +1141,7 @@ async function actionSubmit(req: Request, sb: SupabaseClient, body: Record<strin
       },
       [
         { purpose: "share_with_studios", granted: requestOffers },
-        { purpose: "contact_by_phone", granted: consents.contact_by_phone === true },
+        { purpose: "contact_by_phone", granted: consentCall },
         { purpose: "marketing", granted: consents.marketing === true },
         ...(photoPaths.length > 0 ? [{ purpose: "ai_training", granted: aiTraining }] : []),
       ],
@@ -1202,6 +1218,7 @@ async function actionSubmit(req: Request, sb: SupabaseClient, body: Record<strin
     already_submitted: alreadySubmitted,
     tender_status: tenderStatus,
     offers_requested: alreadySubmitted ? await offersRequested(sb, leadId) : requestOffers,
+    has_phone: alreadySubmitted ? await leadHasPhone(sb, leadId) : !!phone,
     project_token: token,
     project_url: `${BRAND.baseUrl}/projekt/${token}`,
     estimate: { min: estimate.min, max: estimate.max, mid: estimate.mid },
@@ -1222,6 +1239,7 @@ async function actionRequestOffers(req: Request, sb: SupabaseClient, body: Recor
     leadId: session.lead_id,
     timeframeMonths: timeframe,
     contactByPhone: body.contact_by_phone === true,
+    phone: body.phone,
     meta: {
       userId: await userIdFromAuthHeader(sb, req),
       ip: validIp(clientIp(req)),

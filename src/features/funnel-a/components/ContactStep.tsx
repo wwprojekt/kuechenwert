@@ -71,7 +71,7 @@ export function ContactStep({ contact, onChange, onSubmit, onInvalid, onMissingN
   };
 
   return (
-    <form id={CONTACT_FORM_ID} onSubmit={handleSubmit} noValidate className="mx-auto max-w-xl space-y-4 short:space-y-3">
+    <form id={CONTACT_FORM_ID} onSubmit={handleSubmit} noValidate className="mx-auto max-w-xl space-y-4 short:space-y-3 xshort:space-y-2">
       <TextField
         id={fieldId("email")}
         label="E-Mail"
@@ -91,12 +91,13 @@ export function ContactStep({ contact, onChange, onSubmit, onInvalid, onMissingN
       <div className="space-y-2.5">
         <TextField
           id={fieldId("phone")}
-          label="Telefon (optional)"
+          label="Telefon"
           type="tel"
+          required
           autoComplete="tel"
           enterKeyHint="send"
           maxLength={PHONE_MAX}
-          hint={hasPhone ? undefined : "Für schnellere Rückfragen der Studios"}
+          hint={hasPhone ? undefined : "Für Rückfragen der Studios zu Ihrem Angebot"}
           hintClassName="xshort:hidden"
           value={contact.phone}
           onChange={(e) => {
@@ -121,7 +122,6 @@ export function ContactStep({ contact, onChange, onSubmit, onInvalid, onMissingN
         <label htmlFor="kontakt-website">Website</label>
         <input id="kontakt-website" type="text" name="website" tabIndex={-1} autoComplete="off" value={website} onChange={(e) => setWebsite(e.target.value)} />
       </div>
-      <div ref={turnstileRef} />
 
       {missing && (
         <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-border bg-surface-soft px-4 py-3 text-sm">
@@ -152,6 +152,8 @@ export function ContactStep({ contact, onChange, onSubmit, onInvalid, onMissingN
         </a>
         .
       </p>
+      {/* Hinter dem Hinweis: Braucht Turnstile doch eine Eingabe, bleibt der Hinweis über der mobilen Leiste. */}
+      <div ref={turnstileRef} />
     </form>
   );
 }

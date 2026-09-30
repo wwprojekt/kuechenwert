@@ -14,6 +14,8 @@
  *   attach-files   Nach dem Upload eintragen (upload_token, files); meldet dem Team per Outbox
  *   ai-consent     Einwilligung zur KI-Verbesserung erteilen oder widerrufen (granted);
  *                  Widerruf löscht die Trainingskopien sofort
+ *   request-offers Funnel C ohne Ausschreibung (nur Visualisierung): Angebote
+ *                  nachträglich anfordern (consent_share, timeframe_months)
  *   resend         Projektlink(s) per E-Mail neu zusenden (email) – ohne Token
  *
  * Der Token wird nie gespeichert, nur sein SHA-256-Hash (lead_access_tokens).
@@ -36,6 +38,9 @@ import {
 } from "../_shared/kw-http.ts";
 import { MAX_FILES_PER_LEAD, attachUploadedFiles, issueUploads, parseAnnouncedFiles } from "../_shared/lead-files.ts";
 import { forgetTrainingSamples, storeTrainingSamples } from "../_shared/ai-training.ts";
+import { requestPlannerOffers } from "../_shared/planner-offers.ts";
+
+const TIMEFRAMES = new Set([1, 3, 6, 12, 24]);
 
 const SIGNED_URL_TTL = 60 * 60;
 const CONSENT_TEXT_VERSION = "kw-telefon-2026-09-28";
@@ -245,6 +250,20 @@ async function actionAddPhone(req: Request, sb: SupabaseClient, leadId: string, 
   return jsonResponse(req, { ok: true });
 }
 
+async function actionRequestOffers(req: Request, sb: SupabaseClient, leadId: string, body: Record<string, unknown>) {
+  await enforceRateLimit(sb, `kw:project-offers:${leadId}`, 3600, 5);
+  if (body.consent_share !== true) {
+    throw new HttpError(422, "Bitte stimmen Sie der Weitergabe an geprüfte Küchenstudios zu.", "consent");
+  }
+  await requestPlannerOffers(sb, {
+    leadId,
+    timeframeMonths: TIMEFRAMES.has(Number(body.timeframe_months)) ? Number(body.timeframe_months) : null,
+    contactByPhone: body.contact_by_phone === true,
+    meta: { userId: null, ip: validIp(clientIp(req)), userAgent: req.headers.get("user-agent")?.slice(0, 500) ?? null },
+  });
+  return jsonResponse(req, await projectView(sb, leadId));
+}
+
 async function actionExportData(req: Request, sb: SupabaseClient, leadId: string) {
   await enforceRateLimit(sb, `kw:export:${leadId}`, 3600, 10);
   const { data, error } = await sb.rpc("kw_project_export", { p_lead_id: leadId });
@@ -326,6 +345,8 @@ serve(async (req) => {
       return actionAttachFiles(req, sb, leadId, body);
     case "ai-consent":
       return actionAiConsent(req, sb, leadId, body);
+    case "request-offers":
+      return actionRequestOffers(req, sb, leadId, body);
     default:
       throw new HttpError(400, "Unbekannte Aktion.", "unknown_action");
   }

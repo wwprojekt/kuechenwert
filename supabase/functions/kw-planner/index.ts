@@ -13,7 +13,12 @@
  *                 auf das nächste Modell der Ausweichkette wechseln (höchstens
  *                 drei Versuche), fertiges Bild speichern
  *   feedback      Bewertung einer Visualisierung (1 / -1 / null)
- *   submit        Kontakt erfassen → Lead + Ausschreibung + Projektlink
+ *   submit        Kontakt erfassen → Lead (+ Ausschreibung bei request_offers)
+ *                 + Projektlink; liefert die freigeschalteten Visualisierungen
+ *   request-offers  Lead ohne Ausschreibung: Angebote nachträglich anfordern
+ *
+ * Jede Visualisierung ist ein Lead: Bild-URLs und Preisschätzung liefert der
+ * Server erst, wenn Name, E-Mail und Telefon erfasst sind (session.lead_id).
  *
  * Modelle, A/B-Vergleich und Tageslimit stehen in kw_ai_settings
  * (_shared/fal-models.ts). Auth: anonym über session_token (kw_ + 48 hex).
@@ -43,27 +48,14 @@ import {
 import { checkTurnstile, type BotCheck } from "../_shared/turnstile.ts";
 import { insertLeadWithConsents, sanitizeClickIds } from "../_shared/lead-intake.ts";
 import {
-  APPLIANCES,
-  APPLIANCE_LEVELS,
-  EXTRAS,
-  FRONT_COLORS,
-  FRONT_MATERIALS,
-  HANDLES,
   PLANNER_SPEC_VERSION,
-  QUALITY_LEVELS,
-  SERVICES,
-  STYLES,
-  WALL_CABINETS,
-  WORKTOPS,
-  WORKTOP_COLORS,
-  effectiveAppliances,
-  labelOf,
   sanitizeConfig,
   sanitizeRoom,
   type PlannerConfig,
   type RoomInput,
 } from "../_shared/kitchen-catalog.ts";
-import { describeRoom, estimateKitchenPrice, type KitchenEstimate } from "../_shared/kitchen-pricing.ts";
+import { estimateKitchenPrice, type KitchenEstimate } from "../_shared/kitchen-pricing.ts";
+import { OFFERS_CONSENT_TEXT_VERSION, openPlannerTender, plannerCover, requestPlannerOffers } from "../_shared/planner-offers.ts";
 import { loadRateCard } from "../_shared/rate-card.ts";
 import { buildRenderPrompt, buildVariantPrompt } from "../_shared/kitchen-prompt.ts";
 import {
@@ -90,13 +82,15 @@ const BUCKET = "planner-media";
 const MAX_PHOTOS = 3;
 const MAX_UPLOAD_BYTES = 15 * 1024 * 1024;
 const MAX_RENDERS_PER_SESSION = 16;
+/** Vor dem Lead sieht niemand ein Bild: mehr als ein paar Versuche kosten nur Geld. */
+const MAX_RENDERS_BEFORE_LEAD = 3;
 /** So lange gilt eine laufende Visualisierung als „läuft noch“ und wird wiederverwendet. */
 const PENDING_REUSE_MS = 3 * 60 * 1000;
 const RENDER_TIMEOUT_MS = 5 * 60 * 1000;
 /** Nach dem Wechsel auf ein Ausweichmodell: so lange darf die neue fal-Anfrage noch fehlen. */
 const FALLBACK_SUBMIT_GRACE_MS = 30 * 1000;
 const SIGNED_URL_TTL = 60 * 60;
-const CONSENT_TEXT_VERSION = "kw-projekt-2026-09-28b";
+const CONSENT_TEXT_VERSION = OFFERS_CONSENT_TEXT_VERSION;
 const ALLOWED_IMAGE_TYPES: Record<string, string> = {
   "image/jpeg": "jpg",
   "image/png": "png",
@@ -208,63 +202,24 @@ async function loadAiSettings(sb: SupabaseClient): Promise<AiSettings> {
   return resolveAiSettings(data);
 }
 
-function buildPublicSummary(
-  config: PlannerConfig,
-  room: RoomInput,
-  estimate: KitchenEstimate,
-  extra: {
-    timeframeMonths: number | null;
-    housingType: string;
-    photoCount: number;
-    cover: { bucket: string; path: string } | null;
-  },
-): Record<string, unknown> {
-  return {
-    source: "c",
-    room: {
-      form: room.form,
-      walls: room.walls,
-      ceiling_height_cm: room.ceilingHeightCm ?? null,
-      description: describeRoom(room),
-      notes: room.notes ?? null,
-    },
-    config,
-    labels: {
-      quality: labelOf(QUALITY_LEVELS, config.quality),
-      style: labelOf(STYLES, config.style),
-      front: `${labelOf(FRONT_MATERIALS, config.front)}, ${labelOf(FRONT_COLORS, config.frontColor)}`,
-      handle: labelOf(HANDLES, config.handle),
-      wall_cabinets: labelOf(WALL_CABINETS, config.wallCabinets),
-      tall_units: config.tallUnits,
-      worktop: `${labelOf(WORKTOPS, config.worktop)}, ${labelOf(WORKTOP_COLORS, config.worktopColor)}`,
-      appliance_level: labelOf(APPLIANCE_LEVELS, config.applianceLevel),
-      appliances: effectiveAppliances(config.appliances).map((id) => labelOf(APPLIANCES, id)),
-      extras: config.extras.map((id) => labelOf(EXTRAS, id)),
-      services: config.services.map((id) => labelOf(SERVICES, id)),
-    },
-    wishes: config.wishes ?? null,
-    estimate: { min: estimate.min, max: estimate.max, mid: estimate.mid },
-    layout: estimate.layout,
-    timeframe_months: extra.timeframeMonths,
-    housing_type: extra.housingType,
-    photo_count: extra.photoCount,
-    cover: extra.cover,
-  };
+/** Bilder und Preis erst nach der Kontakterfassung: jede Visualisierung ist ein Lead. */
+const unlocked = (session: Pick<Session, "lead_id">) => !!session.lead_id;
+
+async function offersRequested(sb: SupabaseClient, leadId: string | null): Promise<boolean> {
+  if (!leadId) return false;
+  const { data } = await sb.from("lead_auctions").select("id").eq("lead_id", leadId).limit(1).maybeSingle();
+  return !!data;
 }
 
-// ---------------------------------------------------------------------------
-// Aktionen
-// ---------------------------------------------------------------------------
-
-async function actionSession(req: Request, sb: SupabaseClient, body: Record<string, unknown>) {
-  const session = await loadSession(sb, body.session_token);
-  if (!session) return jsonResponse(req, { session: null });
+/** Visualisierungen der Planung; Bild-URLs nur mit erfasstem Kontakt. */
+async function sessionRenders(sb: SupabaseClient, session: Session) {
   const { data: renders } = await sb
     .from("planner_renders")
     .select("id, version, status, mode, variant_label, image_path, storage_bucket, created_at, feedback, base_render_id, spec_snapshot")
     .eq("session_id", session.id)
     .order("version", { ascending: true });
-  const signedRenders = await Promise.all(
+  const open = unlocked(session);
+  return Promise.all(
     (renders ?? []).map(async (r) => {
       const spec = (r.spec_snapshot ?? {}) as Record<string, unknown>;
       return {
@@ -278,23 +233,36 @@ async function actionSession(req: Request, sb: SupabaseClient, body: Record<stri
         base_render_id: r.base_render_id ?? null,
         // Ältere Renders speicherten das Foto nicht mit: ohne Schlüssel gelten sie nie als veraltet.
         spec: "photo_path" in spec ? { config: spec.config ?? null, room: spec.room ?? null, photo_path: spec.photo_path ?? null } : null,
+        locked: !open && r.status === "success",
         image_url:
-          r.status === "success" && r.image_path
+          open && r.status === "success" && r.image_path
             ? await signedUrl(sb, r.image_path, SIGNED_URL_TTL, r.storage_bucket || BUCKET)
             : null,
       };
     }),
   );
+}
+
+// ---------------------------------------------------------------------------
+// Aktionen
+// ---------------------------------------------------------------------------
+
+async function actionSession(req: Request, sb: SupabaseClient, body: Record<string, unknown>) {
+  const session = await loadSession(sb, body.session_token);
+  if (!session) return jsonResponse(req, { session: null });
   const photos = await Promise.all((session.photo_paths ?? []).map(async (p) => ({ path: p, url: await signedUrl(sb, p) })));
+  const open = unlocked(session);
   return jsonResponse(req, {
     session: {
       session_token: session.session_token,
-      submitted: !!session.lead_id,
+      submitted: open,
+      unlocked: open,
+      offers_requested: await offersRequested(sb, session.lead_id),
       config: session.spec,
       room: session.room,
-      estimate: session.estimate,
+      estimate: open ? session.estimate : null,
       photos,
-      renders: signedRenders,
+      renders: await sessionRenders(sb, session),
     },
   });
 }
@@ -515,6 +483,13 @@ async function actionGenerate(req: Request, sb: SupabaseClient, body: Record<str
   if ((count ?? 0) >= MAX_RENDERS_PER_SESSION) {
     throw new HttpError(429, "Sie haben das Maximum an Visualisierungen für diese Planung erreicht.", "render_limit");
   }
+  if (!unlocked(session) && (count ?? 0) >= MAX_RENDERS_BEFORE_LEAD) {
+    throw new HttpError(
+      409,
+      "Ihre Visualisierung ist schon in Arbeit. Sagen Sie uns noch, wohin wir sie schicken dürfen – danach können Sie beliebig Varianten erstellen.",
+      "contact_required",
+    );
+  }
 
   const config = sanitizeConfig(body.config);
   const room = sanitizeRoom(body.room);
@@ -544,7 +519,7 @@ async function actionGenerate(req: Request, sb: SupabaseClient, body: Record<str
       render_id: running.id,
       version: running.version,
       mode: running.mode,
-      estimate,
+      estimate: unlocked(session) ? estimate : null,
     });
   }
 
@@ -627,7 +602,7 @@ async function actionGenerate(req: Request, sb: SupabaseClient, body: Record<str
     version,
     mode,
     base_render_id: base?.id ?? null,
-    estimate,
+    estimate: unlocked(session) ? estimate : null,
   });
 }
 
@@ -664,7 +639,7 @@ async function actionSave(req: Request, sb: SupabaseClient, body: Record<string,
     sanitizeRoom(body.room),
     isPostalCode(body.postal_code) ? body.postal_code : null,
   );
-  return jsonResponse(req, { session_token: session.session_token, estimate });
+  return jsonResponse(req, { session_token: session.session_token, estimate: unlocked(session) ? estimate : null });
 }
 
 /** Ergebnis von fal übernehmen und im privaten Bucket speichern. */
@@ -715,7 +690,9 @@ async function actionStatus(req: Request, sb: SupabaseClient, body: Record<strin
   const failed = (message: string) => jsonResponse(req, { status: "failed", render_id: render.id, error: message });
   const pending = (queue: string) => jsonResponse(req, { status: "pending", render_id: render.id, queue });
   const successResponse = async (path: string) =>
-    jsonResponse(req, { status: "success", render_id: render.id, version: render.version, image_url: await signedUrl(sb, path) });
+    unlocked(session)
+      ? jsonResponse(req, { status: "success", render_id: render.id, version: render.version, image_url: await signedUrl(sb, path) })
+      : jsonResponse(req, { status: "success", render_id: render.id, version: render.version, image_url: null, locked: true });
 
   if (render.status === "success" && render.image_path) return successResponse(render.image_path);
   if (render.status === "failed") {
@@ -806,23 +783,6 @@ async function userIdFromAuthHeader(sb: SupabaseClient, req: Request): Promise<s
   return data?.user?.id ?? null;
 }
 
-/** Titelbild für Studios: die gewählte Visualisierung, sonst die zuletzt fertige. */
-async function coverRender(sb: SupabaseClient, session: Session, requested: unknown) {
-  const ids = [typeof requested === "string" && UUID_RE.test(requested) ? requested : null, session.current_render_id].filter(
-    (id): id is string => !!id,
-  );
-  for (const id of ids) {
-    const { data: r } = await sb
-      .from("planner_renders")
-      .select("id, image_path, storage_bucket, status")
-      .eq("id", id)
-      .eq("session_id", session.id)
-      .maybeSingle();
-    if (r?.status === "success" && r.image_path) return { id: r.id as string, bucket: r.storage_bucket as string, path: r.image_path as string };
-  }
-  return null;
-}
-
 async function actionSubmit(req: Request, sb: SupabaseClient, body: Record<string, unknown>) {
   if (typeof body.website === "string" && body.website.trim().length > 0) {
     return jsonResponse(req, { ok: true, project_url: `${BRAND.baseUrl}/` });
@@ -844,7 +804,9 @@ async function actionSubmit(req: Request, sb: SupabaseClient, body: Record<strin
   if (!isEmail(email)) throw new HttpError(422, "Bitte eine gültige E-Mail-Adresse angeben.", "email");
   if (!phone) throw new HttpError(422, "Bitte eine gültige Telefonnummer angeben.", "phone");
   if (!isPostalCode(postalCode)) throw new HttpError(422, "Bitte eine gültige Postleitzahl angeben.", "postal_code");
-  if (consents.share_with_studios !== true) {
+  // Ältere Clients kennen request_offers nicht und schicken immer die Einwilligung mit.
+  const requestOffers = body.request_offers === undefined ? consents.share_with_studios === true : body.request_offers === true;
+  if (requestOffers && consents.share_with_studios !== true) {
     throw new HttpError(422, "Bitte stimmen Sie der Weitergabe an geprüfte Küchenstudios zu.", "consent");
   }
   const timeframe = TIMEFRAMES.has(Number(body.timeframe_months)) ? Number(body.timeframe_months) : null;
@@ -908,6 +870,7 @@ async function actionSubmit(req: Request, sb: SupabaseClient, body: Record<strin
           config,
           room,
           estimate: { min: estimate.min, max: estimate.max, mid: estimate.mid },
+          offers_requested: requestOffers,
         },
         utm_source: session.utm_source,
         utm_medium: session.utm_medium,
@@ -919,7 +882,7 @@ async function actionSubmit(req: Request, sb: SupabaseClient, body: Record<strin
         user_agent: userAgent,
       },
       [
-        { purpose: "share_with_studios", granted: true },
+        { purpose: "share_with_studios", granted: requestOffers },
         { purpose: "contact_by_phone", granted: consents.contact_by_phone === true },
         { purpose: "marketing", granted: consents.marketing === true },
         ...(photoPaths.length > 0 ? [{ purpose: "ai_training", granted: aiTraining }] : []),
@@ -930,27 +893,27 @@ async function actionSubmit(req: Request, sb: SupabaseClient, body: Record<strin
     alreadySubmitted = inserted.duplicate;
   }
 
-  if (!alreadySubmitted) {
-    const cover = await coverRender(sb, session, body.active_render_id);
-    const { data: settings } = await sb.from("kw_marketplace_settings").select("auto_publish_funnel_c").maybeSingle();
-    const publish = settings?.auto_publish_funnel_c !== false && botCheck !== "unverified";
-    const summary = buildPublicSummary(config, room, estimate, {
-      timeframeMonths: timeframe,
-      housingType,
-      photoCount: photoPaths.length,
-      cover: cover ? { bucket: cover.bucket, path: cover.path } : null,
-    });
-    const { error: tenderErr } = await sb.rpc("kw_open_tender", {
-      p_lead_id: leadId,
-      p_publish: publish,
-      p_public_summary: summary,
-      p_estimate_min_eur: estimate.min,
-      p_estimate_max_eur: estimate.max,
-      p_reference_price_eur: estimate.mid,
-      p_planner_session_id: session.id,
-    });
-    if (tenderErr) console.error("[kw-planner] open tender failed", tenderErr.message);
-    tenderStatus = publish ? "active" : "draft";
+  if (!alreadySubmitted && leadId) {
+    const cover = await plannerCover(sb, session, body.active_render_id);
+    if (requestOffers) {
+      try {
+        tenderStatus = await openPlannerTender(sb, {
+          leadId,
+          sessionId: session.id,
+          config,
+          room,
+          estimate,
+          timeframeMonths: timeframe,
+          housingType,
+          photoCount: photoPaths.length,
+          cover: cover ? { bucket: cover.bucket, path: cover.path } : null,
+          botUnverified: botCheck === "unverified",
+        });
+      } catch (err) {
+        // Der Lead steht; die Ausschreibung legt das Team notfalls im Admin an.
+        console.error("[kw-planner] open tender failed", errorText(err));
+      }
+    }
 
     const now = new Date().toISOString();
     await sb
@@ -986,15 +949,40 @@ async function actionSubmit(req: Request, sb: SupabaseClient, body: Record<strin
   });
   if (tokenErr) throw tokenErr;
 
+  const unlockedSession = { ...session, lead_id: leadId };
   return jsonResponse(req, {
     ok: true,
     lead_id: leadId,
     already_submitted: alreadySubmitted,
     tender_status: tenderStatus,
+    offers_requested: alreadySubmitted ? await offersRequested(sb, leadId) : requestOffers,
     project_token: token,
     project_url: `${BRAND.baseUrl}/projekt/${token}`,
     estimate: { min: estimate.min, max: estimate.max, mid: estimate.mid },
+    renders: await sessionRenders(sb, unlockedSession),
   });
+}
+
+/** Lead ohne Ausschreibung (nur Visualisierung): Angebote nachträglich anfordern. */
+async function actionRequestOffers(req: Request, sb: SupabaseClient, body: Record<string, unknown>) {
+  const session = await requireSession(sb, body.session_token);
+  if (!session.lead_id) throw new HttpError(409, "Bitte geben Sie zuerst Ihre Kontaktdaten an.", "contact_required");
+  await enforceRateLimit(sb, `kw:offers:${session.id}`, 3600, 5);
+  if (body.consent_share !== true) {
+    throw new HttpError(422, "Bitte stimmen Sie der Weitergabe an geprüfte Küchenstudios zu.", "consent");
+  }
+  const timeframe = TIMEFRAMES.has(Number(body.timeframe_months)) ? Number(body.timeframe_months) : null;
+  const result = await requestPlannerOffers(sb, {
+    leadId: session.lead_id,
+    timeframeMonths: timeframe,
+    contactByPhone: body.contact_by_phone === true,
+    meta: {
+      userId: await userIdFromAuthHeader(sb, req),
+      ip: validIp(clientIp(req)),
+      userAgent: req.headers.get("user-agent")?.slice(0, 500) ?? null,
+    },
+  });
+  return jsonResponse(req, { ok: true, offers_requested: true, tender_status: result.tenderStatus, already_open: result.alreadyOpen });
 }
 
 serve(async (req) => {
@@ -1019,6 +1007,8 @@ serve(async (req) => {
       return actionFeedback(req, sb, body);
     case "submit":
       return actionSubmit(req, sb, body);
+    case "request-offers":
+      return actionRequestOffers(req, sb, body);
     default:
       throw new HttpError(400, "Unbekannte Aktion.", "unknown_action");
   }

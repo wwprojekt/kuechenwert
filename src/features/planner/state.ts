@@ -13,24 +13,16 @@ import {
 } from "./core";
 import { loadSession, renderStatus, type PlannerPhoto, type PlannerRender, type PlannerSessionRender } from "./api";
 import { roomWallIssues } from "./estimate-gate";
+import { normalizePlannerStep, type PlannerStep } from "./flow";
 import { usePriceModel } from "./price-model";
 import { plannerRenderKey } from "./render-key";
 
-export type PlannerStep = "raum" | "stil" | "ausstattung" | "geraete" | "visualisierung" | "kontakt";
+export type { PlannerStep } from "./flow";
 
-export const PLANNER_STEPS: Array<{ id: PlannerStep; label: string }> = [
-  { id: "raum", label: "Raum & Foto" },
-  { id: "stil", label: "Stil & Fronten" },
-  { id: "ausstattung", label: "Arbeitsplatte" },
-  { id: "geraete", label: "Geräte & Extras" },
-  { id: "visualisierung", label: "Visualisierung" },
-  { id: "kontakt", label: "Angebote erhalten" },
-];
+export type OffersChoice = "ja" | "nein";
 
 export interface PlannerState {
   step: PlannerStep;
-  /** Weitester bisher erreichter Schritt (Index in PLANNER_STEPS). */
-  furthestIndex: number;
   sessionToken: string | null;
   config: PlannerConfig;
   room: RoomInput;
@@ -39,7 +31,14 @@ export interface PlannerState {
   selectedPhotoPath: string | null;
   renders: PlannerRender[];
   activeRenderId: string | null;
+  /** Antwort auf „Möchten Sie auch Angebote?“ (vor dem Absenden). */
+  offersChoice: OffersChoice | null;
+  /** Zeitrahmen in Monaten als Text ("1", "3" …), nur mit Angeboten. */
+  timeframe: string;
+  /** Kontakt erfasst: Visualisierung und Preis sind freigeschaltet. */
   submitted: boolean;
+  /** Für diese Planung holen Studios Angebote ein. */
+  offersRequested: boolean;
 }
 
 type Action =
@@ -54,21 +53,20 @@ type Action =
   | { type: "selectPhoto"; path: string | null }
   | { type: "renderAdded"; render: PlannerRender }
   | { type: "renderUpdated"; id: string; patch: Partial<PlannerRender> }
+  | { type: "rendersReplaced"; renders: PlannerRender[] }
   | { type: "activeRender"; id: string }
+  | { type: "offersChoice"; value: OffersChoice }
+  | { type: "timeframe"; value: string }
   | { type: "hydrate"; state: Partial<PlannerState> }
-  | { type: "submitted" }
+  | { type: "submitted"; offersRequested: boolean }
+  | { type: "offersRequested" }
   | { type: "reset" };
 
 const STORAGE_KEY = "kw_planner_v2";
 
-export function stepIndex(step: unknown): number {
-  return Math.max(0, PLANNER_STEPS.findIndex((s) => s.id === step));
-}
-
 function initialState(): PlannerState {
   return {
-    step: "raum",
-    furthestIndex: 0,
+    step: "form",
     sessionToken: null,
     config: defaultConfig(),
     room: defaultRoom("l"),
@@ -77,14 +75,17 @@ function initialState(): PlannerState {
     selectedPhotoPath: null,
     renders: [],
     activeRenderId: null,
+    offersChoice: null,
+    timeframe: "",
     submitted: false,
+    offersRequested: false,
   };
 }
 
 function reducer(state: PlannerState, action: Action): PlannerState {
   switch (action.type) {
     case "step":
-      return { ...state, step: action.step, furthestIndex: Math.max(state.furthestIndex, stepIndex(action.step)) };
+      return { ...state, step: action.step };
     case "config":
       return { ...state, config: { ...state.config, ...action.patch } };
     case "form": {
@@ -123,12 +124,23 @@ function reducer(state: PlannerState, action: Action): PlannerState {
         ...state,
         renders: state.renders.map((r) => (r.id === action.id ? { ...r, ...action.patch } : r)),
       };
+    case "rendersReplaced": {
+      const finished = action.renders.filter((r) => r.status === "success");
+      const keep = action.renders.some((r) => r.id === state.activeRenderId) ? state.activeRenderId : null;
+      return { ...state, renders: action.renders, activeRenderId: keep ?? finished[finished.length - 1]?.id ?? null };
+    }
     case "activeRender":
       return { ...state, activeRenderId: action.id };
+    case "offersChoice":
+      return { ...state, offersChoice: action.value };
+    case "timeframe":
+      return { ...state, timeframe: action.value };
     case "hydrate":
       return { ...state, ...action.state };
     case "submitted":
-      return { ...state, submitted: true };
+      return { ...state, submitted: true, offersRequested: action.offersRequested, step: "ergebnis" };
+    case "offersRequested":
+      return { ...state, offersRequested: true, offersChoice: "ja" };
     case "reset":
       return initialState();
   }
@@ -138,14 +150,19 @@ function readStorage(): Partial<PlannerState> | null {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) return null;
-    const parsed = JSON.parse(raw) as Partial<PlannerState>;
-    const furthest = Number.isInteger(parsed.furthestIndex) ? Number(parsed.furthestIndex) : 0;
+    const parsed = JSON.parse(raw) as Partial<PlannerState> & { furthestIndex?: unknown };
+    const { furthestIndex: _legacy, ...rest } = parsed;
     return {
-      ...parsed,
-      furthestIndex: Math.min(PLANNER_STEPS.length - 1, Math.max(furthest, stepIndex(parsed.step))),
+      ...rest,
+      step: normalizePlannerStep(parsed.step),
       config: sanitizeConfig(parsed.config),
       room: sanitizeRoom(parsed.room),
       photos: [],
+      offersChoice: parsed.offersChoice === "ja" || parsed.offersChoice === "nein" ? parsed.offersChoice : null,
+      timeframe: typeof parsed.timeframe === "string" ? parsed.timeframe : "",
+      submitted: parsed.submitted === true,
+      offersRequested: parsed.offersRequested === true,
+      // Bild-URLs laufen ab und kommen frisch vom Server (erst nach der Kontakterfassung).
       renders: (parsed.renders ?? []).map((r) => ({ ...r, image_url: null })),
     };
   } catch {
@@ -173,7 +190,7 @@ export function clearPlannerStorage() {
   }
 }
 
-function fromSessionRender({ spec, ...render }: PlannerSessionRender): PlannerRender {
+export function fromSessionRender({ spec, ...render }: PlannerSessionRender): PlannerRender {
   return { ...render, config_key: spec?.config ? plannerRenderKey(spec.config, spec.room, spec.photo_path) : null };
 }
 
@@ -183,38 +200,37 @@ function useLastValid<T>(value: T, valid: boolean): T {
   return valid ? value : last;
 }
 
+/**
+ * Zustand des Planers im localStorage (ohne Fotos und Bild-URLs). Eine
+ * abgeschickte Planung bleibt als Ergebnis stehen, bis „Neue Küche planen“
+ * sie zurücksetzt.
+ */
 export function usePlanner() {
-  // Eine abgeschickte Planung wird nicht fortgesetzt: die nächste startet frisch.
-  const [state, dispatch] = useReducer(reducer, undefined, () => {
-    const stored = readStorage();
-    return stored?.submitted ? initialState() : { ...initialState(), ...(stored ?? {}) };
-  });
+  const [state, dispatch] = useReducer(reducer, undefined, () => ({ ...initialState(), ...(readStorage() ?? {}) }));
   const hydratedToken = useRef<string | null>(null);
 
   useEffect(() => {
-    if (state.submitted) clearPlannerStorage();
-    else writeStorage(state);
+    writeStorage(state);
   }, [state]);
 
-  useEffect(() => {
-    const token = state.sessionToken;
-    if (!token || hydratedToken.current === token) return;
+  const hydrate = useCallback((token: string) => {
     hydratedToken.current = token;
-    loadSession(token)
+    return loadSession(token)
       .then(({ session }) => {
         if (!session) {
-          dispatch({ type: "hydrate", state: { sessionToken: null, renders: [], photos: [], selectedPhotoPath: null } });
+          dispatch({
+            type: "hydrate",
+            state: { sessionToken: null, renders: [], photos: [], selectedPhotoPath: null, submitted: false, offersRequested: false },
+          });
           return;
         }
-        const renders = session.renders.map(fromSessionRender);
-        const finished = renders.filter((r) => r.status === "success");
+        dispatch({ type: "rendersReplaced", renders: session.renders.map(fromSessionRender) });
         dispatch({
           type: "hydrate",
           state: {
             photos: session.photos,
-            renders,
             submitted: session.submitted,
-            activeRenderId: finished[finished.length - 1]?.id ?? null,
+            offersRequested: session.offers_requested === true,
           },
         });
         dispatch({ type: "photos", photos: session.photos });
@@ -222,7 +238,13 @@ export function usePlanner() {
       .catch(() => {
         /* Offline oder Session abgelaufen: lokaler Stand bleibt nutzbar */
       });
-  }, [state.sessionToken]);
+  }, []);
+
+  useEffect(() => {
+    const token = state.sessionToken;
+    if (!token || hydratedToken.current === token) return;
+    void hydrate(token);
+  }, [state.sessionToken, hydrate]);
 
   const { card, calibration, rateCardVersion } = usePriceModel();
   // Während eine Wandlänge getippt wird (0, 3, 35 …), gilt der letzte vollständige Raum.
@@ -254,8 +276,12 @@ export function usePlanner() {
       selectPhoto: (path: string | null) => dispatch({ type: "selectPhoto", path }),
       addRender: (render: PlannerRender) => dispatch({ type: "renderAdded", render }),
       updateRender: (id: string, patch: Partial<PlannerRender>) => dispatch({ type: "renderUpdated", id, patch }),
+      replaceRenders: (renders: PlannerRender[]) => dispatch({ type: "rendersReplaced", renders }),
       setActiveRender: (id: string) => dispatch({ type: "activeRender", id }),
-      markSubmitted: () => dispatch({ type: "submitted" }),
+      setOffersChoice: (value: OffersChoice) => dispatch({ type: "offersChoice", value }),
+      setTimeframe: (value: string) => dispatch({ type: "timeframe", value }),
+      markSubmitted: (offersRequested: boolean) => dispatch({ type: "submitted", offersRequested }),
+      markOffersRequested: () => dispatch({ type: "offersRequested" }),
       reset: () => {
         clearPlannerStorage();
         hydratedToken.current = null;
@@ -265,7 +291,7 @@ export function usePlanner() {
     [],
   );
 
-  return { state, estimate, ...actions };
+  return { state, estimate, hydrate, ...actions };
 }
 
 const POLL_INTERVAL_MS = 2500;
@@ -289,7 +315,7 @@ export function useRenderPolling(
         try {
           const status = await renderStatus(sessionToken, id);
           if (status.status === "success") {
-            onUpdateRef.current(id, { status: "success", image_url: status.image_url ?? null });
+            onUpdateRef.current(id, { status: "success", image_url: status.image_url ?? null, locked: status.locked === true });
             return;
           }
           if (status.status === "failed") {

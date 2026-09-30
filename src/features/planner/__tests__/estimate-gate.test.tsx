@@ -2,7 +2,7 @@ import { render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 import { PriceSummary } from "../components/PriceSummary";
 import { KITCHEN_FORMS, defaultConfig, defaultRoom, estimateKitchenPrice } from "../core";
-import { estimateNote, estimateVisible, roomWallIssues } from "../estimate-gate";
+import { estimateVisible, roomWallIssues } from "../estimate-gate";
 
 describe("roomWallIssues", () => {
   it("akzeptiert die vorbelegten Maße aller Küchenformen", () => {
@@ -21,17 +21,10 @@ describe("roomWallIssues", () => {
   });
 });
 
-describe("Sichtbarkeit und Hinweis der Schätzung", () => {
-  it("zeigt im Raum-Schritt noch keine Schätzung", () => {
-    expect(estimateVisible(0)).toBe(false);
-    expect(estimateVisible(1)).toBe(true);
-  });
-
-  it("nennt die noch offenen preisrelevanten Schritte", () => {
-    expect(estimateNote(1)).toMatch(/Arbeitsplatte und Geräten/);
-    expect(estimateNote(2)).toMatch(/Geräten und Extras/);
-    expect(estimateNote(3)).toBeNull();
-    expect(estimateNote(5)).toBeNull();
+describe("Sichtbarkeit der Schätzung", () => {
+  it("zeigt den Preis erst nach der Kontakterfassung", () => {
+    expect(estimateVisible(false)).toBe(false);
+    expect(estimateVisible(true)).toBe(true);
   });
 });
 

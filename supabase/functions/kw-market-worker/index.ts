@@ -235,6 +235,13 @@ function summaryRows(summary: Record<string, unknown>, estimate: { min: number |
 // Handler
 // ---------------------------------------------------------------------------
 
+/** Preisschätzung eines Funnel-C-Leads ohne Ausschreibung (aus dem Abschluss der Planung). */
+async function plannerEstimate(ctx: Ctx, leadId: string): Promise<{ min: number; max: number } | null> {
+  const { data } = await ctx.sb.from("leads").select("funnel_answers").eq("id", leadId).maybeSingle();
+  const estimate = (data?.funnel_answers as { estimate?: { min?: unknown; max?: unknown } } | null)?.estimate;
+  return typeof estimate?.min === "number" && typeof estimate?.max === "number" ? { min: estimate.min, max: estimate.max } : null;
+}
+
 async function onProjectCreated(ctx: Ctx, p: Record<string, unknown>) {
   const lead = await ctx.lead(String(p.lead_id));
   const { data: tender } = await ctx.sb
@@ -246,8 +253,32 @@ async function onProjectCreated(ctx: Ctx, p: Record<string, unknown>) {
     .maybeSingle();
 
   const covering = await studiosCovering(ctx, lead.postal_code);
+  // Funnel C „Nein, nur Visualisierung“: Lead ohne Ausschreibung, Studios sehen nichts.
+  const visualOnly = !tender && lead.funnel_type === "traumkueche";
 
-  if (lead.email) {
+  if (lead.email && visualOnly) {
+    const link = await ctx.projectLink(lead.id);
+    const estimate = await plannerEstimate(ctx, lead.id);
+    const content = [
+      greeting(lead.first_name ?? undefined),
+      paragraph(
+        "Ihre Küchenplanung ist gespeichert. Auf Ihrer persönlichen Projektseite finden Sie Ihre KI-Visualisierung und die Preisschätzung – jederzeit wieder abrufbar.",
+      ),
+      estimate ? infoBox("Ihre Preisschätzung", detailRow("Marktpreis", `${formatEuro(estimate.min)} – ${formatEuro(estimate.max)}`)) : "",
+      button("Meine Küche ansehen", link),
+      paragraph(
+        "Wissen Sie schon, was geprüfte Küchenstudios aus Ihrer Region für diese Küche verlangen? Auf Ihrer Projektseite holen Sie mit einem Klick kostenlose und unverbindliche Angebote ein – Ihre Kontaktdaten sehen die Studios erst, wenn Sie es möchten.",
+      ),
+      paragraph("Bitte bewahren Sie diese E-Mail auf – der Link ist Ihr persönlicher Zugang zu Ihrer Planung."),
+    ].join("");
+    await ctx.send({
+      to: lead.email,
+      subject: "Ihre Küchenvisualisierung & Preisschätzung",
+      html: ctx.layout("Ihre Küche ist fertig geplant", content),
+      type: "project_link",
+      recipientName: fullName(lead),
+    });
+  } else if (lead.email) {
     const link = await ctx.projectLink(lead.id);
     const active = tender?.status === "active";
     const intro = !active
@@ -284,6 +315,11 @@ async function onProjectCreated(ctx: Ctx, p: Record<string, unknown>) {
         : "–";
     const content = [
       paragraph(`Neues Projekt über <strong>${escapeHtml(FUNNEL_LABEL[lead.funnel_type] ?? lead.funnel_type)}</strong>.`),
+      visualOnly
+        ? paragraph(
+            "<strong>Nur Visualisierung:</strong> Der Kunde hat (noch) keine Angebote angefordert. Ohne seine Einwilligung keine Ausschreibung anlegen; er kann Angebote jederzeit selbst auf seiner Projektseite anfordern.",
+          )
+        : "",
       infoBox(
         "Kontakt",
         [
@@ -303,7 +339,7 @@ async function onProjectCreated(ctx: Ctx, p: Record<string, unknown>) {
     ].join("");
     await ctx.send({
       to: ctx.adminAddress(),
-      subject: `${covering === 0 ? "⚠ Keine Studios · " : ""}Neues Küchenprojekt · PLZ ${lead.postal_code} · ${value}`,
+      subject: `${visualOnly ? "Neuer Lead (nur Visualisierung)" : `${covering === 0 ? "⚠ Keine Studios · " : ""}Neues Küchenprojekt`} · PLZ ${lead.postal_code} · ${value}`,
       html: ctx.layout("Neues Küchenprojekt", content),
       type: "project_admin_new",
     });

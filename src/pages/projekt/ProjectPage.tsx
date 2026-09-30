@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { CheckCircle2, Clock, Hourglass, Inbox, Loader2, MapPin, PartyPopper, XCircle } from "lucide-react";
+import { CheckCircle2, Clock, Hourglass, Inbox, Loader2, MapPin, PartyPopper, Store, XCircle } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Link, useLocation, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
@@ -14,6 +14,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { ApiError, errorMessage } from "@/features/marketplace/api-client";
 import { OfferCard } from "@/features/marketplace/components/OfferCard";
@@ -23,9 +24,10 @@ import { ProjectAnswers } from "@/features/marketplace/components/ProjectAnswers
 import { ProjectOrderCard } from "@/features/marketplace/components/ProjectOrderCard";
 import { ProjectAiConsentCard } from "@/features/marketplace/components/ProjectAiConsentCard";
 import { ProjectDataCard } from "@/features/marketplace/components/ProjectDataCard";
-import { acceptOffer, cancelProject, getProject, type ProjectOffer, type ProjectView as ProjectData } from "@/features/marketplace/project-api";
+import { acceptOffer, cancelProject, getProject, requestProjectOffers, type ProjectOffer, type ProjectView as ProjectData } from "@/features/marketplace/project-api";
 import { clearStoredProjectToken, storeProjectToken } from "@/features/marketplace/project-token";
 import { BeforeAfterSlider } from "@/features/planner/components/BeforeAfterSlider";
+import { RequestOffersDialog, type OffersRequest } from "@/features/planner/components/RequestOffersDialog";
 import { ProjectLinkRequest } from "./ProjectLinkRequest";
 import { cn } from "@/lib/utils";
 
@@ -41,14 +43,24 @@ function remaining(iso: string | null): string | null {
   return days > 0 ? `${days} Tag${days === 1 ? "" : "e"} ${hours} Std.` : `${hours} Std.`;
 }
 
+/** Funnel C „nur Visualisierung“: Lead ohne Ausschreibung, Angebote noch nicht angefordert. */
+const offersPending = (view: ProjectData) => !view.tender && view.lead.funnel_type === "traumkueche";
+
 function Timeline({ view }: { view: ProjectData }) {
   const status = view.tender?.status ?? "draft";
-  const steps = [
-    { label: "Projekt angelegt", done: true },
-    { label: status === "draft" ? "Prüfung durch KüchenWert" : "Studios geben Angebote ab", done: ["active", "completed", "awarded", "expired"].includes(status) },
-    { label: "Sie vergleichen & wählen", done: ["completed", "awarded"].includes(status) || view.offers.length > 0 },
-    { label: "Studio beauftragt", done: status === "awarded" },
-  ];
+  const steps = offersPending(view)
+    ? [
+        { label: "Küche geplant & visualisiert", done: true },
+        { label: "Angebote anfordern", done: false },
+        { label: "Sie vergleichen & wählen", done: false },
+        { label: "Studio beauftragt", done: false },
+      ]
+    : [
+        { label: "Projekt angelegt", done: true },
+        { label: status === "draft" ? "Prüfung durch KüchenWert" : "Studios geben Angebote ab", done: ["active", "completed", "awarded", "expired"].includes(status) },
+        { label: "Sie vergleichen & wählen", done: ["completed", "awarded"].includes(status) || view.offers.length > 0 },
+        { label: "Studio beauftragt", done: status === "awarded" },
+      ];
   return (
     <ol className="grid gap-3 sm:grid-cols-4">
       {steps.map((s, i) => (
@@ -60,6 +72,22 @@ function Timeline({ view }: { view: ProjectData }) {
         </li>
       ))}
     </ol>
+  );
+}
+
+function RequestOffersCard({ onRequest }: { onRequest: () => void }) {
+  return (
+    <div className="rounded-2xl border border-primary/25 bg-primary/5 p-6 text-center sm:p-8">
+      <Store className="mx-auto h-9 w-9 text-primary" aria-hidden="true" />
+      <p className="mt-3 text-lg font-semibold">Was verlangen Studios wirklich für Ihre Küche?</p>
+      <p className="mx-auto mt-1 max-w-md text-sm text-muted-foreground">
+        Sie haben bisher nur Visualisierung und Preisschätzung angefordert. Mit einem Klick schicken Ihnen geprüfte Küchenstudios aus Ihrer
+        Region kostenlose, unverbindliche Angebote für genau diese Planung.
+      </p>
+      <Button className="mt-4" onClick={onRequest}>
+        Kostenlose Angebote anfordern
+      </Button>
+    </div>
   );
 }
 
@@ -125,6 +153,7 @@ export function ProjectView({ token }: { token: string }) {
   const [cancelOpen, setCancelOpen] = useState(false);
   const [cancelReason, setCancelReason] = useState("");
   const [phoneSaved, setPhoneSaved] = useState(false);
+  const [offersOpen, setOffersOpen] = useState(false);
 
   const query = useQuery({
     queryKey: ["kw-project", token],
@@ -161,6 +190,15 @@ export function ProjectView({ token }: { token: string }) {
     onError: (err) => toast.error(errorMessage(err)),
   });
 
+  const requestOffers = useMutation({
+    mutationFn: (input: OffersRequest) => requestProjectOffers(token, input),
+    onSuccess: (view) => {
+      qc.setQueryData(["kw-project", token], view);
+      setOffersOpen(false);
+      toast.success("Geschafft! Studios aus Ihrer Region erstellen jetzt Ihre Angebote.");
+    },
+  });
+
   if (query.isLoading) {
     return (
       <PageLayout title="Ihr Küchenprojekt" description="Ihre Küchenplanung und Angebote" canonicalPath="/projekt" noIndex>
@@ -190,7 +228,12 @@ export function ProjectView({ token }: { token: string }) {
 
   const view = query.data;
   const tender = view.tender;
-  const estimate = tender?.summary?.estimate ?? (tender?.estimate_min_eur && tender.estimate_max_eur ? { min: tender.estimate_min_eur, max: tender.estimate_max_eur, mid: (tender.estimate_min_eur + tender.estimate_max_eur) / 2 } : null);
+  const estimate =
+    tender?.summary?.estimate ??
+    (tender?.estimate_min_eur && tender.estimate_max_eur
+      ? { min: tender.estimate_min_eur, max: tender.estimate_max_eur, mid: (tender.estimate_min_eur + tender.estimate_max_eur) / 2 }
+      : (view.planner?.estimate ?? null));
+  const noOffersYet = offersPending(view);
   const reference = estimate?.mid ?? tender?.reference_price_eur ?? null;
   const offers = [...view.offers].sort((a, b) => a.price_eur - b.price_eur);
   const activeOffers = offers.filter((o) => o.status === "active");
@@ -274,7 +317,7 @@ export function ProjectView({ token }: { token: string }) {
               )}
             </div>
 
-            {offers.length === 0 && <EmptyOffers view={view} />}
+            {noOffersYet ? <RequestOffersCard onRequest={() => setOffersOpen(true)} /> : offers.length === 0 && <EmptyOffers view={view} />}
 
             {offers.map((offer, i) => (
               <OfferCard key={offer.bid_id} offer={offer} rank={i + 1} referenceEur={reference} canAccept={canAccept} onAccept={setPending} />
@@ -417,6 +460,13 @@ export function ProjectView({ token }: { token: string }) {
       </AlertDialog>
 
       {awarded && <span className="sr-only" aria-live="polite">Angebot von {awarded.dealer.company_name} angenommen</span>}
+      <RequestOffersDialog
+        open={offersOpen}
+        onOpenChange={setOffersOpen}
+        busy={requestOffers.isPending}
+        error={requestOffers.error ? errorMessage(requestOffers.error) : null}
+        onConfirm={(input) => requestOffers.mutate(input)}
+      />
     </PageLayout>
   );
 }

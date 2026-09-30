@@ -60,7 +60,7 @@ export const FAQ_ITEMS: FaqItem[] = [
   {
     question: "Wann bekomme ich die ersten Angebote?",
     answer:
-      "Preisschätzung und KI-Vorschau sehen Sie im Konfigurator sofort. Studio-Angebote können während der gesamten Angebotsphase eingehen: 7 Tage bei einer neuen Anfrage, 72 Stunden beim Unterbieten eines vorhandenen Angebots. Über jedes neue Angebot informieren wir Sie per E-Mail. Nehmen in Ihrer Region noch keine Studios teil, melden wir uns persönlich bei Ihnen.",
+      "Preisschätzung und KI-Vorschau sehen Sie im Konfigurator direkt am Ende Ihrer Planung – nach wenigen Minuten. Studio-Angebote können während der gesamten Angebotsphase eingehen: 7 Tage bei einer neuen Anfrage, 72 Stunden beim Unterbieten eines vorhandenen Angebots. Über jedes neue Angebot informieren wir Sie per E-Mail. Nehmen in Ihrer Region noch keine Studios teil, melden wir uns persönlich bei Ihnen.",
   },
   {
     question: "Welche Küchenstudios machen mit?",
@@ -70,7 +70,7 @@ export const FAQ_ITEMS: FaqItem[] = [
   {
     question: "Was, wenn ich nur eine ungefähre Preisvorstellung haben will?",
     answer:
-      "Dafür gibt es den KüchenRechner: Sie beantworten 4 kurze Fragen zu Größe, Ausstattung, Geräten und Region und sehen eine Preisspanne – ohne Kontaktdaten. Die Werte sind Richtwerte auf Basis öffentlich verfügbarer Marktpreise, keine verbindliche Preisauskunft. Detaillierter wird es im Konfigurator, der die Preisspanne mit jeder Auswahl live anpasst.",
+      "Dafür gibt es den KüchenRechner: Sie beantworten 4 kurze Fragen zu Größe, Ausstattung, Geräten und Region und sehen eine Preisspanne – ohne Kontaktdaten. Die Werte sind Richtwerte auf Basis öffentlich verfügbarer Marktpreise, keine verbindliche Preisauskunft. Detaillierter wird es im Konfigurator: Dort planen Sie Ihre Küche Schritt für Schritt und erhalten am Ende Visualisierung und Preisschätzung für genau Ihre Auswahl.",
   },
   {
     question: "Was passiert mit meinen Daten?",

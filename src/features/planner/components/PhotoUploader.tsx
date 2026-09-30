@@ -45,7 +45,7 @@ export function PhotoUploader({
   return (
     <div className="space-y-3">
       {photos.length > 0 && (
-        <div role="radiogroup" aria-label="Foto für die Visualisierung" className="grid grid-cols-3 gap-3">
+        <div role="radiogroup" aria-label="Foto für die Visualisierung" className="grid grid-cols-3 gap-2 sm:gap-3">
           {photos.map((photo) => {
             const selected = photo.path === selectedPath;
             return (
@@ -106,7 +106,7 @@ export function PhotoUploader({
           onDrop={onDrop}
           disabled={busy}
           className={cn(
-            "flex w-full flex-col items-center justify-center gap-2 rounded-2xl border-2 border-dashed px-6 py-8 text-center transition",
+            "flex w-full flex-col items-center justify-center gap-2 rounded-2xl border-2 border-dashed px-6 py-7 text-center transition short:py-5 xshort:py-4",
             "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
             dragging ? "border-primary bg-primary/10" : "border-primary/40 bg-primary/5 hover:border-primary hover:bg-primary/10",
           )}
@@ -119,15 +119,15 @@ export function PhotoUploader({
             </span>
           )}
           <span className="text-base font-semibold text-foreground">
-            {busy ? "Foto wird hochgeladen …" : photos.length ? "Weiteres Foto hinzufügen" : "Foto Ihrer Küche hochladen"}
+            {busy ? "Foto wird hochgeladen …" : photos.length ? "Weiteres Foto hinzufügen" : "Foto Ihres Raums hochladen"}
           </span>
-          <span className="max-w-sm text-sm text-muted-foreground">
-            Tippen, um ein Foto aufzunehmen oder auszuwählen – oder hierher ziehen. Am besten im Querformat aus der Tür fotografiert.
+          <span className={cn("max-w-sm text-sm text-muted-foreground", photos.length > 0 ? "hidden" : "xshort:hidden")}>
+            Tippen, um ein Foto aufzunehmen oder auszuwählen – oder hierher ziehen. Am besten im Querformat.
           </span>
         </button>
       )}
 
-      <p className="text-xs leading-relaxed text-muted-foreground">
+      <p className="text-xs leading-snug text-muted-foreground">
         Für die Visualisierung geht Ihr Foto an unseren KI-Dienstleister fal.ai (USA). Bitte keine Personen
         fotografieren. Details in der{" "}
         <a href="/datenschutz#ki-visualisierung" className="underline underline-offset-2 hover:text-foreground">

@@ -310,7 +310,7 @@ export const APPLIANCE_LEVELS: QualityOption[] = [
   { id: "budget", label: "Basis", brands: "z. B. Beko, Amica, Bauknecht", prompt: "good-value appliances" },
   { id: "mittel", label: "Mittelklasse", brands: "z. B. Bosch, Siemens, AEG", prompt: "quality appliances" },
   { id: "premium", label: "Premium", brands: "z. B. NEFF, Miele", prompt: "premium appliances" },
-  { id: "luxus", label: "Luxus", brands: "z. B. Gaggenau, Miele Generation 7000, Liebherr Monolith", prompt: "luxury professional-grade appliances" },
+  { id: "luxus", label: "Luxus", brands: "z. B. Gaggenau, Miele G 7000, Liebherr", prompt: "luxury professional-grade appliances" },
 ];
 
 export const SINKS: OptionBase<SinkId>[] = [

@@ -122,6 +122,8 @@ export interface ProjectView {
   can_upload_files?: boolean;
   /** Einwilligung zur KI-Verbesserung; nur bei Planungen mit Raumfoto. */
   ai_training?: { granted: boolean } | null;
+  /** Planung aus dem Konfigurator (Funnel C), auch ohne Ausschreibung. */
+  planner?: { estimate: { min: number; max: number; mid: number } | null; photo_count: number | null } | null;
 }
 
 export interface ProjectFile {
@@ -148,6 +150,16 @@ export const exportProjectData = (token: string) => callFunction<Record<string, 
 export const deleteProjectData = (token: string, email: string) =>
   callFunction<{ ok: true }>(FN, { action: "delete-data", token, email });
 /** KI-Verbesserung erlauben oder widerrufen; ein Widerruf löscht die Trainingskopien sofort. */
+/** Funnel C „nur Visualisierung“: Angebote nachträglich anfordern (gleiche Einwilligung wie im Funnel). */
+export const requestProjectOffers = (token: string, input: { timeframeMonths: number | null; contactByPhone: boolean }) =>
+  callFunction<ProjectView>(FN, {
+    action: "request-offers",
+    token,
+    consent_share: true,
+    timeframe_months: input.timeframeMonths,
+    contact_by_phone: input.contactByPhone,
+  });
+
 export const setProjectAiConsent = (token: string, granted: boolean) =>
   callFunction<ProjectView>(FN, { action: "ai-consent", token, granted });
 

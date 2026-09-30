@@ -17,16 +17,10 @@ export function roomWallIssues(room: RoomInput): Record<string, string> {
 }
 
 /**
- * Die Schätzung erscheint erst, wenn Form und Maße feststehen, also nach dem
- * Raum-Schritt. Vorher wäre sie nur der Preis der vorbelegten Musterküche.
+ * Die Preisschätzung ist der Lohn für die Kontaktdaten: Sie erscheint erst im
+ * Ergebnis, nachdem Name, E-Mail und Telefon erfasst sind – vorher nirgends,
+ * auch nicht als Zwischenstand.
  */
-export function estimateVisible(furthestIndex: number): boolean {
-  return furthestIndex >= 1;
-}
-
-/** Hinweis, solange preisrelevante Schritte noch nicht besucht wurden. */
-export function estimateNote(furthestIndex: number): string | null {
-  if (furthestIndex <= 1) return "Wird mit Arbeitsplatte und Geräten noch genauer.";
-  if (furthestIndex === 2) return "Wird mit Geräten und Extras noch genauer.";
-  return null;
+export function estimateVisible(unlocked: boolean): boolean {
+  return unlocked;
 }

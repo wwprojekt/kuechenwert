@@ -16,6 +16,8 @@ export interface PlannerRender {
   mode: "edit" | "text";
   variant_label: string | null;
   image_url: string | null;
+  /** Fertig, aber erst nach der Kontakterfassung sichtbar. */
+  locked?: boolean;
   error?: string | null;
   feedback?: RenderFeedback;
   /** Variante: Visualisierung, auf der sie aufbaut. */
@@ -31,7 +33,10 @@ export interface PlannerSessionRender extends Omit<PlannerRender, "config_key"> 
 
 export interface PlannerSessionState {
   session_token: string;
+  /** Kontakt erfasst: Bilder und Preis sind freigeschaltet. */
   submitted: boolean;
+  unlocked?: boolean;
+  offers_requested?: boolean;
   config: Partial<PlannerConfig>;
   room: Partial<RoomInput>;
   estimate: KitchenEstimate | null;
@@ -45,7 +50,8 @@ export interface GenerateResult {
   version: number;
   mode: "edit" | "text";
   base_render_id?: string | null;
-  estimate: KitchenEstimate;
+  /** Erst nach der Kontakterfassung. */
+  estimate: KitchenEstimate | null;
 }
 
 export interface RenderStatus {
@@ -53,12 +59,15 @@ export interface RenderStatus {
   render_id: string;
   version?: number;
   image_url?: string | null;
+  locked?: boolean;
   error?: string;
 }
 
 export interface SubmitPayload {
   session_token: string;
   contact: { first_name: string; last_name: string; email: string; phone: string; postal_code: string; city?: string };
+  /** „Ja, auch Angebote“: Ausschreibung für Studios; sonst nur Visualisierung und Preis. */
+  request_offers: boolean;
   consents: { share_with_studios: boolean; contact_by_phone: boolean; marketing: boolean; ai_training: boolean };
   /** Gewählte Visualisierung: Titelbild für die Studios. */
   active_render_id: string | null;
@@ -77,9 +86,12 @@ export interface SubmitResult {
   /** Die Planung war schon abgeschickt: nicht erneut als Conversion zählen. */
   already_submitted?: boolean;
   tender_status: string | null;
+  offers_requested?: boolean;
   project_token: string;
   project_url: string;
   estimate: { min: number; max: number; mid: number };
+  /** Freigeschaltete Visualisierungen (mit Bild-URL). */
+  renders?: PlannerSessionRender[];
 }
 
 const FN = "kw-planner";
@@ -202,4 +214,15 @@ export function renderStatus(sessionToken: string, renderId: string) {
 
 export function submitProject(payload: SubmitPayload) {
   return callFunction<SubmitResult>(FN, { action: "submit", ...payload });
+}
+
+/** Nur Visualisierung gewählt: Angebote nachträglich anfordern. */
+export function requestOffers(input: { sessionToken: string; timeframeMonths: number | null; contactByPhone: boolean }) {
+  return callFunction<{ ok: true; offers_requested: true; tender_status: string }>(FN, {
+    action: "request-offers",
+    session_token: input.sessionToken,
+    consent_share: true,
+    timeframe_months: input.timeframeMonths,
+    contact_by_phone: input.contactByPhone,
+  });
 }

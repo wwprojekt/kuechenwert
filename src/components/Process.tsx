@@ -14,7 +14,7 @@ const STEPS = [
   {
     icon: Sparkles,
     title: "Preis & Vorschau",
-    description: "Sie sehen sofort eine realistische Preisspanne – im Konfigurator zusätzlich die KI-Vorschau Ihrer Küche im eigenen Raum.",
+    description: "Direkt nach Ihrer Planung sehen Sie eine realistische Preisspanne – im Konfigurator zusätzlich die KI-Vorschau Ihrer Küche im eigenen Raum.",
     duration: "Sofort",
   },
   {

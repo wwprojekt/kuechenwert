@@ -14,10 +14,16 @@ const api = vi.hoisted(() => ({
   recomputeCalibration: vi.fn(),
   fetchDailyStats: vi.fn(),
   fetchSettingsHistory: vi.fn(),
+  labList: vi.fn(),
+  labRun: vi.fn(),
+  labStatus: vi.fn(),
+  labUploadPhoto: vi.fn(),
+  rateLabRender: vi.fn(),
 }));
 vi.mock("../api", () => api);
 
 import { AiHistoryCard } from "../AiHistoryCard";
+import { AiLabCard } from "../AiLabCard";
 import { AiModelSettingsCard } from "../AiModelSettingsCard";
 import { AiPerformanceCard } from "../AiPerformanceCard";
 import { PriceLearningCard } from "../PriceLearningCard";
@@ -179,6 +185,29 @@ describe("Admin KI & Preis-Engine", () => {
     fireEvent.click(toggle);
     await waitFor(() => expect(api.setPriceCalibrationEnabled).toHaveBeenCalledWith(false));
     await waitFor(() => expect(api.recomputeCalibration).toHaveBeenCalled());
+  });
+
+  it("schlägt im Testlauf Haupt-, Vergleichs- und Ausweichmodell vor und zeigt die Ergebnisse", async () => {
+    api.fetchAiSettings.mockResolvedValue(settings);
+    const run = {
+      run_id: "11111111-1111-4111-8111-111111111111",
+      created_at: "2026-09-30T12:00:00Z",
+      photo_path: "ai-lab/photos/a.jpg",
+      photo_url: "/foto.jpg",
+      config: null,
+      renders: [
+        { id: "r1", model: "fal-ai/nano-banana-pro/edit", status: "success", error: null, cost_cents: 15, generation_ms: 28_000, rating: null, image_url: "/nbp.jpg" },
+        { id: "r2", model: "openai/gpt-image-2.5/sunburst/edit", status: "failed", error: "content policy", cost_cents: 6, generation_ms: null, rating: null, image_url: null },
+      ],
+    };
+    api.labList.mockResolvedValue([run]);
+    api.labStatus.mockResolvedValue(run);
+    wrap(<AiLabCard />);
+    expect(await screen.findByText("content policy")).toBeInTheDocument();
+    expect(screen.getByRole("img", { name: "KI" })).toHaveAttribute("src", "/nbp.jpg");
+    const checked = await screen.findAllByRole("checkbox", { checked: true });
+    expect(checked).toHaveLength(4);
+    expect(screen.getByRole("button", { name: /Testlauf starten/ })).toBeEnabled();
   });
 
   it("zeigt den Verlauf je Woche und die Änderungen an den Einstellungen", async () => {

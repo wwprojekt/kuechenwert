@@ -1,4 +1,5 @@
 import { ApiError } from "@/features/marketplace/api-client";
+import { preparePhoto } from "@/features/planner/api";
 import { supabase } from "@/integrations/supabase/client";
 import type { Tables } from "@/integrations/supabase/types";
 import { ensureValidRLSSession, invokeWithAuth } from "@/lib/sessionGuard";
@@ -193,6 +194,56 @@ export async function recomputeCalibration(): Promise<{ observations: number; gl
   const { data, error } = await invokeWithAuth("kw-maintenance", { body: { task: "price-calibration" } });
   if (error) throw new ApiError(error.message, 502);
   return data as { observations: number; globalFactor: number; applied: boolean };
+}
+
+export interface LabRender {
+  id: string;
+  model: string;
+  status: "pending" | "success" | "failed";
+  error: string | null;
+  cost_cents: number | null;
+  generation_ms: number | null;
+  rating: 1 | -1 | null;
+  image_url: string | null;
+}
+
+export interface LabRun {
+  run_id: string;
+  created_at: string | null;
+  photo_path: string | null;
+  photo_url: string | null;
+  config: { config?: { style?: string }; room?: { form?: string }; prompt_version?: string } | null;
+  renders: LabRender[];
+}
+
+async function lab<T>(body: Record<string, unknown>): Promise<T> {
+  const { data, error } = await invokeWithAuth("kw-ai-lab", { body });
+  if (error) throw new ApiError(error.message, 502);
+  return data as T;
+}
+
+/** Testfoto wie im Planer verkleinern (ohne Metadaten) und privat hochladen; liefert den Pfad. */
+export async function labUploadPhoto(file: File): Promise<string> {
+  const blob = await preparePhoto(file);
+  const { path, token } = await lab<{ path: string; token: string }>({ action: "upload-url", content_type: "image/jpeg", size: blob.size });
+  const { error } = await supabase.storage
+    .from("planner-media")
+    .uploadToSignedUrl(path, token, blob, { contentType: "image/jpeg", cacheControl: "31536000, immutable" });
+  if (error) throw new ApiError(error.message, 502);
+  return path;
+}
+
+export const labRun = (input: { photoPath: string; models: string[]; style: string; form: string }) =>
+  lab<LabRun>({ action: "run", photo_path: input.photoPath, models: input.models, style: input.style, form: input.form });
+
+export const labStatus = (runId: string) => lab<LabRun>({ action: "status", run_id: runId });
+
+export const labList = () => lab<{ runs: LabRun[] }>({ action: "list" }).then((r) => r.runs);
+
+export async function rateLabRender(id: string, rating: 1 | -1 | null): Promise<void> {
+  await requireSession();
+  const { error } = await supabase.from("kw_ai_lab_renders").update({ rating }).eq("id", id);
+  if (error) throw new ApiError(error.message, 409, error.code);
 }
 
 export interface DailyStats {

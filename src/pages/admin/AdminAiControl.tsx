@@ -1,4 +1,5 @@
 import { AiHistoryCard } from "@/features/ai-admin/AiHistoryCard";
+import { AiLabCard } from "@/features/ai-admin/AiLabCard";
 import { AiModelSettingsCard } from "@/features/ai-admin/AiModelSettingsCard";
 import { AiPerformanceCard } from "@/features/ai-admin/AiPerformanceCard";
 import { OwnModelCard } from "@/features/ai-admin/OwnModelCard";
@@ -18,6 +19,7 @@ export default function AdminAiControl() {
       <AiPerformanceCard />
       <AiHistoryCard />
       <AiModelSettingsCard />
+      <AiLabCard />
       <PriceLearningCard />
       <OwnModelCard />
     </div>

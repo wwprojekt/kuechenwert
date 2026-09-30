@@ -5,7 +5,7 @@
  *   { "task": "retention" }  täglich: Löschfristen. Leads werden erst nach dem
  *     Entfernen ihrer Dateien (Storage-API) anonymisiert, verwaiste
  *     Planer-Sitzungen samt Bildern gelöscht, abgelaufene KI-Trainingskopien
- *     entfernt, Betriebsdaten bereinigt (Fristen siehe Migration
+ *     und Modell-Testläufe (90 Tage) entfernt, Betriebsdaten bereinigt (Fristen siehe Migration
  *     kw_maintenance_jobs).
  *   { "task": "health" }     stündlich: Outbox, Cron, HTTP-Aufrufe, offene
  *     Anfragen, blockierte Rechnungen, kritische Fehler, KI-Tageslimit,
@@ -20,6 +20,7 @@
  *     die Preis-Engine mit den Studio-Angeboten ab (kitchen_price_calibration).
  */
 import type { SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2.100.1";
+import { expireLabRenders } from "../_shared/ai-lab.ts";
 import { expireTrainingSamples } from "../_shared/ai-training.ts";
 import { checkCronOrServiceRoleOrAdmin } from "../_shared/auth.ts";
 import { BRAND } from "../_shared/brand-config.ts";
@@ -99,6 +100,13 @@ async function runRetention(sb: SupabaseClient) {
     failures.push(`KI-Trainingskopien: ${err instanceof Error ? err.message : String(err)}`);
   }
 
+  let labRendersExpired = 0;
+  try {
+    labRendersExpired = await expireLabRenders(sb);
+  } catch (err) {
+    failures.push(`KI-Testläufe: ${err instanceof Error ? err.message : String(err)}`);
+  }
+
   const { data: cleanup, error: cleanupError } = await sb.rpc("kw_retention_cleanup");
   if (cleanupError) throw cleanupError;
 
@@ -117,6 +125,7 @@ async function runRetention(sb: SupabaseClient) {
     leadsAnonymized,
     plannerSessionsDeleted,
     trainingSamplesExpired,
+    labRendersExpired,
     filesRemoved,
     cleanup,
     failures: failures.length,

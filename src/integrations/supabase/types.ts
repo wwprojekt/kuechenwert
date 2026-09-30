@@ -3243,6 +3243,63 @@ export type Database = {
           },
         ]
       }
+      kw_ai_lab_renders: {
+        Row: {
+          completed_at: string | null
+          config: Json
+          cost_cents: number | null
+          created_at: string
+          error_message: string | null
+          fal_response_url: string | null
+          fal_status_url: string | null
+          generation_ms: number | null
+          id: string
+          image_path: string | null
+          model_slug: string
+          photo_path: string
+          prompt: string
+          rating: number | null
+          run_id: string
+          status: string
+        }
+        Insert: {
+          completed_at?: string | null
+          config?: Json
+          cost_cents?: number | null
+          created_at?: string
+          error_message?: string | null
+          fal_response_url?: string | null
+          fal_status_url?: string | null
+          generation_ms?: number | null
+          id?: string
+          image_path?: string | null
+          model_slug: string
+          photo_path: string
+          prompt: string
+          rating?: number | null
+          run_id: string
+          status?: string
+        }
+        Update: {
+          completed_at?: string | null
+          config?: Json
+          cost_cents?: number | null
+          created_at?: string
+          error_message?: string | null
+          fal_response_url?: string | null
+          fal_status_url?: string | null
+          generation_ms?: number | null
+          id?: string
+          image_path?: string | null
+          model_slug?: string
+          photo_path?: string
+          prompt?: string
+          rating?: number | null
+          run_id?: string
+          status?: string
+        }
+        Relationships: []
+      }
       kw_ai_settings: {
         Row: {
           challenger_edit_model: string | null

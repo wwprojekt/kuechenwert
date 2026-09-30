@@ -5,9 +5,22 @@
  * wird der Job eingereiht und der Client pollt über kw-planner/status. So
  * überleben Renders Verbindungsabbrüche, und Varianten laufen parallel.
  * Welche Modelle mit welchen Parametern laufen, steht in fal-models.ts.
+ *
+ * Datensparsam einreichen: fal legt erzeugte Bilder sonst mindestens 7 Tage
+ * unter öffentlichen URLs ab und speichert die Anfrage (Prompt mit
+ * Kundenwünschen) 30 Tage in der Dashboard-Historie. kw-planner kopiert das
+ * Bild sofort in den privaten Bucket, deshalb reicht eine Stunde.
  */
 
 const FAL_KEY = Deno.env.get("FAL_API_KEY") ?? Deno.env.get("FAL_KEY") ?? "";
+
+/** So lange hält fal ein erzeugtes Bild vor (Sekunden). */
+export const FAL_MEDIA_TTL_SECONDS = 3600;
+
+export const FAL_SUBMIT_HEADERS: Readonly<Record<string, string>> = {
+  "X-Fal-Object-Lifecycle-Preference": JSON.stringify({ expiration_duration_seconds: FAL_MEDIA_TTL_SECONDS }),
+  "X-Fal-Store-IO": "0",
+};
 
 export interface FalSubmission {
   requestId: string;
@@ -25,7 +38,7 @@ function headers(): HeadersInit {
 export async function falSubmit(model: string, input: Record<string, unknown>): Promise<FalSubmission> {
   const resp = await fetch(`https://queue.fal.run/${model}`, {
     method: "POST",
-    headers: headers(),
+    headers: { ...headers(), ...FAL_SUBMIT_HEADERS },
     body: JSON.stringify(input),
   });
   if (!resp.ok) {

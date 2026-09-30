@@ -127,4 +127,19 @@ describe("buildRenderPrompt", () => {
     const { prompt } = buildRenderPrompt({ ...midRangeL(), wishes: "<script>{x}</script>" }, defaultRoom("zeile"), { mode: "text" });
     expect(prompt).not.toMatch(/[<>{}]/);
   });
+
+  it("verlangt Fotorealismus mit Licht und Maßstab des Originalfotos", () => {
+    const { prompt } = buildRenderPrompt(midRangeL(), defaultRoom("l"), { mode: "edit" });
+    expect(prompt).toContain("not a 3D render");
+    expect(prompt).toContain("white balance");
+    expect(prompt).toContain("worktop at about 90 cm");
+    expect(prompt).toContain("without covering windows, doors or radiators");
+  });
+
+  it("nennt Oberschrank-Maße nur, wenn Oberschränke geplant sind", () => {
+    const withCabinets = buildRenderPrompt({ ...midRangeL(), wallCabinets: "oberschraenke" }, defaultRoom("l"), { mode: "text" }).prompt;
+    const without = buildRenderPrompt({ ...midRangeL(), wallCabinets: "keine" }, defaultRoom("l"), { mode: "text" }).prompt;
+    expect(withCabinets).toContain("wall units about 35 cm deep");
+    expect(without).not.toContain("wall units");
+  });
 });

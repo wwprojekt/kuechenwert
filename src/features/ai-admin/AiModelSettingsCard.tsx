@@ -158,7 +158,7 @@ export function AiModelSettingsCard() {
               onChange={(v) => set("challenger_edit_model", v)}
               emptyLabel="Kein Vergleich"
               exclude={form.edit_model}
-              hint="Ein Teil der Planungen erhält dieses Modell; Ergebnis unten unter „Leistung“."
+              hint="Ein Teil der Planungen mit Foto erhält dieses Modell für alle Bilder, auch für Varianten; Ergebnis oben unter „Leistung der KI“."
             />
             {form.challenger_edit_model && (
               <div className="space-y-3">

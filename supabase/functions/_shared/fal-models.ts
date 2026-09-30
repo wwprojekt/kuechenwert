@@ -8,7 +8,7 @@
  */
 
 export type FalModelKind = "edit" | "text";
-type FalModelFamily = "gemini" | "flux2" | "qwen";
+type FalModelFamily = "gemini" | "flux2" | "qwen" | "openai";
 
 export interface FalModel {
   id: string;
@@ -55,6 +55,17 @@ export const FAL_MODELS: readonly FalModel[] = [
     openWeights: false,
     supportsLora: false,
     note: "Anderer Anbieter als Google, gestaltet den Raum aber freier um – letztes Ausweichmodell.",
+  },
+  {
+    id: "openai/gpt-image-2.5/sunburst/edit",
+    label: "GPT Image 2.5 Sunburst Edit",
+    vendor: "OpenAI",
+    kind: "edit",
+    family: "openai",
+    costCents: 6,
+    openWeights: false,
+    supportsLora: false,
+    note: "Ändert nur, was verlangt ist: Licht, Belichtung und Raum bleiben am genauesten erhalten. Etwas langsamer, deutlich günstiger – Kandidat für den A/B-Vergleich.",
   },
   {
     id: "fal-ai/qwen-image-edit-plus-lora",
@@ -174,6 +185,10 @@ export function buildModelInput(
         negative_prompt: "blurry, distorted perspective, warped walls, extra windows, people, text, watermark",
         loras: model.supportsLora && opts.lora ? [{ path: opts.lora.url, scale: opts.lora.scale }] : [],
       };
+    case "openai":
+      return model.kind === "edit"
+        ? { prompt, image_urls: [imageUrl], num_images: 1, quality: "high", image_size: "auto", output_format: "jpeg" }
+        : { prompt, num_images: 1, quality: "high", image_size: "landscape_4_3", output_format: "jpeg" };
   }
 }
 
@@ -245,11 +260,16 @@ export function abGroup(sessionId: string, sharePercent: number): AbGroup {
   return Number.isFinite(bucket) && bucket < sharePercent ? "challenger" : "control";
 }
 
-/** Modell für eine neue Visualisierung. Varianten bearbeiten immer ein fertiges Bild. */
+/**
+ * Modell für eine neue Visualisierung. Varianten bearbeiten immer ein fertiges
+ * Bild. Die Vergleichsgruppe rechnet alles mit Foto einschließlich Varianten
+ * mit dem Vergleichsmodell, sonst mischt der A/B-Vergleich beide Modelle.
+ */
 export function chooseModel(settings: AiSettings, opts: { mode: FalModelKind; variant: boolean; group: AbGroup | null }): FalModel {
-  if (opts.variant) return settings.variantModel;
+  const challenger = opts.group === "challenger" ? settings.challengerEdit : null;
+  if (opts.variant) return challenger ?? settings.variantModel;
   if (opts.mode === "text") return settings.textModel;
-  return opts.group === "challenger" && settings.challengerEdit ? settings.challengerEdit : settings.editModel;
+  return challenger ?? settings.editModel;
 }
 
 /**

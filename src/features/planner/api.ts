@@ -1,6 +1,7 @@
 import { supabase } from "@/integrations/supabase/client";
 import { callFunction, ApiError } from "@/features/marketplace/api-client";
 import type { KitchenEstimate, PlannerConfig, PlannerProvenance, RoomInput } from "./core";
+import type { RenderFeedbackReason } from "../../../supabase/functions/_shared/render-feedback.ts";
 
 export interface PlannerPhoto {
   path: string;
@@ -20,6 +21,7 @@ export interface PlannerRender {
   locked?: boolean;
   error?: string | null;
   feedback?: RenderFeedback;
+  feedback_reasons?: RenderFeedbackReason[] | null;
   /** Variante: Visualisierung, auf der sie aufbaut. */
   base_render_id?: string | null;
   /** Planung (plannerRenderKey), aus der die Visualisierung entstand. */
@@ -184,12 +186,13 @@ export function generateRender(input: {
   });
 }
 
-export function sendRenderFeedback(sessionToken: string, renderId: string, value: RenderFeedback) {
-  return callFunction<{ ok: true; feedback: RenderFeedback }>(FN, {
+export function sendRenderFeedback(sessionToken: string, renderId: string, value: RenderFeedback, reasons: RenderFeedbackReason[] = []) {
+  return callFunction<{ ok: true; feedback: RenderFeedback; reasons: RenderFeedbackReason[] }>(FN, {
     action: "feedback",
     session_token: sessionToken,
     render_id: renderId,
     value,
+    reasons,
   });
 }
 

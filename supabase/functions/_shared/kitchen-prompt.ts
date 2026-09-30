@@ -29,6 +29,9 @@ import {
   type RoomInput,
 } from "./kitchen-catalog.ts";
 
+/** Mit jedem Bild gespeichert (spec_snapshot.prompt_version), damit sich Prompt-Stände vergleichen lassen. */
+export const PROMPT_VERSION = "2026-09-30-realism";
+
 const promptOf = <T extends { id: string; prompt: string }>(list: T[], id: string): string =>
   list.find((o) => o.id === id)?.prompt ?? "";
 
@@ -89,6 +92,21 @@ export interface RenderPrompt {
   mode: "edit" | "text";
 }
 
+/**
+ * Übliche Maße deutscher Küchen: Ohne Maßstab zeichnen Bildmodelle Schränke oft
+ * zu hoch oder zu tief, und die Visualisierung weckt falsche Erwartungen.
+ */
+function proportionHint(config: PlannerConfig): string {
+  const parts = ["base units about 60 cm deep with the worktop at about 90 cm and a plinth of about 10-15 cm"];
+  if (config.wallCabinets === "oberschraenke") parts.push("wall units about 35 cm deep, hung about 55-60 cm above the worktop");
+  if (config.tallUnits > 0) parts.push("tall units about 2.1-2.2 m high");
+  return `Use true-to-scale German kitchen proportions: ${parts.join(", ")}; appliances built in flush with the cabinetry.`;
+}
+
+/** Der Hauptgrund, warum KI-Bilder unecht wirken: fremdes Licht, Glanz und Kunststoff-Look. */
+const PHOTO_REALISM =
+  "The result must look like a real, unretouched photograph, not a 3D render: realistic material textures, natural soft shadows and reflections, no CGI look, no oversaturated colours.";
+
 export function buildRenderPrompt(
   config: PlannerConfig,
   room: RoomInput,
@@ -112,9 +130,14 @@ export function buildRenderPrompt(
         "Edit this photo into a photorealistic image of the very same room after a complete kitchen renovation.",
         `Remove the existing kitchen furniture and appliances and install a brand-new kitchen: ${kitchen}.`,
         "Keep the architecture exactly as in the photo: identical walls, windows, doors, radiators, ceiling, floor area, camera position, perspective, focal length and daylight direction.",
-        dims ? `Fit the kitchen realistically along the existing walls (${dims}).` : "Fit the kitchen realistically along the existing walls.",
+        "Keep the existing floor covering and wall colours unless the customer wishes say otherwise; where the old kitchen stood, continue the surrounding wall and floor surfaces seamlessly.",
+        dims
+          ? `Fit the kitchen realistically along the existing walls (${dims}) without covering windows, doors or radiators.`
+          : "Fit the kitchen realistically along the existing walls without covering windows, doors or radiators.",
+        proportionHint(config),
         extra,
-        "Tidy, styled like a high-end interior magazine photo, sharp details, correct proportions, no people, no text, no watermark.",
+        `${PHOTO_REALISM} Keep the exposure, white balance and colour temperature of the original photo, as if taken with the same camera in the same light.`,
+        "Tidy, with only a few subtle everyday items, sharp details, no people, no text, no watermark.",
       ]
         .filter(Boolean)
         .join(" "),
@@ -124,10 +147,12 @@ export function buildRenderPrompt(
   return {
     mode: "text",
     prompt: [
-      `Photorealistic wide-angle interior photograph of a brand-new German kitchen: ${kitchen}.`,
+      `Photorealistic wide-angle interior photograph of a brand-new kitchen in a bright, modern German home: ${kitchen}.`,
       dims ? `Room layout: ${dims}.` : "",
+      proportionHint(config),
       extra,
-      "Bright natural daylight from a large window, soft shadows, calm styling with a few plants and ceramics, architectural interior photography, 24mm lens, eye-level camera, no people, no text, no watermark.",
+      PHOTO_REALISM,
+      "Natural daylight from a window, natural colour grading, eye-level camera with a 24 mm lens and straight verticals, calm styling with a few plants and ceramics, no people, no text, no watermark.",
     ]
       .filter(Boolean)
       .join(" "),
@@ -139,7 +164,7 @@ export function buildVariantPrompt(hint: string): string {
   const change = sanitizeFreeText(hint) || "subtle refinement of materials and light";
   return [
     `Edit this photorealistic kitchen visualization: ${change}.`,
-    "Keep everything the request does not mention exactly as it is: room, walls, windows, doors, floor, ceiling, camera position, perspective, kitchen layout, cabinet arrangement and appliances.",
-    "Photorealistic interior photography, sharp details, correct proportions, no people, no text, no watermark.",
+    "Keep everything the request does not mention exactly as it is: room, walls, windows, doors, floor, ceiling, camera position, perspective, lighting and exposure, kitchen layout, cabinet arrangement and appliances.",
+    `${PHOTO_REALISM} Correct proportions, no people, no text, no watermark.`,
   ].join(" ");
 }

@@ -1,6 +1,7 @@
 import { Clock, ImageIcon, KeyRound, MapPin, Trophy, Users } from "lucide-react";
 import { Link } from "react-router-dom";
 import { formLabel } from "@/features/funnel-a/catalog";
+import { AiBadge } from "@/features/planner/components/AiBadge";
 import { cn } from "@/lib/utils";
 import type { DealerProjectRow } from "../dealer-api";
 
@@ -48,7 +49,10 @@ export function DealerProjectCard({ project, imageUrl }: { project: DealerProjec
     >
       <div className="relative aspect-[16/10] bg-muted">
         {imageUrl ? (
-          <img src={imageUrl} alt="" loading="lazy" className="h-full w-full object-cover transition duration-500 group-hover:scale-105" />
+          <>
+            <img src={imageUrl} alt="" loading="lazy" className="h-full w-full object-cover transition duration-500 group-hover:scale-105" />
+            {project.funnel_type === "traumkueche" && <AiBadge className="bottom-3 left-3" />}
+          </>
         ) : (
           <div className="grid h-full place-items-center text-muted-foreground">
             <ImageIcon className="h-8 w-8" />

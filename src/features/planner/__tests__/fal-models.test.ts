@@ -67,12 +67,20 @@ describe("A/B-Zuteilung und Modellwahl", () => {
     expect(abGroup(ids[7]!, 0)).toBe("control");
   });
 
-  it("nutzt das Vergleichsmodell nur für neue Visualisierungen mit Foto", () => {
+  it("rechnet in der Vergleichsgruppe alle Bilder mit Foto samt Varianten mit dem Vergleichsmodell", () => {
     const s = resolveAiSettings({ challenger_edit_model: "fal-ai/qwen-image-edit-plus-lora", challenger_share: 20, variant_model: "fal-ai/nano-banana-2/edit" });
     expect(chooseModel(s, { mode: "edit", variant: false, group: "challenger" }).id).toBe("fal-ai/qwen-image-edit-plus-lora");
+    expect(chooseModel(s, { mode: "edit", variant: true, group: "challenger" }).id).toBe("fal-ai/qwen-image-edit-plus-lora");
     expect(chooseModel(s, { mode: "edit", variant: false, group: "control" }).id).toBe(DEFAULT_AI_MODELS.edit);
-    expect(chooseModel(s, { mode: "edit", variant: true, group: "challenger" }).id).toBe("fal-ai/nano-banana-2/edit");
+    expect(chooseModel(s, { mode: "edit", variant: true, group: "control" }).id).toBe("fal-ai/nano-banana-2/edit");
+    expect(chooseModel(s, { mode: "edit", variant: true, group: null }).id).toBe("fal-ai/nano-banana-2/edit");
     expect(chooseModel(s, { mode: "text", variant: false, group: "challenger" }).id).toBe(DEFAULT_AI_MODELS.text);
+  });
+
+  it("nimmt Modelle anderer Anbieter-Präfixe aus der Registry an", () => {
+    const s = resolveAiSettings({ challenger_edit_model: "openai/gpt-image-2.5/sunburst/edit", challenger_share: 50 });
+    expect(s.challengerEdit?.vendor).toBe("OpenAI");
+    expect(s.challengerShare).toBe(50);
   });
 });
 
@@ -140,5 +148,10 @@ describe("buildModelInput", () => {
       { path: lora.url, scale: 0.9 },
     ]);
     expect(buildModelInput(falModel(DEFAULT_AI_MODELS.edit)!, { prompt: "x", imageUrl: url, lora })).not.toHaveProperty("loras");
+  });
+
+  it("fordert bei GPT Image hohe Qualität im Seitenverhältnis des Fotos an", () => {
+    const input = buildModelInput(falModel("openai/gpt-image-2.5/sunburst/edit", "edit")!, { prompt: "x", imageUrl: url });
+    expect(input).toMatchObject({ quality: "high", image_size: "auto", output_format: "jpeg", num_images: 1 });
   });
 });

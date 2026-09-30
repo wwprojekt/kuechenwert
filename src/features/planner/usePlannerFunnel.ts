@@ -32,6 +32,7 @@ import { validateLead, type LeadContact, type LeadErrors } from "./steps/LeadSte
 import type { OffersRequest } from "./components/RequestOffersDialog";
 import type { RenderPhase } from "./components/RenderProgress";
 import type { VariantRequest } from "./components/VariantPanel";
+import type { RenderFeedbackReason } from "../../../supabase/functions/_shared/render-feedback.ts";
 
 const CONTACT_KEY = "kw_planner_contact";
 /** So lange steht der Lade-Bildschirm mindestens, bevor die Lead-Fragen kommen. */
@@ -351,16 +352,17 @@ export function usePlannerFunnel() {
     }
   };
 
-  const handleFeedback = async (renderId: string, value: RenderFeedback) => {
+  const handleFeedback = async (renderId: string, value: RenderFeedback, reasons: RenderFeedbackReason[] = []) => {
     const render = state.renders.find((r) => r.id === renderId);
     if (!state.sessionToken || !render) return;
-    const previous = render.feedback ?? null;
-    planner.updateRender(renderId, { feedback: value });
-    trackPlannerFeedback(value, !!render.base_render_id);
+    const previous = { feedback: render.feedback ?? null, feedback_reasons: render.feedback_reasons ?? null };
+    planner.updateRender(renderId, { feedback: value, feedback_reasons: reasons });
+    // Nur die Bewertung selbst zählt als Ereignis, nicht jeder angetippte Grund.
+    if (value !== previous.feedback) trackPlannerFeedback(value, !!render.base_render_id);
     try {
-      await sendRenderFeedback(state.sessionToken, renderId, value);
+      await sendRenderFeedback(state.sessionToken, renderId, value, reasons);
     } catch (err) {
-      planner.updateRender(renderId, { feedback: previous });
+      planner.updateRender(renderId, previous);
       toast.error(errorMessage(err));
     }
   };

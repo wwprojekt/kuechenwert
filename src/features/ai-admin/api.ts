@@ -62,17 +62,24 @@ export interface AiModelStats {
   variants: number;
   avg_ms: number | null;
   p50_ms: number | null;
+  p90_ms: number | null;
   cost_cents: number;
   thumbs_up: number;
   thumbs_down: number;
+  /** Gründe bei „Gefällt mir nicht“ (render-feedback.ts) mit Anzahl. */
+  reasons: Record<string, number>;
 }
 
+/** A/B-Gruppe über die Bilder mit Foto; Erfolg, Ausweichen und Bewertung nur der Erstbilder. */
 export interface AiGroupStats {
   group: "control" | "challenger";
   sessions: number;
   leads: number;
   renders: number;
+  first_renders: number;
   success: number;
+  fell_back: number;
+  variants: number;
   thumbs_up: number;
   thumbs_down: number;
   cost_cents: number;
@@ -81,9 +88,11 @@ export interface AiGroupStats {
 export interface AiStats {
   days: number;
   since: string;
-  today: { renders: number; cap: number };
+  /** open: Bilder ungeprüfter Besucher, die sich höchstens open_cap teilen. */
+  today: { renders: number; cap: number; open: number; open_cap: number };
   models: AiModelStats[];
   groups: AiGroupStats[];
+  reasons: Record<string, number>;
   funnel: {
     sessions: number;
     with_render: number;

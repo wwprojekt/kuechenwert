@@ -21,6 +21,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { AiBadge } from "@/features/planner/components/AiBadge";
 import { useAuth } from "@/contexts/AuthContext";
 import { errorMessage } from "@/features/marketplace/api-client";
 import { buildBriefing, buildFloorPlanDxf, downloadFile } from "@/features/marketplace/briefing-export";
@@ -323,7 +324,10 @@ export default function DealerProjectDetail() {
               {renderUrl && photoUrl && renders[0]?.mode === "edit" ? (
                 <BeforeAfterSlider before={photoUrl} after={renderUrl} beforeLabel="Raum heute" afterLabel="Wunschküche (KI)" className="aspect-[4/3]" />
               ) : (
-                <img src={renderUrl ?? photoUrl} alt="Projekt" className="aspect-[4/3] w-full object-cover" />
+                <div className="relative">
+                  <img src={renderUrl ?? photoUrl} alt="Projekt" className="aspect-[4/3] w-full object-cover" />
+                  {renderUrl && <AiBadge className="bottom-3 right-3" />}
+                </div>
               )}
               {photos.length > 1 && (
                 <div className="flex gap-2 overflow-x-auto p-3">

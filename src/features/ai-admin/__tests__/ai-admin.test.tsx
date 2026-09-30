@@ -40,12 +40,37 @@ const settings: AiSettingsRow = {
 const stats: AiStats = {
   days: 30,
   since: "2026-08-29T00:00:00Z",
-  today: { renders: 42, cap: 300 },
+  today: { renders: 42, cap: 300, open: 30, open_cap: 210 },
   funnel: { sessions: 120, with_render: 90, with_photo_render: 70, leads: 30, ai_training_consents: 12, cost_cents: 1500 },
   groups: [
-    { group: "control", sessions: 80, leads: 20, renders: 100, success: 98, thumbs_up: 40, thumbs_down: 10, cost_cents: 1200 },
-    { group: "challenger", sessions: 20, leads: 4, renders: 25, success: 24, thumbs_up: 6, thumbs_down: 6, cost_cents: 250 },
+    {
+      group: "control",
+      sessions: 80,
+      leads: 20,
+      renders: 100,
+      first_renders: 80,
+      success: 78,
+      fell_back: 4,
+      variants: 20,
+      thumbs_up: 40,
+      thumbs_down: 10,
+      cost_cents: 1200,
+    },
+    {
+      group: "challenger",
+      sessions: 20,
+      leads: 4,
+      renders: 25,
+      first_renders: 20,
+      success: 19,
+      fell_back: 2,
+      variants: 5,
+      thumbs_up: 6,
+      thumbs_down: 6,
+      cost_cents: 250,
+    },
   ],
+  reasons: { raum: 3, unecht: 1 },
   models: [
     {
       model: "fal-ai/nano-banana-pro/edit",
@@ -59,9 +84,11 @@ const stats: AiStats = {
       variants: 30,
       avg_ms: 29000,
       p50_ms: 28000,
+      p90_ms: 35000,
       cost_cents: 1455,
       thumbs_up: 40,
       thumbs_down: 10,
+      reasons: { raum: 3 },
     },
   ],
   training: { samples: 12, sessions: 9 },
@@ -89,6 +116,9 @@ describe("Admin KI & Preis-Engine", () => {
     expect(screen.getByText("42 / 300")).toBeInTheDocument();
     expect(screen.getByText("Vergleichsmodell")).toBeInTheDocument();
     expect(screen.getByText("80 % positiv")).toBeInTheDocument();
+    expect(screen.getByText(/30 von höchstens 210/)).toBeInTheDocument();
+    expect(screen.getByText("Raum verändert (3) · Wirkt künstlich (1)")).toBeInTheDocument();
+    expect(screen.getByText(/Noch kein gesicherter Unterschied/)).toBeInTheDocument();
   });
 
   it("erklärt die neutrale Preis-Engine ohne Angebote und zeigt gelernte Faktoren", async () => {

@@ -12,18 +12,25 @@
  *   status        Render-Status pollen, bei Fehler oder voller Warteschlange
  *                 auf das nächste Modell der Ausweichkette wechseln (höchstens
  *                 drei Versuche), fertiges Bild speichern
- *   feedback      Bewertung einer Visualisierung (1 / -1 / null)
+ *   feedback      Bewertung einer Visualisierung (1 / -1 / null, bei -1 mit Gründen)
  *   submit        Kontakt erfassen → Lead (+ Ausschreibung bei request_offers)
  *                 + Projektlink; liefert die freigeschalteten Visualisierungen
+ *                 und startet eine, falls vorher keine zustande kam
  *   request-offers  Lead ohne Ausschreibung: Angebote nachträglich anfordern
+ *   sweep         Cron kw-planner-sweep: Visualisierungen abschließen, die
+ *                 kein Browser mehr abfragt (Tab geschlossen, Handy im Standby)
  *
  * Jede Visualisierung ist ein Lead: Bild-URLs und Preisschätzung liefert der
  * Server erst, wenn Name, E-Mail und Telefon erfasst sind (session.lead_id).
  *
  * Modelle, A/B-Vergleich und Tageslimit stehen in kw_ai_settings
- * (_shared/fal-models.ts). Auth: anonym über session_token (kw_ + 48 hex).
+ * (_shared/fal-models.ts). Auth: anonym über session_token (kw_ + 48 hex),
+ * sweep nur mit Cron-Geheimnis, Service-Role oder Admin.
  * Rate-Limits pro IP (IPv6 je /64) und Session. Ohne gültiges Turnstile-Token
  * beim Abschluss wird die Ausschreibung nicht automatisch veröffentlicht.
+ * Ungeprüfte Besucher (vor der Anfrage oder ohne bestandene Bot-Prüfung)
+ * teilen sich höchstens OPEN_POOL_SHARE des Tageslimits, damit Bots das
+ * Kontingent nicht für echte Kund:innen aufbrauchen können.
  * Schreibzugriffe mit service_role.
  */
 
@@ -59,7 +66,9 @@ import { estimateKitchenPrice, type KitchenEstimate } from "../_shared/kitchen-p
 import { OFFERS_CONSENT_TEXT_VERSION, openPlannerTender, plannerCover, requestPlannerOffers } from "../_shared/planner-offers.ts";
 import { dimensionsSource, sanitizeProvenance, type PlannerProvenance } from "../_shared/planner-provenance.ts";
 import { loadRateCard } from "../_shared/rate-card.ts";
-import { buildRenderPrompt, buildVariantPrompt } from "../_shared/kitchen-prompt.ts";
+import { PROMPT_VERSION, buildRenderPrompt, buildVariantPrompt } from "../_shared/kitchen-prompt.ts";
+import { sanitizeFeedbackReasons } from "../_shared/render-feedback.ts";
+import { checkCronOrServiceRoleOrAdmin } from "../_shared/auth.ts";
 import {
   MAX_ATTEMPTS,
   abGroup,
@@ -91,6 +100,16 @@ const PENDING_REUSE_MS = 3 * 60 * 1000;
 const RENDER_TIMEOUT_MS = 5 * 60 * 1000;
 /** Nach dem Wechsel auf ein Ausweichmodell: so lange darf die neue fal-Anfrage noch fehlen. */
 const FALLBACK_SUBMIT_GRACE_MS = 30 * 1000;
+/** Anteil des Tageslimits für ungeprüfte Besucher; der Rest bleibt Kund:innen mit bestandener Bot-Prüfung. */
+const OPEN_POOL_SHARE = 0.7;
+/** Der Nachlauf übernimmt Visualisierungen ab diesem Alter; der Browser fragt sonst alle 2,5 s selbst ab. */
+const SWEEP_AFTER_MS = 60 * 1000;
+const SWEEP_BATCH = 25;
+/** Rechenzeit eines Nachlaufs, bevor der nächste Cron-Lauf übernimmt. */
+const SWEEP_BUDGET_MS = 40 * 1000;
+const CAP_REACHED_TEXT =
+  "Die Visualisierung ist heute stark gefragt. Bitte versuchen Sie es später noch einmal – Ihre Planung und die Preisschätzung bleiben erhalten, Angebote können Sie trotzdem anfordern.";
+const FAILED_TEXT = "Die Visualisierung ist fehlgeschlagen. Bitte versuchen Sie es erneut – oft hilft ein anderes Foto.";
 const SIGNED_URL_TTL = 60 * 60;
 const CONSENT_TEXT_VERSION = OFFERS_CONSENT_TEXT_VERSION;
 const ALLOWED_IMAGE_TYPES: Record<string, string> = {
@@ -126,6 +145,7 @@ const SESSION_COLUMNS =
 
 type PendingRender = {
   id: string;
+  session_id: string;
   version: number;
   status: string;
   image_path: string | null;
@@ -143,7 +163,9 @@ type PendingRender = {
 };
 
 const RENDER_STATUS_COLUMNS =
-  "id, version, status, image_path, storage_bucket, fal_status_url, fal_response_url, created_at, attempt_started_at, mode, model_slug, fallback_from, attempt, prompt, input_image_path";
+  "id, session_id, version, status, image_path, storage_bucket, fal_status_url, fal_response_url, created_at, attempt_started_at, mode, model_slug, fallback_from, attempt, prompt, input_image_path";
+
+type SessionRef = Pick<Session, "id" | "lead_id">;
 
 function newSessionToken(): string {
   const buf = new Uint8Array(24);
@@ -218,7 +240,7 @@ async function offersRequested(sb: SupabaseClient, leadId: string | null): Promi
 async function sessionRenders(sb: SupabaseClient, session: Session) {
   const { data: renders } = await sb
     .from("planner_renders")
-    .select("id, version, status, mode, variant_label, image_path, storage_bucket, created_at, feedback, base_render_id, spec_snapshot")
+    .select("id, version, status, mode, variant_label, image_path, storage_bucket, created_at, feedback, feedback_reasons, base_render_id, spec_snapshot")
     .eq("session_id", session.id)
     .order("version", { ascending: true });
   const open = unlocked(session);
@@ -233,6 +255,7 @@ async function sessionRenders(sb: SupabaseClient, session: Session) {
         variant_label: r.variant_label,
         created_at: r.created_at,
         feedback: r.feedback ?? null,
+        feedback_reasons: r.feedback_reasons ?? null,
         base_render_id: r.base_render_id ?? null,
         // Ältere Renders speicherten das Foto nicht mit: ohne Schlüssel gelten sie nie als veraltet.
         spec: "photo_path" in spec ? { config: spec.config ?? null, room: spec.room ?? null, photo_path: spec.photo_path ?? null } : null,
@@ -446,7 +469,142 @@ async function loadBaseRender(sb: SupabaseClient, sessionId: string, id: unknown
     .eq("status", "success")
     .maybeSingle();
   if (!data?.image_path || (data.storage_bucket && data.storage_bucket !== BUCKET)) return null;
-  return data as { id: string; image_path: string; storage_bucket: string | null; spec_snapshot: Record<string, unknown> | null };
+  return data as BaseRender;
+}
+
+type BaseRender = { id: string; image_path: string; storage_bucket: string | null; spec_snapshot: Record<string, unknown> | null };
+
+/** Bestandene (oder mangels Cloudflare übersprungene) Bot-Prüfung beim Absenden. */
+async function sessionVerified(sb: SupabaseClient, session: SessionRef): Promise<boolean> {
+  if (!session.lead_id) return false;
+  const { data } = await sb.from("leads").select("bot_check").eq("id", session.lead_id).maybeSingle();
+  return data?.bot_check === "passed" || data?.bot_check === "skipped";
+}
+
+/**
+ * Tageslimit über alle Besucher; ungeprüfte teilen sich höchstens
+ * OPEN_POOL_SHARE davon. Liefert, ob die Visualisierung zum geprüften Teil zählt.
+ */
+async function checkRenderBudget(sb: SupabaseClient, session: SessionRef, settings: AiSettings): Promise<boolean> {
+  if (settings.dailyRenderCap === 0) {
+    throw new HttpError(
+      503,
+      "Die Visualisierung ist gerade pausiert. Ihre Planung und die Preisschätzung bleiben erhalten – Angebote können Sie trotzdem anfordern.",
+      "render_paused",
+    );
+  }
+  const since = new Date(Date.now() - 86_400_000).toISOString();
+  const { count: total, error: capErr } = await sb.from("planner_renders").select("id", { count: "exact", head: true }).gte("created_at", since);
+  if (capErr || (total ?? 0) >= settings.dailyRenderCap) throw new HttpError(429, CAP_REACHED_TEXT, "daily_render_cap");
+  if (await sessionVerified(sb, session)) return true;
+  const { count: open, error: openErr } = await sb
+    .from("planner_renders")
+    .select("id", { count: "exact", head: true })
+    .gte("created_at", since)
+    .eq("verified", false);
+  if (openErr || (open ?? 0) >= Math.floor(settings.dailyRenderCap * OPEN_POOL_SHARE)) {
+    throw session.lead_id
+      ? new HttpError(429, CAP_REACHED_TEXT, "daily_render_cap")
+      : new HttpError(
+          429,
+          "Ihre Visualisierung starten wir direkt nach Ihren Kontaktdaten – Planung und Preisschätzung bleiben erhalten.",
+          "render_after_contact",
+        );
+  }
+  return false;
+}
+
+interface RenderRequest {
+  config: PlannerConfig;
+  room: RoomInput;
+  photoPath: string | null;
+  variantHint: string | null;
+  variantLabel: string | null;
+  base: BaseRender | null;
+}
+
+/** Visualisierung anlegen und bei fal einreihen (bei Fehlern sofort über die Ausweichkette). */
+async function startRender(
+  sb: SupabaseClient,
+  session: Session,
+  settings: AiSettings,
+  input: RenderRequest,
+): Promise<{ id: string; version: number; mode: "edit" | "text" }> {
+  const verified = await checkRenderBudget(sb, session, settings);
+  const { config, room, photoPath, variantHint, variantLabel, base } = input;
+
+  let group = session.ai_group;
+  let mode: "edit" | "text";
+  let inputPath: string | null;
+  let prompt: string;
+  let specPhoto: string | null;
+  if (base && variantHint) {
+    mode = "edit";
+    inputPath = base.image_path;
+    prompt = buildVariantPrompt(variantHint);
+    specPhoto = typeof base.spec_snapshot?.photo_path === "string" ? base.spec_snapshot.photo_path : null;
+  } else {
+    mode = photoPath ? "edit" : "text";
+    inputPath = photoPath;
+    prompt = buildRenderPrompt(config, room, { mode, variantHint }).prompt;
+    specPhoto = photoPath;
+    if (mode === "edit" && !group && settings.challengerEdit) {
+      group = abGroup(session.id, settings.challengerShare);
+      await sb.from("planner_sessions").update({ ai_group: group }).eq("id", session.id).is("ai_group", null);
+    }
+  }
+  const model = chooseModel(settings, { mode, variant: !!base, group });
+
+  const { data: last } = await sb
+    .from("planner_renders")
+    .select("version")
+    .eq("session_id", session.id)
+    .order("version", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  const version = ((last?.version as number | undefined) ?? 0) + 1;
+
+  const inputUrl = inputPath ? await signedUrl(sb, inputPath, 900) : null;
+  if (inputPath && !inputUrl) throw new HttpError(500, "Foto konnte nicht gelesen werden.", "photo_unreadable");
+
+  const { data: render, error: insErr } = await sb
+    .from("planner_renders")
+    .insert({
+      session_id: session.id,
+      version,
+      prompt,
+      spec_snapshot: { config, room, photo_path: specPhoto, variant_hint: variantHint, prompt_version: PROMPT_VERSION },
+      user_message: variantHint,
+      status: "pending",
+      model_slug: model.id,
+      cost_cents: model.costCents,
+      mode,
+      input_image_path: inputPath,
+      storage_bucket: BUCKET,
+      variant_label: variantLabel,
+      base_render_id: base?.id ?? null,
+      attempt_started_at: new Date().toISOString(),
+      verified,
+    })
+    .select("id")
+    .single();
+  if (insErr || !render) throw insErr ?? new Error("render insert failed");
+
+  try {
+    await submitAttempt(sb, render.id, model, { prompt, imageUrl: inputUrl, settings });
+  } catch (err) {
+    console.error("[kw-planner] fal submit failed", model.id, err);
+    const switched = await switchToFallback(
+      sb,
+      settings,
+      { id: render.id, attempt: 1, first: model, current: model, prompt, imageUrl: inputUrl },
+      `submit: ${errorText(err)}`,
+    );
+    if (!switched) {
+      throw new HttpError(502, "Die Visualisierung konnte gerade nicht gestartet werden. Bitte gleich noch einmal versuchen.", "render_unavailable");
+    }
+  }
+  return { id: render.id as string, version, mode };
 }
 
 async function actionGenerate(req: Request, sb: SupabaseClient, body: Record<string, unknown>) {
@@ -458,26 +616,6 @@ async function actionGenerate(req: Request, sb: SupabaseClient, body: Record<str
   }
   await enforceRateLimit(sb, `kw:gen:${ip}`, 3600, 12, { failClosed: true });
   await enforceRateLimit(sb, `kw:gen-day:${ip}`, 86400, 30, { failClosed: true });
-
-  const settings = await loadAiSettings(sb);
-  if (settings.dailyRenderCap === 0) {
-    throw new HttpError(
-      503,
-      "Die Visualisierung ist gerade pausiert. Ihre Planung und die Preisschätzung bleiben erhalten – Angebote können Sie trotzdem anfordern.",
-      "render_paused",
-    );
-  }
-  const { count: rendersToday, error: capErr } = await sb
-    .from("planner_renders")
-    .select("id", { count: "exact", head: true })
-    .gte("created_at", new Date(Date.now() - 86_400_000).toISOString());
-  if (capErr || (rendersToday ?? 0) >= settings.dailyRenderCap) {
-    throw new HttpError(
-      429,
-      "Die Visualisierung ist heute stark gefragt. Bitte versuchen Sie es später noch einmal – Ihre Planung und die Preisschätzung bleiben erhalten, Angebote können Sie trotzdem anfordern.",
-      "daily_render_cap",
-    );
-  }
 
   const { count } = await sb
     .from("planner_renders")
@@ -528,84 +666,40 @@ async function actionGenerate(req: Request, sb: SupabaseClient, body: Record<str
 
   // Variante: das gewählte Bild gezielt ändern statt die Küche neu zu erfinden.
   const base = variantHint ? await loadBaseRender(sb, session.id, body.base_render_id) : null;
-  let group = session.ai_group;
-  let mode: "edit" | "text";
-  let inputPath: string | null;
-  let prompt: string;
-  let specPhoto: string | null;
-  if (base && variantHint) {
-    mode = "edit";
-    inputPath = base.image_path;
-    prompt = buildVariantPrompt(variantHint);
-    specPhoto = typeof base.spec_snapshot?.photo_path === "string" ? base.spec_snapshot.photo_path : null;
-  } else {
-    mode = photoPath ? "edit" : "text";
-    inputPath = photoPath;
-    prompt = buildRenderPrompt(config, room, { mode, variantHint }).prompt;
-    specPhoto = photoPath;
-    if (mode === "edit" && !group && settings.challengerEdit) {
-      group = abGroup(session.id, settings.challengerShare);
-      await sb.from("planner_sessions").update({ ai_group: group }).eq("id", session.id).is("ai_group", null);
-    }
-  }
-  const model = chooseModel(settings, { mode, variant: !!base, group });
-
-  const { data: last } = await sb
-    .from("planner_renders")
-    .select("version")
-    .eq("session_id", session.id)
-    .order("version", { ascending: false })
-    .limit(1)
-    .maybeSingle();
-  const version = ((last?.version as number | undefined) ?? 0) + 1;
-
-  const inputUrl = inputPath ? await signedUrl(sb, inputPath, 900) : null;
-  if (inputPath && !inputUrl) throw new HttpError(500, "Foto konnte nicht gelesen werden.", "photo_unreadable");
-
-  const { data: render, error: insErr } = await sb
-    .from("planner_renders")
-    .insert({
-      session_id: session.id,
-      version,
-      prompt,
-      spec_snapshot: { config, room, photo_path: specPhoto, variant_hint: variantHint },
-      user_message: variantHint,
-      status: "pending",
-      model_slug: model.id,
-      cost_cents: model.costCents,
-      mode,
-      input_image_path: inputPath,
-      storage_bucket: BUCKET,
-      variant_label: variantLabel,
-      base_render_id: base?.id ?? null,
-      attempt_started_at: new Date().toISOString(),
-    })
-    .select("id")
-    .single();
-  if (insErr || !render) throw insErr ?? new Error("render insert failed");
-
-  try {
-    await submitAttempt(sb, render.id, model, { prompt, imageUrl: inputUrl, settings });
-  } catch (err) {
-    console.error("[kw-planner] fal submit failed", model.id, err);
-    const switched = await switchToFallback(
-      sb,
-      settings,
-      { id: render.id, attempt: 1, first: model, current: model, prompt, imageUrl: inputUrl },
-      `submit: ${errorText(err)}`,
-    );
-    if (!switched) {
-      throw new HttpError(502, "Die Visualisierung konnte gerade nicht gestartet werden. Bitte gleich noch einmal versuchen.", "render_unavailable");
-    }
-  }
+  const render = await startRender(sb, session, await loadAiSettings(sb), { config, room, photoPath, variantHint, variantLabel, base });
 
   return jsonResponse(req, {
     session_token: session.session_token,
     render_id: render.id,
-    version,
-    mode,
+    version: render.version,
+    mode: render.mode,
     base_render_id: base?.id ?? null,
     estimate: unlocked(session) ? estimate : null,
+  });
+}
+
+/**
+ * Nach dem Absenden: Ist keine Visualisierung fertig oder in Arbeit (vorher
+ * fehlgeschlagen, Kontingent für Ungeprüfte erschöpft), jetzt eine starten.
+ */
+async function startRenderAfterContact(sb: SupabaseClient, session: Session): Promise<void> {
+  const { data: renders } = await sb
+    .from("planner_renders")
+    .select("status, spec_snapshot")
+    .eq("session_id", session.id)
+    .order("version", { ascending: false });
+  if ((renders ?? []).some((r) => r.status === "success" || r.status === "pending")) return;
+  const photos = session.photo_paths ?? [];
+  const lastPhoto = (renders ?? [])
+    .map((r) => (r.spec_snapshot as Record<string, unknown> | null)?.photo_path)
+    .find((p): p is string => typeof p === "string" && photos.includes(p));
+  await startRender(sb, session, await loadAiSettings(sb), {
+    config: sanitizeConfig(session.spec),
+    room: sanitizeRoom(session.room),
+    photoPath: lastPhoto ?? photos[0] ?? null,
+    variantHint: null,
+    variantLabel: null,
+    base: null,
   });
 }
 
@@ -649,15 +743,34 @@ async function actionSave(req: Request, sb: SupabaseClient, body: Record<string,
   return jsonResponse(req, { session_token: session.session_token, estimate: unlocked(session) ? estimate : null });
 }
 
+/**
+ * Ausschreibung ohne Titelbild (das Bild war beim Absenden noch nicht fertig):
+ * die erste fertige Visualisierung nachtragen, sonst sehen Studios in der
+ * Projektliste nur einen Platzhalter.
+ */
+async function fillTenderCover(sb: SupabaseClient, leadId: string, cover: { bucket: string; path: string }): Promise<void> {
+  const { data } = await sb
+    .from("lead_auctions")
+    .select("id, public_summary")
+    .eq("lead_id", leadId)
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  const summary = data?.public_summary as Record<string, unknown> | null | undefined;
+  if (!data || !summary || typeof summary !== "object" || summary.cover) return;
+  const { error } = await sb.from("lead_auctions").update({ public_summary: { ...summary, cover } }).eq("id", data.id);
+  if (error) console.error("[kw-planner] tender cover update failed", error.message);
+}
+
 /** Ergebnis von fal übernehmen und im privaten Bucket speichern. */
-async function storeResult(sb: SupabaseClient, sessionId: string, render: PendingRender): Promise<string> {
+async function storeResult(sb: SupabaseClient, session: SessionRef, render: PendingRender): Promise<string> {
   const result = await falResultImage(render.fal_response_url as string);
   const imageResp = await fetch(result.url);
   if (!imageResp.ok) throw new Error(`image download ${imageResp.status}`);
   const bytes = new Uint8Array(await imageResp.arrayBuffer());
   const contentType = imageResp.headers.get("content-type")?.split(";")[0] ?? "image/jpeg";
   const ext = contentType === "image/png" ? "png" : contentType === "image/webp" ? "webp" : "jpg";
-  const path = `${sessionId}/renders/v${render.version}-${render.id.slice(0, 8)}.${ext}`;
+  const path = `${session.id}/renders/v${render.version}-${render.id.slice(0, 8)}.${ext}`;
   const { error: upErr } = await sb.storage.from(BUCKET).upload(path, bytes, {
     contentType,
     cacheControl: "31536000, immutable",
@@ -678,44 +791,35 @@ async function storeResult(sb: SupabaseClient, sessionId: string, render: Pendin
     .eq("id", render.id)
     .eq("status", "pending")
     .select("id");
-  if (updated?.length) await sb.from("planner_sessions").update({ current_render_id: render.id }).eq("id", sessionId);
+  if (updated?.length) {
+    await sb.from("planner_sessions").update({ current_render_id: render.id }).eq("id", session.id);
+    if (session.lead_id) await fillTenderCover(sb, session.lead_id, { bucket: BUCKET, path });
+  }
   return path;
 }
 
-async function actionStatus(req: Request, sb: SupabaseClient, body: Record<string, unknown>) {
-  const session = await requireSession(sb, body.session_token);
-  const { data, error } = await sb
-    .from("planner_renders")
-    .select(RENDER_STATUS_COLUMNS)
-    .eq("id", String(body.render_id ?? ""))
-    .eq("session_id", session.id)
-    .maybeSingle();
-  if (error) throw error;
-  if (!data) throw new HttpError(404, "Visualisierung nicht gefunden.", "render_not_found");
-  const render = data as PendingRender;
+type RenderOutcome =
+  | { status: "success"; path: string }
+  | { status: "pending"; queue: string }
+  | { status: "failed"; message: string };
 
-  const failed = (message: string) => jsonResponse(req, { status: "failed", render_id: render.id, error: message });
-  const pending = (queue: string) => jsonResponse(req, { status: "pending", render_id: render.id, queue });
-  const successResponse = async (path: string) =>
-    unlocked(session)
-      ? jsonResponse(req, { status: "success", render_id: render.id, version: render.version, image_url: await signedUrl(sb, path) })
-      : jsonResponse(req, { status: "success", render_id: render.id, version: render.version, image_url: null, locked: true });
-
-  if (render.status === "success" && render.image_path) return successResponse(render.image_path);
-  if (render.status === "failed") {
-    return failed("Die Visualisierung ist fehlgeschlagen. Bitte versuchen Sie es erneut – oft hilft ein anderes Foto.");
-  }
+/**
+ * Einen Schritt weiter: fal-Status prüfen, fertiges Bild übernehmen, bei
+ * Fehler oder Stau auf das nächste Modell wechseln. Gemeinsam für die
+ * Browser-Abfrage (status) und den Nachlauf (sweep); beide dürfen gleichzeitig
+ * laufen, weil jede Zustandsänderung ein bedingter Update ist.
+ */
+async function advanceRender(sb: SupabaseClient, session: SessionRef, render: PendingRender): Promise<RenderOutcome> {
+  if (render.status === "success" && render.image_path) return { status: "success", path: render.image_path };
+  if (render.status === "failed") return { status: "failed", message: FAILED_TEXT };
 
   const now = Date.now();
-  if (now - new Date(render.created_at).getTime() > RENDER_TIMEOUT_MS) {
-    await markFailed(sb, render.id, "timeout");
-    return failed("Die Visualisierung hat zu lange gedauert. Bitte erneut versuchen.");
-  }
+  const timedOut = now - new Date(render.created_at).getTime() > RENDER_TIMEOUT_MS;
   const attemptStarted = new Date(render.attempt_started_at ?? render.created_at).getTime();
   if (!render.fal_status_url || !render.fal_response_url) {
-    if (render.attempt > 1 && now - attemptStarted < FALLBACK_SUBMIT_GRACE_MS) return pending("FALLBACK");
-    await markFailed(sb, render.id, "missing fal urls");
-    return failed("Die Visualisierung konnte nicht gestartet werden.");
+    if (!timedOut && render.attempt > 1 && now - attemptStarted < FALLBACK_SUBMIT_GRACE_MS) return { status: "pending", queue: "FALLBACK" };
+    await markFailed(sb, render.id, timedOut ? "timeout" : "missing fal urls");
+    return { status: "failed", message: "Die Visualisierung konnte nicht gestartet werden." };
   }
 
   let state: AttemptState;
@@ -727,14 +831,21 @@ async function actionStatus(req: Request, sb: SupabaseClient, body: Record<strin
     problem = `status: ${errorText(err)}`;
   }
 
+  // Auch nach der Zeitgrenze: ein bei fal fertiges Bild ist bezahlt und wird übernommen.
   if (state === "COMPLETED") {
     try {
-      return successResponse(await storeResult(sb, session.id, render));
+      return { status: "success", path: await storeResult(sb, session, render) };
     } catch (err) {
       console.error("[kw-planner] result handling failed", render.model_slug, err);
       state = "ERROR";
       problem = `result: ${errorText(err)}`;
     }
+  }
+
+  if (timedOut) {
+    if (state === "IN_QUEUE") await falCancel(render.fal_status_url);
+    await markFailed(sb, render.id, problem ? `timeout (${problem})` : "timeout");
+    return { status: "failed", message: "Die Visualisierung hat zu lange gedauert. Bitte erneut versuchen." };
   }
 
   const reason = fallbackReason(state, now - attemptStarted);
@@ -752,15 +863,75 @@ async function actionStatus(req: Request, sb: SupabaseClient, body: Record<strin
         { ...ref, id: render.id, prompt: render.prompt, imageUrl },
         problem ? `${reason} (${problem})` : reason,
       );
-      return switched ? pending("FALLBACK") : failed("Die Visualisierung ist fehlgeschlagen. Bitte erneut versuchen.");
+      return switched ? { status: "pending", queue: "FALLBACK" } : { status: "failed", message: "Die Visualisierung ist fehlgeschlagen. Bitte erneut versuchen." };
     }
   }
 
   if (state === "ERROR") {
     await markFailed(sb, render.id, problem || "error");
-    return failed("Die Visualisierung ist fehlgeschlagen. Bitte erneut versuchen.");
+    return { status: "failed", message: "Die Visualisierung ist fehlgeschlagen. Bitte erneut versuchen." };
   }
-  return pending(state);
+  return { status: "pending", queue: state };
+}
+
+async function actionStatus(req: Request, sb: SupabaseClient, body: Record<string, unknown>) {
+  const session = await requireSession(sb, body.session_token);
+  const { data, error } = await sb
+    .from("planner_renders")
+    .select(RENDER_STATUS_COLUMNS)
+    .eq("id", String(body.render_id ?? ""))
+    .eq("session_id", session.id)
+    .maybeSingle();
+  if (error) throw error;
+  if (!data) throw new HttpError(404, "Visualisierung nicht gefunden.", "render_not_found");
+  const render = data as PendingRender;
+
+  const outcome = await advanceRender(sb, session, render);
+  if (outcome.status === "failed") return jsonResponse(req, { status: "failed", render_id: render.id, error: outcome.message });
+  if (outcome.status === "pending") return jsonResponse(req, { status: "pending", render_id: render.id, queue: outcome.queue });
+  return unlocked(session)
+    ? jsonResponse(req, { status: "success", render_id: render.id, version: render.version, image_url: await signedUrl(sb, outcome.path) })
+    : jsonResponse(req, { status: "success", render_id: render.id, version: render.version, image_url: null, locked: true });
+}
+
+/**
+ * Cron kw-planner-sweep (jede Minute, nur wenn etwas offen ist): schließt
+ * Visualisierungen ab, die kein Browser mehr abfragt, und wechselt auch dort
+ * auf Ausweichmodelle. So ist das Bild da, wenn die Kundin später wiederkommt.
+ */
+async function actionSweep(req: Request, sb: SupabaseClient) {
+  const auth = await checkCronOrServiceRoleOrAdmin(req, {});
+  if (!auth.authorized) throw new HttpError(401, "Nicht autorisiert.", "unauthorized");
+  const started = Date.now();
+  const { data, error } = await sb
+    .from("planner_renders")
+    .select(RENDER_STATUS_COLUMNS)
+    .eq("status", "pending")
+    .lt("created_at", new Date(started - SWEEP_AFTER_MS).toISOString())
+    .order("created_at", { ascending: true })
+    .limit(SWEEP_BATCH);
+  if (error) throw error;
+  const renders = (data ?? []) as PendingRender[];
+  const sessionIds = [...new Set(renders.map((r) => r.session_id))];
+  const { data: sessions, error: sessionErr } = sessionIds.length
+    ? await sb.from("planner_sessions").select("id, lead_id").in("id", sessionIds)
+    : { data: [], error: null };
+  if (sessionErr) throw sessionErr;
+  const byId = new Map(((sessions ?? []) as SessionRef[]).map((s) => [s.id, s]));
+
+  const result = { checked: 0, success: 0, failed: 0, pending: 0, errors: 0 };
+  for (const render of renders) {
+    if (Date.now() - started > SWEEP_BUDGET_MS) break;
+    result.checked++;
+    try {
+      const outcome = await advanceRender(sb, byId.get(render.session_id) ?? { id: render.session_id, lead_id: null }, render);
+      result[outcome.status]++;
+    } catch (err) {
+      result.errors++;
+      console.error("[kw-planner] sweep failed", render.id, errorText(err));
+    }
+  }
+  return jsonResponse(req, { ok: true, ...result });
 }
 
 async function actionFeedback(req: Request, sb: SupabaseClient, body: Record<string, unknown>) {
@@ -769,16 +940,21 @@ async function actionFeedback(req: Request, sb: SupabaseClient, body: Record<str
   const renderId = String(body.render_id ?? "");
   if (!UUID_RE.test(renderId)) throw new HttpError(400, "Ungültige Visualisierung.", "invalid_render");
   const value = body.value === 1 || body.value === -1 ? body.value : null;
+  const reasons = value === -1 ? sanitizeFeedbackReasons(body.reasons) : [];
   const { data, error } = await sb
     .from("planner_renders")
-    .update({ feedback: value, feedback_at: value === null ? null : new Date().toISOString() })
+    .update({
+      feedback: value,
+      feedback_reasons: reasons.length ? reasons : null,
+      feedback_at: value === null ? null : new Date().toISOString(),
+    })
     .eq("id", renderId)
     .eq("session_id", session.id)
     .eq("status", "success")
     .select("id");
   if (error) throw error;
   if (!data?.length) throw new HttpError(404, "Visualisierung nicht gefunden.", "render_not_found");
-  return jsonResponse(req, { ok: true, feedback: value });
+  return jsonResponse(req, { ok: true, feedback: value, reasons });
 }
 
 async function userIdFromAuthHeader(sb: SupabaseClient, req: Request): Promise<string | null> {
@@ -940,6 +1116,10 @@ async function actionSubmit(req: Request, sb: SupabaseClient, body: Record<strin
       .eq("id", session.id);
     await sb.rpc("kw_enqueue", { p_event_type: "project_created", p_payload: { lead_id: leadId, funnel: "c" } });
 
+    await startRenderAfterContact(sb, { ...session, lead_id: leadId }).catch((err) =>
+      console.error("[kw-planner] render after contact failed", errorText(err)),
+    );
+
     if (aiTraining && leadId) {
       await storeTrainingSamples(sb, {
         sessionId: session.id,
@@ -1019,6 +1199,8 @@ serve(async (req) => {
       return actionSubmit(req, sb, body);
     case "request-offers":
       return actionRequestOffers(req, sb, body);
+    case "sweep":
+      return actionSweep(req, sb);
     default:
       throw new HttpError(400, "Unbekannte Aktion.", "unknown_action");
   }

@@ -9,7 +9,8 @@
  *     kw_maintenance_jobs).
  *   { "task": "health" }     stündlich: Outbox, Cron, HTTP-Aufrufe, offene
  *     Anfragen, blockierte Rechnungen, kritische Fehler, KI-Tageslimit,
- *     fehlschlagende Visualisierungen und Google Ads: API-Zugang (hält
+ *     fehlschlagende, ausweichende oder hängende Visualisierungen, gesperrtes
+ *     fal-Konto und Google Ads: API-Zugang (hält
  *     nebenbei den Refresh-Token aktiv, den Google nach 6 Monaten ohne
  *     Nutzung verfallen lässt), abgelehnte Anzeigen, Kosten ohne
  *     Conversion, gescheiterte Umsatzmeldungen. Hinweis-Mail an das
@@ -191,6 +192,9 @@ const FINDINGS: Array<{ key: string; text: (n: number) => string; link: string }
   { key: "errors_critical", text: (n) => `${n} kritische Fehler in der letzten Stunde.`, link: "/admin/error-logs" },
   { key: "render_cap_near", text: (n) => `${n} KI-Visualisierungen in 24 Stunden – über 80 % des Tageslimits. Danach sehen Besucher keine Visualisierung mehr; Limit unter „KI & Preis-Engine“ prüfen.`, link: "/admin/ki" },
   { key: "renders_failing", text: (n) => `${n} KI-Visualisierungen sind in den letzten 2 Stunden fehlgeschlagen (fal.ai-Guthaben, API-Schlüssel und Modellstatus prüfen).`, link: "/admin/ki" },
+  { key: "fal_account_blocked", text: () => "fal.ai lehnt Aufträge ab (Guthaben aufgebraucht, Konto oder Modell gesperrt, API-Schlüssel ungültig). Alle Bildmodelle laufen über dieses Konto, die Ausweichkette hilft hier nicht: Guthaben, Schlüssel und Modellzugriff im fal-Dashboard prüfen.", link: "/admin/ki" },
+  { key: "renders_fallback_high", text: (n) => `${n} KI-Visualisierungen mussten in 24 Stunden auf ein Ausweichmodell wechseln (mindestens ein Viertel). Kund:innen warten länger und bekommen evtl. schwächere Bilder; Hauptmodell bei fal.ai prüfen (Störung, abgekündigt) und unter „KI & Preis-Engine“ ggf. umstellen.`, link: "/admin/ki" },
+  { key: "renders_stuck", text: (n) => `${n} KI-Visualisierungen hängen seit über 10 Minuten; der Nachlauf (Cron kw-planner-sweep) arbeitet vermutlich nicht.`, link: "/admin/cron-health" },
   { key: "gads_api_failing", text: () => "Google Ads lehnt den API-Zugriff ab (Zugangsdaten gads_* im Supabase Vault prüfen, z. B. widerrufener Refresh-Token; Diagnose unter Einstellungen → Tracking). Die Conversion-Messung im Browser läuft unabhängig davon weiter.", link: "/admin/settings" },
   { key: "gads_ads_disapproved", text: (n) => `${n} Google-Ads-Anzeigen sind abgelehnt und laufen nicht. Grund in Google Ads unter Anzeigen prüfen; die Texte stehen im Kampagnenplan (google-ads-plan.ts).`, link: "/admin/settings" },
   { key: "gads_no_delivery", text: (n) => `Keine der ${n} aktiven Google-Ads-Kampagnen hatte gestern eine einzige Impression (erwartet nur, wenn sie gestern pausiert waren). In Google Ads Zahlung, Kontostatus und Richtlinienhinweise prüfen.`, link: "/admin/settings" },

@@ -2,7 +2,9 @@ import { AlertTriangle, CheckCircle2, ImageIcon, PencilLine, RefreshCcw, Wand2 }
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { ConsentCheckbox } from "@/features/funnel-a/components/ContactFields";
+import type { RenderFeedbackReason } from "../../../../supabase/functions/_shared/render-feedback.ts";
 import type { PlannerRender, RenderFeedback as Feedback } from "../api";
+import { AiBadge } from "../components/AiBadge";
 import { BeforeAfterSlider } from "../components/BeforeAfterSlider";
 import { PriceSummary } from "../components/PriceSummary";
 import { RenderFeedback } from "../components/RenderFeedback";
@@ -24,7 +26,7 @@ interface ResultStepProps {
   offersRequested: boolean;
   onGenerate: (variant?: VariantRequest) => void;
   onSelectRender: (id: string) => void;
-  onFeedback: (renderId: string, value: Feedback) => void;
+  onFeedback: (renderId: string, value: Feedback, reasons: RenderFeedbackReason[]) => void;
   onRequestOffers: () => void;
   onAdjust: () => void;
   onNewPlanning: () => void;
@@ -46,6 +48,7 @@ function RenderView({ active, beforePhotoUrl, generating, error, startedAt, onGe
         {active.variant_label && (
           <span className="absolute bottom-3 left-3 rounded-full bg-black/60 px-2.5 py-1 text-xs font-medium text-white">{active.variant_label}</span>
         )}
+        <AiBadge className="bottom-3 right-3" />
       </div>
     );
   }
@@ -89,7 +92,16 @@ export function ResultStep(props: ResultStepProps) {
           <PriceSummary estimate={estimate} compact />
         </div>
         {active?.status === "success" && active.image_url && (
-          <RenderFeedback value={active.feedback ?? null} onChange={(value) => onFeedback(active.id, value)} />
+          <>
+            <p className="text-xs text-muted-foreground">
+              Die KI-Visualisierung zeigt Stil, Farben und Materialien. Maße und Details plant das Küchenstudio vor Ort genau.
+            </p>
+            <RenderFeedback
+              value={active.feedback ?? null}
+              reasons={active.feedback_reasons ?? []}
+              onChange={(value, reasons) => onFeedback(active.id, value, reasons)}
+            />
+          </>
         )}
       </div>
 

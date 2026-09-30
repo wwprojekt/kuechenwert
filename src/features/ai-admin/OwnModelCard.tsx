@@ -3,14 +3,14 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Progress } from "@/components/ui/progress";
 import { fetchAiStats } from "./api";
 
-/** Richtwert für ein erstes eigenes LoRA auf einem offenen Bildmodell. */
-const TRAINING_GOAL = 300;
+/** Ab so vielen echten Räumen trägt ein fester Testsatz für Modell- und Prompt-Vergleiche. */
+const TEST_SET_GOAL = 50;
 
 const STEPS = [
-  "Kund:innen stellen freiwillig ihre Raumfotos ohne Kontaktdaten bereit; Bewertungen zeigen, welche Visualisierungen überzeugen.",
-  "Ein offenes Modell (Qwen Image Edit Plus) läuft oben als Vergleichsmodell mit – so sehen wir, wie nah es am Hauptmodell ist.",
-  "Mit genug echten Raumfotos, am besten ergänzt um Fotos der fertig montierten Küchen, trainieren wir ein eigenes LoRA (fal LoRA-Training) und tragen es oben ein.",
-  "Gewinnt das eigene Modell den A/B-Vergleich bei Zufriedenheit, Anfragequote und Kosten, wird es Hauptmodell.",
+  "Kund:innen stellen freiwillig ihre Raumfotos ohne Kontaktdaten bereit; Bewertungen und Gründe zeigen, welche Visualisierungen überzeugen.",
+  "Ab etwa 50 Fotos entsteht ein fester Testsatz: Neue Modelle und Prompts laufen zuerst gegen dieselben echten Räume, bevor Kund:innen sie sehen.",
+  "Der beste Kandidat tritt oben im A/B-Vergleich gegen das Hauptmodell an – gemessen an Bewertungen der Erstbilder, Ausweichquote, Dauer und Kosten.",
+  "Ein eigenes LoRA auf einem offenen Modell lohnt erst mit Vorher-nachher-Paaren (Raumfoto und Foto der fertig montierten Küche) und wird nur Hauptmodell, wenn es den Vergleich gewinnt.",
 ];
 
 export function OwnModelCard() {
@@ -29,12 +29,12 @@ export function OwnModelCard() {
       <CardContent className="space-y-5">
         <div className="space-y-1.5">
           <div className="flex justify-between text-sm">
-            <span>Raumfotos mit Einwilligung</span>
+            <span>Raumfotos mit Einwilligung (Testsatz)</span>
             <span className="tabular-nums">
-              {samples} / {TRAINING_GOAL}
+              {samples} / {TEST_SET_GOAL}
             </span>
           </div>
-          <Progress value={Math.min(100, (samples / TRAINING_GOAL) * 100)} />
+          <Progress value={Math.min(100, (samples / TEST_SET_GOAL) * 100)} />
           <p className="text-xs text-muted-foreground">
             Aus {stats.data?.training.sessions ?? 0} Planungen; in den letzten 30 Tagen {stats.data?.funnel.ai_training_consents ?? 0} neue
             Einwilligungen. Gespeichert höchstens 36 Monate, Widerruf löscht sofort.

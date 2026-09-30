@@ -8,7 +8,13 @@ import {
   estimateKitchenPrice,
   type PlannerConfig,
 } from "../core";
-import { CALIBRATION_PRIOR, computeCalibration, type CalibrationObservation } from "../../../../supabase/functions/_shared/price-calibration.ts";
+import {
+  CALIBRATION_PRIOR,
+  RECENCY_HALF_LIFE_DAYS,
+  computeCalibration,
+  observationWeight,
+  type CalibrationObservation,
+} from "../../../../supabase/functions/_shared/price-calibration.ts";
 
 const obs = (ratio: number, extra: Partial<CalibrationObservation> = {}): CalibrationObservation => ({
   ratio,
@@ -53,6 +59,18 @@ describe("computeCalibration", () => {
     expect(factorOf(rows, "quality:premium")).toBeGreaterThan(factorOf(rows, "quality:mittel"));
     expect(factorOf(rows, "quality:budget")).toBe(1);
     expect(factorOf(rows, "region:3")).toBeCloseTo(1, 2);
+  });
+
+  it("gewichtet alte Ausschreibungen und Einzelangebote schwächer", () => {
+    expect(observationWeight({ ageDays: 0, offers: 1 })).toBeCloseTo(0.5, 6);
+    expect(observationWeight({ ageDays: 0, offers: 3 })).toBeCloseTo(0.75, 6);
+    expect(observationWeight({ ageDays: RECENCY_HALF_LIFE_DAYS, offers: 3 })).toBeCloseTo(0.375, 6);
+    expect(observationWeight({ ageDays: -5, offers: 0 })).toBeCloseTo(0.5, 6);
+
+    const recentLow = Array.from({ length: 20 }, () => obs(0.9, { weight: 1 }));
+    const oldHigh = Array.from({ length: 20 }, () => obs(1.4, { weight: 0.1 }));
+    expect(factorOf(computeCalibration([...recentLow, ...oldHigh]), "global")).toBeLessThan(1);
+    expect(computeCalibration([...recentLow, ...oldHigh])[0]!.sampleCount).toBe(40);
   });
 
   it("wertet im Anfrageformular keine Qualitätsstufe aus", () => {

@@ -2,6 +2,7 @@ import { ApiError } from "@/features/marketplace/api-client";
 import { supabase } from "@/integrations/supabase/client";
 import type { Tables } from "@/integrations/supabase/types";
 import { ensureValidRLSSession, invokeWithAuth } from "@/lib/sessionGuard";
+import type { AccuracySummary } from "../../../supabase/functions/_shared/price-accuracy.ts";
 
 /** Einzeilige Tabelle kw_ai_settings (id = true); Wertebereiche sichern CHECK-Constraints. */
 export type AiSettingsRow = Tables<"kw_ai_settings">;
@@ -31,20 +32,45 @@ export async function fetchAiSettings(): Promise<AiSettingsRow> {
   return { ...data, lora_scale: Number(data.lora_scale) };
 }
 
+function settingsError(error: { code?: string; message: string }): ApiError {
+  return new ApiError(
+    error.code === "23514"
+      ? "Ein Wert liegt außerhalb des erlaubten Bereichs."
+      : error.code === "42501"
+        ? "Nur Admins dürfen die KI-Einstellungen ändern."
+        : error.message,
+    409,
+    error.code,
+  );
+}
+
 export async function saveAiSettings(update: AiSettingsUpdate): Promise<void> {
   await requireSession();
   const { error } = await supabase.from("kw_ai_settings").update(update).eq("id", true);
-  if (error) {
-    throw new ApiError(
-      error.code === "23514"
-        ? "Ein Wert liegt außerhalb des erlaubten Bereichs."
-        : error.code === "42501"
-          ? "Nur Admins dürfen die KI-Einstellungen ändern."
-          : error.message,
-      409,
-      error.code,
-    );
-  }
+  if (error) throw settingsError(error);
+}
+
+/** Marktabgleich an oder aus; wirkt nach dem nächsten Lauf der Kalibrierung. */
+export async function setPriceCalibrationEnabled(enabled: boolean): Promise<void> {
+  await requireSession();
+  const { error } = await supabase.from("kw_ai_settings").update({ price_calibration_enabled: enabled }).eq("id", true);
+  if (error) throw settingsError(error);
+}
+
+export interface SettingsChange {
+  changed_at: string;
+  changes: Record<string, { from: unknown; to: unknown }>;
+}
+
+export async function fetchSettingsHistory(limit = 12): Promise<SettingsChange[]> {
+  await requireSession();
+  const { data, error } = await supabase
+    .from("kw_ai_settings_history")
+    .select("changed_at, changes")
+    .order("changed_at", { ascending: false })
+    .limit(limit);
+  if (error) throw new ApiError(error.message, 409, error.code);
+  return (data ?? []) as unknown as SettingsChange[];
 }
 
 export interface AiModelStats {
@@ -131,9 +157,57 @@ export async function fetchCalibration(): Promise<CalibrationRow[]> {
   }));
 }
 
+export interface CalibrationAccuracy {
+  /** Schätzung, die Kund:innen bei der Anfrage gesehen haben. */
+  shown?: AccuracySummary;
+  /** Heutige Engine ohne und mit Marktabgleich (an denselben Ausschreibungen gelernt). */
+  raw?: AccuracySummary;
+  calibrated?: AccuracySummary;
+}
+
+export interface CalibrationRun {
+  run_at: string;
+  applied: boolean;
+  observations: number;
+  global_factor: number | null;
+  accuracy: CalibrationAccuracy;
+}
+
+export async function fetchCalibrationRuns(limit = 30): Promise<CalibrationRun[]> {
+  await requireSession();
+  const { data, error } = await supabase
+    .from("kitchen_price_calibration_runs")
+    .select("run_at, applied, observations, global_factor, accuracy")
+    .order("run_at", { ascending: false })
+    .limit(limit);
+  if (error) throw new ApiError(error.message, 409, error.code);
+  return (data ?? []).map((r) => ({
+    ...r,
+    global_factor: r.global_factor === null ? null : Number(r.global_factor),
+    accuracy: (r.accuracy ?? {}) as CalibrationAccuracy,
+  }));
+}
+
 /** Marktabgleich sofort neu berechnen (sonst täglich 03:40 per Cron). */
-export async function recomputeCalibration(): Promise<{ observations: number; globalFactor: number }> {
+export async function recomputeCalibration(): Promise<{ observations: number; globalFactor: number; applied: boolean }> {
   const { data, error } = await invokeWithAuth("kw-maintenance", { body: { task: "price-calibration" } });
   if (error) throw new ApiError(error.message, 502);
-  return data as { observations: number; globalFactor: number };
+  return data as { observations: number; globalFactor: number; applied: boolean };
+}
+
+export interface DailyStats {
+  day: string;
+  stats: Pick<AiStats, "models" | "groups" | "reasons" | "funnel">;
+}
+
+/** Anonyme Tageswerte (kw_ai_stats_daily), auch älter als 30 Tage. */
+export async function fetchDailyStats(sinceDay: string): Promise<DailyStats[]> {
+  await requireSession();
+  const { data, error } = await supabase
+    .from("kw_ai_stats_daily")
+    .select("day, stats")
+    .gte("day", sinceDay)
+    .order("day", { ascending: true });
+  if (error) throw new ApiError(error.message, 409, error.code);
+  return (data ?? []) as unknown as DailyStats[];
 }

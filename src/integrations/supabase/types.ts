@@ -2787,6 +2787,36 @@ export type Database = {
         }
         Relationships: []
       }
+      kitchen_price_calibration_runs: {
+        Row: {
+          accuracy: Json
+          applied: boolean
+          factors: Json
+          global_factor: number | null
+          id: number
+          observations: number
+          run_at: string
+        }
+        Insert: {
+          accuracy?: Json
+          applied: boolean
+          factors?: Json
+          global_factor?: number | null
+          id?: never
+          observations?: number
+          run_at?: string
+        }
+        Update: {
+          accuracy?: Json
+          applied?: boolean
+          factors?: Json
+          global_factor?: number | null
+          id?: never
+          observations?: number
+          run_at?: string
+        }
+        Relationships: []
+      }
       kitchen_pricing_rate_cards: {
         Row: {
           created_at: string
@@ -3225,6 +3255,7 @@ export type Database = {
           id: boolean
           lora_scale: number
           lora_url: string | null
+          price_calibration_enabled: boolean
           text_model: string
           updated_at: string
           updated_by: string | null
@@ -3241,6 +3272,7 @@ export type Database = {
           id?: boolean
           lora_scale?: number
           lora_url?: string | null
+          price_calibration_enabled?: boolean
           text_model?: string
           updated_at?: string
           updated_by?: string | null
@@ -3257,6 +3289,7 @@ export type Database = {
           id?: boolean
           lora_scale?: number
           lora_url?: string | null
+          price_calibration_enabled?: boolean
           text_model?: string
           updated_at?: string
           updated_by?: string | null
@@ -3271,6 +3304,53 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      kw_ai_settings_history: {
+        Row: {
+          changed_at: string
+          changed_by: string | null
+          changes: Json
+          id: number
+        }
+        Insert: {
+          changed_at?: string
+          changed_by?: string | null
+          changes: Json
+          id?: never
+        }
+        Update: {
+          changed_at?: string
+          changed_by?: string | null
+          changes?: Json
+          id?: never
+        }
+        Relationships: [
+          {
+            foreignKeyName: "kw_ai_settings_history_changed_by_fkey"
+            columns: ["changed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      kw_ai_stats_daily: {
+        Row: {
+          day: string
+          stats: Json
+          updated_at: string
+        }
+        Insert: {
+          day: string
+          stats: Json
+          updated_at?: string
+        }
+        Update: {
+          day?: string
+          stats?: Json
+          updated_at?: string
+        }
+        Relationships: []
       }
       kw_ai_training_samples: {
         Row: {
@@ -5167,6 +5247,7 @@ export type Database = {
           fallback_reason: string | null
           feedback: number | null
           feedback_at: string | null
+          feedback_reasons: string[] | null
           generation_ms: number | null
           id: string
           image_height: number | null
@@ -5183,6 +5264,7 @@ export type Database = {
           storage_bucket: string
           user_message: string | null
           variant_label: string | null
+          verified: boolean
           version: number
         }
         Insert: {
@@ -5200,6 +5282,7 @@ export type Database = {
           fallback_reason?: string | null
           feedback?: number | null
           feedback_at?: string | null
+          feedback_reasons?: string[] | null
           generation_ms?: number | null
           id?: string
           image_height?: number | null
@@ -5216,6 +5299,7 @@ export type Database = {
           storage_bucket?: string
           user_message?: string | null
           variant_label?: string | null
+          verified?: boolean
           version?: number
         }
         Update: {
@@ -5233,6 +5317,7 @@ export type Database = {
           fallback_reason?: string | null
           feedback?: number | null
           feedback_at?: string | null
+          feedback_reasons?: string[] | null
           generation_ms?: number | null
           id?: string
           image_height?: number | null
@@ -5249,6 +5334,7 @@ export type Database = {
           storage_bucket?: string
           user_message?: string | null
           variant_label?: string | null
+          verified?: boolean
           version?: number
         }
         Relationships: [
@@ -7376,6 +7462,11 @@ export type Database = {
           status: string
         }[]
       }
+      kw_ai_rollup_daily: { Args: { p_day: string }; Returns: undefined }
+      kw_ai_stats_between: {
+        Args: { p_from: string; p_to: string }
+        Returns: Json
+      }
       kw_anonymize_lead: {
         Args: { p_lead_id: string; p_source: string }
         Returns: Json
@@ -7615,6 +7706,7 @@ export type Database = {
         Returns: {
           auction_id: string
           bid_count: number
+          created_at: string
           funnel: string
           funnel_answers: Json
           kitchen_form: string
@@ -7623,6 +7715,9 @@ export type Database = {
           planner_config: Json
           planner_room: Json
           postal_code: string
+          shown_max_eur: number
+          shown_mid_eur: number
+          shown_min_eur: number
         }[]
       }
       kw_project_accept_offer: {
@@ -7630,7 +7725,12 @@ export type Database = {
         Returns: Json
       }
       kw_project_cancel: {
-        Args: { p_lead_id: string; p_reason?: string }
+        Args: {
+          p_ip?: unknown
+          p_lead_id: string
+          p_reason?: string
+          p_user_agent?: string
+        }
         Returns: Json
       }
       kw_project_erase: { Args: { p_lead_id: string }; Returns: Json }

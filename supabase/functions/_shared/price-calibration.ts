@@ -9,7 +9,8 @@
  * global, dann Formular (a/c), Qualitätsstufe (nur Konfigurator) und
  * PLZ-Region jeweils auf den Rest der Ebene davor – und werden zur 1
  * geschrumpft: Mit wenigen Angeboten bleibt die Schätzung fast unverändert,
- * mit vielen folgt sie dem Markt.
+ * mit vielen folgt sie dem Markt. Jede Ausschreibung zählt mit ihrem Gewicht
+ * (observationWeight): ältere und solche mit nur einem Angebot weniger.
  */
 
 import { QUALITY_LEVELS, type QualityLevel } from "./kitchen-catalog.ts";
@@ -21,6 +22,22 @@ export interface CalibrationObservation {
   source: EstimateSource;
   quality: QualityLevel | null;
   postalCode: string | null;
+  /** 0–1, ohne Angabe 1. */
+  weight?: number;
+}
+
+/** Küchenpreise steigen: ein Angebot von vor einem Jahr zählt halb so viel wie ein heutiges. */
+export const RECENCY_HALF_LIFE_DAYS = 365;
+
+/**
+ * Gewicht einer Ausschreibung: Zeitverfall mal n/(n+1) für n Angebote. Ein
+ * einzelnes Angebot ist ein unsicherer Marktpreis (und ließe ein einzelnes
+ * Studio die Schätzung seiner Region verschieben), mehrere zählen fast voll.
+ */
+export function observationWeight(opts: { ageDays: number; offers: number }): number {
+  const age = Number.isFinite(opts.ageDays) ? Math.max(0, opts.ageDays) : 0;
+  const offers = Number.isFinite(opts.offers) ? Math.max(1, Math.floor(opts.offers)) : 1;
+  return Math.pow(0.5, age / RECENCY_HALF_LIFE_DAYS) * (offers / (offers + 1));
 }
 
 export interface CalibrationRow {
@@ -41,18 +58,19 @@ const round4 = (n: number) => Math.round(n * 10_000) / 10_000;
 
 interface Point {
   y: number;
+  w: number;
   source: EstimateSource;
   quality: QualityLevel | null;
   region: string | null;
 }
 
 function level(points: Point[], residual: (p: Point) => number, prior: number) {
-  const n = points.length;
-  const sum = points.reduce((s, p) => s + residual(p), 0);
+  const weight = points.reduce((s, p) => s + p.w, 0);
+  const sum = points.reduce((s, p) => s + p.w * residual(p), 0);
   return {
-    offset: n > 0 ? sum / (n + prior) : 0,
-    observed: n > 0 ? Math.exp(sum / n) : null,
-    n,
+    offset: weight > 0 ? sum / (weight + prior) : 0,
+    observed: weight > 0 ? Math.exp(sum / weight) : null,
+    n: points.length,
   };
 }
 
@@ -61,8 +79,10 @@ export function computeCalibration(observations: CalibrationObservation[], prior
     .filter((o) => Number.isFinite(o.ratio) && o.ratio >= VALID_RATIO.min && o.ratio <= VALID_RATIO.max)
     .map((o) => {
       const digit = (o.postalCode ?? "").trim().charAt(0);
+      const w = o.weight === undefined ? 1 : Number(o.weight);
       return {
         y: Math.max(-MAX_ABS_LOG, Math.min(MAX_ABS_LOG, Math.log(o.ratio))),
+        w: Number.isFinite(w) ? Math.min(1, Math.max(0, w)) : 1,
         source: o.source,
         quality: o.source === "c" ? o.quality : null,
         region: /^\d$/.test(digit) ? digit : null,

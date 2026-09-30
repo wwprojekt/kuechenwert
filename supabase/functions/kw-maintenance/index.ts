@@ -29,9 +29,10 @@ import { button, list, paragraph } from "../_shared/email-builder.ts";
 import { estimateFunnelA, sanitizeFunnelAAnswers } from "../_shared/funnel-a-catalog.ts";
 import { googleAdsHealth } from "../_shared/google-ads.ts";
 import { sanitizeConfig, sanitizeRoom } from "../_shared/kitchen-catalog.ts";
-import { estimateKitchenPrice } from "../_shared/kitchen-pricing.ts";
+import { calibrationFactor, calibrationFromRows, estimateKitchenPrice } from "../_shared/kitchen-pricing.ts";
 import { HttpError, escapeHtml, jsonResponse, readJson, serve, serviceClient } from "../_shared/kw-http.ts";
-import { computeCalibration, type CalibrationObservation } from "../_shared/price-calibration.ts";
+import { accuracySummary, type AccuracyPoint } from "../_shared/price-accuracy.ts";
+import { computeCalibration, observationWeight, type CalibrationObservation } from "../_shared/price-calibration.ts";
 import { loadRateCard } from "../_shared/rate-card.ts";
 
 const ALERT_WINDOW_SECONDS = 12 * 60 * 60;
@@ -131,25 +132,42 @@ type ObservationRow = {
   planner_config: Record<string, unknown> | null;
   planner_room: Record<string, unknown> | null;
   observed_eur: number | string;
+  bid_count: number | null;
+  created_at: string | null;
+  shown_min_eur: number | string | null;
+  shown_max_eur: number | string | null;
+  shown_mid_eur: number | string | null;
 };
+
+type Range = { min: number; max: number; mid: number };
 
 /**
  * Rechnet jede Ausschreibung mit der aktuellen Engine und Rate-Card neu (ohne
  * bisherigen Abgleich) und vergleicht mit dem Median der Angebote. So wirken
  * Änderungen an Rate-Card oder Engine sofort, ohne doppelt zu korrigieren.
+ * Jeder Lauf landet mit Treffsicherheit in kitchen_price_calibration_runs;
+ * ist der Marktabgleich ausgeschaltet, bleiben die angewendeten Faktoren 1.
  */
 async function runPriceCalibration(sb: SupabaseClient) {
   const { card } = await loadRateCard(sb);
+  const { data: settings } = await sb.from("kw_ai_settings").select("price_calibration_enabled").eq("id", true).maybeSingle();
+  const applied = settings?.price_calibration_enabled !== false;
   const { data, error } = await sb.rpc("kw_price_observations", { p_limit: 2000 });
   if (error) throw error;
+
+  const now = Date.now();
   const observations: CalibrationObservation[] = [];
+  const raw: Array<AccuracyPoint & { index: number }> = [];
+  const shown: AccuracyPoint[] = [];
   for (const row of (data ?? []) as ObservationRow[]) {
     const observed = Number(row.observed_eur);
     if (!Number.isFinite(observed) || observed <= 0) continue;
+    let estimate: Range;
+    let segment: Pick<CalibrationObservation, "source" | "quality" | "postalCode">;
     if (row.funnel === "traumkueche" && row.planner_config) {
       const config = sanitizeConfig(row.planner_config);
-      const estimate = estimateKitchenPrice(config, sanitizeRoom(row.planner_room), { card, postalCode: row.postal_code });
-      observations.push({ ratio: observed / estimate.mid, source: "c", quality: config.quality, postalCode: row.postal_code });
+      estimate = estimateKitchenPrice(config, sanitizeRoom(row.planner_room), { card, postalCode: row.postal_code });
+      segment = { source: "c", quality: config.quality, postalCode: row.postal_code };
     } else if (row.funnel === "a") {
       const answers = sanitizeFunnelAAnswers({
         ...(row.funnel_answers ?? {}),
@@ -157,17 +175,31 @@ async function runPriceCalibration(sb: SupabaseClient) {
         kitchen_style: row.kitchen_style,
         postal_code: row.postal_code,
       });
-      const estimate = estimateFunnelA(answers, { card });
-      observations.push({ ratio: observed / estimate.mid, source: "a", quality: null, postalCode: row.postal_code });
+      estimate = estimateFunnelA(answers, { card });
+      segment = { source: "a", quality: null, postalCode: row.postal_code };
+    } else {
+      continue;
     }
+    const ageDays = row.created_at ? (now - new Date(row.created_at).getTime()) / 86_400_000 : 0;
+    observations.push({ ...segment, ratio: observed / estimate.mid, weight: observationWeight({ ageDays, offers: Number(row.bid_count ?? 1) }) });
+    raw.push({ observed, min: estimate.min, max: estimate.max, mid: estimate.mid, index: observations.length - 1 });
+    const s = { min: Number(row.shown_min_eur), max: Number(row.shown_max_eur), mid: Number(row.shown_mid_eur) };
+    if (s.min > 0 && s.max > 0) shown.push({ observed, min: s.min, max: s.max, mid: s.mid > 0 ? s.mid : Math.sqrt(s.min * s.max) });
   }
 
   const rows = computeCalibration(observations);
+  const learned = calibrationFromRows(rows.map((r) => ({ segment: r.segment, factor: r.factor, sample_count: r.sampleCount })));
+  const calibrated = raw.map((p) => {
+    const f = calibrationFactor(learned, observations[p.index]!);
+    return { observed: p.observed, min: p.min * f, max: p.max * f, mid: p.mid * f };
+  });
+  const accuracy = { shown: accuracySummary(shown), raw: accuracySummary(raw), calibrated: accuracySummary(calibrated) };
+
   const updatedAt = new Date().toISOString();
   const { error: upsertError } = await sb.from("kitchen_price_calibration").upsert(
     rows.map((r) => ({
       segment: r.segment,
-      factor: r.factor,
+      factor: applied ? r.factor : 1,
       sample_count: r.sampleCount,
       observed_ratio: r.observedRatio,
       updated_at: updatedAt,
@@ -176,7 +208,15 @@ async function runPriceCalibration(sb: SupabaseClient) {
   );
   if (upsertError) throw upsertError;
   const global = rows.find((r) => r.segment === "global");
-  return { task: "price-calibration", observations: observations.length, globalFactor: global?.factor ?? 1 };
+  const { error: runError } = await sb.from("kitchen_price_calibration_runs").insert({
+    applied,
+    observations: observations.length,
+    global_factor: global?.factor ?? 1,
+    factors: rows,
+    accuracy,
+  });
+  if (runError) console.error("[kw-maintenance] calibration run log failed", runError.message);
+  return { task: "price-calibration", observations: observations.length, globalFactor: global?.factor ?? 1, applied, accuracy };
 }
 
 type Snapshot = Record<string, number>;

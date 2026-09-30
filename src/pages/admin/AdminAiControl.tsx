@@ -1,3 +1,4 @@
+import { AiHistoryCard } from "@/features/ai-admin/AiHistoryCard";
 import { AiModelSettingsCard } from "@/features/ai-admin/AiModelSettingsCard";
 import { AiPerformanceCard } from "@/features/ai-admin/AiPerformanceCard";
 import { OwnModelCard } from "@/features/ai-admin/OwnModelCard";
@@ -15,6 +16,7 @@ export default function AdminAiControl() {
         </p>
       </div>
       <AiPerformanceCard />
+      <AiHistoryCard />
       <AiModelSettingsCard />
       <PriceLearningCard />
       <OwnModelCard />

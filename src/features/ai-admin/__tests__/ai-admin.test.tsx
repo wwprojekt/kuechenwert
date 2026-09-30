@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { AiSettingsRow, AiStats } from "../api";
@@ -7,12 +7,17 @@ import type { AiSettingsRow, AiStats } from "../api";
 const api = vi.hoisted(() => ({
   fetchAiSettings: vi.fn(),
   saveAiSettings: vi.fn(),
+  setPriceCalibrationEnabled: vi.fn(),
   fetchAiStats: vi.fn(),
   fetchCalibration: vi.fn(),
+  fetchCalibrationRuns: vi.fn(),
   recomputeCalibration: vi.fn(),
+  fetchDailyStats: vi.fn(),
+  fetchSettingsHistory: vi.fn(),
 }));
 vi.mock("../api", () => api);
 
+import { AiHistoryCard } from "../AiHistoryCard";
 import { AiModelSettingsCard } from "../AiModelSettingsCard";
 import { AiPerformanceCard } from "../AiPerformanceCard";
 import { PriceLearningCard } from "../PriceLearningCard";
@@ -33,6 +38,7 @@ const settings: AiSettingsRow = {
   lora_url: null,
   lora_scale: 1,
   daily_render_cap: 300,
+  price_calibration_enabled: true,
   updated_at: "2026-09-28T22:00:00Z",
   updated_by: null,
 };
@@ -122,6 +128,8 @@ describe("Admin KI & Preis-Engine", () => {
   });
 
   it("erklärt die neutrale Preis-Engine ohne Angebote und zeigt gelernte Faktoren", async () => {
+    api.fetchAiSettings.mockResolvedValue(settings);
+    api.fetchCalibrationRuns.mockResolvedValue([]);
     api.fetchCalibration.mockResolvedValueOnce([
       { segment: "global", factor: 1, sample_count: 0, observed_ratio: null, updated_at: "2026-09-28T22:49:46Z" },
     ]);
@@ -139,5 +147,50 @@ describe("Admin KI & Preis-Engine", () => {
     expect(screen.getByText("+6 %")).toBeInTheDocument();
     expect(screen.getByText("Qualität Premium")).toBeInTheDocument();
     expect(screen.queryByText("PLZ-Region 8")).not.toBeInTheDocument();
+  });
+
+  it("zeigt die Treffsicherheit und lässt den Marktabgleich abschalten", async () => {
+    api.fetchAiSettings.mockResolvedValue(settings);
+    api.fetchCalibration.mockResolvedValue([
+      { segment: "global", factor: 1.06, sample_count: 24, observed_ratio: 1.12, updated_at: "2026-09-28T22:49:46Z" },
+    ]);
+    api.fetchCalibrationRuns.mockResolvedValue([
+      {
+        run_at: "2026-09-29T03:40:00Z",
+        applied: true,
+        observations: 24,
+        global_factor: 1.06,
+        accuracy: {
+          shown: { n: 20, mdape: 0.14, coverage: 0.7, bias: 0.09 },
+          raw: { n: 24, mdape: 0.16, coverage: 0.6, bias: 0.1 },
+          calibrated: { n: 24, mdape: 0.1, coverage: 0.75, bias: 0.01 },
+        },
+      },
+    ]);
+    api.setPriceCalibrationEnabled.mockResolvedValue(undefined);
+    api.recomputeCalibration.mockResolvedValue({ observations: 24, globalFactor: 1.06, applied: false });
+    wrap(<PriceLearningCard />);
+    expect(await screen.findByText("± 14 %")).toBeInTheDocument();
+    expect(screen.getByText("70 % der Angebote in der Spanne · 20 Ausschreibungen")).toBeInTheDocument();
+    expect(screen.getByText(/im Mittel 9 % unter dem Angebotsmedian/)).toBeInTheDocument();
+
+    const toggle = await screen.findByRole("switch", { name: "Marktabgleich anwenden" });
+    await waitFor(() => expect(toggle).not.toBeDisabled());
+    fireEvent.click(toggle);
+    await waitFor(() => expect(api.setPriceCalibrationEnabled).toHaveBeenCalledWith(false));
+    await waitFor(() => expect(api.recomputeCalibration).toHaveBeenCalled());
+  });
+
+  it("zeigt den Verlauf je Woche und die Änderungen an den Einstellungen", async () => {
+    api.fetchDailyStats.mockResolvedValue([
+      { day: "2026-09-30", stats: { models: stats.models, groups: [], reasons: {}, funnel: stats.funnel } },
+    ]);
+    api.fetchSettingsHistory.mockResolvedValue([
+      { changed_at: "2026-09-30T12:00:00Z", changes: { daily_render_cap: { from: 300, to: 400 } } },
+    ]);
+    wrap(<AiHistoryCard />);
+    expect(await screen.findByText("KW 40/2026")).toBeInTheDocument();
+    expect(screen.getByText("Nano Banana Pro (Gemini 3 Pro Image)")).toBeInTheDocument();
+    expect(await screen.findByText("Tageslimit: 300 → 400")).toBeInTheDocument();
   });
 });

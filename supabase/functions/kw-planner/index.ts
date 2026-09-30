@@ -794,8 +794,12 @@ async function fillTenderCover(sb: SupabaseClient, leadId: string, cover: { buck
   if (error) console.error("[kw-planner] tender cover update failed", error.message);
 }
 
-/** Ergebnis von fal übernehmen und im privaten Bucket speichern. */
-async function storeResult(sb: SupabaseClient, session: SessionRef, render: PendingRender): Promise<string> {
+/**
+ * Ergebnis von fal übernehmen und im privaten Bucket speichern. Die Dauer gilt
+ * nur, wenn der Browser das Bild abholt: Beim Nachlauf ist unbekannt, wann fal
+ * fertig war, und Minutenwerte würden die Statistik verzerren.
+ */
+async function storeResult(sb: SupabaseClient, session: SessionRef, render: PendingRender, measured: boolean): Promise<string> {
   const result = await falResultImage(render.fal_response_url as string);
   const imageResp = await fetch(result.url);
   if (!imageResp.ok) throw new Error(`image download ${imageResp.status}`);
@@ -818,7 +822,7 @@ async function storeResult(sb: SupabaseClient, session: SessionRef, render: Pend
       image_width: result.width ?? null,
       image_height: result.height ?? null,
       completed_at: new Date().toISOString(),
-      generation_ms: Date.now() - attemptStarted,
+      generation_ms: measured ? Date.now() - attemptStarted : null,
     })
     .eq("id", render.id)
     .eq("status", "pending")
@@ -841,7 +845,12 @@ type RenderOutcome =
  * Browser-Abfrage (status) und den Nachlauf (sweep); beide dürfen gleichzeitig
  * laufen, weil jede Zustandsänderung ein bedingter Update ist.
  */
-async function advanceRender(sb: SupabaseClient, session: SessionRef, render: PendingRender): Promise<RenderOutcome> {
+async function advanceRender(
+  sb: SupabaseClient,
+  session: SessionRef,
+  render: PendingRender,
+  opts: { measured: boolean },
+): Promise<RenderOutcome> {
   if (render.status === "success" && render.image_path) return { status: "success", path: render.image_path };
   if (render.status === "failed") return { status: "failed", message: FAILED_TEXT };
 
@@ -866,7 +875,7 @@ async function advanceRender(sb: SupabaseClient, session: SessionRef, render: Pe
   // Auch nach der Zeitgrenze: ein bei fal fertiges Bild ist bezahlt und wird übernommen.
   if (state === "COMPLETED") {
     try {
-      return { status: "success", path: await storeResult(sb, session, render) };
+      return { status: "success", path: await storeResult(sb, session, render, opts.measured) };
     } catch (err) {
       console.error("[kw-planner] result handling failed", render.model_slug, err);
       state = "ERROR";
@@ -918,7 +927,7 @@ async function actionStatus(req: Request, sb: SupabaseClient, body: Record<strin
   if (!data) throw new HttpError(404, "Visualisierung nicht gefunden.", "render_not_found");
   const render = data as PendingRender;
 
-  const outcome = await advanceRender(sb, session, render);
+  const outcome = await advanceRender(sb, session, render, { measured: true });
   if (outcome.status === "failed") return jsonResponse(req, { status: "failed", render_id: render.id, error: outcome.message });
   if (outcome.status === "pending") return jsonResponse(req, { status: "pending", render_id: render.id, queue: outcome.queue });
   return unlocked(session)
@@ -956,7 +965,9 @@ async function actionSweep(req: Request, sb: SupabaseClient) {
     if (Date.now() - started > SWEEP_BUDGET_MS) break;
     result.checked++;
     try {
-      const outcome = await advanceRender(sb, byId.get(render.session_id) ?? { id: render.session_id, lead_id: null }, render);
+      const outcome = await advanceRender(sb, byId.get(render.session_id) ?? { id: render.session_id, lead_id: null }, render, {
+        measured: false,
+      });
       result[outcome.status]++;
     } catch (err) {
       result.errors++;

@@ -144,7 +144,7 @@ export function usePlannerFunnel() {
     trackFunnelStep("c", step, stepNumber, stepTotal);
   }, [step, stepNumber, stepTotal]);
 
-  const { patchConfig, setForm, goTo: setPlannerStep } = planner;
+  const { patchConfig, setForm, goTo: setPlannerStep, confirmStep } = planner;
   // Einstiege wie /funnel/c?stil=landhaus&form=u einmalig übernehmen.
   useEffect(() => {
     const style = STYLES.find((s) => s.id === searchParams.get("stil"))?.id;
@@ -220,6 +220,7 @@ export function usePlannerFunnel() {
           variantHint: variant?.hint ?? null,
           variantLabel: variant?.label ?? null,
           baseRenderId: base?.id ?? null,
+          provenance: state.answered,
           utm: utm(),
         });
         planner.setSession(res.session_token);
@@ -247,7 +248,18 @@ export function usePlannerFunnel() {
         setGenerating(false);
       }
     },
-    [planner, state.sessionToken, state.config, state.room, state.selectedPhotoPath, state.postalCode, activeRender, activeOutdated, currentKey],
+    [
+      planner,
+      state.sessionToken,
+      state.config,
+      state.room,
+      state.selectedPhotoPath,
+      state.postalCode,
+      state.answered,
+      activeRender,
+      activeOutdated,
+      currentKey,
+    ],
   );
 
   // Lade-Bildschirm: mindestens kurz sichtbar, dann weiter zu den Lead-Fragen.
@@ -301,8 +313,9 @@ export function usePlannerFunnel() {
       return;
     }
     telemetry.next();
+    confirmStep(step);
     navigate(nextStep(step, flow));
-  }, [telemetry, handleGenerate, navigate]);
+  }, [telemetry, handleGenerate, navigate, confirmStep]);
 
   const goBack = useCallback(() => {
     const { step, flow } = latestRef.current;
@@ -379,7 +392,14 @@ export function usePlannerFunnel() {
     setSubmitting(true);
     setSubmitError(null);
     try {
-      const saved = await savePlanning({ sessionToken: state.sessionToken, config: state.config, room: state.room, postalCode: state.postalCode, utm: utm() });
+      const saved = await savePlanning({
+        sessionToken: state.sessionToken,
+        config: state.config,
+        room: state.room,
+        postalCode: state.postalCode,
+        provenance: state.answered,
+        utm: utm(),
+      });
       planner.setSession(saved.session_token);
       const turnstileToken = await waitForToken();
       const res = await submitProject({

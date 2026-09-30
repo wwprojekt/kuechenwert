@@ -38,9 +38,10 @@ import {
 } from "../_shared/kw-http.ts";
 import { MAX_FILES_PER_LEAD, attachUploadedFiles, issueUploads, parseAnnouncedFiles } from "../_shared/lead-files.ts";
 import { forgetTrainingSamples, storeTrainingSamples } from "../_shared/ai-training.ts";
+import { PLANNER_TIMEFRAMES } from "../_shared/kitchen-catalog.ts";
 import { requestPlannerOffers } from "../_shared/planner-offers.ts";
 
-const TIMEFRAMES = new Set([1, 3, 6, 12, 24]);
+const TIMEFRAMES = new Set(PLANNER_TIMEFRAMES.map((t) => t.months));
 
 const SIGNED_URL_TTL = 60 * 60;
 const CONSENT_TEXT_VERSION = "kw-telefon-2026-09-28";

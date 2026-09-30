@@ -342,6 +342,19 @@ export const SERVICES: OptionBase<ServiceId>[] = [
   { id: "wasser", label: "Wasser- & Abwasseranschluss", prompt: "" },
 ];
 
+/** Zeitrahmen für Angebote (Monate bis zur Küche): Lead-Schritt, Nachfordern und Studio-Ansicht. */
+export const PLANNER_TIMEFRAMES: ReadonlyArray<{ months: number; label: string }> = [
+  { months: 1, label: "So schnell wie möglich" },
+  { months: 3, label: "In 1–3 Monaten" },
+  { months: 6, label: "In 3–6 Monaten" },
+  { months: 12, label: "In 6–12 Monaten" },
+  { months: 24, label: "Später / erst Ideen sammeln" },
+];
+
+export function plannerTimeframeLabel(months: unknown): string | null {
+  return PLANNER_TIMEFRAMES.find((t) => t.months === months)?.label ?? null;
+}
+
 export interface RoomInput {
   form: KitchenFormId;
   /** Wandlängen in cm, Schlüssel gemäß KITCHEN_FORMS[].walls[].key */
@@ -378,7 +391,7 @@ export function defaultRoom(form: KitchenFormId = "l"): RoomInput {
   const def = formById(form) ?? KITCHEN_FORMS[2]!;
   const walls: Record<string, number> = {};
   for (const w of def.walls) walls[w.key] = w.defaultCm;
-  return { form: def.id, walls, ceilingHeightCm: 250, notes: null };
+  return { form: def.id, walls, ceilingHeightCm: null, notes: null };
 }
 
 export function defaultConfig(): PlannerConfig {

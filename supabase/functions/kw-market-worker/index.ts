@@ -210,23 +210,37 @@ const dealerName = (d: Dealer) => d.company_name?.trim() || fullName(d) || "Küc
 const isFunnelSummary = (summary: Record<string, unknown>) =>
   (summary.source === "a" || summary.source === "b") && !summary.labels;
 
-function summaryRows(summary: Record<string, unknown>, estimate: { min: number | null; max: number | null }) {
+const CHOICE_NOTE: Record<string, string> = { default: " (Standard)", partial: " (teils Standard)" };
+const DIMENSIONS_NOTE: Record<string, string> = { example: " (Beispielmaße)", partial: " (teils Beispielmaße)" };
+
+/** Studios sehen zusätzlich, welche Planer-Angaben Standardwerte statt Kundenwahl sind. */
+function summaryRows(
+  summary: Record<string, unknown>,
+  estimate: { min: number | null; max: number | null },
+  audience: "customer" | "studio" = "customer",
+) {
   const range = estimate.min && estimate.max ? `${formatEuro(estimate.min)} – ${formatEuro(estimate.max)}` : null;
+  const catalogRows = () =>
+    describeLeadSummary(summary).flatMap((group) => group.rows.map((row) => detailRow(escapeHtml(row.label), escapeHtml(row.value))));
   if (isFunnelSummary(summary)) {
-    const rows = describeLeadSummary(summary).flatMap((group) =>
-      group.rows.map((row) => detailRow(escapeHtml(row.label), escapeHtml(row.value))),
-    );
+    const rows = catalogRows();
     if (range) rows.push(detailRow("Preisschätzung", range));
     return rows.join("");
   }
   const labels = (summary.labels ?? {}) as Record<string, unknown>;
   const room = (summary.room ?? {}) as Record<string, unknown>;
-  const rows: string[] = [];
-  if (room.description) rows.push(detailRow("Raum", escapeHtml(String(room.description))));
-  if (labels.quality) rows.push(detailRow("Qualität", escapeHtml(String(labels.quality))));
-  if (labels.style) rows.push(detailRow("Stil", escapeHtml(String(labels.style))));
-  if (labels.front) rows.push(detailRow("Fronten", escapeHtml(String(labels.front))));
-  if (labels.worktop) rows.push(detailRow("Arbeitsplatte", escapeHtml(String(labels.worktop))));
+  const defaults = (audience === "studio" ? (summary.defaults ?? {}) : {}) as Record<string, unknown>;
+  const labelRow = (key: string, title: string) =>
+    labels[key] ? detailRow(title, escapeHtml(String(labels[key])) + (CHOICE_NOTE[String(defaults[key])] ?? "")) : "";
+  const dimensions = audience === "studio" ? (DIMENSIONS_NOTE[String(room.dimensions_source)] ?? "") : "";
+  const rows = [
+    room.description ? detailRow("Raum", escapeHtml(String(room.description)) + dimensions) : "",
+    labelRow("quality", "Qualität"),
+    labelRow("style", "Stil"),
+    labelRow("front", "Fronten"),
+    labelRow("worktop", "Arbeitsplatte"),
+    ...catalogRows(),
+  ];
   if (range) rows.push(detailRow("KI-Preisschätzung", range));
   return rows.join("");
 }
@@ -388,7 +402,7 @@ async function onTenderPublished(ctx: Ctx, p: Record<string, unknown>) {
         paragraph(
           `In Ihrem Einzugsgebiet${r.distance_km != null ? ` (ca. ${Math.round(r.distance_km)} km entfernt)` : ""} sucht ein Kunde ein Küchenstudio. Geben Sie ein Angebot ab oder schalten Sie den Kontakt direkt frei.`,
         ),
-        infoBox("Projekt", summaryRows(tender.public_summary ?? {}, { min: tender.estimate_min_eur, max: tender.estimate_max_eur })),
+        infoBox("Projekt", summaryRows(tender.public_summary ?? {}, { min: tender.estimate_min_eur, max: tender.estimate_max_eur }, "studio")),
         tender.ends_at ? paragraph(`Angebotsphase bis <strong>${new Date(tender.ends_at).toLocaleDateString("de-DE")}</strong>.`) : "",
         button("Projekt ansehen", `${BRAND.baseUrl}/dashboard/projekte/${auctionId}`),
       ].join("");

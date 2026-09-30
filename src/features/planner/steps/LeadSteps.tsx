@@ -3,6 +3,7 @@ import type { FormEvent } from "react";
 import { CardStep } from "@/components/funnel/card-step";
 import { FUNNEL_HEADING_ID } from "@/components/funnel/funnel-frame";
 import { ConsentCheckbox, TextField } from "@/features/funnel-a/components/ContactFields";
+import { PLANNER_TIMEFRAMES } from "../core";
 import type { OffersChoice } from "../state";
 
 export const PLANNER_NAME_FORM = "planner-name";
@@ -12,13 +13,7 @@ export const PLANNER_CONTACT_FORM = "planner-contact";
 export const OFFERS_CONSENT_TEXT =
   "Mit „Ja“ willige ich ein, dass KüchenWert meine Planung ohne Kontaktdaten freigeschalteten Küchenstudios in meiner Region zur Angebotserstellung zeigt und meine Kontaktdaten an das von mir gewählte Studio sowie an bis zu drei Studios zur persönlichen Beratung weitergibt. Widerruf jederzeit möglich.";
 
-export const TIMEFRAMES = [
-  { id: "1", label: "So schnell wie möglich" },
-  { id: "3", label: "In 1–3 Monaten" },
-  { id: "6", label: "In 3–6 Monaten" },
-  { id: "12", label: "In 6–12 Monaten" },
-  { id: "24", label: "Später / erst Ideen sammeln" },
-];
+export const TIMEFRAMES = PLANNER_TIMEFRAMES.map((t) => ({ id: String(t.months), label: t.label }));
 
 export function OffersStep({ value, onChange, onAdvance }: { value: OffersChoice | null; onChange: (v: OffersChoice) => void; onAdvance: () => void }) {
   return (

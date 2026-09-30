@@ -31,7 +31,7 @@ export function buildBriefing(detail: DealerProjectDetail, mediaUrls: Record<str
     },
     room: s.room ?? null,
     layout_cm: s.layout ?? null,
-    configuration: { labels: s.labels ?? null, raw: s.config ?? null },
+    configuration: { labels: s.labels ?? null, raw: s.config ?? null, defaults: s.defaults ?? null },
     customer_wishes: s.wishes ?? null,
     estimate_eur: s.estimate ?? { min: detail.estimate_min_eur, max: detail.estimate_max_eur, mid: detail.reference_price_eur },
     media: detail.media.map((m) => ({ kind: m.kind, url: mediaUrls[m.path] ?? null, url_expires_in_s: 3600 })),
@@ -66,7 +66,9 @@ export function buildFloorPlanDxf(detail: DealerProjectDetail): string | null {
     entities.push(dxfLine("KUECHE", x, y, x + w, y), dxfLine("KUECHE", x + w, y, x + w, y - h), dxfLine("KUECHE", x + w, y - h, x, y - h), dxfLine("KUECHE", x, y - h, x, y));
     entities.push(dxfText("BESCHRIFTUNG", x + w / 2 - 300, y - h / 2, 80, r.label, r.vertical ? 90 : 0));
   }
-  entities.push(dxfText("BESCHRIFTUNG", 0, 400, 100, `KuechenWert Projekt ${detail.auction_id.slice(0, 8)} - ${room.form} - Masse ca., bitte vor Ort aufmessen`));
+  const source = detail.summary.room.dimensions_source;
+  const measures = source === "example" ? "Beispielmasse, vom Kunden nicht angepasst" : source === "partial" ? "teils Beispielmasse" : "Masse ca.";
+  entities.push(dxfText("BESCHRIFTUNG", 0, 400, 100, `KuechenWert Projekt ${detail.auction_id.slice(0, 8)} - ${room.form} - ${measures}, bitte vor Ort aufmessen`));
   return [
     "0", "SECTION", "2", "HEADER", "9", "$ACADVER", "1", "AC1009", "9", "$INSUNITS", "70", "4", "0", "ENDSEC",
     "0", "SECTION", "2", "ENTITIES",

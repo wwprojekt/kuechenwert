@@ -49,6 +49,7 @@ import { checkTurnstile, type BotCheck } from "../_shared/turnstile.ts";
 import { insertLeadWithConsents, sanitizeClickIds } from "../_shared/lead-intake.ts";
 import {
   PLANNER_SPEC_VERSION,
+  PLANNER_TIMEFRAMES,
   sanitizeConfig,
   sanitizeRoom,
   type PlannerConfig,
@@ -56,6 +57,7 @@ import {
 } from "../_shared/kitchen-catalog.ts";
 import { estimateKitchenPrice, type KitchenEstimate } from "../_shared/kitchen-pricing.ts";
 import { OFFERS_CONSENT_TEXT_VERSION, openPlannerTender, plannerCover, requestPlannerOffers } from "../_shared/planner-offers.ts";
+import { dimensionsSource, sanitizeProvenance, type PlannerProvenance } from "../_shared/planner-provenance.ts";
 import { loadRateCard } from "../_shared/rate-card.ts";
 import { buildRenderPrompt, buildVariantPrompt } from "../_shared/kitchen-prompt.ts";
 import {
@@ -96,7 +98,7 @@ const ALLOWED_IMAGE_TYPES: Record<string, string> = {
   "image/png": "png",
   "image/webp": "webp",
 };
-const TIMEFRAMES = new Set([1, 3, 6, 12, 24]);
+const TIMEFRAMES = new Set(PLANNER_TIMEFRAMES.map((t) => t.months));
 const HOUSING = new Set(["own", "rent", "unknown"]);
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
 
@@ -107,6 +109,7 @@ type Session = {
   status: string;
   spec: Record<string, unknown>;
   room: Record<string, unknown>;
+  provenance: Record<string, unknown> | null;
   estimate: KitchenEstimate | null;
   photo_paths: string[];
   current_render_id: string | null;
@@ -119,7 +122,7 @@ type Session = {
 };
 
 const SESSION_COLUMNS =
-  "id, session_token, lead_id, status, spec, room, estimate, photo_paths, current_render_id, ai_group, utm_source, utm_medium, utm_campaign, utm_content, utm_term";
+  "id, session_token, lead_id, status, spec, room, provenance, estimate, photo_paths, current_render_id, ai_group, utm_source, utm_medium, utm_campaign, utm_content, utm_term";
 
 type PendingRender = {
   id: string;
@@ -501,7 +504,7 @@ async function actionGenerate(req: Request, sb: SupabaseClient, body: Record<str
   const variantHint = cleanText(body.variant_hint, 300);
   const variantLabel = cleanText(body.variant_label, 80);
 
-  const estimate = await persistPlanning(sb, session.id, config, room, postalCode);
+  const estimate = await persistPlanning(sb, session.id, config, room, postalCode, sanitizeProvenance(body.provenance, room));
 
   // Doppelstart (Auto-Start plus Klick, zwei Tabs): die laufende Visualisierung weiterverwenden.
   const { data: running } = await sb
@@ -612,6 +615,7 @@ async function persistPlanning(
   config: PlannerConfig,
   room: RoomInput,
   postalCode: string | null,
+  provenance: PlannerProvenance | null,
 ): Promise<KitchenEstimate> {
   const { card, version: rateCardVersion, calibration } = await loadRateCard(sb);
   const estimate = estimateKitchenPrice(config, room, { card, postalCode, rateCardVersion, calibration });
@@ -621,6 +625,7 @@ async function persistPlanning(
       spec: config,
       spec_version: PLANNER_SPEC_VERSION,
       room,
+      ...(provenance ? { provenance } : {}),
       estimate,
       price_range_min_cents: estimate.min * 100,
       price_range_max_cents: estimate.max * 100,
@@ -632,12 +637,14 @@ async function persistPlanning(
 
 async function actionSave(req: Request, sb: SupabaseClient, body: Record<string, unknown>) {
   const session = await ensureSession(sb, req, body.session_token, body.utm);
+  const room = sanitizeRoom(body.room);
   const estimate = await persistPlanning(
     sb,
     session.id,
     sanitizeConfig(body.config),
-    sanitizeRoom(body.room),
+    room,
     isPostalCode(body.postal_code) ? body.postal_code : null,
+    sanitizeProvenance(body.provenance, room),
   );
   return jsonResponse(req, { session_token: session.session_token, estimate: unlocked(session) ? estimate : null });
 }
@@ -817,6 +824,7 @@ async function actionSubmit(req: Request, sb: SupabaseClient, body: Record<strin
 
   const config = sanitizeConfig(session.spec);
   const room = sanitizeRoom(session.room);
+  const provenance = sanitizeProvenance(session.provenance, room);
   const { card, version: rateCardVersion, calibration } = await loadRateCard(sb);
   const estimate = estimateKitchenPrice(config, room, { card, postalCode, rateCardVersion, calibration });
 
@@ -829,7 +837,7 @@ async function actionSubmit(req: Request, sb: SupabaseClient, body: Record<strin
     botCheck = await checkTurnstile(body.turnstile_token, ip);
     const { data: tierRow } = await sb.rpc("kw_lead_tier_score", {
       p_has_photo: photoPaths.length > 0,
-      p_has_dimensions: true,
+      p_has_dimensions: provenance ? dimensionsSource(provenance, room) !== "example" : true,
       p_has_phone: true,
       p_timeframe_months: timeframe,
       p_value_eur: estimate.mid,
@@ -869,6 +877,7 @@ async function actionSubmit(req: Request, sb: SupabaseClient, body: Record<strin
           planner_session_id: session.id,
           config,
           room,
+          provenance,
           estimate: { min: estimate.min, max: estimate.max, mid: estimate.mid },
           offers_requested: requestOffers,
         },
@@ -907,6 +916,7 @@ async function actionSubmit(req: Request, sb: SupabaseClient, body: Record<strin
           housingType,
           photoCount: photoPaths.length,
           cover: cover ? { bucket: cover.bucket, path: cover.path } : null,
+          provenance,
           botUnverified: botCheck === "unverified",
         });
       } catch (err) {

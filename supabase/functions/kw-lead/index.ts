@@ -40,6 +40,7 @@ import {
   missingRequired,
   regionForPostalCode,
   sanitizeFunnelAAnswers,
+  statedBudget,
   timeframeMonths,
   toStoredAnswers,
   type FunnelAAnswers,
@@ -133,13 +134,14 @@ async function actionSubmit(req: Request, sb: SupabaseClient, body: Record<strin
   const estimate = estimateFunnelA(answers, { card, postalCode: answers.postal_code, rateCardVersion, calibration });
   const estimateRange = { min: estimate.min, max: estimate.max, mid: estimate.mid };
   const months = timeframeMonths(answers.timeframe);
+  const budget = statedBudget(answers);
 
   const { data: tierRow } = await sb.rpc("kw_lead_tier_score", {
     p_has_photo: false,
     p_has_dimensions: false,
     p_has_phone: !!phone,
     p_timeframe_months: months,
-    p_value_eur: answers.budget_eur ?? estimate.mid,
+    p_value_eur: budget ?? estimate.mid,
   });
   const tier = (Array.isArray(tierRow) ? tierRow[0] : tierRow) ?? { tier: "standard", score: 0 };
   const userId = await userIdFromAuthHeader(sb, req);
@@ -168,7 +170,7 @@ async function actionSubmit(req: Request, sb: SupabaseClient, body: Record<strin
       kitchen_style: answers.kitchen_style || null,
       purchase_reason: answers.purchase_reason || null,
       timeframe_months: months,
-      budget_midpoint: answers.budget_eur,
+      budget_midpoint: budget,
       first_name: firstName,
       last_name: lastName,
       email,

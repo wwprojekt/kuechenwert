@@ -120,7 +120,15 @@ export function StepContent({ step, answers, onAnswer, onAdvance }: StepContentP
         />
       );
     case "budget":
-      return <BudgetStep answers={answers} onChange={(value) => onAnswer("budget_eur", value)} />;
+      return (
+        <BudgetStep
+          answers={answers}
+          onChange={(value) => {
+            onAnswer("budget_eur", value);
+            onAnswer("budget_confirmed", true);
+          }}
+        />
+      );
     case "plz":
       return (
         <PlzStep value={answers.postal_code} onChange={(value) => onAnswer("postal_code", value)} onSubmit={onAdvance} />

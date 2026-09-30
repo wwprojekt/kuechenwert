@@ -9,27 +9,10 @@
 
 import type { SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2.100.1";
 import { HttpError } from "./kw-http.ts";
-import {
-  APPLIANCES,
-  APPLIANCE_LEVELS,
-  EXTRAS,
-  FRONT_COLORS,
-  FRONT_MATERIALS,
-  HANDLES,
-  QUALITY_LEVELS,
-  SERVICES,
-  STYLES,
-  WALL_CABINETS,
-  WORKTOPS,
-  WORKTOP_COLORS,
-  effectiveAppliances,
-  labelOf,
-  sanitizeConfig,
-  sanitizeRoom,
-  type PlannerConfig,
-  type RoomInput,
-} from "./kitchen-catalog.ts";
-import { describeRoom, estimateKitchenPrice, type KitchenEstimate } from "./kitchen-pricing.ts";
+import { sanitizeConfig, sanitizeRoom, type PlannerConfig, type RoomInput } from "./kitchen-catalog.ts";
+import { estimateKitchenPrice, type KitchenEstimate } from "./kitchen-pricing.ts";
+import { sanitizeProvenance, type PlannerProvenance } from "./planner-provenance.ts";
+import { buildPlannerSummary } from "./planner-summary.ts";
 import { loadRateCard } from "./rate-card.ts";
 
 /** Einwilligungstext „Ja, Angebote“ (Funnel C, ab 30.09.2026). */
@@ -42,50 +25,6 @@ export interface ConsentMeta {
   userId: string | null;
   ip: string | null;
   userAgent: string | null;
-}
-
-export function buildPlannerSummary(
-  config: PlannerConfig,
-  room: RoomInput,
-  estimate: KitchenEstimate,
-  extra: {
-    timeframeMonths: number | null;
-    housingType: string;
-    photoCount: number;
-    cover: { bucket: string; path: string } | null;
-  },
-): Record<string, unknown> {
-  return {
-    source: "c",
-    room: {
-      form: room.form,
-      walls: room.walls,
-      ceiling_height_cm: room.ceilingHeightCm ?? null,
-      description: describeRoom(room),
-      notes: room.notes ?? null,
-    },
-    config,
-    labels: {
-      quality: labelOf(QUALITY_LEVELS, config.quality),
-      style: labelOf(STYLES, config.style),
-      front: `${labelOf(FRONT_MATERIALS, config.front)}, ${labelOf(FRONT_COLORS, config.frontColor)}`,
-      handle: labelOf(HANDLES, config.handle),
-      wall_cabinets: labelOf(WALL_CABINETS, config.wallCabinets),
-      tall_units: config.tallUnits,
-      worktop: `${labelOf(WORKTOPS, config.worktop)}, ${labelOf(WORKTOP_COLORS, config.worktopColor)}`,
-      appliance_level: labelOf(APPLIANCE_LEVELS, config.applianceLevel),
-      appliances: effectiveAppliances(config.appliances).map((id) => labelOf(APPLIANCES, id)),
-      extras: config.extras.map((id) => labelOf(EXTRAS, id)),
-      services: config.services.map((id) => labelOf(SERVICES, id)),
-    },
-    wishes: config.wishes ?? null,
-    estimate: { min: estimate.min, max: estimate.max, mid: estimate.mid },
-    layout: estimate.layout,
-    timeframe_months: extra.timeframeMonths,
-    housing_type: extra.housingType,
-    photo_count: extra.photoCount,
-    cover: extra.cover,
-  };
 }
 
 /** Titelbild für Studios: die gewählte Visualisierung, sonst die zuletzt fertige. */
@@ -126,6 +65,7 @@ export async function openPlannerTender(
     housingType: string;
     photoCount: number;
     cover: { bucket: string; path: string } | null;
+    provenance: PlannerProvenance | null;
     botUnverified: boolean;
   },
 ): Promise<"active" | "draft"> {
@@ -136,6 +76,7 @@ export async function openPlannerTender(
     housingType: input.housingType,
     photoCount: input.photoCount,
     cover: input.cover,
+    provenance: input.provenance,
   });
   const { error } = await sb.rpc("kw_open_tender", {
     p_lead_id: input.leadId,
@@ -194,7 +135,7 @@ export async function requestPlannerOffers(
 
   const { data: session, error: sessionErr } = await sb
     .from("planner_sessions")
-    .select("id, spec, room, photo_paths, current_render_id")
+    .select("id, spec, room, provenance, photo_paths, current_render_id")
     .eq("lead_id", lead.id)
     .order("created_at", { ascending: false })
     .limit(1)
@@ -247,6 +188,7 @@ export async function requestPlannerOffers(
     housingType: (lead.housing_type as string | null) ?? "unknown",
     photoCount: (session.photo_paths ?? []).length,
     cover: cover ? { bucket: cover.bucket, path: cover.path } : null,
+    provenance: sanitizeProvenance(session.provenance, room),
     botUnverified: lead.bot_check === "unverified",
   });
   const { error: enqueueErr } = await sb.rpc("kw_enqueue", { p_event_type: "project_created", p_payload: { lead_id: lead.id, funnel: "c" } });

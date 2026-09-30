@@ -31,6 +31,7 @@ function controller(step: PlannerStep, submitted: boolean): Controller {
     timeframe: "",
     submitted,
     offersRequested: false,
+    answered: null,
   };
   const flow = { unlocked: submitted, wantsOffers: true };
   const fn = new Proxy({}, { get: () => noop });

@@ -39,12 +39,40 @@ import {
   withdrawOffer,
   type DealerProjectDetail as Detail,
 } from "@/features/marketplace/dealer-api";
-import { OFFER_INCLUDE_LABELS, type OfferIncludes } from "@/features/marketplace/project-api";
+import { OFFER_INCLUDE_LABELS, type OfferIncludes, type ProjectSummaryLabels } from "@/features/marketplace/project-api";
 import { BeforeAfterSlider } from "@/features/planner/components/BeforeAfterSlider";
 import { FloorPlanSketch } from "@/features/planner/components/FloorPlanSketch";
-import { sanitizeRoom } from "@/features/planner/core";
+import { sanitizeRoom, type ChoiceSource, type DimensionsSource } from "@/features/planner/core";
 
 const euro = (n: number) => `${Math.round(n).toLocaleString("de-DE")} €`;
+
+const CHOICE_NOTE: Record<ChoiceSource, string> = { default: "Standard", partial: "teils Standard" };
+
+const DIMENSIONS_NOTE: Record<DimensionsSource, string> = {
+  customer: "Angaben des Kunden, bitte vor Ort aufmessen",
+  partial: "teils Beispielmaße des Planers, vom Kunden nicht angepasst; bitte vor Ort aufmessen",
+  example: "Beispielmaße des Planers, vom Kunden nicht angepasst; bitte vor Ort aufmessen",
+};
+
+type ConfigRow = [key: keyof ProjectSummaryLabels, label: string, value: string | undefined];
+
+function configRows(labels: ProjectSummaryLabels): ConfigRow[] {
+  const rows: ConfigRow[] = [
+    ["quality", "Qualität", labels.quality],
+    ["style", "Stil", labels.style],
+    ["front", "Fronten", labels.front],
+    ["handle", "Griffe", labels.handle],
+    ["wall_cabinets", "Oberschränke", labels.wall_cabinets],
+    ["tall_units", "Hochschränke", labels.tall_units != null ? String(labels.tall_units) : undefined],
+    ["worktop", "Arbeitsplatte", labels.worktop],
+    ["sink", "Spüle & Armatur", [labels.sink, labels.tap].filter(Boolean).join(", ")],
+    ["appliance_level", "Geräte", labels.appliance_level],
+    ["appliances", "Gerätewünsche", (labels.appliances ?? []).join(", ")],
+    ["extras", "Extras", (labels.extras ?? []).join(", ")],
+    ["services", "Leistungen", (labels.services ?? []).join(", ")],
+  ];
+  return rows.filter(([, , value]) => !!value);
+}
 
 const offerSchema = z.object({
   price: z.coerce.number({ invalid_type_error: "Bitte einen Preis angeben" }).min(500, "Bitte einen realistischen Preis angeben").max(1_999_999),
@@ -225,6 +253,8 @@ export default function DealerProjectDetail() {
   const d = detailQuery.data;
   const s = d.summary ?? {};
   const labels = s.labels;
+  const defaults = s.defaults ?? {};
+  const choiceRows = labels ? configRows(labels) : [];
   const renders = d.media.filter((m) => m.kind === "render");
   const photos = d.media.filter((m) => m.kind === "photo");
   const renderUrl = renders[0] ? media.data?.[renders[0].path] : undefined;
@@ -314,27 +344,24 @@ export default function DealerProjectDetail() {
             <div className="rounded-2xl border bg-card p-5">
               <h2 className="font-bold">Wunschkonfiguration</h2>
               <dl className="mt-3 grid gap-x-6 gap-y-2 text-sm sm:grid-cols-2">
-                {[
-                  ["Qualität", labels.quality],
-                  ["Stil", labels.style],
-                  ["Fronten", labels.front],
-                  ["Griffe", labels.handle],
-                  ["Oberschränke", labels.wall_cabinets],
-                  ["Hochschränke", labels.tall_units != null ? String(labels.tall_units) : undefined],
-                  ["Arbeitsplatte", labels.worktop],
-                  ["Geräte", labels.appliance_level],
-                  ["Gerätewünsche", (labels.appliances ?? []).join(", ")],
-                  ["Extras", (labels.extras ?? []).join(", ")],
-                  ["Leistungen", (labels.services ?? []).join(", ")],
-                ]
-                  .filter(([, v]) => !!v)
-                  .map(([k, v]) => (
-                    <div key={k} className="flex gap-3">
-                      <dt className="w-28 flex-none text-muted-foreground">{k}</dt>
-                      <dd className="font-medium">{v}</dd>
+                {choiceRows.map(([key, label, value]) => {
+                  const note = defaults[key];
+                  return (
+                    <div key={key} className="flex gap-3">
+                      <dt className="w-28 flex-none text-muted-foreground">{label}</dt>
+                      <dd className="font-medium">
+                        {value}
+                        {note && <span className="ml-1.5 font-normal text-muted-foreground">({CHOICE_NOTE[note]})</span>}
+                      </dd>
                     </div>
-                  ))}
+                  );
+                })}
               </dl>
+              {choiceRows.some(([key]) => defaults[key]) && (
+                <p className="mt-3 text-xs text-muted-foreground">
+                  „Standard“: Diesen Schritt hat der Kunde übersprungen, der Wert ist die Voreinstellung des Planers.
+                </p>
+              )}
               {s.wishes && (
                 <p className="mt-4 rounded-lg bg-muted/60 p-3 text-sm">
                   <span className="font-semibold">Hinweis des Kunden:</span> {s.wishes}
@@ -347,7 +374,9 @@ export default function DealerProjectDetail() {
             <div className="grid gap-4 rounded-2xl border bg-card p-5 sm:grid-cols-[1fr_1.2fr]">
               <div>
                 <h2 className="font-bold">Raum & Maße</h2>
-                <p className="mt-1 text-sm text-muted-foreground">{s.room?.description} (Angaben des Kunden, bitte vor Ort aufmessen)</p>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  {s.room?.description} ({DIMENSIONS_NOTE[s.room?.dimensions_source ?? "customer"]})
+                </p>
                 {s.layout && (
                   <ul className="mt-3 space-y-1 text-sm">
                     <li>Schrankzeile: {(s.layout.runCm / 100).toLocaleString("de-DE")} m</li>

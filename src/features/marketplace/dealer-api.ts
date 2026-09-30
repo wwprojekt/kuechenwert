@@ -1,6 +1,7 @@
 import { supabase } from "@/integrations/supabase/client";
 import { ensureValidRLSSession } from "@/lib/sessionGuard";
 import { ApiError } from "./api-client";
+import type { ChoiceSource, DimensionsSource } from "@/features/planner/core";
 import type { CancelReason, Order, OrderStep } from "./order";
 import type { OfferIncludes, ProjectSummaryLabels, TenderStatus } from "./project-api";
 
@@ -8,8 +9,18 @@ export type DealerScope = "open" | "all" | "mine";
 
 export interface ProjectSummary {
   source?: "a" | "b" | "c";
-  room?: { form?: string; walls?: Record<string, number>; ceiling_height_cm?: number | null; description?: string; notes?: string | null };
+  room?: {
+    form?: string;
+    walls?: Record<string, number>;
+    ceiling_height_cm?: number | null;
+    description?: string;
+    notes?: string | null;
+    /** Fehlt bei älteren Planungen: dann gelten die Maße als Kundenangabe. */
+    dimensions_source?: DimensionsSource;
+  };
   labels?: ProjectSummaryLabels;
+  /** Zeilen aus labels, die (teilweise) Standardwerte des Planers sind. */
+  defaults?: Partial<Record<keyof ProjectSummaryLabels, ChoiceSource>>;
   config?: Record<string, unknown>;
   wishes?: string | null;
   estimate?: { min: number; max: number; mid: number };

@@ -2,13 +2,19 @@ import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from "r
 import {
   defaultConfig,
   defaultRoom,
+  emptyProvenance,
   estimateKitchenPrice,
   formById,
+  keepWallsOf,
+  markStepAnswered,
+  markWallEdited,
   sanitizeConfig,
+  sanitizeProvenance,
   sanitizeRoom,
   type KitchenEstimate,
   type KitchenFormId,
   type PlannerConfig,
+  type PlannerProvenance,
   type RoomInput,
 } from "./core";
 import { loadSession, renderStatus, type PlannerPhoto, type PlannerRender, type PlannerSessionRender } from "./api";
@@ -39,11 +45,17 @@ export interface PlannerState {
   submitted: boolean;
   /** Für diese Planung holen Studios Angebote ein. */
   offersRequested: boolean;
+  /**
+   * Vom Kunden beantwortete Schritte und eingegebene Wandlängen; alles andere
+   * sind Standardwerte. null = unbekannt (Planung aus einer älteren Version).
+   */
+  answered: PlannerProvenance | null;
 }
 
 type Action =
   | { type: "step"; step: PlannerStep }
-  | { type: "config"; patch: Partial<PlannerConfig> }
+  | { type: "config"; patch: Partial<PlannerConfig>; step?: PlannerStep }
+  | { type: "confirm"; step: PlannerStep }
   | { type: "form"; form: KitchenFormId }
   | { type: "wall"; key: string; cm: number }
   | { type: "room"; patch: Partial<RoomInput> }
@@ -79,6 +91,7 @@ function initialState(): PlannerState {
     timeframe: "",
     submitted: false,
     offersRequested: false,
+    answered: emptyProvenance(),
   };
 }
 
@@ -87,7 +100,11 @@ function reducer(state: PlannerState, action: Action): PlannerState {
     case "step":
       return { ...state, step: action.step };
     case "config":
-      return { ...state, config: { ...state.config, ...action.patch } };
+      return { ...state, config: { ...state.config, ...action.patch }, answered: markStepAnswered(state.answered, action.step) };
+    case "confirm": {
+      const answered = markStepAnswered(state.answered, action.step);
+      return answered === state.answered ? state : { ...state, answered };
+    }
     case "form": {
       if (action.form === state.room.form) return state;
       const next = defaultRoom(action.form);
@@ -96,10 +113,18 @@ function reducer(state: PlannerState, action: Action): PlannerState {
         const previous = state.room.walls[w.key];
         if (previous && previous > 0) next.walls[w.key] = previous;
       }
-      return { ...state, room: { ...next, ceilingHeightCm: state.room.ceilingHeightCm } };
+      return {
+        ...state,
+        room: { ...next, ceilingHeightCm: state.room.ceilingHeightCm },
+        answered: keepWallsOf(state.answered, action.form),
+      };
     }
     case "wall":
-      return { ...state, room: { ...state.room, walls: { ...state.room.walls, [action.key]: action.cm } } };
+      return {
+        ...state,
+        room: { ...state.room, walls: { ...state.room.walls, [action.key]: action.cm } },
+        answered: markWallEdited(state.answered, action.key),
+      };
     case "room":
       return { ...state, room: { ...state.room, ...action.patch } };
     case "postalCode":
@@ -152,11 +177,14 @@ function readStorage(): Partial<PlannerState> | null {
     if (!raw) return null;
     const parsed = JSON.parse(raw) as Partial<PlannerState> & { furthestIndex?: unknown };
     const { furthestIndex: _legacy, ...rest } = parsed;
+    const room = sanitizeRoom(parsed.room);
     return {
       ...rest,
       step: normalizePlannerStep(parsed.step),
       config: sanitizeConfig(parsed.config),
-      room: sanitizeRoom(parsed.room),
+      room,
+      // Ohne gespeicherte Angabe ist unbekannt, was der Kunde gewählt hat – nicht „alles Standard“.
+      answered: "answered" in parsed ? sanitizeProvenance(parsed.answered, room) : null,
       photos: [],
       offersChoice: parsed.offersChoice === "ja" || parsed.offersChoice === "nein" ? parsed.offersChoice : null,
       timeframe: typeof parsed.timeframe === "string" ? parsed.timeframe : "",
@@ -263,7 +291,9 @@ export function usePlanner() {
   const actions = useMemo(
     () => ({
       goTo: (step: PlannerStep) => dispatch({ type: "step", step }),
-      patchConfig: (patch: Partial<PlannerConfig>) => dispatch({ type: "config", patch }),
+      /** Mit step gilt der Schritt als vom Kunden beantwortet. */
+      patchConfig: (patch: Partial<PlannerConfig>, step?: PlannerStep) => dispatch({ type: "config", patch, step }),
+      confirmStep: (step: PlannerStep) => dispatch({ type: "confirm", step }),
       setForm: (form: KitchenFormId) => dispatch({ type: "form", form }),
       setWall: (key: string, cm: number) => dispatch({ type: "wall", key, cm }),
       patchRoom: (patch: Partial<RoomInput>) => dispatch({ type: "room", patch }),

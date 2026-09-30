@@ -5,6 +5,7 @@ import { FunnelFrame, type FunnelNav } from "@/components/funnel/funnel-frame";
 import { PlzStep } from "@/components/funnel/plz-step";
 import { RequestOffersDialog } from "./components/RequestOffersDialog";
 import { RenderStatusChip, useRenderPercent } from "./components/RenderProgress";
+import type { PlannerConfig } from "./core";
 import { stepDef, type PlannerStep } from "./flow";
 import { ApplianceLevelStep, CookingStep, ExtrasStep, MoreAppliancesStep, ServicesStep } from "./steps/ApplianceSteps";
 import { FrontColorStep, FrontStep, HandleStep, QualityStep, StyleStep } from "./steps/DesignSteps";
@@ -66,7 +67,11 @@ export function PlannerFunnel({ c }: { c: Controller }) {
   const def = stepDef(step);
   const renderPercent = useRenderPercent(c.renderPhase, c.renderStarted);
   const selectedPhoto = state.photos.find((p) => p.path === state.selectedPhotoPath) ?? null;
-  const configProps = { config: state.config, onChange: planner.patchConfig, onAdvance: actions.goNext };
+  const configProps = {
+    config: state.config,
+    onChange: (patch: Partial<PlannerConfig>) => planner.patchConfig(patch, step),
+    onAdvance: actions.goNext,
+  };
   const firstName = c.contact.first_name.trim();
 
   let content: ReactNode = null;

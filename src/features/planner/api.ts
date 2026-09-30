@@ -1,6 +1,6 @@
 import { supabase } from "@/integrations/supabase/client";
 import { callFunction, ApiError } from "@/features/marketplace/api-client";
-import type { KitchenEstimate, PlannerConfig, RoomInput } from "./core";
+import type { KitchenEstimate, PlannerConfig, PlannerProvenance, RoomInput } from "./core";
 
 export interface PlannerPhoto {
   path: string;
@@ -166,6 +166,7 @@ export function generateRender(input: {
   variantLabel?: string | null;
   /** Mit variantHint: diese fertige Visualisierung gezielt ändern statt neu zu planen. */
   baseRenderId?: string | null;
+  provenance?: PlannerProvenance | null;
   utm?: Record<string, string>;
 }) {
   return callFunction<GenerateResult>(FN, {
@@ -173,6 +174,7 @@ export function generateRender(input: {
     session_token: input.sessionToken,
     config: input.config,
     room: input.room,
+    provenance: input.provenance ?? null,
     photo_path: input.photoPath,
     postal_code: input.postalCode ?? null,
     variant_hint: input.variantHint ?? null,
@@ -196,6 +198,7 @@ export function savePlanning(input: {
   config: PlannerConfig;
   room: RoomInput;
   postalCode?: string | null;
+  provenance?: PlannerProvenance | null;
   utm?: Record<string, string>;
 }) {
   return callFunction<{ session_token: string; estimate: KitchenEstimate }>(FN, {
@@ -203,6 +206,7 @@ export function savePlanning(input: {
     session_token: input.sessionToken,
     config: input.config,
     room: input.room,
+    provenance: input.provenance ?? null,
     postal_code: input.postalCode ?? null,
     utm: input.utm,
   });

@@ -13,6 +13,7 @@ import {
   missingRequired,
   regionForPostalCode,
   sanitizeFunnelAAnswers,
+  statedBudget,
   styleLabel,
   timeframeMonths,
   toStoredAnswers,
@@ -52,6 +53,15 @@ describe("sanitizeFunnelAAnswers", () => {
     expect(sanitizeFunnelAAnswers({ budget_eur: null }).budget_eur).toBeNull();
     expect(sanitizeFunnelAAnswers({}).budget_eur).toBe(10_000);
     expect(sanitizeFunnelAAnswers({ budget_eur: 12_345 }).budget_eur).toBe(12_500);
+  });
+
+  it("zählt den unberührten Budget-Slider nicht als Angabe", () => {
+    expect(sanitizeFunnelAAnswers({ budget_eur: 12_000 }).budget_confirmed).toBe(false);
+    expect(sanitizeFunnelAAnswers({ budget_eur: 12_000, budget_confirmed: "ja" }).budget_confirmed).toBe(false);
+    expect(sanitizeFunnelAAnswers({ budget_eur: 12_000, budget_confirmed: true }).budget_confirmed).toBe(true);
+    expect(statedBudget(answers())).toBeNull();
+    expect(statedBudget(answers({ budget_eur: 18_000, budget_confirmed: true }))).toBe(18_000);
+    expect(statedBudget(answers({ budget_eur: null, budget_confirmed: true }))).toBeNull();
   });
 });
 
@@ -111,6 +121,8 @@ describe("Hilfsfunktionen", () => {
     const stored = toStoredAnswers(answers({ budget_eur: null }), { salutation: "Frau", estimate: null });
     expect(stored.version).toBe(2);
     expect(stored.budget_source).toBe("unknown");
+    expect(toStoredAnswers(answers(), { salutation: null, estimate: null }).budget_source).toBe("default");
+    expect(toStoredAnswers(answers({ budget_confirmed: true }), { salutation: null, estimate: null }).budget_source).toBe("slider");
   });
 });
 
@@ -233,6 +245,28 @@ describe("describeFunnelB / describeLeadSummary", () => {
     ]);
   });
 
+  it("zeigt Zahlungsbedingungen und Mülltrennsystem des Vergleichsangebots", () => {
+    const rows = (summary: Record<string, unknown>) =>
+      Object.fromEntries(describeFunnelB({ source: "b", ...summary }).flatMap((g) => g.rows.map((r) => [r.label, r.value])));
+    expect(
+      rows({
+        payment_financing: "with_interest",
+        payment_financing_apr: 4.9,
+        payment_financing_months: 36,
+        payment_down_payment_percent: 30,
+        waste_separation_system: false,
+      }),
+    ).toEqual({
+      Mülltrennsystem: "Nicht vorgesehen",
+      Zahlung: "Finanzierung mit Zinsen (4,9 % eff. p. a., 36 Monate)",
+      Anzahlung: "30 %",
+    });
+    expect(rows({ payment_financing: "zero_interest", waste_separation_system: true })).toEqual({
+      Mülltrennsystem: "Vorgesehen",
+      Zahlung: "Zinsfreie Finanzierung (0 %)",
+    });
+  });
+
   it("baut aus einer leads-Zeile dieselbe Struktur wie kw_lead_public_summary", () => {
     const summary = leadSummaryFromRow({
       funnel_type: "b",
@@ -246,9 +280,18 @@ describe("describeFunnelB / describeLeadSummary", () => {
       purchase_reason: null,
       special_wishes: ["steckdosen"],
       delivery_mode: "pickup",
+      payment_financing: "none",
+      payment_down_payment_percent: 20,
       funnel_answers: { salutation: "frau", brand: "nolte" },
     });
-    expect(summary).toMatchObject({ source: "b", existing_offer_eur: 24_500, estimate: null, answers: { brand: "nolte" } });
+    expect(summary).toMatchObject({
+      source: "b",
+      existing_offer_eur: 24_500,
+      payment_financing: "none",
+      payment_down_payment_percent: 20,
+      estimate: null,
+      answers: { brand: "nolte" },
+    });
     expect(summary.answers).not.toHaveProperty("salutation");
     expect(describeLeadSummary(summary)[0]?.rows[0]).toEqual({ label: "Vorhandenes Angebot", value: "24.500 €" });
   });
@@ -256,5 +299,20 @@ describe("describeFunnelB / describeLeadSummary", () => {
   it("wählt die Darstellung nach Herkunft", () => {
     expect(describeLeadSummary({ source: "c" })).toEqual([]);
     expect(describeLeadSummary({ source: "a", kitchen_form: "zeile" })[0]?.rows[0]).toEqual({ label: "Form", value: "Küchenzeile" });
+  });
+
+  it("zeigt für Planungen aus Funnel C den Rahmen", () => {
+    expect(describeLeadSummary({ source: "c", labels: { timeframe: "In 1–3 Monaten" }, housing_type: "own" })).toEqual([
+      {
+        title: "Rahmen",
+        rows: [
+          { label: "Zeitraum", value: "In 1–3 Monaten" },
+          { label: "Wohnsituation", value: "Eigentum" },
+        ],
+      },
+    ]);
+    expect(describeLeadSummary({ source: "c", timeframe_months: 6, housing_type: "unknown" })).toEqual([
+      { title: "Rahmen", rows: [{ label: "Zeitraum", value: "In ca. 6 Monaten" }] },
+    ]);
   });
 });

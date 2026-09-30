@@ -30,6 +30,7 @@ import {
   APPLIANCE_CATEGORIES,
   DELIVERY_MODES,
   EXTRAS_OPTIONS,
+  FINANCING_OPTIONS,
   HANDLE_TYPES,
   KITCHEN_BRANDS,
   SINK_BRANDS,
@@ -237,6 +238,8 @@ export interface FunnelAAnswers {
   timeframe: string;
   /** Budget in Euro; null = „Weiß ich nicht, bitte beraten“. */
   budget_eur: number | null;
+  /** Slider bewegt oder „Weiß ich nicht“ gewählt; sonst steht dort nur der Startwert. */
+  budget_confirmed: boolean;
   postal_code: string;
 }
 
@@ -261,6 +264,7 @@ export function emptyFunnelAAnswers(): FunnelAAnswers {
     decision_maker: "",
     timeframe: "",
     budget_eur: FUNNEL_A_BUDGET.default,
+    budget_confirmed: false,
     postal_code: "",
   };
 }
@@ -345,8 +349,14 @@ export function sanitizeFunnelAAnswers(input: unknown): FunnelAAnswers {
     decision_maker: pickId(raw.decision_maker, DECISION_IDS),
     timeframe: pickId(raw.timeframe, TIMEFRAME_IDS),
     budget_eur: "budget_eur" in raw ? clampBudget(raw.budget_eur) : FUNNEL_A_BUDGET.default,
+    budget_confirmed: raw.budget_confirmed === true,
     postal_code: /^\d{5}$/.test(plz) ? plz : "",
   };
+}
+
+/** Budget, das der Kunde wirklich genannt hat; der unberührte Startwert zählt nicht. */
+export function statedBudget(a: FunnelAAnswers): number | null {
+  return a.budget_confirmed ? a.budget_eur : null;
 }
 
 export function missingRequired(a: FunnelAAnswers): (keyof FunnelAAnswers)[] {
@@ -448,7 +458,7 @@ export function toStoredAnswers(
     housing: a.housing || null,
     decision_maker: a.decision_maker || null,
     timeframe: a.timeframe || null,
-    budget_source: a.budget_eur === null ? "unknown" : "slider",
+    budget_source: a.budget_eur === null ? "unknown" : a.budget_confirmed ? "slider" : "default",
     estimate: extra.estimate,
   };
 }
@@ -603,6 +613,19 @@ function applianceRows(value: unknown): DetailRow[] {
   return [...byCategory].map(([label, values]) => ({ label, value: values.join(", ") }));
 }
 
+const decimal = (n: number) => n.toLocaleString("de-DE", { maximumFractionDigits: 2 });
+
+/** Zahlungsart des vorhandenen Angebots, bei Finanzierung mit Zins und Laufzeit. */
+function paymentText(s: Record<string, unknown>): string | null {
+  const name = slugName(FINANCING_OPTIONS, s.payment_financing);
+  if (!name || s.payment_financing !== "with_interest") return name;
+  const terms = [
+    typeof s.payment_financing_apr === "number" ? `${decimal(s.payment_financing_apr)} % eff. p. a.` : null,
+    typeof s.payment_financing_months === "number" && s.payment_financing_months > 0 ? `${s.payment_financing_months} Monate` : null,
+  ].filter(Boolean);
+  return terms.length ? `${name} (${terms.join(", ")})` : name;
+}
+
 /** Lesbare Angaben eines Funnel-B-Projekts (vorhandenes Studio-Angebot). */
 export function describeFunnelB(summary: unknown): DetailGroup[] {
   const s = asRecord(summary);
@@ -622,6 +645,10 @@ export function describeFunnelB(summary: unknown): DetailGroup[] {
     row("Dekor", text(a.worktopDesignCustom) ?? text(a.worktopDesign)),
     row("Spüle", sink || null),
     row("Spülenmaterial", slugName(SINK_MATERIALS, a.sinkMaterial)),
+    row(
+      "Mülltrennsystem",
+      s.waste_separation_system === true ? "Vorgesehen" : s.waste_separation_system === false ? "Nicht vorgesehen" : null,
+    ),
   ];
 
   const extras = stringList(s.special_wishes)
@@ -633,6 +660,8 @@ export function describeFunnelB(summary: unknown): DetailGroup[] {
   const frame: (DetailRow | null)[] = [
     row("Zeitraum", timeframe),
     row("Lieferung", slugName(DELIVERY_MODES, s.delivery_mode)),
+    row("Zahlung", paymentText(s)),
+    row("Anzahlung", typeof s.payment_down_payment_percent === "number" ? `${decimal(s.payment_down_payment_percent)} %` : null),
     row("Extras", extras.join(", ") || null),
     row("Hinweise", text(a.extrasNotes)),
   ];
@@ -658,6 +687,11 @@ export interface LeadSummaryRow {
   purchase_reason: string | null;
   special_wishes: string[] | null;
   delivery_mode: string | null;
+  payment_financing?: string | null;
+  payment_financing_apr?: number | null;
+  payment_financing_months?: number | null;
+  payment_down_payment_percent?: number | null;
+  waste_separation_system?: boolean | null;
   funnel_answers: unknown;
 }
 
@@ -678,16 +712,35 @@ export function leadSummaryFromRow(lead: LeadSummaryRow): Record<string, unknown
     purchase_reason: lead.purchase_reason,
     special_wishes: lead.special_wishes,
     delivery_mode: lead.delivery_mode,
+    payment_financing: lead.payment_financing ?? null,
+    payment_financing_apr: lead.payment_financing_apr ?? null,
+    payment_financing_months: lead.payment_financing_months ?? null,
+    payment_down_payment_percent: lead.payment_down_payment_percent ?? null,
+    waste_separation_system: lead.waste_separation_system ?? null,
     estimate: typeof estimate.min === "number" && typeof estimate.max === "number" ? estimate : null,
     answers,
   };
 }
 
-/** Anzeige je Herkunft: A = Anfrage, B = Unterbieten; C nutzt summary.labels. */
+/** Rahmen eines Funnel-C-Projekts; die Planung selbst zeigen die Konfigurator-Labels. */
+export function describeFunnelC(summary: unknown): DetailGroup[] {
+  const s = asRecord(summary);
+  const timeframe =
+    text(asRecord(s.labels).timeframe) ?? (typeof s.timeframe_months === "number" ? `In ca. ${s.timeframe_months} Monaten` : null);
+  const housing = s.housing_type === "own" ? "Eigentum" : s.housing_type === "rent" ? "Miete" : null;
+  const rows = [
+    timeframe ? { label: "Zeitraum", value: timeframe } : null,
+    housing ? { label: "Wohnsituation", value: housing } : null,
+  ].filter((r): r is DetailRow => r !== null);
+  return rows.length ? [{ title: "Rahmen", rows }] : [];
+}
+
+/** Anzeige je Herkunft: A = Anfrage, B = Unterbieten, C = Rahmen neben summary.labels. */
 export function describeLeadSummary(summary: unknown): DetailGroup[] {
   const source = asRecord(summary).source;
   if (source === "b") return describeFunnelB(summary);
   if (source === "a") return describeFunnelA(summary);
+  if (source === "c") return describeFunnelC(summary);
   return [];
 }
 

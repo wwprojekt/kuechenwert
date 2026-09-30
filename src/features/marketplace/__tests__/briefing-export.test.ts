@@ -88,4 +88,17 @@ describe("buildFloorPlanDxf", () => {
     expect(/^[\x20-\x7E\n]*$/.test(dxf)).toBe(true);
     expect(dxf).toContain("Masse ca., bitte vor Ort aufmessen");
   });
+
+  it("weist unveränderte Beispielmaße des Planers aus", () => {
+    const room = { form: "l", walls: { a: 300, b: 240 }, dimensions_source: "example" as const };
+    const dxf = buildFloorPlanDxf(detail({ summary: { source: "c", room } }))!;
+    expect(dxf).toContain("Beispielmasse, vom Kunden nicht angepasst, bitte vor Ort aufmessen");
+  });
+});
+
+describe("buildBriefing mit Standardwerten", () => {
+  it("gibt die Kennzeichnung der Standardwerte mit aus", () => {
+    const b = buildBriefing(detail({ summary: { source: "c", defaults: { front: "default" } } }), {});
+    expect(b.configuration.defaults).toEqual({ front: "default" });
+  });
 });

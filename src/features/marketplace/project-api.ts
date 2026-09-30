@@ -70,10 +70,13 @@ export interface ProjectSummaryLabels {
   wall_cabinets?: string;
   tall_units?: number;
   worktop?: string;
+  sink?: string;
+  tap?: string;
   appliance_level?: string;
   appliances?: string[];
   extras?: string[];
   services?: string[];
+  timeframe?: string | null;
 }
 
 export interface ProjectView {

@@ -50,7 +50,7 @@ export type FunnelAStepSlug = (typeof FUNNEL_A_SLUGS)[number];
 export type ExtraApplianceId = FunnelAAnswers["extra_appliances"][number];
 
 /** Antwortfelder, die per Einzelauswahl (Kachel) beantwortet werden. */
-export type ChoiceField = Exclude<keyof FunnelAAnswers, "extra_appliances" | "budget_eur" | "postal_code">;
+export type ChoiceField = Exclude<keyof FunnelAAnswers, "extra_appliances" | "budget_eur" | "budget_confirmed" | "postal_code">;
 
 /** Katalog-Option; Farbwelten bringen Farbmuster mit. */
 export type FunnelAOption = ChoiceOption & { swatches?: readonly string[] };

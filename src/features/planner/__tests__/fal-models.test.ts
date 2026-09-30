@@ -78,7 +78,12 @@ describe("A/B-Zuteilung und Modellwahl", () => {
   });
 
   it("nimmt Modelle anderer Anbieter-Präfixe aus der Registry an", () => {
-    const s = resolveAiSettings({ challenger_edit_model: "openai/gpt-image-2.5/sunburst/edit", challenger_share: 50 });
+    expect(resolveAiSettings({ edit_model: "openai/gpt-image-2.5/sunburst/edit" }).editModel.vendor).toBe("OpenAI");
+    const s = resolveAiSettings({
+      edit_model: "fal-ai/nano-banana-pro/edit",
+      challenger_edit_model: "openai/gpt-image-2.5/sunburst/edit",
+      challenger_share: 50,
+    });
     expect(s.challengerEdit?.vendor).toBe("OpenAI");
     expect(s.challengerShare).toBe(50);
   });
@@ -87,7 +92,7 @@ describe("A/B-Zuteilung und Modellwahl", () => {
 describe("Ausweichkette", () => {
   const model = (id: string) => falModel(id)!;
 
-  it("geht Schwestermodell und anderen Anbieter der Reihe nach durch", () => {
+  it("geht die Ausweichmodelle der Reihe nach durch, jedes von einem anderen Anbieter", () => {
     const s = resolveAiSettings(null);
     const first = s.editModel;
     const step1 = nextFallback(s, first, first)!;
@@ -95,6 +100,7 @@ describe("Ausweichkette", () => {
     const step2 = nextFallback(s, first, step1)!;
     expect(step2.id).toBe(DEFAULT_AI_MODELS.fallbackEdit2);
     expect(nextFallback(s, first, step2)).toBeNull();
+    expect(new Set([first.vendor, step1.vendor, step2.vendor]).size).toBe(3);
   });
 
   it("versucht das erste Modell nie noch einmal und überspringt doppelte Einträge", () => {

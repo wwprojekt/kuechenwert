@@ -32,7 +32,7 @@ export const FAL_MODELS: readonly FalModel[] = [
     costCents: 15,
     openWeights: false,
     supportsLora: false,
-    note: "Höchste Raumtreue: Wände, Fenster und Perspektive bleiben erhalten.",
+    note: "Sehr detailreich, deutet den Raum im Testlauf (30.09.2026) aber oft neu: Perspektive, Fenster und Grundriss ändern sich.",
   },
   {
     id: "fal-ai/nano-banana-2/edit",
@@ -43,7 +43,7 @@ export const FAL_MODELS: readonly FalModel[] = [
     costCents: 12,
     openWeights: false,
     supportsLora: false,
-    note: "Schneller und günstiger, erhält den Raum gut – erstes Ausweichmodell.",
+    note: "Schnell, erhält den Raum meist gut – erstes Ausweichmodell (anderer Anbieter als das Hauptmodell).",
   },
   {
     id: "fal-ai/flux-2-pro/edit",
@@ -54,7 +54,7 @@ export const FAL_MODELS: readonly FalModel[] = [
     costCents: 14,
     openWeights: false,
     supportsLora: false,
-    note: "Anderer Anbieter als Google, gestaltet den Raum aber freier um – letztes Ausweichmodell.",
+    note: "Dritter Anbieter, gestaltet den Raum aber freier um – letztes Ausweichmodell.",
   },
   {
     id: "openai/gpt-image-2.5/sunburst/edit",
@@ -65,7 +65,7 @@ export const FAL_MODELS: readonly FalModel[] = [
     costCents: 6,
     openWeights: false,
     supportsLora: false,
-    note: "Ändert nur, was verlangt ist: Licht, Belichtung und Raum bleiben am genauesten erhalten. Etwas langsamer, deutlich günstiger – Kandidat für den A/B-Vergleich.",
+    note: "Hält im Testlauf Raum, Fenster, Perspektive und Licht am genauesten und ist am günstigsten – Hauptmodell mit Foto.",
   },
   {
     id: "fal-ai/qwen-image-edit-plus-lora",
@@ -114,12 +114,12 @@ export const FAL_MODELS: readonly FalModel[] = [
 ];
 
 /**
- * Ausweichkette mit Foto: erst das Schwestermodell (Kapazitätsproblem eines
- * Modells, Raum bleibt erhalten), dann ein anderer Anbieter (Ausfall bei
- * Google, abgelehntes Foto).
+ * Mit Foto über drei Anbieter: GPT Image 2.5 hält den Raum im Testlauf am
+ * genauesten; fällt OpenAI aus oder lehnt ein Foto ab, folgen Google und
+ * Black Forest Labs.
  */
 export const DEFAULT_AI_MODELS = {
-  edit: "fal-ai/nano-banana-pro/edit",
+  edit: "openai/gpt-image-2.5/sunburst/edit",
   text: "fal-ai/flux-2-pro",
   fallbackEdit: "fal-ai/nano-banana-2/edit",
   fallbackEdit2: "fal-ai/flux-2-pro/edit",

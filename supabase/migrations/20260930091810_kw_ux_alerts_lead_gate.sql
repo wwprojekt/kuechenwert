@@ -1,7 +1,7 @@
 -- ============================================================================
 -- UX-Alerts an den neuen Funnel C anpassen (30.09.2026)
 --
--- Seit 20260930081500 sieht niemand die KI-Visualisierung vor der
+-- Seit 20260930091716 sieht niemand die KI-Visualisierung vor der
 -- Kontakterfassung: Planungen mit fertigem Bild ohne Lead sind Abbrüche an
 -- den Lead-Fragen, „visualisierung“ ist nur noch der Lade-Bildschirm (4,5 s)
 -- und der erste Schritt ist die Küchenform statt Foto und Maße. Nur Titel und

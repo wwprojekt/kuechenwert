@@ -4,7 +4,7 @@
 -- Abschnitt 3 („Anfragen über unsere Formulare“) sagt jetzt, dass der Planer
 -- Visualisierung und Preisschätzung erst nach Name, E-Mail und Telefon zeigt
 -- und per E-Mail schickt, und dass Studios die Planung ohne Angebotswunsch
--- nicht sehen (Leads ohne Ausschreibung, 20260930081500). Rechtsgrundlage und
+-- nicht sehen (Leads ohne Ausschreibung, 20260930091716). Rechtsgrundlage und
 -- Speicherdauer („Anfragen ohne Ausschreibung nach 180 Tagen“) gelten
 -- unverändert. Bricht ab, wenn der Text zwischenzeitlich geändert wurde.
 -- ============================================================================

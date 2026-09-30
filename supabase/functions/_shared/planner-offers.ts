@@ -12,7 +12,7 @@ import { HttpError } from "./kw-http.ts";
 import { sanitizeConfig, sanitizeRoom, type PlannerConfig, type RoomInput } from "./kitchen-catalog.ts";
 import { estimateKitchenPrice, type KitchenEstimate } from "./kitchen-pricing.ts";
 import { sanitizeProvenance, type PlannerProvenance } from "./planner-provenance.ts";
-import { buildPlannerSummary } from "./planner-summary.ts";
+import { buildPlannerSummary, type PlannerLeadFrame } from "./planner-summary.ts";
 import { loadRateCard } from "./rate-card.ts";
 
 /** Einwilligungstext „Ja, Angebote“ (Funnel C, ab 30.09.2026). */
@@ -61,8 +61,7 @@ export async function openPlannerTender(
     config: PlannerConfig;
     room: RoomInput;
     estimate: KitchenEstimate;
-    timeframeMonths: number | null;
-    housingType: string;
+    frame: PlannerLeadFrame;
     photoCount: number;
     cover: { bucket: string; path: string } | null;
     provenance: PlannerProvenance | null;
@@ -72,8 +71,7 @@ export async function openPlannerTender(
   const { data: settings } = await sb.from("kw_marketplace_settings").select("auto_publish_funnel_c").maybeSingle();
   const publish = settings?.auto_publish_funnel_c !== false && !input.botUnverified;
   const summary = buildPlannerSummary(input.config, input.room, input.estimate, {
-    timeframeMonths: input.timeframeMonths,
-    housingType: input.housingType,
+    ...input.frame,
     photoCount: input.photoCount,
     cover: input.cover,
     provenance: input.provenance,
@@ -89,6 +87,22 @@ export async function openPlannerTender(
   });
   if (error) throw error;
   return publish ? "active" : "draft";
+}
+
+/** Rahmen eines gespeicherten Leads (funnel_answers aus kw-planner submit). */
+export function storedLeadFrame(
+  answers: Record<string, unknown>,
+  lead: { timeframeMonths: number | null; purchaseReason: string | null; housingType: string },
+): PlannerLeadFrame {
+  const source = answers.budget_source;
+  return {
+    timeframeMonths: lead.timeframeMonths,
+    budgetEur: typeof answers.budget_eur === "number" ? answers.budget_eur : null,
+    budgetSource: source === "slider" || source === "unknown" ? source : null,
+    purchaseReason: lead.purchaseReason,
+    housing: typeof answers.housing === "string" ? answers.housing : null,
+    housingType: lead.housingType,
+  };
 }
 
 export async function hasOpenTender(sb: SupabaseClient, leadId: string): Promise<boolean> {
@@ -120,7 +134,7 @@ export async function requestPlannerOffers(
 ): Promise<{ tenderStatus: string; alreadyOpen: boolean }> {
   const { data: lead, error: leadErr } = await sb
     .from("leads")
-    .select("id, funnel_type, postal_code, housing_type, timeframe_months, bot_check, consent_call, funnel_answers, user_id")
+    .select("id, funnel_type, postal_code, housing_type, purchase_reason, timeframe_months, bot_check, consent_call, funnel_answers, user_id")
     .eq("id", input.leadId)
     .maybeSingle();
   if (leadErr) throw leadErr;
@@ -184,8 +198,11 @@ export async function requestPlannerOffers(
     config,
     room,
     estimate,
-    timeframeMonths: timeframe,
-    housingType: (lead.housing_type as string | null) ?? "unknown",
+    frame: storedLeadFrame(answers, {
+      timeframeMonths: timeframe,
+      purchaseReason: (lead.purchase_reason as string | null) ?? null,
+      housingType: (lead.housing_type as string | null) ?? "unknown",
+    }),
     photoCount: (session.photo_paths ?? []).length,
     cover: cover ? { bucket: cover.bucket, path: cover.path } : null,
     provenance: sanitizeProvenance(session.provenance, room),

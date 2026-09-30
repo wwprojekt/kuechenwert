@@ -1,7 +1,14 @@
-import { formById, type RoomInput } from "./core";
+import { CEILING_HEIGHT_RANGE, formById, type RoomInput } from "./core";
 
 /** Gleiche Grenzen wie sanitizeRoom in _shared/kitchen-catalog.ts, das der Server beim Speichern anwendet. */
 export const WALL_LIMITS_CM = { min: 60, max: 1200 } as const;
+
+/** Die Raumhöhe ist freiwillig; eine Angabe außerhalb des Bereichs verwirft der Server. */
+export function ceilingIssue(room: RoomInput): string | null {
+  const cm = room.ceilingHeightCm;
+  if (cm == null) return null;
+  return cm < CEILING_HEIGHT_RANGE.min || cm > CEILING_HEIGHT_RANGE.max ? "Bitte in cm, z. B. 250" : null;
+}
 
 /** Fehlertext je Wand, die so nicht berechnet werden kann (leer, zu kurz, zu lang). */
 export function roomWallIssues(room: RoomInput): Record<string, string> {

@@ -246,6 +246,41 @@ export const TIMEFRAMES = [
   { slug: "flexibel", name: "Flexibel / Bestes Angebot zählt", months: null as number | null },
 ];
 
+/**
+ * Was im Preis des vorhandenen Angebots enthalten ist. Die Schlüssel sind die
+ * des Angebotsformulars der Studios (lead_bids.includes), damit beide
+ * Angebote Punkt für Punkt vergleichbar sind; „sink“ gibt es nur hier.
+ */
+export const OFFER_INCLUDES = [
+  { slug: "appliances", name: "Elektrogeräte" },
+  { slug: "delivery", name: "Lieferung" },
+  { slug: "assembly", name: "Montage" },
+  { slug: "sink", name: "Spüle & Armatur" },
+  { slug: "removal", name: "Altküche abbauen & entsorgen" },
+  { slug: "connection", name: "Elektro- & Wasseranschluss" },
+  { slug: "measurement", name: "Aufmaß vor Ort" },
+];
+
+/** Einzige Auswahl, wenn der Kunde den Leistungsumfang nicht kennt. */
+export const OFFER_INCLUDES_UNKNOWN = "unknown";
+
+const DAY_MS = 86_400_000;
+
+/** „Angebot gültig bis“ (YYYY-MM-DD): bis ein Jahr zurück (abgelaufen) und zwei Jahre voraus. */
+export function offerValidityRange(now = new Date()): { min: string; max: string } {
+  const iso = (t: number) => new Date(t).toISOString().slice(0, 10);
+  return { min: iso(now.getTime() - 365 * DAY_MS), max: iso(now.getTime() + 2 * 365 * DAY_MS) };
+}
+
+/** Kalendertag im Bereich von offerValidityRange, sonst null. */
+export function plausibleOfferDate(value: unknown, now = new Date()): string | null {
+  if (typeof value !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return null;
+  const date = new Date(`${value}T00:00:00Z`);
+  if (Number.isNaN(date.getTime()) || !date.toISOString().startsWith(value)) return null;
+  const { min, max } = offerValidityRange(now);
+  return value >= min && value <= max ? value : null;
+}
+
 export const DELIVERY_MODES = [
   { slug: "delivery_assembly", name: "Lieferung + Montage" },
   { slug: "delivery_only",     name: "Nur Lieferung" },

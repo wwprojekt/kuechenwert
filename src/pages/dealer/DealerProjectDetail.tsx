@@ -29,7 +29,8 @@ import { ContactComplaintCard } from "@/features/marketplace/components/ContactC
 import { DealerOrderPanel } from "@/features/marketplace/components/DealerOrderPanel";
 import { DealerProjectDocuments } from "@/features/marketplace/components/DealerProjectDocuments";
 import { projectTitle, projectValue, timeLeft } from "@/features/marketplace/components/DealerProjectCard";
-import { ProjectAnswers } from "@/features/marketplace/components/ProjectAnswers";
+import { DetailGroupsCard, ProjectAnswers } from "@/features/marketplace/components/ProjectAnswers";
+import { describeLeadDetails, detailsRoom } from "@/features/marketplace/lead-details";
 import {
   fetchDealerProject,
   fetchMarketProfile,
@@ -43,7 +44,7 @@ import {
 import { OFFER_INCLUDE_LABELS, type OfferIncludes, type ProjectSummaryLabels } from "@/features/marketplace/project-api";
 import { BeforeAfterSlider } from "@/features/planner/components/BeforeAfterSlider";
 import { FloorPlanSketch } from "@/features/planner/components/FloorPlanSketch";
-import { sanitizeRoom, type ChoiceSource, type DimensionsSource } from "@/features/planner/core";
+import { VENTILATION_OPTIONS, describeRoom, sanitizeRoom, type ChoiceSource, type DimensionsSource } from "@/features/planner/core";
 
 const euro = (n: number) => `${Math.round(n).toLocaleString("de-DE")} €`;
 
@@ -260,7 +261,12 @@ export default function DealerProjectDetail() {
   const photos = d.media.filter((m) => m.kind === "photo");
   const renderUrl = renders[0] ? media.data?.[renders[0].path] : undefined;
   const photoUrl = photos[0] ? media.data?.[photos[0].path] : undefined;
-  const room = s.room?.form && s.room.walls ? sanitizeRoom(s.room) : null;
+  const plannedRoom = s.room?.form && s.room.walls ? sanitizeRoom(s.room) : null;
+  // Ohne Planung (Funnel A/B): Wandlängen, die der Kunde nachgetragen hat.
+  const addedRoom = plannedRoom ? null : detailsRoom(d.details, s.kitchen_form);
+  const room = plannedRoom ?? (addedRoom ? sanitizeRoom(addedRoom) : null);
+  const detailGroups = describeLeadDetails(d.details, s.kitchen_form);
+  const ventilationLabel = VENTILATION_OPTIONS.find((o) => o.id === s.room?.ventilation)?.label;
   const slotsLeft = Math.max(0, d.max_contact_purchases - d.contact_purchases);
   const canUnlock = !d.contact_unlocked && !d.awarded_to_me && ["active", "completed"].includes(d.status) && slotsLeft > 0 && (d.contact_price_cents ?? 0) > 0;
   const left = timeLeft(d.ends_at);
@@ -379,13 +385,17 @@ export default function DealerProjectDetail() {
               <div>
                 <h2 className="font-bold">Raum & Maße</h2>
                 <p className="mt-1 text-sm text-muted-foreground">
-                  {s.room?.description} ({DIMENSIONS_NOTE[s.room?.dimensions_source ?? "customer"]})
+                  {plannedRoom
+                    ? `${s.room?.description ?? describeRoom(room)} (${DIMENSIONS_NOTE[s.room?.dimensions_source ?? "customer"]})`
+                    : `${describeRoom(room)} (vom Kunden nachgetragen, bitte vor Ort aufmessen)`}
                 </p>
-                {s.layout && (
+                {(s.layout || s.room?.ceiling_height_cm || ventilationLabel) && (
                   <ul className="mt-3 space-y-1 text-sm">
-                    <li>Schrankzeile: {(s.layout.runCm / 100).toLocaleString("de-DE")} m</li>
-                    <li>Arbeitsplatte: ca. {(s.layout.worktopCm / 100).toLocaleString("de-DE")} m</li>
-                    {s.layout.islandCm > 0 && <li>Insel: {(s.layout.islandCm / 100).toLocaleString("de-DE")} m</li>}
+                    {s.layout && <li>Schrankzeile: {(s.layout.runCm / 100).toLocaleString("de-DE")} m</li>}
+                    {s.layout && <li>Arbeitsplatte: ca. {(s.layout.worktopCm / 100).toLocaleString("de-DE")} m</li>}
+                    {s.layout && s.layout.islandCm > 0 && <li>Insel: {(s.layout.islandCm / 100).toLocaleString("de-DE")} m</li>}
+                    {s.room?.ceiling_height_cm && <li>Raumhöhe: {(s.room.ceiling_height_cm / 100).toLocaleString("de-DE")} m</li>}
+                    {ventilationLabel && <li>Dunstabzug: {ventilationLabel}</li>}
                   </ul>
                 )}
               </div>
@@ -394,6 +404,7 @@ export default function DealerProjectDetail() {
           )}
 
           <ProjectAnswers summary={s} title="Angaben aus der Anfrage" wide />
+          <DetailGroupsCard groups={detailGroups} title="Ergänzungen" wide />
 
           <div className="flex flex-wrap gap-2 print:hidden">
             <Button variant="outline" onClick={exportJson}>

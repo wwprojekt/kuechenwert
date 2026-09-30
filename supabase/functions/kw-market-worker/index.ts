@@ -30,6 +30,7 @@ import {
 } from "../_shared/email-builder.ts";
 import { BRAND } from "../_shared/brand-config.ts";
 import { describeLeadSummary } from "../_shared/funnel-a-catalog.ts";
+import { describeLeadDetails, hasDetails } from "../_shared/lead-details.ts";
 import { ISSUER_SETTINGS_COLUMNS, issuerProfile, missingIssuerFields } from "../_shared/issuer-profile.ts";
 
 const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY") ?? "";
@@ -249,6 +250,100 @@ function summaryRows(
 // Handler
 // ---------------------------------------------------------------------------
 
+/** Ergänzungen aus Experten-Check und Projektseite als Mail-Kästen; ohne Ergänzungen leer. */
+async function detailsBoxes(ctx: Ctx, leadId: string, kitchenForm: string | null): Promise<string> {
+  const { data, error } = await ctx.sb
+    .from("kw_lead_details")
+    .select("customer, customer_updated_at, expert, expert_updated_at")
+    .eq("lead_id", leadId)
+    .maybeSingle();
+  if (error) throw error;
+  return describeLeadDetails(data, kitchenForm)
+    .map((group) => infoBox(escapeHtml(group.title), group.rows.map((row) => detailRow(escapeHtml(row.label), escapeHtml(row.value))).join("")))
+    .join("");
+}
+
+const UPDATE_NOTICE: Record<string, string> = {
+  customer: "Der Kunde hat Angaben zu Raum, Technik oder Beratung ergänzt.",
+  expert: "KüchenWert hat Ergebnisse aus dem Experten-Check ergänzt.",
+  files: "Neue Unterlagen des Kunden sind für Sie freigegeben.",
+};
+/** Mehrere Änderungen kurz hintereinander ergeben eine Nachricht je Studio und Projekt. */
+const UPDATE_NOTICE_GAP_MS = 6 * 3600 * 1000;
+
+/**
+ * Ergänzte Angaben oder freigegebene Unterlagen (Trigger auf kw_lead_details
+ * und lead_files): Studios mit Angebot oder gekauftem Kontakt erfahren es.
+ * Andere Studios sehen den neuen Stand, sobald sie das Projekt öffnen.
+ */
+async function onProjectUpdated(ctx: Ctx, p: Record<string, unknown>) {
+  const leadId = String(p.lead_id);
+  const source = String(p.source);
+  const notice = UPDATE_NOTICE[source] ?? UPDATE_NOTICE.customer!;
+  if (source === "customer" || source === "expert") {
+    const { data: details, error: detailsError } = await ctx.sb
+      .from("kw_lead_details")
+      .select("customer, expert")
+      .eq("lead_id", leadId)
+      .maybeSingle();
+    if (detailsError) throw detailsError;
+    // Gelöschte Angaben sind keine Ergänzung.
+    if (!hasDetails(details?.[source] as object | null | undefined)) return;
+  }
+  const { data: tender, error } = await ctx.sb
+    .from("lead_auctions")
+    .select("id")
+    .eq("lead_id", leadId)
+    .in("status", ["active", "completed", "awarded"])
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (error) throw error;
+  if (!tender) return;
+
+  const [bids, unlocks] = await Promise.all([
+    ctx.sb.from("lead_bids").select("dealer_id").eq("auction_id", tender.id).in("status", ["active", "accepted"]),
+    ctx.sb.from("lead_match_candidates").select("dealer_id").eq("lead_id", leadId).eq("is_purchased", true),
+  ]);
+  if (bids.error) throw bids.error;
+  if (unlocks.error) throw unlocks.error;
+  const dealerIds = [...new Set([...(bids.data ?? []), ...(unlocks.data ?? [])].map((row) => row.dealer_id as string))];
+  if (dealerIds.length === 0) return;
+
+  const lead = await ctx.lead(leadId);
+  const region = `PLZ ${lead.postal_code.slice(0, 3)}xx`;
+  const since = new Date(Date.now() - UPDATE_NOTICE_GAP_MS).toISOString();
+  for (const dealerId of dealerIds) {
+    const { data: recent } = await ctx.sb
+      .from("dealer_notifications")
+      .select("id")
+      .eq("user_id", dealerId)
+      .eq("lead_auction_id", tender.id)
+      .eq("type", "project_updated")
+      .gte("created_at", since)
+      .limit(1)
+      .maybeSingle();
+    if (recent) continue;
+    await ctx.notifyDealer(dealerId, "project_updated", `Projekt ergänzt · ${region}`, notice, tender.id);
+    await ctx.bestEffort(`dealer update mail ${dealerId}`, async () => {
+      const dealer = await ctx.dealer(dealerId);
+      if (!dealer.email) return;
+      const content = [
+        greeting(dealerName(dealer)),
+        paragraph(`${escapeHtml(notice)} Es geht um Ihr Küchenprojekt aus ${escapeHtml(region)}.`),
+        button("Projekt ansehen", `${BRAND.baseUrl}/dashboard/projekte/${tender.id}`),
+      ].join("");
+      await ctx.send({
+        to: dealer.email,
+        subject: `Projekt ergänzt · ${region}`,
+        html: ctx.layout("Ein Projekt wurde ergänzt", content),
+        type: "project_updated_dealer",
+        recipientId: dealerId,
+      });
+    });
+  }
+}
+
 /** Preisschätzung eines Funnel-C-Leads ohne Ausschreibung (aus dem Abschluss der Planung). */
 async function plannerEstimate(ctx: Ctx, leadId: string): Promise<{ min: number; max: number } | null> {
   const { data } = await ctx.sb.from("leads").select("funnel_answers").eq("id", leadId).maybeSingle();
@@ -322,11 +417,14 @@ async function onProjectCreated(ctx: Ctx, p: Record<string, unknown>) {
   }
 
   await ctx.bestEffort("admin mail", async () => {
+    const planned = visualOnly ? await plannerEstimate(ctx, lead.id) : null;
     const value = tender?.estimate_min_eur
       ? `${formatEuro(tender.estimate_min_eur)} – ${formatEuro(tender.estimate_max_eur)}`
-      : lead.budget_midpoint
-        ? `Budget ~${formatEuro(lead.budget_midpoint)}`
-        : "–";
+      : planned
+        ? `${formatEuro(planned.min)} – ${formatEuro(planned.max)}`
+        : lead.budget_midpoint
+          ? `Budget ~${formatEuro(lead.budget_midpoint)}`
+          : "–";
     const content = [
       paragraph(`Neues Projekt über <strong>${escapeHtml(FUNNEL_LABEL[lead.funnel_type] ?? lead.funnel_type)}</strong>.`),
       visualOnly
@@ -392,6 +490,7 @@ async function onTenderPublished(ctx: Ctx, p: Record<string, unknown>) {
         ? `ca. ${formatEuro(tender.reference_price_eur)}`
         : "auf Anfrage";
   const title = `Neues Küchenprojekt · PLZ ${lead.postal_code.slice(0, 3)}xx · ${value}`;
+  const additions = await detailsBoxes(ctx, lead.id, lead.kitchen_form);
 
   for (const r of (recipients ?? []) as Array<{ dealer_id: string; email: string | null; company_name: string | null; distance_km: number | null; notify_email: boolean }>) {
     await ctx.notifyDealer(r.dealer_id, "project_new", title, "Jetzt ansehen und Angebot abgeben.", auctionId);
@@ -403,6 +502,7 @@ async function onTenderPublished(ctx: Ctx, p: Record<string, unknown>) {
           `In Ihrem Einzugsgebiet${r.distance_km != null ? ` (ca. ${Math.round(r.distance_km)} km entfernt)` : ""} sucht ein Kunde ein Küchenstudio. Geben Sie ein Angebot ab oder schalten Sie den Kontakt direkt frei.`,
         ),
         infoBox("Projekt", summaryRows(tender.public_summary ?? {}, { min: tender.estimate_min_eur, max: tender.estimate_max_eur }, "studio")),
+        additions,
         tender.ends_at ? paragraph(`Angebotsphase bis <strong>${new Date(tender.ends_at).toLocaleDateString("de-DE")}</strong>.`) : "",
         button("Projekt ansehen", `${BRAND.baseUrl}/dashboard/projekte/${auctionId}`),
       ].join("");
@@ -752,6 +852,7 @@ async function onLeadFilesAdded(ctx: Ctx, p: Record<string, unknown>) {
 
 const HANDLERS: Record<string, (ctx: Ctx, payload: Record<string, unknown>) => Promise<void>> = {
   lead_files_added: onLeadFilesAdded,
+  project_updated: onProjectUpdated,
   project_created: onProjectCreated,
   project_link: onProjectLink,
   tender_published: onTenderPublished,

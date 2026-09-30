@@ -9,6 +9,7 @@ import { errorMessage } from "../api-client";
 import { AdminComplaintsSection } from "./AdminComplaintsSection";
 import { AdminLeadFilesSection } from "./AdminLeadFilesSection";
 import { AdminTenderActions } from "./AdminTenderActions";
+import { AdminTenderBriefing } from "./AdminTenderBriefing";
 import { TENDER_STATUS_LABELS, fetchAdminTender, openTenderAsAdmin, publishTenderAsAdmin } from "../admin-api";
 
 const dateTime = (iso: string | null) =>
@@ -39,7 +40,7 @@ export function TenderStatusBadge({ status }: { status: string | undefined }) {
  * (Funnel B startet nach dem Experten-Check als Entwurf) und die vom Kunden
  * hochgeladenen Unterlagen mit Freigabe für Studios.
  */
-export function AdminTenderPanel({ leadId, funnelType }: { leadId: string; funnelType: string }) {
+export function AdminTenderPanel({ leadId, funnelType, kitchenForm }: { leadId: string; funnelType: string; kitchenForm?: string | null }) {
   const qc = useQueryClient();
   const [notify, setNotify] = useState(false);
   const tender = useQuery({ queryKey: ["admin-lead-tender", leadId], queryFn: () => fetchAdminTender(leadId) });
@@ -134,7 +135,7 @@ export function AdminTenderPanel({ leadId, funnelType }: { leadId: string; funne
               <div className="flex flex-col gap-2 rounded-md bg-amber-50 p-3 text-amber-900 sm:flex-row sm:items-center sm:justify-between">
                 <p className="text-xs">
                   {funnelType === "b"
-                    ? "Nach dem Experten-Check veröffentlichen. Unterlagen sehen Studios nur, wenn Sie sie unten einzeln freigeben."
+                    ? "Nach dem Experten-Check veröffentlichen: Ergebnis unten im Briefing festhalten. Unterlagen sehen Studios nur, wenn Sie sie unten einzeln freigeben."
                     : "Nach Prüfung freigeben, damit Studios im Umkreis Angebote abgeben können."}
                 </p>
                 <Button size="sm" onClick={() => publish.mutate(t.id)} disabled={publish.isPending} className="flex-none">
@@ -147,6 +148,8 @@ export function AdminTenderPanel({ leadId, funnelType }: { leadId: string; funne
           </div>
         )}
       </section>
+
+      <AdminTenderBriefing leadId={leadId} funnelType={funnelType} kitchenForm={kitchenForm} />
 
       {t && <AdminComplaintsSection auctionId={t.id} />}
 

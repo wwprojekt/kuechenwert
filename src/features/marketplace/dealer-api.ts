@@ -2,6 +2,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { ensureValidRLSSession } from "@/lib/sessionGuard";
 import { ApiError } from "./api-client";
 import type { ChoiceSource, DimensionsSource } from "@/features/planner/core";
+import type { LeadDetails } from "./lead-details";
 import type { CancelReason, Order, OrderStep } from "./order";
 import type { OfferIncludes, ProjectSummaryLabels, TenderStatus } from "./project-api";
 
@@ -13,6 +14,7 @@ export interface ProjectSummary {
     form?: string;
     walls?: Record<string, number>;
     ceiling_height_cm?: number | null;
+    ventilation?: string | null;
     description?: string;
     notes?: string | null;
     /** Fehlt bei älteren Planungen: dann gelten die Maße als Kundenangabe. */
@@ -78,6 +80,8 @@ export interface DealerProjectDetail extends Omit<DealerProjectRow, "my_offer" |
   bid_visibility: "lowest_price" | "sealed";
   my_offer: MyOffer | null;
   media: DealerProjectMedia[];
+  /** Ergänzungen von Kunde und Experten-Check; fehlt bei älteren RPC-Versionen. */
+  details?: LeadDetails | null;
   contact: null | {
     first_name: string | null;
     last_name: string | null;

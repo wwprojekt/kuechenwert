@@ -16,6 +16,7 @@ import {
   SINKS,
   STYLES,
   TAPS,
+  VENTILATION_OPTIONS,
   WALL_CABINETS,
   WORKTOPS,
   WORKTOP_COLORS,
@@ -26,15 +27,27 @@ import {
   type RoomInput,
 } from "./kitchen-catalog.ts";
 import { describeRoom, type KitchenEstimate } from "./kitchen-pricing.ts";
+import { redactOptional } from "./contact-redaction.ts";
 import { dimensionsSource, labelDefaults, type PlannerProvenance } from "./planner-provenance.ts";
+
+/** Rahmen aus den Lead-Fragen (nur mit „Ja, Angebote“ gefragt). */
+export interface PlannerLeadFrame {
+  timeframeMonths: number | null;
+  /** Genanntes Budget in Euro; null ohne Angabe. */
+  budgetEur: number | null;
+  /** "slider" = genannt, "unknown" = „Weiß ich nicht“, null = nicht gefragt oder übersprungen. */
+  budgetSource: "slider" | "unknown" | null;
+  purchaseReason: string | null;
+  /** Wohnsituation aus dem Katalog von Funnel A (z. B. own_house). */
+  housing: string | null;
+  housingType: string;
+}
 
 export function buildPlannerSummary(
   config: PlannerConfig,
   room: RoomInput,
   estimate: KitchenEstimate,
-  extra: {
-    timeframeMonths: number | null;
-    housingType: string;
+  extra: PlannerLeadFrame & {
     photoCount: number;
     cover: { bucket: string; path: string } | null;
     /** Ohne Angabe (ältere Planungen) bleibt offen, was Standardwert ist. */
@@ -42,17 +55,19 @@ export function buildPlannerSummary(
   },
 ): Record<string, unknown> {
   const provenance = extra.provenance;
+  const wishes = redactOptional(config.wishes);
   return {
     source: "c",
     room: {
       form: room.form,
       walls: room.walls,
       ceiling_height_cm: room.ceilingHeightCm ?? null,
+      ventilation: room.ventilation ?? null,
       description: describeRoom(room),
-      notes: room.notes ?? null,
+      notes: redactOptional(room.notes),
       ...(provenance ? { dimensions_source: dimensionsSource(provenance, room) } : {}),
     },
-    config,
+    config: { ...config, wishes },
     labels: {
       quality: labelOf(QUALITY_LEVELS, config.quality),
       style: labelOf(STYLES, config.style),
@@ -68,12 +83,17 @@ export function buildPlannerSummary(
       extras: config.extras.map((id) => labelOf(EXTRAS, id)),
       services: config.services.map((id) => labelOf(SERVICES, id)),
       timeframe: plannerTimeframeLabel(extra.timeframeMonths),
+      ventilation: room.ventilation ? labelOf(VENTILATION_OPTIONS, room.ventilation) : null,
     },
     ...(provenance ? { defaults: labelDefaults(provenance) } : {}),
-    wishes: config.wishes ?? null,
+    wishes,
     estimate: { min: estimate.min, max: estimate.max, mid: estimate.mid },
     layout: estimate.layout,
     timeframe_months: extra.timeframeMonths,
+    budget_eur: extra.budgetEur,
+    budget_source: extra.budgetSource,
+    purchase_reason: extra.purchaseReason,
+    housing: extra.housing,
     housing_type: extra.housingType,
     photo_count: extra.photoCount,
     cover: extra.cover,

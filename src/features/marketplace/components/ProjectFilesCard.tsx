@@ -4,9 +4,9 @@ import { useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import {
-  LEAD_FILE_CATEGORIES,
   MAX_LEAD_FILES,
   MAX_LEAD_FILES_PER_PROJECT,
+  leadFileCategoriesFor,
   leadFileLabel,
   type LeadFileCategory,
   type PendingLeadFile,
@@ -21,13 +21,22 @@ const dateFormat = new Intl.DateTimeFormat("de-DE", { dateStyle: "medium" });
 
 interface ProjectFilesCardProps {
   token: string;
+  /** Unterbieten (b) lädt Angebot und Planung hoch, Anfrage und Planer Grundriss und Raumfotos. */
+  funnelType: string;
   files: ProjectFile[];
   canUpload: boolean;
   className?: string;
 }
 
-/** Unterlagen zum Projekt (Funnel B): Übersicht und Nachreichen über den Projektlink. */
-export function ProjectFilesCard({ token, files, canUpload, className }: ProjectFilesCardProps) {
+const INTRO: Record<"offer" | "room", string> = {
+  offer:
+    "Laden Sie Ihr Angebot und – falls vorhanden – die Planung aus dem Küchenstudio hoch. Damit können wir Ihr Angebot prüfen und Studios genau vergleichen.",
+  room: "Ein Grundriss oder Fotos Ihres Raums helfen den Studios, genauer zu planen – und Ihnen, Rückfragen zu sparen.",
+};
+
+/** Unterlagen zum Projekt: Übersicht und Nachreichen über den Projektlink. */
+export function ProjectFilesCard({ token, funnelType, files, canUpload, className }: ProjectFilesCardProps) {
+  const categories = leadFileCategoriesFor(funnelType);
   const qc = useQueryClient();
   const [pending, setPending] = useState<PendingLeadFile[]>([]);
   const [progress, setProgress] = useState<{ done: number; total: number } | null>(null);
@@ -63,7 +72,7 @@ export function ProjectFilesCard({ token, files, canUpload, className }: Project
           <h2 className="font-bold leading-snug">Ihre Unterlagen</h2>
           <p className="mt-1 text-sm text-muted-foreground">
             {files.length === 0
-              ? "Laden Sie Ihr Angebot und – falls vorhanden – die Planung aus dem Küchenstudio hoch. Damit können wir Ihr Angebot prüfen und Studios genau vergleichen."
+              ? INTRO[funnelType === "b" ? "offer" : "room"]
               : "Diese Unterlagen liegen uns vor. Küchenstudios zeigen wir sie erst, wenn darauf keine Namen und Kontaktdaten mehr zu sehen sind."}
           </p>
         </div>
@@ -84,7 +93,7 @@ export function ProjectFilesCard({ token, files, canUpload, className }: Project
 
       {canUpload && (
         <div className="mt-4 space-y-3">
-          {LEAD_FILE_CATEGORIES.map((option) => (
+          {categories.map((option) => (
             <LeadFileDrop
               key={option.value}
               option={option}

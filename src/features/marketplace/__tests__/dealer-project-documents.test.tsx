@@ -24,11 +24,11 @@ describe("DealerProjectDocuments", () => {
       />,
     );
     expect(screen.getByText("Angebot 1")).toBeInTheDocument();
-    expect(screen.getByText("Planung 1")).toBeInTheDocument();
-    expect(screen.getByText("Planung 2")).toBeInTheDocument();
+    expect(screen.getByText("Planung / Grundriss 1")).toBeInTheDocument();
+    expect(screen.getByText("Planung / Grundriss 2")).toBeInTheDocument();
     expect(screen.getByText(/ohne Namen und Kontaktdaten freigegeben/)).toBeInTheDocument();
     expect(screen.getByText("nicht verfügbar")).toBeInTheDocument();
-    expect(screen.getByAltText("Planung 2")).toHaveAttribute("src", "https://example.test/p2");
+    expect(screen.getByAltText("Planung / Grundriss 2")).toHaveAttribute("src", "https://example.test/p2");
   });
 
   it("zeigt nach dem Kontaktkauf die Dateinamen", () => {

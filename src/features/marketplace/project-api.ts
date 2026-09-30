@@ -1,5 +1,6 @@
 import type { PendingLeadFile } from "@/features/funnel-b/files";
 import { announceFiles, uploadToTargets, type UploadTarget } from "@/features/funnel-b/upload";
+import type { CustomerDetails } from "./lead-details";
 import { callFunction } from "./api-client";
 import type { Order } from "./order";
 
@@ -108,12 +109,14 @@ export interface ProjectView {
     decided_at: string | null;
     contact_unlocks: number;
     summary: {
-      room?: { description?: string; walls?: Record<string, number>; form?: string };
+      room?: { description?: string; walls?: Record<string, number>; form?: string; ceiling_height_cm?: number | null; ventilation?: string | null };
       labels?: ProjectSummaryLabels;
       wishes?: string | null;
       estimate?: { min: number; max: number; mid: number };
     };
   };
+  /** Eigene Ergänzungen des Kunden (Angaben vervollständigen); fehlt bei älteren Function-Versionen. */
+  details?: { customer: CustomerDetails; updated_at: string | null } | null;
   offers: ProjectOffer[];
   renders: ProjectMedia[];
   photos: Array<{ path: string; url: string | null }>;
@@ -121,12 +124,16 @@ export interface ProjectView {
   order?: Order | null;
   /** Hochgeladene Unterlagen (nur Name und Kategorie). */
   files?: ProjectFile[];
-  /** Unterlagen dürfen nachgereicht werden (Funnel B, Projekt offen). */
+  /** Unterlagen dürfen nachgereicht werden (Projekt offen, noch Platz). */
   can_upload_files?: boolean;
   /** Einwilligung zur KI-Verbesserung; nur bei Planungen mit Raumfoto. */
   ai_training?: { granted: boolean } | null;
   /** Planung aus dem Konfigurator (Funnel C), auch ohne Ausschreibung. */
-  planner?: { estimate: { min: number; max: number; mid: number } | null; photo_count: number | null } | null;
+  planner?: {
+    estimate: { min: number; max: number; mid: number } | null;
+    photo_count: number | null;
+    room?: { ceilingHeightCm?: number | null; ventilation?: string | null } | null;
+  } | null;
 }
 
 export interface ProjectFile {
@@ -165,6 +172,10 @@ export const requestProjectOffers = (token: string, input: { timeframeMonths: nu
 
 export const setProjectAiConsent = (token: string, granted: boolean) =>
   callFunction<ProjectView>(FN, { action: "ai-consent", token, granted });
+
+/** Angaben vervollständigen: ersetzt die bisherigen Ergänzungen des Kunden. */
+export const saveProjectDetails = (token: string, details: CustomerDetails) =>
+  callFunction<ProjectView>(FN, { action: "save-details", token, details });
 
 /**
  * Unterlagen über den Projektlink nachreichen: ankündigen, direkt in den

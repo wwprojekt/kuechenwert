@@ -10,8 +10,10 @@
  *   order-problem  Problem zum Auftrag melden (message)
  *   export-data    Alle gespeicherten Daten als JSON (Art. 15/20 DSGVO)
  *   delete-data    Projekt beenden und personenbezogene Daten löschen (email zur Bestätigung)
- *   upload-files   Unterlagen nachreichen (Funnel B): Dateien ankündigen → signierte Upload-URLs
+ *   upload-files   Unterlagen nachreichen (alle Funnels): Dateien ankündigen → signierte Upload-URLs
  *   attach-files   Nach dem Upload eintragen (upload_token, files); meldet dem Team per Outbox
+ *   save-details   Angaben vervollständigen (details: Raum, Technik, Beratung, Hinweis);
+ *                  Studios am Projekt erfahren es über die Outbox (project_updated)
  *   ai-consent     Einwilligung zur KI-Verbesserung erteilen oder widerrufen (granted);
  *                  Widerruf löscht die Trainingskopien sofort
  *   request-offers Funnel C ohne Ausschreibung (nur Visualisierung): Angebote
@@ -39,6 +41,7 @@ import {
 import { MAX_FILES_PER_LEAD, attachUploadedFiles, issueUploads, parseAnnouncedFiles } from "../_shared/lead-files.ts";
 import { forgetTrainingSamples, storeTrainingSamples } from "../_shared/ai-training.ts";
 import { PLANNER_TIMEFRAMES } from "../_shared/kitchen-catalog.ts";
+import { sanitizeCustomerDetails } from "../_shared/lead-details.ts";
 import { requestPlannerOffers } from "../_shared/planner-offers.ts";
 
 const TIMEFRAMES = new Set(PLANNER_TIMEFRAMES.map((t) => t.months));
@@ -159,10 +162,10 @@ async function actionAiConsent(req: Request, sb: SupabaseClient, leadId: string,
   return jsonResponse(req, await projectView(sb, leadId));
 }
 
-/** Unterlagen des Leads und ob der Kunde noch welche nachreichen darf (nur Funnel B, Projekt offen). */
+/** Unterlagen des Leads und ob der Kunde noch welche nachreichen darf (alle Funnels, Projekt offen). */
 async function uploadState(sb: SupabaseClient, leadId: string) {
   const [{ data: lead, error: leadErr }, { data: tender, error: tenderErr }, { data: files, error: filesErr }] = await Promise.all([
-    sb.from("leads").select("funnel_type").eq("id", leadId).maybeSingle(),
+    sb.from("leads").select("anonymized_at").eq("id", leadId).maybeSingle(),
     sb.from("lead_auctions").select("status").eq("lead_id", leadId).order("created_at", { ascending: false }).limit(1).maybeSingle(),
     sb.from("lead_files").select("file_name, category, created_at").eq("lead_id", leadId).order("created_at", { ascending: true }),
   ]);
@@ -170,8 +173,21 @@ async function uploadState(sb: SupabaseClient, leadId: string) {
   if (tenderErr) throw tenderErr;
   if (filesErr) throw filesErr;
   const list = (files ?? []).map((f) => ({ name: f.file_name as string, category: f.category as string, created_at: f.created_at as string }));
-  const allowed = lead?.funnel_type === "b" && !CLOSED_TENDER_STATUSES.has((tender?.status as string | undefined) ?? "") && list.length < MAX_FILES_PER_LEAD;
+  const allowed =
+    !!lead && !lead.anonymized_at && !CLOSED_TENDER_STATUSES.has((tender?.status as string | undefined) ?? "") && list.length < MAX_FILES_PER_LEAD;
   return { files: list, allowed };
+}
+
+/** Angaben vervollständigen: ersetzt die Ergänzungen des Kunden (die des Teams bleiben). */
+async function actionSaveDetails(req: Request, sb: SupabaseClient, leadId: string, body: Record<string, unknown>) {
+  await enforceRateLimit(sb, `kw:project-details:${leadId}`, 3600, 30);
+  const { data: lead, error } = await sb.from("leads").select("kitchen_form, anonymized_at").eq("id", leadId).maybeSingle();
+  if (error) throw error;
+  if (!lead || lead.anonymized_at) throw new HttpError(404, "Projekt nicht gefunden.", "not_found");
+  const customer = sanitizeCustomerDetails(body.details, lead.kitchen_form as string | null);
+  const { error: saveErr } = await sb.from("kw_lead_details").upsert({ lead_id: leadId, customer }, { onConflict: "lead_id" });
+  if (saveErr) throw saveErr;
+  return jsonResponse(req, await projectView(sb, leadId));
 }
 
 async function actionUploadFiles(req: Request, sb: SupabaseClient, leadId: string, body: Record<string, unknown>) {
@@ -344,6 +360,8 @@ serve(async (req) => {
       return actionUploadFiles(req, sb, leadId, body);
     case "attach-files":
       return actionAttachFiles(req, sb, leadId, body);
+    case "save-details":
+      return actionSaveDetails(req, sb, leadId, body);
     case "ai-consent":
       return actionAiConsent(req, sb, leadId, body);
     case "request-offers":

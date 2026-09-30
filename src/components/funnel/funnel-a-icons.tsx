@@ -51,7 +51,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { UNSURE } from "@/features/funnel-a/catalog";
-import type { ChoiceField, ExtraApplianceId } from "@/features/funnel-a/steps";
+import type { ChoiceField, ExtraApplianceId, ServiceOptionId } from "@/features/funnel-a/steps";
 
 /** Icons je Antwortfeld und Katalog-ID; „unsicher“ fällt auf HelpCircle zurück. */
 const CHOICE_ICONS: Partial<Record<ChoiceField, Record<string, LucideIcon>>> = {
@@ -87,4 +87,11 @@ export const EXTRA_APPLIANCE_ICONS: Partial<Record<ExtraApplianceId, LucideIcon>
   kaffee: Coffee,
   weinkuehler: Wine,
   waermeschublade: Heater,
+};
+
+export const SERVICE_ICONS: Record<ServiceOptionId, LucideIcon> = {
+  lieferung_montage: Truck,
+  altkueche: Recycle,
+  elektro: Zap,
+  wasser: Droplets,
 };

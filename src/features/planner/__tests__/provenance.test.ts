@@ -68,7 +68,16 @@ describe("Studio-Zusammenfassung einer Planung", () => {
   const config = defaultConfig();
   const room = defaultRoom("l");
   const estimate = estimateKitchenPrice(config, room);
-  const extra = { timeframeMonths: 3, housingType: "unknown", photoCount: 0, cover: null };
+  const extra = {
+    timeframeMonths: 3,
+    budgetEur: null,
+    budgetSource: null,
+    purchaseReason: null,
+    housing: null,
+    housingType: "unknown",
+    photoCount: 0,
+    cover: null,
+  };
 
   it("enthält Zeitrahmen, Spüle und Armatur", () => {
     const summary = buildPlannerSummary(config, room, estimate, { ...extra, provenance: null });
@@ -92,5 +101,32 @@ describe("Studio-Zusammenfassung einer Planung", () => {
     expect(skipped.room).toMatchObject({ dimensions_source: "example" });
     expect(skipped.defaults).toMatchObject({ front: "default", worktop: "default", sink: "default", services: "default" });
     expect(skipped.defaults).not.toHaveProperty("style");
+  });
+
+  it("gibt Budget, Anlass, Wohnsituation, Raumhöhe und Dunstabzug weiter", () => {
+    const summary = buildPlannerSummary(config, { ...room, ceilingHeightCm: 245, ventilation: "umluft" }, estimate, {
+      ...extra,
+      provenance: null,
+      budgetEur: 20_000,
+      budgetSource: "slider",
+      purchaseReason: "umzug",
+      housing: "own_house",
+      housingType: "own",
+    });
+    expect(summary).toMatchObject({ budget_eur: 20_000, budget_source: "slider", purchase_reason: "umzug", housing: "own_house", housing_type: "own" });
+    expect(summary.room).toMatchObject({ ceiling_height_cm: 245, ventilation: "umluft" });
+    expect(summary.labels).toMatchObject({ ventilation: "Nur Umluft" });
+  });
+
+  it("entfernt Kontaktdaten aus Wünschen und Studio-Hinweisen", () => {
+    const summary = buildPlannerSummary(
+      { ...config, wishes: "Große Insel, ruft an: 0170 1234567" },
+      { ...room, notes: "Fragen an max@web.de" },
+      estimate,
+      { ...extra, provenance: null },
+    );
+    const text = JSON.stringify(summary);
+    expect(text).not.toMatch(/0170|max@web\.de/);
+    expect(summary.wishes).toBe("Große Insel, ruft an: [entfernt]");
   });
 });

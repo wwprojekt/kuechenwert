@@ -14,10 +14,10 @@ const VIEWPORTS = [
   { width: 1366, height: 657 },
 ];
 
-const A_STEPS = ['kuechenform', 'raum', 'groesse', 'stil', 'farbe', 'arbeitsplatte', 'kochfeld', 'backofen', 'kuehlen', 'geraete', 'kochstil', 'anlass', 'wohnsituation', 'entscheidung', 'zeitrahmen', 'budget', 'plz', 'name', 'kontakt'];
-const B_STEPS = ['preis', 'unterlagen', 'hochladen', 'zeitrahmen', 'details', 'marke', 'fronten', 'griffe', 'arbeitsplatte', 'arbeitsplatte-name', 'geraete', 'spuele', 'spuele-marke', 'muell', 'extras', 'notizen', 'lieferung', 'zahlung', 'anzahlung', 'plz', 'name', 'kontakt', 'einwilligung'];
-const C_PLAN = ['form', 'masse', 'foto', 'stil', 'qualitaet', 'fronten', 'farbe', 'griffe', 'arbeitsplatte', 'plattenfarbe', 'schraenke', 'spuele', 'geraeteklasse', 'kochen', 'geraete', 'extras', 'leistungen', 'wuensche', 'plz'];
-const C_LEAD = ['angebote', 'zeitrahmen', 'name', 'kontakt'];
+const A_STEPS = ['kuechenform', 'raum', 'groesse', 'stil', 'farbe', 'arbeitsplatte', 'kochfeld', 'backofen', 'kuehlen', 'geraete', 'leistungen', 'kochstil', 'anlass', 'wohnsituation', 'entscheidung', 'zeitrahmen', 'budget', 'plz', 'name', 'kontakt'];
+const B_STEPS = ['preis', 'leistungsumfang', 'unterlagen', 'hochladen', 'kuechenform', 'zeitrahmen', 'details', 'marke', 'fronten', 'griffe', 'arbeitsplatte', 'arbeitsplatte-name', 'geraete', 'spuele', 'spuele-marke', 'extras', 'notizen', 'zahlung', 'anzahlung', 'plz', 'name', 'kontakt', 'einwilligung'];
+const C_PLAN = ['form', 'masse', 'foto', 'stil', 'qualitaet', 'fronten', 'farbe', 'griffe', 'arbeitsplatte', 'plattenfarbe', 'schraenke', 'spuele', 'geraeteklasse', 'kochen', 'abluft', 'geraete', 'extras', 'leistungen', 'wuensche', 'plz'];
+const C_LEAD = ['angebote', 'zeitrahmen', 'budget', 'anlass', 'wohnsituation', 'name', 'kontakt'];
 
 const TOKEN = `kw_${'a'.repeat(48)}`;
 const RENDER = { id: '11111111-1111-4111-8111-111111111111', version: 1, status: 'pending', mode: 'text', variant_label: null, image_url: null, feedback: null };
@@ -111,7 +111,8 @@ for (const viewport of VIEWPORTS) {
         await seed(page, 'local', 'kw_planner_v2', plannerState(step, lead));
         await page.goto(`/funnel/c?schritt=${step}`);
         await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
-        await expect(page.locator('main')).not.toContainText(/\d\s?€/);
+        // Die Budgetfrage zeigt ihre feste Skala in Euro, sonst erscheint vor dem Ergebnis kein Betrag.
+        if (step !== 'budget') await expect(page.locator('main')).not.toContainText(/\d\s?€/);
         await expectFits(page);
       });
     }

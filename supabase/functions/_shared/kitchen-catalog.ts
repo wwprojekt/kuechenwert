@@ -355,11 +355,24 @@ export function plannerTimeframeLabel(months: unknown): string | null {
   return PLANNER_TIMEFRAMES.find((t) => t.months === months)?.label ?? null;
 }
 
+export type VentilationId = "abluft" | "umluft" | "unbekannt";
+
+/** Dunstabzug: Kann die Luft nach draußen, entscheidet über Haube, Kochfeldabzug und Mauerdurchbruch. */
+export const VENTILATION_OPTIONS: Array<{ id: VentilationId; label: string; hint: string }> = [
+  { id: "abluft", label: "Abluft nach draußen", hint: "Mauer- oder Fensterdurchbruch möglich" },
+  { id: "umluft", label: "Nur Umluft", hint: "z. B. Mietwohnung, Passiv- oder Niedrigenergiehaus" },
+  { id: "unbekannt", label: "Weiß ich nicht", hint: "Das Studio prüft es beim Aufmaß" },
+];
+
+export const CEILING_HEIGHT_RANGE = { min: 200, max: 400 } as const;
+
 export interface RoomInput {
   form: KitchenFormId;
   /** Wandlängen in cm, Schlüssel gemäß KITCHEN_FORMS[].walls[].key */
   walls: Record<string, number>;
+  /** Nur mit Kundenangabe; sonst null (keine angenommene Standardhöhe). */
   ceilingHeightCm?: number | null;
+  ventilation?: VentilationId | null;
   notes?: string | null;
 }
 
@@ -431,6 +444,7 @@ const SINK_IDS = ids(SINKS);
 const TAP_IDS = ids(TAPS);
 const EXTRA_IDS = ids(EXTRAS);
 const SERVICE_IDS = ids(SERVICES);
+const VENTILATION_IDS = ids(VENTILATION_OPTIONS);
 
 function pick<T extends string>(value: unknown, allowed: Set<string>, fallback: T): T {
   return typeof value === "string" && allowed.has(value) ? (value as T) : fallback;
@@ -485,10 +499,14 @@ export function sanitizeRoom(input: unknown): RoomInput {
     walls[w.key] = clampInt(rawWalls[w.key], min, 1200, w.defaultCm);
   }
   const notes = typeof raw.notes === "string" ? raw.notes.trim().slice(0, 500) : null;
+  const ceiling = typeof raw.ceilingHeightCm === "number" ? raw.ceilingHeightCm : Number.NaN;
   return {
     form,
     walls,
-    ceilingHeightCm: raw.ceilingHeightCm == null ? null : clampInt(raw.ceilingHeightCm, 200, 400, 250),
+    // Außerhalb des Bereichs verworfen statt auf eine Grenze gezogen: lieber keine Höhe als eine falsche.
+    ceilingHeightCm:
+      Number.isFinite(ceiling) && ceiling >= CEILING_HEIGHT_RANGE.min && ceiling <= CEILING_HEIGHT_RANGE.max ? Math.round(ceiling) : null,
+    ventilation: VENTILATION_IDS.has(String(raw.ventilation)) ? (raw.ventilation as VentilationId) : null,
     notes: notes && notes.length > 0 ? notes : null,
   };
 }

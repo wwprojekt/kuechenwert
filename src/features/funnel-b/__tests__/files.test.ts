@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { MAX_LEAD_FILE_BYTES, formatFileSize, leadFileLabel, leadFileProblem, leadFileType } from "../files";
+import { MAX_LEAD_FILE_BYTES, formatFileSize, leadFileCategoriesFor, leadFileLabel, leadFileProblem, leadFileType } from "../files";
 
 const file = (name: string, type: string, size = 1000) => ({ name, type, size });
 
@@ -40,9 +40,23 @@ describe("leadFileProblem", () => {
   });
 });
 
+describe("leadFileCategoriesFor", () => {
+  it("fragt in Funnel B nach dem Angebot, sonst nach Grundriss und Raumfotos", () => {
+    expect(leadFileCategoriesFor("b").map((c) => c.value)).toContain("angebot");
+    for (const funnel of ["a", "c"]) {
+      expect(leadFileCategoriesFor(funnel).map((c) => c.value)).toEqual(["grundriss", "kueche_bild"]);
+    }
+  });
+
+  it("nimmt für Raumfotos keine PDFs an", () => {
+    const photos = leadFileCategoriesFor("a").find((c) => c.value === "kueche_bild");
+    expect(photos?.accept).toBe("image/*");
+  });
+});
+
 describe("leadFileLabel", () => {
   it("zeigt lesbare Namen statt interner Kategorien", () => {
-    expect(leadFileLabel("grundriss")).toBe("Planung");
+    expect(leadFileLabel("grundriss")).toBe("Planung / Grundriss");
     expect(leadFileLabel("kueche_bild")).toBe("Foto");
     expect(leadFileLabel("angebot")).toBe("Angebot");
     expect(leadFileLabel(null)).toBe("Datei");

@@ -5,7 +5,7 @@ import { createElement, type ReactNode } from "react";
 import { MemoryRouter } from "react-router-dom";
 import type * as RouterDom from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { EXTRA_APPLIANCE_ICONS, choiceIcon } from "@/components/funnel/funnel-a-icons";
+import { EXTRA_APPLIANCE_ICONS, SERVICE_ICONS, choiceIcon } from "@/components/funnel/funnel-a-icons";
 import { WORKTOP_PICTOGRAMS } from "@/components/funnel/funnel-a-pictograms";
 import { hasKitchenFormPlan } from "@/components/kitchen/KitchenFormPlan";
 import { KITCHEN_FORMS } from "@/features/planner/core";
@@ -63,6 +63,7 @@ describe("Schritte", () => {
       "backofen",
       "kuehlen",
       "geraete",
+      "leistungen",
       "kochstil",
       "anlass",
       "wohnsituation",
@@ -76,7 +77,7 @@ describe("Schritte", () => {
     expect(FUNNEL_A_STEPS.map((s) => s.slug)).toEqual([...FUNNEL_A_SLUGS]);
     expect(FUNNEL_A_FIRST_SLUG).toBe("kuechenform");
     expect(stepPath("raum")).toBe("/funnel/a/raum");
-    expect(stepIndex("kontakt")).toBe(18);
+    expect(stepIndex("kontakt")).toBe(19);
   });
 
   it("erkennt nur bekannte Slugs", () => {
@@ -102,8 +103,11 @@ describe("Schritte", () => {
 
   it("zeigt zu jeder Option ein Foto, Piktogramm, Farbmuster oder Icon", () => {
     for (const step of FUNNEL_A_STEPS) {
-      if (step.kind === "multi") {
+      if (step.kind === "multi" && step.field === "extra_appliances") {
         for (const o of step.options) expect(EXTRA_APPLIANCE_ICONS[o.id], `${step.slug}/${o.id}`).toBeDefined();
+      }
+      if (step.kind === "multi" && step.field === "services") {
+        for (const o of step.options) expect(SERVICE_ICONS[o.id], `${step.slug}/${o.id}`).toBeDefined();
       }
       if (step.kind !== "choice") continue;
       const ids = step.options.map((o) => o.id);

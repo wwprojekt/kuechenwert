@@ -1,8 +1,12 @@
 import { Eye, Lock, Store } from "lucide-react";
 import type { FormEvent } from "react";
+import { BudgetSliderStep } from "@/components/funnel/budget-slider-step";
 import { CardStep } from "@/components/funnel/card-step";
+import { choiceIcon } from "@/components/funnel/funnel-a-icons";
 import { FUNNEL_HEADING_ID } from "@/components/funnel/funnel-frame";
+import { FUNNEL_A_BUDGET, HOUSING_OPTIONS, OCCASION_OPTIONS, UNSURE } from "@/features/funnel-a/catalog";
 import { ConsentCheckbox, TextField } from "@/features/funnel-a/components/ContactFields";
+import type { ChoiceField } from "@/features/funnel-a/steps";
 import { PLANNER_TIMEFRAMES } from "../core";
 import type { OffersChoice } from "../state";
 
@@ -54,6 +58,68 @@ export function TimeframeStep({ value, onChange, onAdvance }: { value: string; o
       onSelect={onChange}
       onAutoAdvance={onAdvance}
       options={TIMEFRAMES.map((t, i) => ({ ...t, wide: i === TIMEFRAMES.length - 1 }))}
+    />
+  );
+}
+
+/** Ohne Preisanker: Schätzung und Visualisierung erscheinen im Planer erst nach dem Kontakt. */
+export function LeadBudgetStep({
+  value,
+  confirmed,
+  onChange,
+}: {
+  value: number | null;
+  confirmed: boolean;
+  onChange: (value: number | null) => void;
+}) {
+  return (
+    <BudgetSliderStep
+      value={value}
+      confirmed={confirmed}
+      onChange={onChange}
+      min={FUNNEL_A_BUDGET.min}
+      max={FUNNEL_A_BUDGET.max}
+      step={FUNNEL_A_BUDGET.step}
+      defaultValue={FUNNEL_A_BUDGET.default}
+    />
+  );
+}
+
+function catalogOptions(field: ChoiceField, options: ReadonlyArray<{ id: string; label: string; hint?: string }>) {
+  return options.map((o, i) => {
+    const Icon = choiceIcon(field, o.id);
+    return {
+      id: o.id,
+      label: o.label,
+      description: o.hint,
+      icon: Icon ? <Icon aria-hidden="true" /> : undefined,
+      wide: o.id === UNSURE && i === options.length - 1 && options.length % 2 === 1,
+    };
+  });
+}
+
+export function OccasionStep({ value, onChange, onAdvance }: { value: string; onChange: (v: string) => void; onAdvance: () => void }) {
+  return (
+    <CardStep
+      labelledBy={FUNNEL_HEADING_ID}
+      columns={2}
+      selected={value}
+      onSelect={onChange}
+      onAutoAdvance={onAdvance}
+      options={catalogOptions("purchase_reason", OCCASION_OPTIONS)}
+    />
+  );
+}
+
+export function HousingStep({ value, onChange, onAdvance }: { value: string; onChange: (v: string) => void; onAdvance: () => void }) {
+  return (
+    <CardStep
+      labelledBy={FUNNEL_HEADING_ID}
+      columns={2}
+      selected={value}
+      onSelect={onChange}
+      onAutoAdvance={onAdvance}
+      options={catalogOptions("housing", HOUSING_OPTIONS)}
     />
   );
 }

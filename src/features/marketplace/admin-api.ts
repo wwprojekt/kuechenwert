@@ -1,8 +1,10 @@
 import { leadFileExtension, leadFileType } from "@/features/funnel-b/files";
 import { supabase } from "@/integrations/supabase/client";
+import type { Json } from "@/integrations/supabase/types";
 import { ensureValidRLSSession, invokeWithAuth } from "@/lib/sessionGuard";
 import { ApiError } from "./api-client";
 import type { ComplaintReason } from "./dealer-api";
+import { sanitizeExpertBriefing, type CustomerDetails, type ExpertBriefing } from "./lead-details";
 
 export type AdminTenderStatus = "draft" | "active" | "completed" | "awarded" | "expired" | "cancelled";
 
@@ -46,6 +48,39 @@ async function requireSession() {
 function fail(error: { message: string; code?: string }): never {
   const status = error.code === "42501" ? 403 : error.code === "P0002" ? 404 : 409;
   throw new ApiError(error.message, status, error.code);
+}
+
+export interface AdminLeadDetails {
+  customer: CustomerDetails;
+  customer_updated_at: string | null;
+  expert: ExpertBriefing;
+  expert_updated_at: string | null;
+}
+
+/** Ergänzungen zu einem Lead: Angaben des Kunden und Briefing aus dem Experten-Check. */
+export async function fetchLeadDetails(leadId: string): Promise<AdminLeadDetails | null> {
+  await requireSession();
+  const { data, error } = await supabase
+    .from("kw_lead_details")
+    .select("customer, customer_updated_at, expert, expert_updated_at")
+    .eq("lead_id", leadId)
+    .maybeSingle();
+  if (error) fail(error);
+  return (data as unknown as AdminLeadDetails | null) ?? null;
+}
+
+/**
+ * Briefing aus dem Experten-Check speichern (ersetzt das bisherige). Studios
+ * sehen es ohne Kontaktdaten; Studios am Projekt werden benachrichtigt.
+ */
+export async function saveExpertBriefing(leadId: string, briefing: ExpertBriefing): Promise<ExpertBriefing> {
+  await requireSession();
+  const expert = sanitizeExpertBriefing(briefing);
+  const { error } = await supabase
+    .from("kw_lead_details")
+    .upsert({ lead_id: leadId, expert: expert as unknown as Json }, { onConflict: "lead_id" });
+  if (error) fail(error);
+  return expert;
 }
 
 /** Letzter Tender-Status je Lead für die Übersichtstabelle. */

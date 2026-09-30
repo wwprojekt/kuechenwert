@@ -10,6 +10,7 @@ import {
   OCCASION_OPTIONS,
   OVEN_OPTIONS,
   ROOM_TYPE_OPTIONS,
+  SERVICE_OPTIONS,
   SIZE_OPTIONS,
   STYLE_OPTIONS,
   TIMEFRAME_OPTIONS,
@@ -34,6 +35,7 @@ export const FUNNEL_A_SLUGS = [
   "backofen",
   "kuehlen",
   "geraete",
+  "leistungen",
   "kochstil",
   "anlass",
   "wohnsituation",
@@ -48,9 +50,10 @@ export const FUNNEL_A_SLUGS = [
 export type FunnelAStepSlug = (typeof FUNNEL_A_SLUGS)[number];
 
 export type ExtraApplianceId = FunnelAAnswers["extra_appliances"][number];
+export type ServiceOptionId = FunnelAAnswers["services"][number];
 
 /** Antwortfelder, die per Einzelauswahl (Kachel) beantwortet werden. */
-export type ChoiceField = Exclude<keyof FunnelAAnswers, "extra_appliances" | "budget_eur" | "budget_confirmed" | "postal_code">;
+export type ChoiceField = Exclude<keyof FunnelAAnswers, "extra_appliances" | "services" | "budget_eur" | "budget_confirmed" | "postal_code">;
 
 /** Katalog-Option; Farbwelten bringen Farbmuster mit. */
 export type FunnelAOption = ChoiceOption & { swatches?: readonly string[] };
@@ -67,6 +70,7 @@ interface StepBase {
 export type FunnelAStep =
   | (StepBase & { kind: "choice"; field: ChoiceField; options: readonly FunnelAOption[] })
   | (StepBase & { kind: "multi"; field: "extra_appliances"; options: readonly ChoiceOption<ExtraApplianceId>[] })
+  | (StepBase & { kind: "multi"; field: "services"; options: readonly ChoiceOption<ServiceOptionId>[] })
   | (StepBase & { kind: "budget"; field: "budget_eur" })
   | (StepBase & { kind: "plz"; field: "postal_code" })
   | (StepBase & { kind: "name" })
@@ -167,6 +171,16 @@ export const FUNNEL_A_STEPS: readonly FunnelAStep[] = [
     eyebrow: "Weitere Geräte · optional",
     question: "Welche Geräte wünschen Sie sich noch?",
     hint: "Mehrfachauswahl möglich.",
+  },
+  {
+    slug: "leistungen",
+    kind: "multi",
+    field: "services",
+    options: SERVICE_OPTIONS,
+    required: false,
+    eyebrow: "Leistungen · optional",
+    question: "Was soll das Küchenstudio übernehmen?",
+    hint: "Mehrfachauswahl möglich – so rechnen alle Studios mit demselben Umfang.",
   },
   {
     slug: "kochstil",
@@ -275,7 +289,7 @@ export function isStepAnswered(step: FunnelAStep, answers: FunnelAAnswers): bool
     case "choice":
       return answers[step.field] !== "";
     case "multi":
-      return answers.extra_appliances.length > 0;
+      return answers[step.field].length > 0;
     case "budget":
       return true;
     case "plz":

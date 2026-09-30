@@ -1,6 +1,7 @@
 import { layoutRects } from "@/features/planner/components/FloorPlanSketch";
 import { sanitizeRoom } from "@/features/planner/core";
 import type { DealerProjectDetail } from "./dealer-api";
+import { detailsRoom } from "./lead-details";
 
 /**
  * Planungsbriefing für Küchenplanungs-Software.
@@ -35,6 +36,8 @@ export function buildBriefing(detail: DealerProjectDetail, mediaUrls: Record<str
     customer_wishes: s.wishes ?? null,
     estimate_eur: s.estimate ?? { min: detail.estimate_min_eur, max: detail.estimate_max_eur, mid: detail.reference_price_eur },
     media: detail.media.map((m) => ({ kind: m.kind, url: mediaUrls[m.path] ?? null, url_expires_in_s: 3600 })),
+    /** Nach dem Absenden: Angaben des Kunden und Briefing aus dem Experten-Check. */
+    additions: detail.details ?? null,
     contact: detail.contact ?? null,
     legacy_answers: s.answers ?? null,
   };
@@ -51,10 +54,15 @@ function dxfText(layer: string, x: number, y: number, height: number, text: stri
   return ["0", "TEXT", "8", layer, "10", num(x), "20", num(y), "30", "0.0", "40", num(height), "1", safe, "50", num(rotation)].join("\n");
 }
 
-/** DXF-R12-Grundriss (mm) der Schrankzeilen, y-Achse nach oben. */
+/**
+ * DXF-R12-Grundriss (mm) der Schrankzeilen, y-Achse nach oben. Ohne Planung
+ * (Funnel A/B) aus den Wandlängen, die der Kunde nachgetragen hat.
+ */
 export function buildFloorPlanDxf(detail: DealerProjectDetail): string | null {
-  if (!detail.summary?.room?.form || !detail.summary.room.walls) return null;
-  const room = sanitizeRoom(detail.summary.room);
+  const planned = detail.summary?.room?.form && detail.summary.room.walls ? detail.summary.room : null;
+  const added = planned ? null : detailsRoom(detail.details, detail.summary?.kitchen_form);
+  if (!planned && !added) return null;
+  const room = sanitizeRoom(planned ?? added);
   const rects = layoutRects(room);
   if (rects.length === 0) return null;
   const entities: string[] = [];
@@ -66,8 +74,14 @@ export function buildFloorPlanDxf(detail: DealerProjectDetail): string | null {
     entities.push(dxfLine("KUECHE", x, y, x + w, y), dxfLine("KUECHE", x + w, y, x + w, y - h), dxfLine("KUECHE", x + w, y - h, x, y - h), dxfLine("KUECHE", x, y - h, x, y));
     entities.push(dxfText("BESCHRIFTUNG", x + w / 2 - 300, y - h / 2, 80, r.label, r.vertical ? 90 : 0));
   }
-  const source = detail.summary.room.dimensions_source;
-  const measures = source === "example" ? "Beispielmasse, vom Kunden nicht angepasst" : source === "partial" ? "teils Beispielmasse" : "Masse ca.";
+  const source = planned?.dimensions_source;
+  const measures = !planned
+    ? "Masse vom Kunden nachgetragen"
+    : source === "example"
+      ? "Beispielmasse, vom Kunden nicht angepasst"
+      : source === "partial"
+        ? "teils Beispielmasse"
+        : "Masse ca.";
   entities.push(dxfText("BESCHRIFTUNG", 0, 400, 100, `KuechenWert Projekt ${detail.auction_id.slice(0, 8)} - ${room.form} - ${measures}, bitte vor Ort aufmessen`));
   return [
     "0", "SECTION", "2", "HEADER", "9", "$ACADVER", "1", "AC1009", "9", "$INSUNITS", "70", "4", "0", "ENDSEC",

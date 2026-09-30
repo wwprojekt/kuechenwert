@@ -23,8 +23,9 @@ import {
   type PlannerRender,
   type RenderFeedback,
 } from "./api";
+import { housingType } from "@/features/funnel-a/catalog";
 import { KITCHEN_FORMS, STYLES } from "./core";
-import { roomWallIssues } from "./estimate-gate";
+import { ceilingIssue, roomWallIssues } from "./estimate-gate";
 import { isPlannerStep, nextStep, plannerProgress, previousStep, stepDef, type PlannerStep } from "./flow";
 import { plannerRenderKey } from "./render-key";
 import { fromSessionRender, usePlanner, useRenderPolling } from "./state";
@@ -72,6 +73,7 @@ export function usePlannerFunnel() {
   const [aiBusy, setAiBusy] = useState(false);
   const { waitForToken, resetTurnstile, turnstileCallbackRef } = useTurnstile();
   const wallIssues = useMemo(() => roomWallIssues(state.room), [state.room]);
+  const ceilingError = useMemo(() => ceilingIssue(state.room), [state.room]);
 
   const flow = useMemo(() => ({ unlocked: state.submitted, wantsOffers: state.offersChoice === null ? null : state.offersChoice === "ja" }), [state.submitted, state.offersChoice]);
   const step = state.step;
@@ -283,17 +285,17 @@ export function usePlannerFunnel() {
   }, [step, generating, genError, state.renders.length, handleGenerate, navigate]);
 
   // Auto-Weiter läuft zeitversetzt nach der Auswahl: dann zählt der neueste Stand, nicht der beim Klick.
-  const latestRef = useRef({ step, state, flow, wallIssues });
-  latestRef.current = { step, state, flow, wallIssues };
+  const latestRef = useRef({ step, state, flow, wallIssues, ceilingError });
+  latestRef.current = { step, state, flow, wallIssues, ceilingError };
 
   const goNext = useCallback(() => {
-    const { step, state, flow, wallIssues } = latestRef.current;
-    if (step === "masse" && Object.keys(wallIssues).length > 0) {
+    const { step, state, flow, wallIssues, ceilingError } = latestRef.current;
+    if (step === "masse" && (Object.keys(wallIssues).length > 0 || ceilingError)) {
       setShowWallErrors(true);
-      const first = Object.keys(wallIssues)[0];
-      telemetry.validationFailed(Object.keys(wallIssues).map((key) => `wall-${key}`));
-      document.getElementById(`wall-${first}`)?.focus();
-      setBlocked("Bitte prüfen Sie die Wandlängen.");
+      const fields = [...Object.keys(wallIssues).map((key) => `wall-${key}`), ...(ceilingError ? ["ceiling"] : [])];
+      telemetry.validationFailed(fields);
+      document.getElementById(fields[0]!)?.focus();
+      setBlocked(Object.keys(wallIssues).length > 0 ? "Bitte prüfen Sie die Wandlängen." : "Bitte prüfen Sie die Raumhöhe.");
       return;
     }
     if (step === "plz") {
@@ -417,7 +419,12 @@ export function usePlannerFunnel() {
         consents: { share_with_studios: wantsOffers, contact_by_phone: contact.contact_by_phone, marketing: false, ai_training: false },
         active_render_id: activeRender?.status === "success" ? activeRender.id : null,
         timeframe_months: wantsOffers ? Number(state.timeframe) || null : null,
-        housing_type: "unknown",
+        // Nur mit „Ja, Angebote“ gefragt; ein unberührter Budget-Slider zählt nicht.
+        budget_eur: wantsOffers && state.budgetConfirmed ? state.budget : null,
+        budget_source: wantsOffers && state.budgetConfirmed ? (state.budget === null ? "unknown" : "slider") : null,
+        purchase_reason: wantsOffers ? state.occasion || null : null,
+        housing: wantsOffers ? state.housing || null : null,
+        housing_type: wantsOffers && state.housing ? housingType(state.housing) : "unknown",
         turnstile_token: turnstileToken,
         website: honeypot,
         landing_page: getEntryPath() ?? window.location.pathname,
@@ -506,6 +513,7 @@ export function usePlannerFunnel() {
     progress,
     blocked: step === "kontakt" ? submitError : blocked,
     wallIssues,
+    ceilingError,
     showWallErrors,
     contact,
     setContact: (patch: Partial<LeadContact>) => setContact((c) => ({ ...c, ...patch })),

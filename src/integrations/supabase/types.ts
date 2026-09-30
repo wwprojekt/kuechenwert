@@ -3557,6 +3557,47 @@ export type Database = {
         }
         Relationships: []
       }
+      kw_lead_details: {
+        Row: {
+          created_at: string
+          customer: Json
+          customer_updated_at: string | null
+          expert: Json
+          expert_updated_at: string | null
+          expert_updated_by: string | null
+          lead_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          customer?: Json
+          customer_updated_at?: string | null
+          expert?: Json
+          expert_updated_at?: string | null
+          expert_updated_by?: string | null
+          lead_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          customer?: Json
+          customer_updated_at?: string | null
+          expert?: Json
+          expert_updated_at?: string | null
+          expert_updated_by?: string | null
+          lead_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "kw_lead_details_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: true
+            referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       kw_marketplace_settings: {
         Row: {
           auto_issue_invoices: boolean
@@ -5243,6 +5284,7 @@ export type Database = {
           photo_paths: string[]
           price_range_max_cents: number | null
           price_range_min_cents: number | null
+          provenance: Json | null
           room: Json
           session_token: string
           spec: Json
@@ -5271,6 +5313,7 @@ export type Database = {
           photo_paths?: string[]
           price_range_max_cents?: number | null
           price_range_min_cents?: number | null
+          provenance?: Json | null
           room?: Json
           session_token: string
           spec?: Json
@@ -5299,6 +5342,7 @@ export type Database = {
           photo_paths?: string[]
           price_range_max_cents?: number | null
           price_range_min_cents?: number | null
+          provenance?: Json | null
           room?: Json
           session_token?: string
           spec?: Json
@@ -7636,6 +7680,7 @@ export type Database = {
       }
       kw_turnstile_secret: { Args: never; Returns: string }
       kw_ux_detect_alerts: { Args: never; Returns: Json }
+      kw_ux_field_label: { Args: { p_field: string }; Returns: string }
       kw_wilson_lower: {
         Args: { p_hits: number; p_total: number }
         Returns: number

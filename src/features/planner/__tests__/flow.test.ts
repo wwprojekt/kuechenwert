@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { PLANNER_STEPS, nextStep, normalizePlannerStep, plannerFlow, plannerProgress, previousStep } from "../flow";
+import { PLANNER_STEPS, nextStep, normalizePlannerStep, plannerFlow, plannerProgress, previousStep, stepDef } from "../flow";
 
 const open = { unlocked: false, wantsOffers: null };
 
@@ -17,10 +17,27 @@ describe("Schrittfolge von Funnel C", () => {
     expect(nextStep("angebote", { unlocked: false, wantsOffers: false })).toBe("name");
   });
 
+  it("stellt Budget, Anlass und Wohnsituation nur mit „Ja, Angebote“", () => {
+    const yes = plannerFlow({ unlocked: false, wantsOffers: true });
+    expect(yes.slice(yes.indexOf("angebote"))).toEqual(["angebote", "zeitrahmen", "budget", "anlass", "wohnsituation", "name", "kontakt"]);
+    const no = plannerFlow({ unlocked: false, wantsOffers: false });
+    for (const step of ["zeitrahmen", "budget", "anlass", "wohnsituation"]) expect(no).not.toContain(step);
+    expect(previousStep("name", { unlocked: false, wantsOffers: true })).toBe("wohnsituation");
+    expect(previousStep("name", { unlocked: false, wantsOffers: false })).toBe("angebote");
+  });
+
+  it("fragt den Dunstabzug als Detail direkt nach Kochen & Kühlen", () => {
+    const steps = plannerFlow(open);
+    expect(steps.indexOf("abluft")).toBe(steps.indexOf("kochen") + 1);
+    expect(stepDef("abluft").detail).toBe(true);
+  });
+
   it("überspringt nach der Kontakterfassung alle Lead-Fragen", () => {
     const unlocked = { unlocked: true, wantsOffers: true };
     const steps = plannerFlow(unlocked);
-    for (const lead of ["visualisierung", "angebote", "zeitrahmen", "name", "kontakt"]) expect(steps).not.toContain(lead);
+    for (const lead of ["visualisierung", "angebote", "zeitrahmen", "budget", "anlass", "wohnsituation", "name", "kontakt"]) {
+      expect(steps).not.toContain(lead);
+    }
     expect(nextStep("plz", unlocked)).toBe("ergebnis");
   });
 

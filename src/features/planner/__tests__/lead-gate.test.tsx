@@ -29,6 +29,10 @@ function controller(step: PlannerStep, submitted: boolean): Controller {
     activeRenderId: "r1",
     offersChoice: "ja",
     timeframe: "",
+    budget: 10_000,
+    budgetConfirmed: false,
+    occasion: "",
+    housing: "",
     submitted,
     offersRequested: false,
     answered: null,
@@ -67,21 +71,32 @@ function controller(step: PlannerStep, submitted: boolean): Controller {
   } as unknown as Controller;
 }
 
-const renderStep = (step: PlannerStep, submitted = false) =>
+const renderStep = (step: PlannerStep, submitted = false, patch: Partial<Controller> = {}) =>
   render(
     <MemoryRouter>
-      <PlannerFunnel c={controller(step, submitted)} />
+      <PlannerFunnel c={{ ...controller(step, submitted), ...patch }} />
     </MemoryRouter>,
   );
 
 describe("Funnel C: Preis und Küche erst nach der Kontakterfassung", () => {
-  const before = PLANNER_STEPS.filter((s) => s.kind !== "result").map((s) => s.id);
+  // Die Budgetfrage zeigt ihre feste Skala in Euro; sie wird unten eigens geprüft.
+  const before = PLANNER_STEPS.filter((s) => s.kind !== "result" && s.id !== "budget").map((s) => s.id);
 
   it.each(before)("zeigt im Schritt „%s“ keinen Preis und kein Küchenbild", (step) => {
     const { container, unmount } = renderStep(step);
     expect(container.textContent).not.toMatch(/\d\s?€/);
     expect(container.querySelector('img[src="/k.webp"]')).toBeNull();
     unmount();
+  });
+
+  it("zeigt in der Budgetfrage nichts aus der Schätzung", () => {
+    const base = controller("budget", false).estimate;
+    const odd = { ...base, min: 12_345, mid: 17_777, max: 23_456 };
+    const { container } = renderStep("budget", false, { estimate: odd });
+    const text = container.textContent ?? "";
+    for (const amount of ["12.345", "17.777", "23.456"]) expect(text).not.toContain(amount);
+    expect(text).not.toMatch(/schätz|kostet/i);
+    expect(container.querySelector('img[src="/k.webp"]')).toBeNull();
   });
 
   it("zeigt nur einen Fortschrittsbalken in Prozent statt Schrittnamen", () => {

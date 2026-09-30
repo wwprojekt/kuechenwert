@@ -10,8 +10,6 @@ import {
   Hand,
   Layers,
   SquareStack,
-  Truck,
-  PackageCheck,
   Boxes,
   Wallet,
   BadgePercent,
@@ -20,13 +18,10 @@ import {
   Gem,
   Box,
   FlaskConical,
-  Wrench,
   CircleDot,
   Square,
   Sparkles,
   Trash2,
-  CheckCircle2,
-  XCircle,
 } from "lucide-react";
 
 /**
@@ -76,19 +71,6 @@ export const SINK_MATERIAL_ICONS: Record<string, React.ReactNode> = {
   mineralguss: <Box className={iconClass} />,
   kupfer: <Coins className={iconClass} />,
   "sonstige-sink-mat": <HelpCircle className={iconClass} />,
-};
-
-export const WASTE_SEP_ICONS: Record<string, React.ReactNode> = {
-  yes: <CheckCircle2 className={iconClass} />,
-  no: <XCircle className={iconClass} />,
-  unknown: <HelpCircle className={iconClass} />,
-};
-
-export const DELIVERY_ICONS: Record<string, React.ReactNode> = {
-  delivery_assembly: <Wrench className={iconClass} />,
-  delivery_only: <Truck className={iconClass} />,
-  pickup: <PackageCheck className={iconClass} />,
-  unknown: <HelpCircle className={iconClass} />,
 };
 
 export const FINANCING_ICONS: Record<string, React.ReactNode> = {

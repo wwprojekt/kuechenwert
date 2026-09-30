@@ -10,9 +10,9 @@ function stable(value: unknown): unknown {
 }
 
 /**
- * Schlüssel der Planung, die eine Visualisierung zeigt. Hinweise für die
- * Studios (Wünsche, Raumnotizen) gehören nicht dazu: Wer sie ergänzt, soll
- * nicht zum Neu-Visualisieren aufgefordert werden.
+ * Schlüssel der Planung, die eine Visualisierung zeigt. Angaben nur für die
+ * Studios (Wünsche, Raumnotizen, Dunstabzug) gehören nicht dazu: Wer sie
+ * ergänzt, soll nicht zum Neu-Visualisieren aufgefordert werden.
  */
 export function plannerRenderKey(
   config: Partial<PlannerConfig> | null | undefined,
@@ -20,6 +20,6 @@ export function plannerRenderKey(
   photoPath: string | null | undefined,
 ): string {
   const { wishes: _wishes, ...look } = sanitizeConfig(config);
-  const { notes: _notes, ...space } = sanitizeRoom(room);
+  const { notes: _notes, ventilation: _ventilation, ...space } = sanitizeRoom(room);
   return JSON.stringify(stable({ look, space, photo: photoPath ?? null }));
 }

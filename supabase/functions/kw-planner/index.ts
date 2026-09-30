@@ -65,6 +65,9 @@ import {
 import { estimateKitchenPrice, type KitchenEstimate } from "../_shared/kitchen-pricing.ts";
 import { OFFERS_CONSENT_TEXT_VERSION, openPlannerTender, plannerCover, requestPlannerOffers } from "../_shared/planner-offers.ts";
 import { dimensionsSource, sanitizeProvenance, type PlannerProvenance } from "../_shared/planner-provenance.ts";
+import type { PlannerLeadFrame } from "../_shared/planner-summary.ts";
+import { FUNNEL_A_BUDGET, HOUSING_OPTIONS, OCCASION_OPTIONS, housingType as housingTypeOf } from "../_shared/funnel-a-catalog.ts";
+import { redactOptional } from "../_shared/contact-redaction.ts";
 import { loadRateCard } from "../_shared/rate-card.ts";
 import { PROMPT_VERSION, buildRenderPrompt, buildVariantPrompt } from "../_shared/kitchen-prompt.ts";
 import { sanitizeFeedbackReasons } from "../_shared/render-feedback.ts";
@@ -119,6 +122,35 @@ const ALLOWED_IMAGE_TYPES: Record<string, string> = {
 };
 const TIMEFRAMES = new Set(PLANNER_TIMEFRAMES.map((t) => t.months));
 const HOUSING = new Set(["own", "rent", "unknown"]);
+const HOUSING_IDS = new Set(HOUSING_OPTIONS.map((o) => o.id));
+const OCCASION_IDS = new Set(OCCASION_OPTIONS.map((o) => o.id));
+
+/** Wünsche gehen an Studios und an das Bildmodell: ohne Telefonnummern, E-Mail-Adressen und Links. */
+function plannerConfigFrom(body: unknown): PlannerConfig {
+  const config = sanitizeConfig(body);
+  return { ...config, wishes: redactOptional(config.wishes) };
+}
+
+/**
+ * Rahmen aus den Lead-Fragen („Ja, Angebote“): Budget nur mit Auswahl des
+ * Kunden (budget_source), Anlass und Wohnsituation aus dem Katalog von Funnel A.
+ */
+function leadFrameFrom(body: Record<string, unknown>, timeframeMonths: number | null): PlannerLeadFrame {
+  const source = body.budget_source === "slider" || body.budget_source === "unknown" ? body.budget_source : null;
+  const amount = Number(body.budget_eur);
+  const budgetEur =
+    source === "slider" && Number.isFinite(amount) && amount >= FUNNEL_A_BUDGET.min && amount <= FUNNEL_A_BUDGET.max ? Math.round(amount) : null;
+  const housing = HOUSING_IDS.has(String(body.housing)) ? String(body.housing) : null;
+  return {
+    timeframeMonths,
+    budgetEur,
+    budgetSource: source === "slider" && budgetEur === null ? null : source,
+    purchaseReason: OCCASION_IDS.has(String(body.purchase_reason)) ? String(body.purchase_reason) : null,
+    housing,
+    // Ältere Clients schicken housing_type direkt.
+    housingType: housing ? housingTypeOf(housing) : HOUSING.has(String(body.housing_type)) ? String(body.housing_type) : "unknown",
+  };
+}
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
 
 type Session = {
@@ -632,7 +664,7 @@ async function actionGenerate(req: Request, sb: SupabaseClient, body: Record<str
     );
   }
 
-  const config = sanitizeConfig(body.config);
+  const config = plannerConfigFrom(body.config);
   const room = sanitizeRoom(body.room);
   const postalCode = isPostalCode(body.postal_code) ? body.postal_code : null;
   const photoPath = typeof body.photo_path === "string" && body.photo_path ? body.photo_path : null;
@@ -735,7 +767,7 @@ async function actionSave(req: Request, sb: SupabaseClient, body: Record<string,
   const estimate = await persistPlanning(
     sb,
     session.id,
-    sanitizeConfig(body.config),
+    plannerConfigFrom(body.config),
     room,
     isPostalCode(body.postal_code) ? body.postal_code : null,
     sanitizeProvenance(body.provenance, room),
@@ -993,7 +1025,7 @@ async function actionSubmit(req: Request, sb: SupabaseClient, body: Record<strin
     throw new HttpError(422, "Bitte stimmen Sie der Weitergabe an geprüfte Küchenstudios zu.", "consent");
   }
   const timeframe = TIMEFRAMES.has(Number(body.timeframe_months)) ? Number(body.timeframe_months) : null;
-  const housingType = HOUSING.has(String(body.housing_type)) ? String(body.housing_type) : "unknown";
+  const frame = leadFrameFrom(body, timeframe);
   const photoPaths = session.photo_paths ?? [];
   // Die Frage nach der KI-Verbesserung erscheint nur mit Raumfoto.
   const aiTraining = photoPaths.length > 0 && consents.ai_training === true;
@@ -1038,11 +1070,13 @@ async function actionSubmit(req: Request, sb: SupabaseClient, body: Record<strin
         score: tier.score,
         postal_code: postalCode,
         city,
-        housing_type: housingType,
+        housing_type: frame.housingType,
+        purchase_reason: frame.purchaseReason,
         kitchen_form: room.form,
         kitchen_style: config.style,
         timeframe_months: timeframe,
-        budget_midpoint: estimate.mid,
+        // Wie in Funnel A das genannte Budget; die KI-Schätzung steht in funnel_answers.estimate.
+        budget_midpoint: frame.budgetEur,
         first_name: firstName,
         last_name: lastName,
         email,
@@ -1056,6 +1090,9 @@ async function actionSubmit(req: Request, sb: SupabaseClient, body: Record<strin
           provenance,
           estimate: { min: estimate.min, max: estimate.max, mid: estimate.mid },
           offers_requested: requestOffers,
+          budget_eur: frame.budgetEur,
+          budget_source: frame.budgetSource,
+          housing: frame.housing,
         },
         utm_source: session.utm_source,
         utm_medium: session.utm_medium,
@@ -1088,8 +1125,7 @@ async function actionSubmit(req: Request, sb: SupabaseClient, body: Record<strin
           config,
           room,
           estimate,
-          timeframeMonths: timeframe,
-          housingType,
+          frame,
           photoCount: photoPaths.length,
           cover: cover ? { bucket: cover.bucket, path: cover.path } : null,
           provenance,

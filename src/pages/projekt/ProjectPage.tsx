@@ -19,7 +19,9 @@ import { Textarea } from "@/components/ui/textarea";
 import { ApiError, errorMessage } from "@/features/marketplace/api-client";
 import { OfferCard } from "@/features/marketplace/components/OfferCard";
 import { PhoneCaptureCard } from "@/features/marketplace/components/PhoneCaptureCard";
+import { ProjectDetailsCard } from "@/features/marketplace/components/ProjectDetailsCard";
 import { ProjectFilesCard } from "@/features/marketplace/components/ProjectFilesCard";
+import { hasDetails } from "@/features/marketplace/lead-details";
 import { ProjectAnswers } from "@/features/marketplace/components/ProjectAnswers";
 import { ProjectOrderCard } from "@/features/marketplace/components/ProjectOrderCard";
 import { ProjectAiConsentCard } from "@/features/marketplace/components/ProjectAiConsentCard";
@@ -254,7 +256,25 @@ export function ProjectView({ token }: { token: string }) {
   // Solange noch nichts hochgeladen ist, steht die Karte oben: Nachreichen ist dann der nächste Schritt.
   const filesFirst = canUploadFiles && files.length === 0;
   const filesCard = (canUploadFiles || files.length > 0) && (
-    <ProjectFilesCard token={token} files={files} canUpload={canUploadFiles} />
+    <ProjectFilesCard token={token} funnelType={view.lead.funnel_type} files={files} canUpload={canUploadFiles} />
+  );
+  const customerDetails = view.details?.customer ?? null;
+  const plannedRoom = view.planner?.room;
+  const showDetails = tender?.status !== "cancelled";
+  // Direkt nach der Anfrage ist Ergänzen der nächste sinnvolle Schritt: dann oben.
+  const detailsFirst = showDetails && !closed && !hasDetails(customerDetails);
+  const detailsCard = showDetails && (
+    <ProjectDetailsCard
+      token={token}
+      kitchenForm={view.lead.kitchen_form}
+      details={customerDetails}
+      updatedAt={view.details?.updated_at ?? null}
+      planned={
+        view.lead.funnel_type === "traumkueche"
+          ? { ceiling: plannedRoom?.ceilingHeightCm != null, ventilation: !!plannedRoom?.ventilation }
+          : null
+      }
+    />
   );
 
   return (
@@ -305,6 +325,7 @@ export function ProjectView({ token }: { token: string }) {
           <div className="space-y-5">
             {view.order && <ProjectOrderCard token={token} order={view.order} studioName={awarded?.dealer.company_name ?? "Ihr Küchenstudio"} />}
             {filesFirst && filesCard}
+            {detailsFirst && detailsCard}
 
             <div className="flex items-end justify-between gap-3">
               <h2 className="text-2xl font-bold">
@@ -336,6 +357,7 @@ export function ProjectView({ token }: { token: string }) {
           <aside className="space-y-5">
             {!isNew && phoneCard}
             {!filesFirst && filesCard}
+            {!detailsFirst && detailsCard}
             {latestRender?.url && (
               <div className="overflow-hidden rounded-2xl border bg-card">
                 {photo?.url && latestRender.mode === "edit" ? (

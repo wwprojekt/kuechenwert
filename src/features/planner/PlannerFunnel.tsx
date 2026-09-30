@@ -10,9 +10,19 @@ import { stepDef, type PlannerStep } from "./flow";
 import { ApplianceLevelStep, CookingStep, ExtrasStep, MoreAppliancesStep, ServicesStep } from "./steps/ApplianceSteps";
 import { FrontColorStep, FrontStep, HandleStep, QualityStep, StyleStep } from "./steps/DesignSteps";
 import { CabinetStep, SinkStep, WorktopColorStep, WorktopStep } from "./steps/EquipmentSteps";
-import { LeadContactStep, LeadNameStep, OffersStep, PLANNER_CONTACT_FORM, PLANNER_NAME_FORM, TimeframeStep } from "./steps/LeadSteps";
+import {
+  HousingStep,
+  LeadBudgetStep,
+  LeadContactStep,
+  LeadNameStep,
+  OccasionStep,
+  OffersStep,
+  PLANNER_CONTACT_FORM,
+  PLANNER_NAME_FORM,
+  TimeframeStep,
+} from "./steps/LeadSteps";
 import { ResultStep } from "./steps/ResultStep";
-import { FormStep, MeasureStep, PhotoStep } from "./steps/RoomSteps";
+import { FormStep, MeasureStep, PhotoStep, VentilationStep } from "./steps/RoomSteps";
 import { VisualizingStep } from "./steps/VisualizingStep";
 import { WishesStep } from "./steps/WishesStep";
 import type { PlannerFunnel as Controller } from "./usePlannerFunnel";
@@ -34,6 +44,7 @@ const HEADINGS: Record<PlannerStep, { heading: string; hint?: string }> = {
   spuele: { heading: "Welche Spüle und Armatur?" },
   geraeteklasse: { heading: "Welche Geräte-Klasse?", hint: "Bestimmt Ausstattung, Design und Preis aller Elektrogeräte." },
   kochen: { heading: "Wie möchten Sie kochen und kühlen?" },
+  abluft: { heading: "Kann der Küchendunst nach draußen?", hint: "Entscheidet über Dunstabzugshaube oder Kochfeldabzug." },
   geraete: { heading: "Welche Geräte sollen noch hinein?", hint: "Mehrfachauswahl möglich." },
   extras: { heading: "Welche Extras wünschen Sie sich?", hint: "Mehrfachauswahl möglich." },
   leistungen: { heading: "Was soll das Küchenstudio übernehmen?", hint: "Mehrfachauswahl möglich." },
@@ -42,6 +53,9 @@ const HEADINGS: Record<PlannerStep, { heading: string; hint?: string }> = {
   visualisierung: { heading: "Ihre Küche wird visualisiert …" },
   angebote: { heading: "Möchten Sie auch kostenlose Angebote von Küchenstudios?" },
   zeitrahmen: { heading: "Wann soll Ihre neue Küche kommen?", hint: "So können die Studios Lieferzeit und Montage einplanen." },
+  budget: { heading: "Welches Budget haben Sie eingeplant?", hint: "Unverbindlich – damit die Studios passende Angebote machen." },
+  anlass: { heading: "Was ist der Anlass für die neue Küche?" },
+  wohnsituation: { heading: "Wie wohnen Sie?", hint: "Bei Mietwohnungen klären die Studios Umbauten mit Ihnen vorab." },
   name: { heading: "Fast geschafft! Wie dürfen wir Sie ansprechen?" },
   kontakt: { heading: "Wohin dürfen wir Ihre Küche schicken?", hint: "Danach sehen Sie Küche und Preis sofort – und erhalten beides per E-Mail." },
   ergebnis: { heading: "Hier ist Ihre neue Küche" },
@@ -86,7 +100,16 @@ export function PlannerFunnel({ c }: { c: Controller }) {
       content = <FormStep form={state.room.form} onForm={planner.setForm} onAdvance={actions.goNext} />;
       break;
     case "masse":
-      content = <MeasureStep room={state.room} wallIssues={c.wallIssues} showAllWallErrors={c.showWallErrors} onWall={planner.setWall} />;
+      content = (
+        <MeasureStep
+          room={state.room}
+          wallIssues={c.wallIssues}
+          ceilingError={c.ceilingError}
+          showAllWallErrors={c.showWallErrors}
+          onWall={planner.setWall}
+          onCeiling={(ceilingHeightCm) => planner.patchRoom({ ceilingHeightCm })}
+        />
+      );
       break;
     case "foto":
       nav = { ...nav, nextLabel: state.photos.length ? "Weiter" : "Ohne Foto weiter" };
@@ -133,6 +156,12 @@ export function PlannerFunnel({ c }: { c: Controller }) {
     case "kochen":
       content = <CookingStep {...configProps} />;
       break;
+    case "abluft":
+      nav = { ...nav, nextLabel: state.room.ventilation ? "Weiter" : "Überspringen" };
+      content = (
+        <VentilationStep value={state.room.ventilation ?? null} onChange={(ventilation) => planner.patchRoom({ ventilation })} onAdvance={actions.goNext} />
+      );
+      break;
     case "geraete":
       content = <MoreAppliancesStep {...configProps} />;
       break;
@@ -162,6 +191,21 @@ export function PlannerFunnel({ c }: { c: Controller }) {
       above = <RenderStatusChip phase={c.renderPhase} percent={renderPercent} />;
       nav = { ...nav, nextLabel: state.timeframe ? "Weiter" : "Überspringen" };
       content = <TimeframeStep value={state.timeframe} onChange={planner.setTimeframe} onAdvance={actions.goNext} />;
+      break;
+    case "budget":
+      above = <RenderStatusChip phase={c.renderPhase} percent={renderPercent} />;
+      nav = { ...nav, nextLabel: state.budgetConfirmed ? "Weiter" : "Überspringen" };
+      content = <LeadBudgetStep value={state.budget} confirmed={state.budgetConfirmed} onChange={planner.setBudget} />;
+      break;
+    case "anlass":
+      above = <RenderStatusChip phase={c.renderPhase} percent={renderPercent} />;
+      nav = { ...nav, nextLabel: state.occasion ? "Weiter" : "Überspringen" };
+      content = <OccasionStep value={state.occasion} onChange={planner.setOccasion} onAdvance={actions.goNext} />;
+      break;
+    case "wohnsituation":
+      above = <RenderStatusChip phase={c.renderPhase} percent={renderPercent} />;
+      nav = { ...nav, nextLabel: state.housing ? "Weiter" : "Überspringen" };
+      content = <HousingStep value={state.housing} onChange={planner.setHousing} onAdvance={actions.goNext} />;
       break;
     case "name":
       above = <RenderStatusChip phase={c.renderPhase} percent={renderPercent} />;

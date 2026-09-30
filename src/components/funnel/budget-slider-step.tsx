@@ -11,6 +11,11 @@ interface BudgetSliderStepProps {
   step: number;
   /** Startwert des Sliders, solange noch kein Betrag gewählt wurde. */
   defaultValue: number;
+  /**
+   * Der Kunde hat einen Betrag oder „Weiß ich nicht“ gewählt. Vorher zeigt der
+   * Schritt nichts als ausgewählt an, denn nur eine echte Wahl zählt als Budget.
+   */
+  confirmed: boolean;
 }
 
 const EUR = new Intl.NumberFormat("de-DE", { style: "currency", currency: "EUR", maximumFractionDigits: 0 });
@@ -86,9 +91,9 @@ function formatAmount(value: number, max: number): string {
   return value >= max ? `${EUR.format(max)}+` : EUR.format(value);
 }
 
-export function BudgetSliderStep({ value, onChange, min, max, step, defaultValue }: BudgetSliderStepProps) {
+export function BudgetSliderStep({ value, onChange, min, max, step, defaultValue, confirmed }: BudgetSliderStepProps) {
   const [remembered, setRemembered] = useState(value ?? defaultValue);
-  const unknown = value === null;
+  const unknown = confirmed && value === null;
   const shown = value ?? remembered;
   const percentage = ((shown - min) / (max - min)) * 100;
 
@@ -102,10 +107,15 @@ export function BudgetSliderStep({ value, onChange, min, max, step, defaultValue
       <style>{RANGE_CSS}</style>
 
       <div className="text-center">
-        {unknown ? (
+        {!confirmed ? (
+          <>
+            <p className="font-display text-3xl font-bold tracking-tight-2 text-foreground sm:text-4xl short:text-2xl">Ihr Budget?</p>
+            <p className="mt-1 text-sm text-ink-muted xshort:hidden">Schieben, einen Betrag antippen oder „Weiß ich nicht“ wählen.</p>
+          </>
+        ) : unknown ? (
           <>
             <p className="font-display text-3xl font-bold tracking-tight-2 text-foreground sm:text-4xl short:text-2xl">Budget offen</p>
-            <p className="mt-1 text-sm text-ink-muted">Die Studios beraten Sie zu einem passenden Budget.</p>
+            <p className="mt-1 text-sm text-ink-muted xshort:hidden">Die Studios beraten Sie zu einem passenden Budget.</p>
           </>
         ) : (
           <p className="font-display text-4xl font-bold tabular-nums tracking-tight-2 text-brand-700 sm:text-5xl short:text-3xl">
@@ -123,10 +133,13 @@ export function BudgetSliderStep({ value, onChange, min, max, step, defaultValue
           value={shown}
           onChange={(event) => setAmount(Number(event.target.value))}
           aria-label="Budget in Euro"
-          aria-valuetext={unknown ? "Keine Festlegung, Beratung gewünscht" : formatAmount(shown, max)}
-          data-muted={unknown || undefined}
+          aria-valuetext={
+            !confirmed ? "Noch kein Budget gewählt" : unknown ? "Keine Festlegung, Beratung gewünscht" : formatAmount(shown, max)
+          }
+          data-track="budget_eur"
+          data-muted={!confirmed || unknown || undefined}
           className="kw-budget-range"
-          style={{ "--pct": `${percentage}%` } as CSSProperties}
+          style={{ "--pct": `${!confirmed || unknown ? 0 : percentage}%` } as CSSProperties}
         />
         <div className="mt-2 flex justify-between text-xs font-medium text-ink-muted" aria-hidden="true">
           <span>{EUR.format(min)}</span>
@@ -136,7 +149,7 @@ export function BudgetSliderStep({ value, onChange, min, max, step, defaultValue
 
       <div className="grid grid-cols-5 gap-1.5 sm:flex sm:flex-wrap sm:justify-center sm:gap-2">
         {QUICK_PICKS.map((amount) => {
-          const active = value === amount;
+          const active = confirmed && value === amount;
           return (
             <button
               key={amount}

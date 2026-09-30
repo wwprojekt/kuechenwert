@@ -146,7 +146,8 @@ export function FunnelAClient({ slug }: { slug: FunnelAStepSlug }) {
     }
   };
 
-  const nextLabel = step.kind === "choice" && !step.required && !isStepAnswered(step, answers) ? "Überspringen" : "Weiter";
+  const optionalStep = step.kind === "choice" || step.kind === "multi";
+  const nextLabel = optionalStep && !step.required && !isStepAnswered(step, answers) ? "Überspringen" : "Weiter";
   const blockedHint = step.kind === "plz" ? "Bitte geben Sie Ihre fünfstellige Postleitzahl ein." : "Bitte wählen Sie eine Antwort aus.";
   const submit =
     step.kind === "contact"

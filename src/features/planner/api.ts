@@ -74,6 +74,12 @@ export interface SubmitPayload {
   /** Gewählte Visualisierung: Titelbild für die Studios. */
   active_render_id: string | null;
   timeframe_months: number | null;
+  /** Nur mit Auswahl des Kunden (budget_source); null ohne Angabe. */
+  budget_eur: number | null;
+  budget_source: "slider" | "unknown" | null;
+  purchase_reason: string | null;
+  /** Wohnsituation aus dem Katalog von Funnel A; housing_type ist die Kurzform. */
+  housing: string | null;
   housing_type: "own" | "rent" | "unknown";
   turnstile_token: string | null;
   website?: string;

@@ -1,14 +1,17 @@
+import { plausibleOfferDate } from "@/config/funnel-b-stammdaten";
 import { isOfferReady, type FunnelBData } from "./state";
 
 /**
  * Funnel B („Angebot unterbieten“): eine Frage pro Bildschirm. Nach Preis,
- * Unterlagen und Zeitrahmen entscheidet der Kunde, ob er Details angibt;
- * wer Unterlagen hochlädt, braucht sie meist nicht.
+ * Leistungsumfang, Unterlagen, Küchenform und Zeitrahmen entscheidet der
+ * Kunde, ob er Details angibt; wer Unterlagen hochlädt, braucht sie meist nicht.
  */
 export type FunnelBStepKey =
   | "preis"
+  | "leistungsumfang"
   | "unterlagen"
   | "hochladen"
+  | "kuechenform"
   | "zeitrahmen"
   | "details"
   | "marke"
@@ -19,10 +22,8 @@ export type FunnelBStepKey =
   | "geraete"
   | "spuele"
   | "spuele-marke"
-  | "muell"
   | "extras"
   | "notizen"
-  | "lieferung"
   | "zahlung"
   | "anzahlung"
   | "plz"
@@ -40,8 +41,14 @@ export interface FunnelBStep {
 
 export const FUNNEL_B_STEPS: readonly FunnelBStep[] = [
   { key: "preis", question: "Was kostet Ihr Küchenangebot?", hint: "Bruttopreis laut Angebot – diesen Preis sollen die Studios unterbieten." },
+  {
+    key: "leistungsumfang",
+    question: "Was ist in diesem Preis enthalten?",
+    hint: "Mehrfachauswahl – so bieten die Studios denselben Umfang an.",
+  },
   { key: "unterlagen", question: "Haben Sie Angebot oder Planung zur Hand?", hint: "Mit Unterlagen können wir genau vergleichen." },
   { key: "hochladen", question: "Laden Sie Ihre Unterlagen hoch", hint: "PDF oder Fotos, höchstens 10 Dateien à 20 MB." },
+  { key: "kuechenform", question: "Welche Form hat die geplante Küche?", hint: "Damit Studios Ihr Angebot auch ohne Unterlagen einordnen können." },
   { key: "zeitrahmen", question: "Wann soll die Küche geliefert werden?", hint: "Ein fester Termin bringt oft den besseren Preis." },
   { key: "details", question: "Möchten Sie Details zu Ihrem Angebot angeben?", hint: "Freiwillig – was Sie nicht wissen, klären wir im Experten-Check." },
   { key: "marke", question: "Von welchem Hersteller ist die Küche?", detail: true },
@@ -52,10 +59,8 @@ export const FUNNEL_B_STEPS: readonly FunnelBStep[] = [
   { key: "geraete", question: "Welche Geräte sind im Angebot?", hint: "Marke und Modell machen den Vergleich genauer.", detail: true },
   { key: "spuele", question: "Welche Spüle ist geplant?", detail: true },
   { key: "spuele-marke", question: "Welche Marke und welches Modell?", detail: true },
-  { key: "muell", question: "Ist ein Mülltrennsystem geplant?", detail: true },
   { key: "extras", question: "Welche Extras sind im Angebot?", hint: "Mehrfachauswahl möglich.", detail: true },
   { key: "notizen", question: "Gibt es noch etwas, das wir wissen sollten?", hint: "Optional, z. B. Glas-Spritzschutz oder USB-Dosen.", detail: true },
-  { key: "lieferung", question: "Wie soll geliefert werden?", detail: true },
   { key: "zahlung", question: "Wie soll bezahlt werden?", detail: true },
   { key: "anzahlung", question: "Wie hoch ist die Anzahlung?", hint: "Was Ihr Studio fordert, z. B. 30 %.", detail: true },
   { key: "plz", question: "Wo soll die Küche hin?", hint: "Wir stellen Ihr Angebot Studios aus Ihrer Region vor." },
@@ -65,8 +70,12 @@ export const FUNNEL_B_STEPS: readonly FunnelBStep[] = [
 ];
 
 const KEYS = new Set<string>(FUNNEL_B_STEPS.map((s) => s.key));
-/** ?schritt=1…9 aus der Version bis 09/2026. */
-const LEGACY: Record<string, FunnelBStepKey> = { "1": "preis", "2": "zeitrahmen", "9": "plz" };
+/**
+ * ?schritt=1…9 aus der Version bis 09/2026; „muell“ ist in „extras“
+ * aufgegangen, „lieferung“ im Leistungsumfang. Alte Links landen an
+ * derselben Stelle im Ablauf.
+ */
+const LEGACY: Record<string, FunnelBStepKey> = { "1": "preis", "2": "zeitrahmen", "9": "plz", muell: "extras", lieferung: "zahlung" };
 
 export function parseFunnelBStep(raw: string | null): FunnelBStepKey {
   if (raw && KEYS.has(raw)) return raw as FunnelBStepKey;
@@ -85,7 +94,7 @@ export function funnelBFlow(data: FunnelBData): FunnelBStepKey[] {
   }).map((s) => s.key);
 }
 
-const OFFER_STEPS: ReadonlySet<FunnelBStepKey> = new Set(["preis", "unterlagen", "hochladen"]);
+const OFFER_STEPS: ReadonlySet<FunnelBStepKey> = new Set(["preis", "leistungsumfang", "unterlagen", "hochladen"]);
 
 /** Ohne vollständiges Angebot geht es nicht zu den weiteren Schritten (Dateien überstehen kein Neuladen). */
 export function guardFunnelBStep(key: FunnelBStepKey, data: FunnelBData): FunnelBStepKey {
@@ -96,16 +105,16 @@ export function guardFunnelBStep(key: FunnelBStepKey, data: FunnelBData): Funnel
 
 /** Freiwillige Einzelauswahl je Schritt: ohne Antwort heißt „Weiter“ „Überspringen“. */
 const OPTIONAL_CHOICE: Partial<Record<FunnelBStepKey, keyof FunnelBData>> = {
+  kuechenform: "kitchenForm",
   zeitrahmen: "timeframe",
   griffe: "handleType",
   arbeitsplatte: "worktopMaterial",
   spuele: "sinkMaterial",
-  muell: "wasteSeparationSystem",
-  lieferung: "deliveryMode",
   zahlung: "paymentFinancing",
 };
 
 export function isSkippable(key: FunnelBStepKey, data: FunnelBData): boolean {
+  if (key === "leistungsumfang") return data.offerIncludes.length === 0;
   const field = OPTIONAL_CHOICE[key];
   return !!field && !data[field];
 }
@@ -127,6 +136,9 @@ export function missingIn(key: FunnelBStepKey, data: FunnelBData): Missing[] {
   switch (key) {
     case "preis":
       if (!(Number(data.existingOfferPriceEur) > 0)) add("existing_offer_price", "Bitte geben Sie den Angebotspreis an.", "funnel-b-offer-price");
+      if (data.offerValidUntil && !plausibleOfferDate(data.offerValidUntil)) {
+        add("offer_valid_until", "Bitte prüfen Sie das Datum, bis wann das Angebot gilt – oder lassen Sie das Feld leer.", "funnel-b-offer-valid-until");
+      }
       break;
     case "unterlagen":
       if (!data.offerDeliveryMethod) add("offer_delivery", "Bitte wählen Sie, ob Sie Unterlagen jetzt hochladen oder später nachreichen.", "funnel-b-offer-delivery");

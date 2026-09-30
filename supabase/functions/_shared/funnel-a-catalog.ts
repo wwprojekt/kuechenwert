@@ -13,6 +13,7 @@
 import {
   APPLIANCES,
   KITCHEN_FORMS,
+  SERVICES,
   STYLES,
   defaultConfig,
   defaultRoom,
@@ -21,6 +22,7 @@ import {
   type KitchenFormId,
   type PlannerConfig,
   type RoomInput,
+  type ServiceId,
   type StyleId,
   type WorktopId,
 } from "./kitchen-catalog.ts";
@@ -33,6 +35,8 @@ import {
   FINANCING_OPTIONS,
   HANDLE_TYPES,
   KITCHEN_BRANDS,
+  OFFER_INCLUDES,
+  OFFER_INCLUDES_UNKNOWN,
   SINK_BRANDS,
   SINK_MATERIALS,
   TIMEFRAMES as FUNNEL_B_TIMEFRAMES,
@@ -169,6 +173,12 @@ export const EXTRA_APPLIANCE_OPTIONS: ChoiceOption<ApplianceId>[] = EXTRA_APPLIA
 
 export const DEFAULT_EXTRA_APPLIANCES: ApplianceId[] = ["geschirrspueler"];
 
+/** Leistungen des Studios wie im Planer (Funnel C); ohne Vorauswahl, damit nur echte Antworten zählen. */
+export const SERVICE_OPTIONS: ChoiceOption<ServiceId>[] = SERVICES.map((s) => ({ id: s.id, label: s.label, hint: s.hint }));
+
+/** Die Schätzung nimmt ohne Antwort Lieferung und Montage an – so kauft die Mehrheit. */
+const DEFAULT_ESTIMATE_SERVICES: ServiceId[] = ["lieferung_montage"];
+
 export const COOKSTYLE_OPTIONS: ChoiceOption[] = [
   { id: "allein", label: "Ich koche allein", hint: "Praktisch und effizient" },
   { id: "paar", label: "Zu zweit", hint: "Gemütlich und regelmäßig" },
@@ -231,6 +241,8 @@ export interface FunnelAAnswers {
   oven_placement: string;
   cooling: string;
   extra_appliances: ApplianceId[];
+  /** Was das Studio übernehmen soll; leer = nicht beantwortet. */
+  services: ServiceId[];
   cooking_style: string;
   purchase_reason: string;
   housing: string;
@@ -258,6 +270,7 @@ export function emptyFunnelAAnswers(): FunnelAAnswers {
     oven_placement: "",
     cooling: "",
     extra_appliances: [...DEFAULT_EXTRA_APPLIANCES],
+    services: [],
     cooking_style: "",
     purchase_reason: "",
     housing: "",
@@ -303,6 +316,7 @@ const COOKTOP_IDS = idSet(COOKTOP_OPTIONS);
 const OVEN_IDS = idSet(OVEN_OPTIONS);
 const COOLING_IDS = idSet(COOLING_OPTIONS);
 const EXTRA_IDS = idSet(EXTRA_APPLIANCE_OPTIONS);
+const SERVICE_IDS = idSet(SERVICE_OPTIONS);
 const COOKSTYLE_IDS = idSet(COOKSTYLE_OPTIONS);
 const OCCASION_IDS = idSet(OCCASION_OPTIONS);
 const HOUSING_IDS = idSet(HOUSING_OPTIONS);
@@ -331,6 +345,9 @@ export function sanitizeFunnelAAnswers(input: unknown): FunnelAAnswers {
   const extras = Array.isArray(raw.extra_appliances)
     ? Array.from(new Set(raw.extra_appliances.filter((v): v is ApplianceId => typeof v === "string" && EXTRA_IDS.has(v))))
     : [];
+  const services = Array.isArray(raw.services)
+    ? Array.from(new Set(raw.services.filter((v): v is ServiceId => typeof v === "string" && SERVICE_IDS.has(v))))
+    : [];
   const plz = typeof raw.postal_code === "string" ? raw.postal_code.trim() : "";
   return {
     kitchen_form: pickId(normalizeFormId(raw.kitchen_form), FORM_IDS),
@@ -343,6 +360,7 @@ export function sanitizeFunnelAAnswers(input: unknown): FunnelAAnswers {
     oven_placement: pickId(raw.oven_placement, OVEN_IDS),
     cooling: pickId(raw.cooling, COOLING_IDS),
     extra_appliances: extras,
+    services,
     cooking_style: pickId(raw.cooking_style, COOKSTYLE_IDS),
     purchase_reason: pickId(raw.purchase_reason, OCCASION_IDS),
     housing: pickId(raw.housing, HOUSING_IDS),
@@ -420,6 +438,7 @@ export function funnelAPlannerInput(a: FunnelAAnswers): { config: PlannerConfig;
       worktop: WORKTOP_TO_PLANNER[a.worktop_category] ?? d.worktop,
       tallUnits: fridgeTall + ovenTall + pantryTall,
       appliances: [...appliances],
+      services: a.services.length > 0 ? [...a.services] : [...DEFAULT_ESTIMATE_SERVICES],
       quality: "mittel",
       applianceLevel: "mittel",
     },
@@ -454,6 +473,7 @@ export function toStoredAnswers(
     oven_placement: a.oven_placement || null,
     cooling: a.cooling || null,
     extra_appliances: a.extra_appliances,
+    services: a.services,
     cooking_style: a.cooking_style || null,
     housing: a.housing || null,
     decision_maker: a.decision_maker || null,
@@ -548,6 +568,10 @@ export function describeFunnelA(summary: unknown): DetailGroup[] {
     brands.length ? { label: "Wunschmarken", value: brands.join(", ") } : null,
   ];
 
+  const services = stringList(a.services)
+    .map((id) => labelIn(SERVICE_OPTIONS, id))
+    .filter((v): v is string => !!v);
+
   const housing =
     a.housing === UNSURE
       ? null
@@ -577,6 +601,7 @@ export function describeFunnelA(summary: unknown): DetailGroup[] {
   const groups: DetailGroup[] = [
     { title: "Küche", rows: clean(kitchen) },
     { title: "Geräte", rows: clean(devices) },
+    { title: "Leistungen", rows: services.length ? [{ label: "Gewünscht", value: services.join(", ") }] : [] },
     { title: "Rahmen", rows: clean(frame) },
   ];
   if (openTopics.length) {
@@ -626,6 +651,21 @@ function paymentText(s: Record<string, unknown>): string | null {
   return terms.length ? `${name} (${terms.join(", ")})` : name;
 }
 
+/** Leistungsumfang eines Angebots (Schlüssel aus OFFER_INCLUDES); null ohne Angabe. */
+export function offerIncludesText(value: unknown): string | null {
+  const slugs = stringList(value);
+  if (slugs.includes(OFFER_INCLUDES_UNKNOWN)) return "nicht bekannt";
+  const names = OFFER_INCLUDES.filter((o) => slugs.includes(o.slug)).map((o) => o.name);
+  return names.length ? names.join(", ") : null;
+}
+
+/** YYYY-MM-DD als deutsches Datum; alles andere null. */
+export function isoDateText(value: unknown): string | null {
+  if (typeof value !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return null;
+  const [y, m, d] = value.split("-");
+  return `${d}.${m}.${y}`;
+}
+
 /** Lesbare Angaben eines Funnel-B-Projekts (vorhandenes Studio-Angebot). */
 export function describeFunnelB(summary: unknown): DetailGroup[] {
   const s = asRecord(summary);
@@ -636,6 +676,8 @@ export function describeFunnelB(summary: unknown): DetailGroup[] {
   const sink = [slugName(SINK_BRANDS, a.sinkBrand), text(a.sinkDesignation)].filter(Boolean).join(" ");
   const offer: (DetailRow | null)[] = [
     typeof s.existing_offer_eur === "number" && s.existing_offer_eur > 0 ? row("Vorhandenes Angebot", eur(s.existing_offer_eur)) : null,
+    row("Im Preis enthalten", offerIncludesText(a.offerIncludes)),
+    row("Gültig bis", isoDateText(a.offerValidUntil)),
     row("Form", formLabel(s.kitchen_form)),
     row("Küchenmarke", brand),
     row("Front", text(a.frontName)),
@@ -727,9 +769,17 @@ export function describeFunnelC(summary: unknown): DetailGroup[] {
   const s = asRecord(summary);
   const timeframe =
     text(asRecord(s.labels).timeframe) ?? (typeof s.timeframe_months === "number" ? `In ca. ${s.timeframe_months} Monaten` : null);
-  const housing = s.housing_type === "own" ? "Eigentum" : s.housing_type === "rent" ? "Miete" : null;
+  const budget =
+    s.budget_source === "unknown" ? "Beratung gewünscht" : typeof s.budget_eur === "number" && s.budget_eur > 0 ? `ca. ${eur(s.budget_eur)}` : null;
+  const occasion = s.purchase_reason === UNSURE ? null : labelIn(OCCASION_OPTIONS, s.purchase_reason);
+  const housing =
+    s.housing === UNSURE
+      ? null
+      : (labelIn(HOUSING_OPTIONS, s.housing) ?? (s.housing_type === "own" ? "Eigentum" : s.housing_type === "rent" ? "Miete" : null));
   const rows = [
     timeframe ? { label: "Zeitraum", value: timeframe } : null,
+    budget ? { label: "Budget", value: budget } : null,
+    occasion ? { label: "Anlass", value: occasion } : null,
     housing ? { label: "Wohnsituation", value: housing } : null,
   ].filter((r): r is DetailRow => r !== null);
   return rows.length ? [{ title: "Rahmen", rows }] : [];

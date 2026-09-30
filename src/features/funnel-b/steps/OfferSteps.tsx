@@ -1,8 +1,27 @@
-import { CloudUpload, ListChecks, Mail, SkipForward } from "lucide-react";
+import {
+  CloudUpload,
+  Droplets,
+  HelpCircle,
+  ListChecks,
+  Mail,
+  MessagesSquare,
+  Plug,
+  Recycle,
+  Refrigerator,
+  Ruler,
+  SkipForward,
+  Truck,
+  Wrench,
+  type LucideIcon,
+} from "lucide-react";
 import { CardStep } from "@/components/funnel/card-step";
 import { FUNNEL_HEADING_ID } from "@/components/funnel/funnel-frame";
 import { TIMEFRAME_ICONS_B } from "@/components/funnel/funnel-b-icons";
-import { TIMEFRAMES } from "@/config/funnel-b-stammdaten";
+import { ImageCardStep } from "@/components/funnel/image-card-step";
+import { MultiCardStep } from "@/components/funnel/multi-card-step";
+import { KitchenFormPlan, hasKitchenFormPlan } from "@/components/kitchen/KitchenFormPlan";
+import { OFFER_INCLUDES, OFFER_INCLUDES_UNKNOWN, TIMEFRAMES, offerValidityRange } from "@/config/funnel-b-stammdaten";
+import { FORM_OPTIONS } from "@/features/funnel-a/catalog";
 import { Field } from "../Field";
 import { LEAD_FILE_CATEGORIES, MAX_LEAD_FILES, type LeadFileCategory } from "../files";
 import { LeadFileDrop } from "../LeadFileDrop";
@@ -16,6 +35,7 @@ export interface FunnelBStepProps {
 }
 
 export function PriceStep({ data, update, onAdvance }: FunnelBStepProps) {
+  const validity = offerValidityRange();
   return (
     <form
       onSubmit={(e) => {
@@ -43,17 +63,75 @@ export function PriceStep({ data, update, onAdvance }: FunnelBStepProps) {
           <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-sm text-ink-muted">€</span>
         </div>
       </Field>
-      <Field label="Name des Küchenstudios (optional)" hint="Hilft beim Vergleich, wird den Studios nicht gezeigt.">
-        <input
-          type="text"
-          name="existing_offer_studio"
-          className="input-field"
-          placeholder="z. B. Küchen Müller, Musterstadt"
-          value={data.existingOfferStudio}
-          onChange={(e) => update({ existingOfferStudio: e.target.value })}
-        />
-      </Field>
+      <div className="grid gap-4 sm:grid-cols-[1.4fr_1fr] short:gap-3">
+        <Field label="Name des Küchenstudios (optional)" hint="Hilft beim Vergleich, wird den Studios nicht gezeigt.">
+          <input
+            type="text"
+            name="existing_offer_studio"
+            className="input-field"
+            placeholder="z. B. Küchen Müller, Musterstadt"
+            value={data.existingOfferStudio}
+            onChange={(e) => update({ existingOfferStudio: e.target.value })}
+          />
+        </Field>
+        <Field label="Angebot gültig bis (optional)" controlId="funnel-b-offer-valid-until">
+          <input
+            id="funnel-b-offer-valid-until"
+            type="date"
+            name="offer_valid_until"
+            className="input-field"
+            min={validity.min}
+            max={validity.max}
+            value={data.offerValidUntil}
+            onChange={(e) => update({ offerValidUntil: e.target.value })}
+          />
+        </Field>
+      </div>
     </form>
+  );
+}
+
+const INCLUDE_ICONS: Record<string, LucideIcon> = {
+  appliances: Refrigerator,
+  delivery: Truck,
+  assembly: Wrench,
+  sink: Droplets,
+  removal: Recycle,
+  connection: Plug,
+  measurement: Ruler,
+  [OFFER_INCLUDES_UNKNOWN]: HelpCircle,
+};
+
+const INCLUDE_OPTIONS = [
+  ...OFFER_INCLUDES.map((o) => ({ id: o.slug, label: o.name })),
+  { id: OFFER_INCLUDES_UNKNOWN, label: "Weiß ich nicht genau" },
+].map((o) => {
+  const Icon = INCLUDE_ICONS[o.id];
+  return { ...o, icon: Icon ? <Icon aria-hidden="true" /> : undefined };
+});
+
+/** Leistungsumfang des Angebots; „Weiß ich nicht genau“ schließt die übrigen Punkte aus. */
+export function OfferIncludesStep({ data, update }: Omit<FunnelBStepProps, "onAdvance">) {
+  const change = (next: string[]) => {
+    const added = next.find((id) => !data.offerIncludes.includes(id));
+    update({ offerIncludes: added === OFFER_INCLUDES_UNKNOWN ? [OFFER_INCLUDES_UNKNOWN] : next.filter((id) => id !== OFFER_INCLUDES_UNKNOWN) });
+  };
+  return <MultiCardStep labelledBy={FUNNEL_HEADING_ID} options={INCLUDE_OPTIONS} selected={data.offerIncludes} onSelectionChange={change} />;
+}
+
+export function KitchenFormStep({ data, update, onAdvance }: FunnelBStepProps) {
+  return (
+    <ImageCardStep
+      labelledBy={FUNNEL_HEADING_ID}
+      selected={data.kitchenForm}
+      onSelect={(id) => update({ kitchenForm: id })}
+      onAutoAdvance={onAdvance}
+      options={FORM_OPTIONS.map((f) =>
+        hasKitchenFormPlan(f.id)
+          ? { id: f.id, label: f.label, description: f.hint, pictogram: <KitchenFormPlan form={f.id} /> }
+          : { id: f.id, label: f.label, description: f.hint, icon: <MessagesSquare aria-hidden="true" /> },
+      )}
+    />
   );
 }
 

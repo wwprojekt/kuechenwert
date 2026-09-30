@@ -94,6 +94,22 @@ describe("buildFloorPlanDxf", () => {
     const dxf = buildFloorPlanDxf(detail({ summary: { source: "c", room } }))!;
     expect(dxf).toContain("Beispielmasse, vom Kunden nicht angepasst, bitte vor Ort aufmessen");
   });
+
+  it("zeichnet ohne Planung die Wände, die der Kunde nachgetragen hat", () => {
+    const added = detail({ summary: { source: "a", kitchen_form: "l" }, details: { customer: { walls: { a: 300, b: 240 } } } });
+    const dxf = buildFloorPlanDxf(added)!;
+    expect(dxf).toContain("Masse vom Kunden nachgetragen, bitte vor Ort aufmessen");
+    expect(dxf).toContain("11\n3000.0\n21\n0.0");
+    expect(buildFloorPlanDxf({ ...added, details: { customer: { walls: { a: 300 } } } })).toBeNull();
+  });
+});
+
+describe("buildBriefing mit Ergänzungen", () => {
+  it("gibt Kundenangaben und Experten-Check mit aus", () => {
+    const details = { customer: { ventilation: "umluft" as const }, expert: { manufacturer: "Nobilia" } };
+    expect(buildBriefing(detail({ details }), {}).additions).toEqual(details);
+    expect(buildBriefing(detail(), {}).additions).toBeNull();
+  });
 });
 
 describe("buildBriefing mit Standardwerten", () => {

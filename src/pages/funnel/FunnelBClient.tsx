@@ -11,7 +11,6 @@ import { ConsentStep, ContactStep, NameStep, PlzCityStep } from "@/features/funn
 import {
   AppliancesStep,
   BrandStep,
-  DeliveryStep,
   DownPaymentStep,
   ExtrasStep,
   FrontStep,
@@ -20,11 +19,18 @@ import {
   PaymentStep,
   SinkBrandStep,
   SinkStep,
-  WasteStep,
   WorktopNameStep,
   WorktopStep,
 } from "@/features/funnel-b/steps/DetailSteps";
-import { DetailsChoiceStep, DocumentsChoiceStep, PriceStep, TimeframeStep, UploadStep } from "@/features/funnel-b/steps/OfferSteps";
+import {
+  DetailsChoiceStep,
+  DocumentsChoiceStep,
+  KitchenFormStep,
+  OfferIncludesStep,
+  PriceStep,
+  TimeframeStep,
+  UploadStep,
+} from "@/features/funnel-b/steps/OfferSteps";
 import { ApiError, errorMessage } from "@/features/marketplace/api-client";
 import { useFunnelTelemetry } from "@/hooks/useFunnelTelemetry";
 import { useSupportPhone } from "@/hooks/useSupportPhone";
@@ -215,8 +221,10 @@ export default function FunnelBClient() {
   const props = { data, update, onAdvance: handleNext };
   const CONTENT: Record<FunnelBStepKey, ReactNode> = {
     preis: <PriceStep {...props} />,
+    leistungsumfang: <OfferIncludesStep {...props} />,
     unterlagen: <DocumentsChoiceStep {...props} />,
     hochladen: <UploadStep {...props} />,
+    kuechenform: <KitchenFormStep {...props} />,
     zeitrahmen: <TimeframeStep {...props} />,
     details: <DetailsChoiceStep {...props} />,
     marke: <BrandStep {...props} />,
@@ -227,10 +235,8 @@ export default function FunnelBClient() {
     geraete: <AppliancesStep {...props} />,
     spuele: <SinkStep {...props} />,
     "spuele-marke": <SinkBrandStep {...props} />,
-    muell: <WasteStep {...props} />,
     extras: <ExtrasStep {...props} />,
     notizen: <NotesStep {...props} />,
-    lieferung: <DeliveryStep {...props} />,
     zahlung: <PaymentStep {...props} />,
     anzahlung: <DownPaymentStep {...props} />,
     plz: <PlzCityStep {...props} />,

@@ -297,7 +297,7 @@ export default function AdminLeads() {
                 </DialogDescription>
               </DialogHeader>
               <div className="space-y-4 text-sm">
-                <AdminTenderPanel leadId={selected.id} funnelType={selected.funnel_type} />
+                <AdminTenderPanel leadId={selected.id} funnelType={selected.funnel_type} kitchenForm={selected.kitchen_form} />
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <div className="text-xs uppercase text-muted-foreground">E-Mail</div>

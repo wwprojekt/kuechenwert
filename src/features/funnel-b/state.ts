@@ -11,6 +11,11 @@ export interface FunnelBAppliance {
 
 /** Formularstand von Funnel B; Feldnamen sind der Vertrag mit kw-lead-b. */
 export interface FunnelBData {
+  /** Leistungsumfang des vorhandenen Angebots (OFFER_INCLUDES) oder ["unknown"]. */
+  offerIncludes: string[];
+  /** YYYY-MM-DD aus dem Angebot, optional. */
+  offerValidUntil: string;
+  kitchenForm: string;
   timeframe: string;
 
   brand: string;
@@ -28,12 +33,10 @@ export interface FunnelBData {
   sinkBrand: string;
   sinkMaterial: string;
   sinkDesignation: string;
-  wasteSeparationSystem: "yes" | "no" | "unknown" | "";
 
   extras: string[];
   extrasNotes: string;
 
-  deliveryMode: string;
   paymentDownPaymentPercent: string;
   paymentFinancing: string;
   paymentFinancingApr: string;
@@ -64,6 +67,9 @@ export interface FunnelBData {
 }
 
 export const initialFunnelBData: FunnelBData = {
+  offerIncludes: [],
+  offerValidUntil: "",
+  kitchenForm: "",
   timeframe: "",
   brand: "",
   brandCustom: "",
@@ -77,10 +83,8 @@ export const initialFunnelBData: FunnelBData = {
   sinkBrand: "",
   sinkMaterial: "",
   sinkDesignation: "",
-  wasteSeparationSystem: "",
   extras: [],
   extrasNotes: "",
-  deliveryMode: "",
   paymentDownPaymentPercent: "",
   paymentFinancing: "",
   paymentFinancingApr: "",

@@ -156,6 +156,21 @@ describe("describeFunnelA", () => {
     expect(Object.values(rows).join(" ")).not.toMatch(/unsicher|_/);
   });
 
+  it("zeigt gewünschte Leistungen als eigene Gruppe", () => {
+    const groups = describeFunnelA({ source: "a", kitchen_form: "l", answers: { services: ["lieferung_montage", "altkueche", "rakete"] } });
+    expect(groups.find((g) => g.title === "Leistungen")?.rows).toEqual([
+      { label: "Gewünscht", value: "Lieferung & Montage, Altküche abbauen & entsorgen" },
+    ]);
+    expect(describeFunnelA({ source: "a", kitchen_form: "l", answers: {} }).map((g) => g.title)).not.toContain("Leistungen");
+  });
+
+  it("rechnet ohne Antwort mit Lieferung und Montage, speichert aber nur echte Antworten", () => {
+    expect(sanitizeFunnelAAnswers({}).services).toEqual([]);
+    expect(sanitizeFunnelAAnswers({ services: ["wasser", "rakete", "wasser"] }).services).toEqual(["wasser"]);
+    expect(funnelAPlannerInput(answers()).config.services).toEqual(["lieferung_montage"]);
+    expect(funnelAPlannerInput(answers({ services: ["altkueche"] })).config.services).toEqual(["altkueche"]);
+  });
+
   it("zeigt Alt-Leads ohne Roh-IDs und UUIDs", () => {
     const groups = describeFunnelA({
       source: "a",
@@ -267,6 +282,17 @@ describe("describeFunnelB / describeLeadSummary", () => {
     });
   });
 
+  it("zeigt Leistungsumfang und Gültigkeit des Vergleichsangebots", () => {
+    const rows = (answers: Record<string, unknown>) => describeFunnelB({ source: "b", existing_offer_eur: 18_000, answers })[0]?.rows;
+    expect(rows({ offerIncludes: ["delivery", "assembly", "appliances"], offerValidUntil: "2026-11-15" })).toEqual([
+      { label: "Vorhandenes Angebot", value: "18.000 €" },
+      { label: "Im Preis enthalten", value: "Elektrogeräte, Lieferung, Montage" },
+      { label: "Gültig bis", value: "15.11.2026" },
+    ]);
+    expect(rows({ offerIncludes: ["unknown"] })).toContainEqual({ label: "Im Preis enthalten", value: "nicht bekannt" });
+    expect(rows({ offerValidUntil: "bald" })).toEqual([{ label: "Vorhandenes Angebot", value: "18.000 €" }]);
+  });
+
   it("baut aus einer leads-Zeile dieselbe Struktur wie kw_lead_public_summary", () => {
     const summary = leadSummaryFromRow({
       funnel_type: "b",
@@ -313,6 +339,18 @@ describe("describeFunnelB / describeLeadSummary", () => {
     ]);
     expect(describeLeadSummary({ source: "c", timeframe_months: 6, housing_type: "unknown" })).toEqual([
       { title: "Rahmen", rows: [{ label: "Zeitraum", value: "In ca. 6 Monaten" }] },
+    ]);
+  });
+
+  it("zeigt Budget, Anlass und Wohnsituation aus dem Planer", () => {
+    const rows = (summary: Record<string, unknown>) => describeLeadSummary({ source: "c", ...summary })[0]?.rows ?? [];
+    expect(rows({ budget_eur: 22_000, budget_source: "slider", purchase_reason: "umzug", housing: "own_house", housing_type: "own" })).toEqual([
+      { label: "Budget", value: "ca. 22.000 €" },
+      { label: "Anlass", value: "Umzug" },
+      { label: "Wohnsituation", value: "Eigenes Haus" },
+    ]);
+    expect(rows({ budget_source: "unknown", purchase_reason: UNSURE, housing: UNSURE, housing_type: "own" })).toEqual([
+      { label: "Budget", value: "Beratung gewünscht" },
     ]);
   });
 });

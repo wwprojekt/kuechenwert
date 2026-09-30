@@ -35,8 +35,18 @@ import {
 import { checkTurnstile } from "../_shared/turnstile.ts";
 import { insertLeadWithConsents, leadForSubmission, parseSubmissionId, sanitizeClickIds } from "../_shared/lead-intake.ts";
 import { regionForPostalCode } from "../_shared/plz-region.ts";
-import { DELIVERY_MODES, EXTRAS_OPTIONS, FINANCING_OPTIONS, TIMEFRAMES } from "../_shared/funnel-b-catalog.ts";
+import {
+  DELIVERY_MODES,
+  EXTRAS_OPTIONS,
+  FINANCING_OPTIONS,
+  OFFER_INCLUDES,
+  OFFER_INCLUDES_UNKNOWN,
+  TIMEFRAMES,
+  plausibleOfferDate,
+} from "../_shared/funnel-b-catalog.ts";
+import { FORM_OPTIONS } from "../_shared/funnel-a-catalog.ts";
 import { attachUploadedFiles, issueUploads, parseAnnouncedFiles } from "../_shared/lead-files.ts";
+import { redactOptional } from "../_shared/contact-redaction.ts";
 
 const CONSENT_TEXT_VERSION = "kw-unterbieten-2026-09-28b";
 
@@ -46,6 +56,20 @@ const TIMEFRAME_MONTHS = new Map<string, number | null>(TIMEFRAMES.map((t) => [t
 const DELIVERY = new Set<string>(DELIVERY_MODES.map((d) => d.slug));
 const FINANCING = new Set<string>(FINANCING_OPTIONS.map((f) => f.slug));
 const EXTRAS = new Set<string>(EXTRAS_OPTIONS.map((e) => e.slug));
+const INCLUDES = OFFER_INCLUDES.map((o) => o.slug);
+const FORMS = new Set<string>(FORM_OPTIONS.map((f) => f.id));
+
+/** Freitext, den Studios sehen: gekürzt und ohne Kontaktdaten. */
+function studioText(value: unknown, max: number): string | null {
+  return redactOptional(cleanText(value, max));
+}
+
+/** Leistungsumfang des vorhandenen Angebots; „Weiß ich nicht“ steht allein. */
+function offerIncludes(value: unknown): string[] {
+  if (!Array.isArray(value)) return [];
+  if (value.includes(OFFER_INCLUDES_UNKNOWN)) return [OFFER_INCLUDES_UNKNOWN];
+  return INCLUDES.filter((slug) => value.includes(slug));
+}
 
 function asRecord(value: unknown): Record<string, unknown> {
   return value && typeof value === "object" && !Array.isArray(value) ? (value as Record<string, unknown>) : {};
@@ -124,9 +148,10 @@ async function actionSubmit(req: Request, sb: SupabaseClient, body: Record<strin
     return {
       categorySlug: cleanText(a.categorySlug, 60),
       brandSlug: cleanText(a.brandSlug, 60),
-      model: cleanText(a.model, 120),
+      model: studioText(a.model, 120),
     };
   });
+  const kitchenForm = typeof d.kitchenForm === "string" && FORMS.has(d.kitchenForm) ? d.kitchenForm : null;
   // Erst nach der Validierung: ein Eingabefehler soll das Token nicht verbrauchen.
   const botCheck = await checkTurnstile(body.turnstile_token, ip);
   const waste = slugIn(d.wasteSeparationSystem, WASTE_SEPARATION);
@@ -165,6 +190,7 @@ async function actionSubmit(req: Request, sb: SupabaseClient, body: Record<strin
       email,
       phone,
       budget_midpoint: Math.round(priceEur),
+      kitchen_form: kitchenForm,
       timeframe_months: timeframeMonths,
       delivery_mode: slugIn(d.deliveryMode, DELIVERY),
       payment_financing: slugIn(d.paymentFinancing, FINANCING),
@@ -181,20 +207,23 @@ async function actionSubmit(req: Request, sb: SupabaseClient, body: Record<strin
       special_wishes: extras,
       consent_call: consentStudioCall,
       consent_marketing: consentMarketing,
+      // Freitexte sehen Studios vor dem Kontaktkauf: ohne Kontaktdaten speichern.
       funnel_answers: {
         brand: cleanText(d.brand, 80),
-        brandCustom: cleanText(d.brandCustom, 120),
-        frontName: cleanText(d.frontName, 120),
+        brandCustom: studioText(d.brandCustom, 120),
+        frontName: studioText(d.frontName, 120),
         frontMaterialName: cleanText(d.frontMaterialName, 120),
         handleType: cleanText(d.handleType, 60),
         worktopMaterial: cleanText(d.worktopMaterial, 60),
         worktopDesign: cleanText(d.worktopDesign, 120),
-        worktopDesignCustom: cleanText(d.worktopDesignCustom, 120),
+        worktopDesignCustom: studioText(d.worktopDesignCustom, 120),
         appliances,
         sinkBrand: cleanText(d.sinkBrand, 60),
         sinkMaterial: cleanText(d.sinkMaterial, 60),
-        sinkDesignation: cleanText(d.sinkDesignation, 120),
-        extrasNotes: cleanText(d.extrasNotes, 1000),
+        sinkDesignation: studioText(d.sinkDesignation, 120),
+        extrasNotes: studioText(d.extrasNotes, 1000),
+        offerIncludes: offerIncludes(d.offerIncludes),
+        offerValidUntil: plausibleOfferDate(d.offerValidUntil),
         salutation,
         offerDeliveryMethod: offerDelivery,
         timeframeSlug: timeframe,

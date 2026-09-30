@@ -11,6 +11,12 @@ interface BudgetStepProps {
   onChange: (value: number | null) => void;
 }
 
+/** Ohne Antwort zur Leistung rechnet die Schätzung mit Lieferung und Montage (funnelAPlannerInput). */
+function anchorScope(services: FunnelAAnswers["services"]): string {
+  if (services.length === 0 || services.includes("lieferung_montage")) return "Markenküche inkl. Geräte, Lieferung & Montage";
+  return "Markenküche inkl. Geräte, ohne Lieferung & Montage";
+}
+
 /** Budget-Slider mit Preisanker aus den bisherigen Antworten. */
 export function BudgetStep({ answers, onChange }: BudgetStepProps) {
   const { card, calibration, rateCardVersion } = usePriceModel();
@@ -28,7 +34,7 @@ export function BudgetStep({ answers, onChange }: BudgetStepProps) {
           <strong className="whitespace-nowrap font-semibold tabular-nums text-brand-800">
             {NUMBER.format(estimate.min)} – {NUMBER.format(estimate.max)} €
           </strong>
-          <span className="mt-0.5 block text-xs text-ink-muted xshort:hidden">Markenküche inkl. Geräte, Lieferung &amp; Montage</span>
+          <span className="mt-0.5 block text-xs text-ink-muted xshort:hidden">{anchorScope(answers.services)}</span>
         </p>
       </div>
 
@@ -39,6 +45,7 @@ export function BudgetStep({ answers, onChange }: BudgetStepProps) {
         max={FUNNEL_A_BUDGET.max}
         step={FUNNEL_A_BUDGET.step}
         defaultValue={FUNNEL_A_BUDGET.default}
+        confirmed={answers.budget_confirmed}
       />
     </div>
   );

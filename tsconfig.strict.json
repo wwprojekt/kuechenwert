@@ -116,6 +116,8 @@
     "supabase/functions/_shared/funnel-b-catalog.ts",
     "supabase/functions/_shared/funnel-telemetry.ts",
     "supabase/functions/_shared/planner-provenance.ts",
-    "supabase/functions/_shared/planner-summary.ts"
+    "supabase/functions/_shared/planner-summary.ts",
+    "supabase/functions/_shared/contact-redaction.ts",
+    "supabase/functions/_shared/lead-details.ts"
   ]
 }

@@ -17,6 +17,7 @@ import {
   type PlannerProvenance,
   type RoomInput,
 } from "./core";
+import { FUNNEL_A_BUDGET, HOUSING_OPTIONS, OCCASION_OPTIONS } from "@/features/funnel-a/catalog";
 import { loadSession, renderStatus, type PlannerPhoto, type PlannerRender, type PlannerSessionRender } from "./api";
 import { roomWallIssues } from "./estimate-gate";
 import { normalizePlannerStep, type PlannerStep } from "./flow";
@@ -41,6 +42,12 @@ export interface PlannerState {
   offersChoice: OffersChoice | null;
   /** Zeitrahmen in Monaten als Text ("1", "3" …), nur mit Angeboten. */
   timeframe: string;
+  /** Budget in Euro, null = „Weiß ich nicht“; zählt nur mit budgetConfirmed (nur mit Angeboten). */
+  budget: number | null;
+  budgetConfirmed: boolean;
+  /** Anlass und Wohnsituation (IDs aus dem Katalog von Funnel A), nur mit Angeboten. */
+  occasion: string;
+  housing: string;
   /** Kontakt erfasst: Visualisierung und Preis sind freigeschaltet. */
   submitted: boolean;
   /** Für diese Planung holen Studios Angebote ein. */
@@ -69,6 +76,9 @@ type Action =
   | { type: "activeRender"; id: string }
   | { type: "offersChoice"; value: OffersChoice }
   | { type: "timeframe"; value: string }
+  | { type: "budget"; value: number | null }
+  | { type: "occasion"; value: string }
+  | { type: "housing"; value: string }
   | { type: "hydrate"; state: Partial<PlannerState> }
   | { type: "submitted"; offersRequested: boolean }
   | { type: "offersRequested" }
@@ -89,10 +99,22 @@ function initialState(): PlannerState {
     activeRenderId: null,
     offersChoice: null,
     timeframe: "",
+    budget: FUNNEL_A_BUDGET.default,
+    budgetConfirmed: false,
+    occasion: "",
+    housing: "",
     submitted: false,
     offersRequested: false,
     answered: emptyProvenance(),
   };
+}
+
+const OCCASION_IDS = new Set(OCCASION_OPTIONS.map((o) => o.id));
+const HOUSING_IDS = new Set(HOUSING_OPTIONS.map((o) => o.id));
+
+function storedBudget(value: unknown): number | null {
+  if (value === null) return null;
+  return typeof value === "number" && value >= FUNNEL_A_BUDGET.min && value <= FUNNEL_A_BUDGET.max ? value : FUNNEL_A_BUDGET.default;
 }
 
 function reducer(state: PlannerState, action: Action): PlannerState {
@@ -115,7 +137,7 @@ function reducer(state: PlannerState, action: Action): PlannerState {
       }
       return {
         ...state,
-        room: { ...next, ceilingHeightCm: state.room.ceilingHeightCm },
+        room: { ...next, ceilingHeightCm: state.room.ceilingHeightCm, ventilation: state.room.ventilation ?? null, notes: state.room.notes ?? null },
         answered: keepWallsOf(state.answered, action.form),
       };
     }
@@ -160,6 +182,12 @@ function reducer(state: PlannerState, action: Action): PlannerState {
       return { ...state, offersChoice: action.value };
     case "timeframe":
       return { ...state, timeframe: action.value };
+    case "budget":
+      return { ...state, budget: action.value, budgetConfirmed: true };
+    case "occasion":
+      return { ...state, occasion: action.value };
+    case "housing":
+      return { ...state, housing: action.value };
     case "hydrate":
       return { ...state, ...action.state };
     case "submitted":
@@ -188,6 +216,10 @@ function readStorage(): Partial<PlannerState> | null {
       photos: [],
       offersChoice: parsed.offersChoice === "ja" || parsed.offersChoice === "nein" ? parsed.offersChoice : null,
       timeframe: typeof parsed.timeframe === "string" ? parsed.timeframe : "",
+      budget: storedBudget(parsed.budget),
+      budgetConfirmed: parsed.budgetConfirmed === true,
+      occasion: OCCASION_IDS.has(String(parsed.occasion)) ? String(parsed.occasion) : "",
+      housing: HOUSING_IDS.has(String(parsed.housing)) ? String(parsed.housing) : "",
       submitted: parsed.submitted === true,
       offersRequested: parsed.offersRequested === true,
       // Bild-URLs laufen ab und kommen frisch vom Server (erst nach der Kontakterfassung).
@@ -310,6 +342,9 @@ export function usePlanner() {
       setActiveRender: (id: string) => dispatch({ type: "activeRender", id }),
       setOffersChoice: (value: OffersChoice) => dispatch({ type: "offersChoice", value }),
       setTimeframe: (value: string) => dispatch({ type: "timeframe", value }),
+      setBudget: (value: number | null) => dispatch({ type: "budget", value }),
+      setOccasion: (value: string) => dispatch({ type: "occasion", value }),
+      setHousing: (value: string) => dispatch({ type: "housing", value }),
       markSubmitted: (offersRequested: boolean) => dispatch({ type: "submitted", offersRequested }),
       markOffersRequested: () => dispatch({ type: "offersRequested" }),
       reset: () => {

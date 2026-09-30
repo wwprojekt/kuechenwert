@@ -3,12 +3,11 @@ import { useMemo, useRef } from "react";
 import { CardStep } from "@/components/funnel/card-step";
 import { Combobox, type ComboboxOption } from "@/components/funnel/combobox";
 import { FUNNEL_HEADING_ID } from "@/components/funnel/funnel-frame";
-import { DELIVERY_ICONS, FINANCING_ICONS, HANDLE_TYPE_ICONS, SINK_MATERIAL_ICONS, WASTE_SEP_ICONS } from "@/components/funnel/funnel-b-icons";
+import { FINANCING_ICONS, HANDLE_TYPE_ICONS, SINK_MATERIAL_ICONS } from "@/components/funnel/funnel-b-icons";
 import { MultiCardStep } from "@/components/funnel/multi-card-step";
 import {
   APPLIANCE_BRANDS,
   APPLIANCE_CATEGORIES,
-  DELIVERY_MODES,
   EXTRAS_OPTIONS,
   FINANCING_OPTIONS,
   FRONT_CATEGORY_LABEL,
@@ -219,23 +218,6 @@ export function SinkBrandStep({ data, update }: Props) {
   );
 }
 
-export function WasteStep({ data, update, onAdvance }: FunnelBStepProps) {
-  return (
-    <CardStep
-      labelledBy={FUNNEL_HEADING_ID}
-      columns={3}
-      selected={data.wasteSeparationSystem}
-      onSelect={(v) => update({ wasteSeparationSystem: v as FunnelBData["wasteSeparationSystem"] })}
-      onAutoAdvance={onAdvance}
-      options={[
-        { id: "yes", label: "Ja, vorgesehen", icon: WASTE_SEP_ICONS.yes },
-        { id: "no", label: "Nein, kein System", icon: WASTE_SEP_ICONS.no },
-        { id: "unknown", label: "Weiß ich nicht", icon: WASTE_SEP_ICONS.unknown },
-      ]}
-    />
-  );
-}
-
 /** Kurze Beschriftungen, damit alle Extras auf einen Handy-Bildschirm passen; gespeichert wird der Slug. */
 const EXTRA_SHORT: Record<string, string> = {
   steckdosen: "Steckdosen / USB",
@@ -244,7 +226,7 @@ const EXTRA_SHORT: Record<string, string> = {
   beleuchtung_innen: "Licht im Schrank",
   ausziehauszug: "Apothekerauszug",
   "eckschrank-karussell": "Eckschrank-Lösung",
-  abfallsystem: "Abfallsystem",
+  abfallsystem: "Mülltrennsystem",
   kraeuterregal: "Gewürzregal",
   "rueckwand-glas": "Glas-Rückwand",
   sockelschublade: "Sockel-Schubladen",
@@ -270,22 +252,6 @@ export function NotesStep({ data, update }: Props) {
       placeholder="z. B. Spritzschutz aus Glas, USB-Dosen in der Schublade …"
       value={data.extrasNotes}
       onChange={(e) => update({ extrasNotes: e.target.value })}
-    />
-  );
-}
-
-export function DeliveryStep({ data, update, onAdvance }: FunnelBStepProps) {
-  return (
-    <CardStep
-      labelledBy={FUNNEL_HEADING_ID}
-      columns={2}
-      selected={data.deliveryMode}
-      onSelect={(v) => update({ deliveryMode: v })}
-      onAutoAdvance={onAdvance}
-      options={[
-        ...DELIVERY_MODES.map((d) => ({ id: d.slug, label: d.name, icon: DELIVERY_ICONS[d.slug] })),
-        { id: "unknown", label: "Weiß ich nicht", icon: DELIVERY_ICONS.unknown },
-      ]}
     />
   );
 }

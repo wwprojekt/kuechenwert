@@ -1,7 +1,8 @@
 /**
- * Unterlagen zu einer Anfrage „Studio-Preis unterbieten“: Kategorien, Grenzen
- * und Prüfung im Browser. Spiegelt supabase/functions/_shared/lead-files.ts;
- * Grenzen dort und hier gemeinsam ändern.
+ * Unterlagen zu einer Anfrage: Kategorien, Grenzen und Prüfung im Browser.
+ * Funnel B startet mit dem vorhandenen Angebot, Anfrage und Planer reichen
+ * Grundriss und Raumfotos auf der Projektseite nach. Spiegelt
+ * supabase/functions/_shared/lead-files.ts; Grenzen dort und hier gemeinsam ändern.
  */
 
 /** Interne Kategorien in lead_files; „grundriss“ steht für die gesamte Planung. */
@@ -41,9 +42,29 @@ export const LEAD_FILE_CATEGORIES: LeadFileCategoryOption[] = [
   },
 ];
 
+/** Anfrage (A) und Planer (C): Raum statt Angebot. */
+export const ROOM_FILE_CATEGORIES: LeadFileCategoryOption[] = [
+  {
+    value: "grundriss",
+    label: "Grundriss oder Bauplan",
+    description: "Maßskizze, Bauplan oder Grundriss vom Architekten.",
+    accept: "application/pdf,image/*",
+  },
+  {
+    value: "kueche_bild",
+    label: "Fotos vom Raum",
+    description: "Die Wände, an die die Küche soll – bei Tageslicht und ohne Personen.",
+    accept: "image/*",
+  },
+];
+
+export function leadFileCategoriesFor(funnelType: string): LeadFileCategoryOption[] {
+  return funnelType === "b" ? LEAD_FILE_CATEGORIES : ROOM_FILE_CATEGORIES;
+}
+
 const CATEGORY_LABELS: Record<string, string> = {
   angebot: "Angebot",
-  grundriss: "Planung",
+  grundriss: "Planung / Grundriss",
   kueche_bild: "Foto",
   rendering: "Visualisierung",
   sonstiges: "Sonstiges",
@@ -96,7 +117,7 @@ export function leadFileProblem(file: Pick<File, "name" | "type" | "size">, cate
   const type = leadFileType(file);
   if (!ACCEPTED_TYPES.has(type)) return `„${file.name}“: Bitte nur PDF oder Bilder (JPG, PNG, WebP, HEIC) hochladen.`;
   if (category === "kueche_bild" && type === "application/pdf") {
-    return `„${file.name}“ ist ein PDF – bitte unter „Planung“ oder „Schriftliches Angebot“ hochladen.`;
+    return `„${file.name}“ ist ein PDF – hier bitte nur Fotos, PDFs gehören zu Planung bzw. Grundriss.`;
   }
   if (file.size <= 0) return `„${file.name}“ ist leer.`;
   if (file.size > MAX_LEAD_FILE_BYTES) {

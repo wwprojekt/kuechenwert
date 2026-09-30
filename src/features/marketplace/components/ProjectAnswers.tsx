@@ -1,9 +1,8 @@
-import { describeLeadSummary } from "@/features/funnel-a/catalog";
+import { describeLeadSummary, type DetailGroup } from "@/features/funnel-a/catalog";
 import { cn } from "@/lib/utils";
 
-/** Angaben eines Funnel-A/B-Projekts, gruppiert; ohne solche Angaben rendert die Komponente nichts. */
-export function ProjectAnswers({ summary, title, wide = false }: { summary: unknown; title: string; wide?: boolean }) {
-  const groups = describeLeadSummary(summary);
+/** Gruppierte Angaben als Karte; ohne Gruppen rendert die Komponente nichts. */
+export function DetailGroupsCard({ groups, title, wide = false }: { groups: DetailGroup[]; title: string; wide?: boolean }) {
   if (groups.length === 0) return null;
 
   return (
@@ -26,4 +25,9 @@ export function ProjectAnswers({ summary, title, wide = false }: { summary: unkn
       </div>
     </div>
   );
+}
+
+/** Angaben eines Projekts aus dem Funnel (A, B oder der Rahmen von C). */
+export function ProjectAnswers({ summary, title, wide = false }: { summary: unknown; title: string; wide?: boolean }) {
+  return <DetailGroupsCard groups={describeLeadSummary(summary)} title={title} wide={wide} />;
 }

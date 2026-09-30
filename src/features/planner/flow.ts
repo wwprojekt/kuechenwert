@@ -20,6 +20,7 @@ export type PlannerStep =
   | "spuele"
   | "geraeteklasse"
   | "kochen"
+  | "abluft"
   | "geraete"
   | "extras"
   | "leistungen"
@@ -28,6 +29,9 @@ export type PlannerStep =
   | "visualisierung"
   | "angebote"
   | "zeitrahmen"
+  | "budget"
+  | "anlass"
+  | "wohnsituation"
   | "name"
   | "kontakt"
   | "ergebnis";
@@ -55,6 +59,7 @@ export const PLANNER_STEPS: readonly PlannerStepDef[] = [
   { id: "spuele", label: "Spüle & Armatur", kind: "plan", detail: true },
   { id: "geraeteklasse", label: "Geräte-Klasse", kind: "plan", detail: true },
   { id: "kochen", label: "Kochen & Kühlen", kind: "plan", detail: true },
+  { id: "abluft", label: "Dunstabzug", kind: "plan", detail: true },
   { id: "geraete", label: "Weitere Geräte", kind: "plan", detail: true },
   { id: "extras", label: "Extras", kind: "plan", detail: true },
   { id: "leistungen", label: "Leistungen", kind: "plan", detail: true },
@@ -63,6 +68,9 @@ export const PLANNER_STEPS: readonly PlannerStepDef[] = [
   { id: "visualisierung", label: "Visualisierung", kind: "lead" },
   { id: "angebote", label: "Angebote", kind: "lead" },
   { id: "zeitrahmen", label: "Zeitrahmen", kind: "lead" },
+  { id: "budget", label: "Budget", kind: "lead" },
+  { id: "anlass", label: "Anlass", kind: "lead" },
+  { id: "wohnsituation", label: "Wohnsituation", kind: "lead" },
   { id: "name", label: "Name", kind: "lead" },
   { id: "kontakt", label: "Kontakt", kind: "lead" },
   { id: "ergebnis", label: "Ihre Küche", kind: "result" },
@@ -93,14 +101,17 @@ export function stepDef(step: PlannerStep): PlannerStepDef {
 export interface FlowState {
   /** Kontakt erfasst: Lead-Schritte entfallen, Visualisieren führt direkt ins Ergebnis. */
   unlocked: boolean;
-  /** Antwort auf „Möchten Sie auch Angebote?“; der Zeitrahmen folgt nur bei Ja. */
+  /** Antwort auf „Möchten Sie auch Angebote?“; Zeitrahmen, Budget, Anlass und Wohnsituation folgen nur bei Ja. */
   wantsOffers: boolean | null;
 }
+
+/** Fragen für die Studios: nur mit „Ja, Angebote“. */
+const OFFER_QUESTIONS: ReadonlySet<PlannerStep> = new Set(["zeitrahmen", "budget", "anlass", "wohnsituation"]);
 
 /** Sichtbare Schritte in Reihenfolge. */
 export function plannerFlow({ unlocked, wantsOffers }: FlowState): PlannerStep[] {
   return PLANNER_STEPS.filter((s) => {
-    if (s.kind === "lead") return !unlocked && (s.id !== "zeitrahmen" || wantsOffers === true);
+    if (s.kind === "lead") return !unlocked && (!OFFER_QUESTIONS.has(s.id) || wantsOffers === true);
     if (s.kind === "result") return unlocked;
     return true;
   }).map((s) => s.id);

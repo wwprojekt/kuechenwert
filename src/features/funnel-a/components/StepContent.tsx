@@ -1,7 +1,7 @@
 import type { LucideIcon } from "lucide-react";
 import { CardStep, type CardOption } from "@/components/funnel/card-step";
 import { KitchenFormPlan, hasKitchenFormPlan } from "@/components/kitchen/KitchenFormPlan";
-import { EXTRA_APPLIANCE_ICONS, choiceIcon } from "@/components/funnel/funnel-a-icons";
+import { EXTRA_APPLIANCE_ICONS, SERVICE_ICONS, choiceIcon } from "@/components/funnel/funnel-a-icons";
 import { WORKTOP_PICTOGRAMS, WORKTOP_TINTS } from "@/components/funnel/funnel-a-pictograms";
 import { ImageCardStep, type ImageOption } from "@/components/funnel/image-card-step";
 import { MultiCardStep } from "@/components/funnel/multi-card-step";
@@ -111,7 +111,14 @@ export function StepContent({ step, answers, onAnswer, onAdvance }: StepContentP
         />
       );
     case "multi":
-      return (
+      return step.field === "services" ? (
+        <MultiCardStep
+          options={step.options.map((o) => ({ ...o, icon: renderIcon(SERVICE_ICONS[o.id]) }))}
+          selected={answers.services}
+          onSelectionChange={(ids) => onAnswer("services", ids)}
+          labelledBy={QUESTION_ID}
+        />
+      ) : (
         <MultiCardStep
           options={step.options.map((o) => ({ ...o, icon: renderIcon(EXTRA_APPLIANCE_ICONS[o.id]) }))}
           selected={answers.extra_appliances}

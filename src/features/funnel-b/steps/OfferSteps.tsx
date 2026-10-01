@@ -186,7 +186,8 @@ export function UploadStep({ data, update }: Omit<FunnelBStepProps, "onAdvance">
       ))}
       <PendingFileList files={data.uploads} onRemove={(id) => update({ uploads: data.uploads.filter((u) => u.id !== id) })} />
       <p className="text-xs leading-snug text-ink-muted">
-        Ihre Unterlagen sieht zuerst nur unser Team. Studios zeigen wir sie erst ohne Namen und Kontaktdaten.
+        Ihre Unterlagen sieht zuerst nur unser Team, beim Auslesen hilft eine KI in der EU. Studios zeigen wir sie erst ohne Namen und
+        Kontaktdaten.
       </p>
     </div>
   );

@@ -176,9 +176,11 @@ async function actionSubmit(req: Request, sb: SupabaseClient, body: Record<strin
   const userId = await userIdFromAuthHeader(sb, req);
   const userAgent = req.headers.get("user-agent")?.slice(0, 500) ?? null;
 
+  // Wie kw_lead_refresh_tier, das nach dem Upload mit den tatsächlich angehängten Dateien nachrechnet:
+  // Eine Planung vom Studio enthält die Maße.
   const { data: tierRow } = await sb.rpc("kw_lead_tier_score", {
     p_has_photo: files.some((f) => f.category === "kueche_bild" || f.category === "grundriss"),
-    p_has_dimensions: false,
+    p_has_dimensions: files.some((f) => f.category === "grundriss"),
     p_has_phone: true,
     p_timeframe_months: timeframeMonths,
     p_value_eur: Math.round(priceEur),

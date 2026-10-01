@@ -11,46 +11,43 @@ import { OFFER_INCLUDES, OFFER_INCLUDES_UNKNOWN } from "@/config/funnel-b-stammd
 import { KITCHEN_FORMS } from "@/features/planner/core";
 import { errorMessage } from "../api-client";
 import { fetchLeadDetails, saveExpertBriefing } from "../admin-api";
+import { fillBriefingDraft, toBriefingDraft, type BriefingDraft } from "../briefing-draft";
 import { DETAILS_NOTES_MAX, RUN_LENGTH_RANGE, describeLeadDetails, type ExpertBriefing } from "../lead-details";
+import { AdminPlanReading } from "./AdminPlanReading";
 
 const INCLUDE_OPTIONS = [...OFFER_INCLUDES, { slug: OFFER_INCLUDES_UNKNOWN, name: "Nicht bekannt" }];
 
-interface Draft {
-  kitchen_form: string;
-  manufacturer: string;
-  run_length_cm: string;
-  offer_includes: string[];
-  offer_valid_until: string;
-  notes: string;
-}
-
-function toDraft(expert: ExpertBriefing | null | undefined): Draft {
-  return {
-    kitchen_form: expert?.kitchen_form ?? "",
-    manufacturer: expert?.manufacturer ?? "",
-    run_length_cm: expert?.run_length_cm ? String(expert.run_length_cm) : "",
-    offer_includes: expert?.offer_includes ?? [],
-    offer_valid_until: expert?.offer_valid_until ?? "",
-    notes: expert?.notes ?? "",
-  };
+interface AdminTenderBriefingProps {
+  leadId: string;
+  funnelType: string;
+  kitchenForm?: string | null;
+  /** Funnel B: genannter Preis, zum Abgleich mit einem hochgeladenen Angebot. */
+  statedPriceEur?: number | null;
 }
 
 /**
  * Ergebnis des Experten-Checks für Studios: vor dem Veröffentlichen
- * festhalten, was im Gespräch geklärt wurde (Funnel B vor allem ohne
- * Unterlagen). Keine Namen oder Kontaktdaten eintragen; Freitext wird
- * zusätzlich bereinigt.
+ * festhalten, was im Gespräch geklärt wurde. Bei Funnel B schlägt die
+ * KI-Auslesung der hochgeladenen Planung Werte vor. Keine Namen oder
+ * Kontaktdaten eintragen; Freitext wird zusätzlich bereinigt.
  */
-export function AdminTenderBriefing({ leadId, funnelType, kitchenForm }: { leadId: string; funnelType: string; kitchenForm?: string | null }) {
+export function AdminTenderBriefing({ leadId, funnelType, kitchenForm, statedPriceEur }: AdminTenderBriefingProps) {
   const qc = useQueryClient();
   const queryKey = ["admin-lead-details", leadId];
   const details = useQuery({ queryKey, queryFn: () => fetchLeadDetails(leadId) });
-  const [draft, setDraft] = useState<Draft>(() => toDraft(null));
+  const [draft, setDraft] = useState<BriefingDraft>(() => toBriefingDraft(null));
   const saved = details.data?.expert;
 
   useEffect(() => {
-    setDraft(toDraft(saved));
+    setDraft(toBriefingDraft(saved));
   }, [saved]);
+
+  const applySuggestion = (suggestion: ExpertBriefing) => {
+    const { draft: next, filled } = fillBriefingDraft(draft, suggestion);
+    setDraft(next);
+    if (filled.length > 0) toast.success("Vorschlag übernommen – bitte prüfen und dann speichern.");
+    else toast.info("Alle passenden Felder sind schon ausgefüllt; überschrieben wurde nichts.");
+  };
 
   const save = useMutation({
     mutationFn: () =>
@@ -69,7 +66,7 @@ export function AdminTenderBriefing({ leadId, funnelType, kitchenForm }: { leadI
     onError: (err) => toast.error(errorMessage(err)),
   });
 
-  const set = (patch: Partial<Draft>) => setDraft((d) => ({ ...d, ...patch }));
+  const set = (patch: Partial<BriefingDraft>) => setDraft((d) => ({ ...d, ...patch }));
   const toggleInclude = (slug: string, checked: boolean) =>
     set({
       offer_includes:
@@ -102,6 +99,7 @@ export function AdminTenderBriefing({ leadId, funnelType, kitchenForm }: { leadI
         <p className="mt-3 text-sm text-destructive">{errorMessage(details.error)}</p>
       ) : (
         <div className="mt-3 space-y-4">
+          {funnelType === "b" && <AdminPlanReading leadId={leadId} statedPriceEur={statedPriceEur} onApply={applySuggestion} />}
           <div className="grid gap-3 sm:grid-cols-3">
             <div className="space-y-1">
               <Label htmlFor="briefing-form">Küchenform</Label>

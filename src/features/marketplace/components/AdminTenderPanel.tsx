@@ -178,7 +178,12 @@ export function AdminTenderPanel({ leadId, funnelType, kitchenForm }: { leadId: 
         )}
       </section>
 
-      <AdminTenderBriefing leadId={leadId} funnelType={funnelType} kitchenForm={kitchenForm} />
+      <AdminTenderBriefing
+        leadId={leadId}
+        funnelType={funnelType}
+        kitchenForm={kitchenForm}
+        statedPriceEur={typeof t?.public_summary?.existing_offer_eur === "number" ? t.public_summary.existing_offer_eur : null}
+      />
 
       {t && <AdminComplaintsSection auctionId={t.id} />}
 

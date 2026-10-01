@@ -51,6 +51,13 @@ export async function saveAiSettings(update: AiSettingsUpdate): Promise<void> {
   if (error) throw settingsError(error);
 }
 
+/** KI-Auslesung hochgeladener Planungen (Funnel B): an/aus und Modell. */
+export async function savePlanReadingSettings(update: Pick<AiSettingsRow, "plan_reading_enabled" | "plan_reading_model">): Promise<void> {
+  await requireSession();
+  const { error } = await supabase.from("kw_ai_settings").update(update).eq("id", true);
+  if (error) throw settingsError(error);
+}
+
 /** Marktabgleich an oder aus; wirkt nach dem nächsten Lauf der Kalibrierung. */
 export async function setPriceCalibrationEnabled(enabled: boolean): Promise<void> {
   await requireSession();

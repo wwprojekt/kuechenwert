@@ -1688,6 +1688,8 @@ export type Database = {
           id: boolean
           lora_scale: number
           lora_url: string | null
+          plan_reading_enabled: boolean
+          plan_reading_model: string
           price_calibration_enabled: boolean
           text_model: string
           updated_at: string
@@ -1705,6 +1707,8 @@ export type Database = {
           id?: boolean
           lora_scale?: number
           lora_url?: string | null
+          plan_reading_enabled?: boolean
+          plan_reading_model?: string
           price_calibration_enabled?: boolean
           text_model?: string
           updated_at?: string
@@ -1722,6 +1726,8 @@ export type Database = {
           id?: boolean
           lora_scale?: number
           lora_url?: string | null
+          plan_reading_enabled?: boolean
+          plan_reading_model?: string
           price_calibration_enabled?: boolean
           text_model?: string
           updated_at?: string
@@ -2345,6 +2351,74 @@ export type Database = {
           processed_at?: string | null
         }
         Relationships: []
+      }
+      kw_plan_readings: {
+        Row: {
+          attempts: number
+          created_at: string
+          duration_ms: number | null
+          error_code: string | null
+          error_message: string | null
+          file_ids: string[]
+          finished_at: string | null
+          input_tokens: number | null
+          lead_id: string
+          model: string | null
+          next_attempt_at: string | null
+          output_tokens: number | null
+          requested_at: string
+          result: Json | null
+          started_at: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          attempts?: number
+          created_at?: string
+          duration_ms?: number | null
+          error_code?: string | null
+          error_message?: string | null
+          file_ids?: string[]
+          finished_at?: string | null
+          input_tokens?: number | null
+          lead_id: string
+          model?: string | null
+          next_attempt_at?: string | null
+          output_tokens?: number | null
+          requested_at?: string
+          result?: Json | null
+          started_at?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          attempts?: number
+          created_at?: string
+          duration_ms?: number | null
+          error_code?: string | null
+          error_message?: string | null
+          file_ids?: string[]
+          finished_at?: string | null
+          input_tokens?: number | null
+          lead_id?: string
+          model?: string | null
+          next_attempt_at?: string | null
+          output_tokens?: number | null
+          requested_at?: string
+          result?: Json | null
+          started_at?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "kw_plan_readings_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: true
+            referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       kw_plz3_centroids: {
         Row: {
@@ -4833,6 +4907,7 @@ export type Database = {
         Args: { p_lead: Database["public"]["Tables"]["leads"]["Row"] }
         Returns: Json
       }
+      kw_lead_refresh_tier: { Args: { p_lead_id: string }; Returns: undefined }
       kw_lead_share_consent: { Args: { p_lead_id: string }; Returns: boolean }
       kw_lead_storage_paths: {
         Args: { p_lead_id: string }
@@ -4855,6 +4930,7 @@ export type Database = {
         }[]
       }
       kw_marketplace_tick: { Args: never; Returns: Json }
+      kw_mistral_api_key: { Args: never; Returns: string }
       kw_open_tender: {
         Args: {
           p_estimate_max_eur: number
@@ -4920,6 +4996,62 @@ export type Database = {
       kw_outbox_finish: {
         Args: { p_error?: string; p_id: number }
         Returns: undefined
+      }
+      kw_plan_reading_start: {
+        Args: { p_lead_id: string }
+        Returns: {
+          attempts: number
+          created_at: string
+          duration_ms: number | null
+          error_code: string | null
+          error_message: string | null
+          file_ids: string[]
+          finished_at: string | null
+          input_tokens: number | null
+          lead_id: string
+          model: string | null
+          next_attempt_at: string | null
+          output_tokens: number | null
+          requested_at: string
+          result: Json | null
+          started_at: string | null
+          status: string
+          updated_at: string
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "kw_plan_readings"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
+      kw_plan_readings_claim: {
+        Args: { p_limit?: number }
+        Returns: {
+          attempts: number
+          created_at: string
+          duration_ms: number | null
+          error_code: string | null
+          error_message: string | null
+          file_ids: string[]
+          finished_at: string | null
+          input_tokens: number | null
+          lead_id: string
+          model: string | null
+          next_attempt_at: string | null
+          output_tokens: number | null
+          requested_at: string
+          result: Json | null
+          started_at: string | null
+          status: string
+          updated_at: string
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "kw_plan_readings"
+          isOneToOne: false
+          isSetofReturn: true
+        }
       }
       kw_plz_distance_km: {
         Args: { p_a: string; p_b: string }

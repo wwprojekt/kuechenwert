@@ -45,6 +45,8 @@ const settings: AiSettingsRow = {
   lora_scale: 1,
   daily_render_cap: 300,
   price_calibration_enabled: true,
+  plan_reading_enabled: true,
+  plan_reading_model: "mistral-medium-latest",
   updated_at: "2026-09-28T22:00:00Z",
   updated_by: null,
 };

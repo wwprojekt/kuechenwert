@@ -37,6 +37,9 @@ verify_jwt = false
 [functions.kw-ai-lab]
 verify_jwt = false
 
+[functions.kw-plan-read]
+verify_jwt = false
+
 [functions.kw-unsubscribe]
 verify_jwt = false
 

@@ -1,4 +1,5 @@
 import { falModel } from "../../../supabase/functions/_shared/fal-models.ts";
+import { PLAN_READING_MODELS } from "../../../supabase/functions/_shared/plan-reading.ts";
 import type { DailyStats, SettingsChange } from "./api";
 
 export type HistoryBucket = "week" | "month";
@@ -107,11 +108,14 @@ const FIELD_LABELS: Record<string, string> = {
   lora_scale: "LoRA-Stärke",
   daily_render_cap: "Tageslimit",
   price_calibration_enabled: "Marktabgleich",
+  plan_reading_enabled: "Planungen auslesen",
+  plan_reading_model: "Modell zum Auslesen",
 };
 
 function formatValue(key: string, value: unknown): string {
   if (value === null || value === undefined || value === "") return "keins";
   if (typeof value === "boolean") return value ? "an" : "aus";
+  if (key === "plan_reading_model") return PLAN_READING_MODELS.find((m) => m.id === value)?.label ?? String(value);
   if (typeof value === "string" && key.endsWith("_model")) return falModel(value)?.label ?? value;
   if (key === "challenger_share") return `${String(value)} %`;
   return String(value);

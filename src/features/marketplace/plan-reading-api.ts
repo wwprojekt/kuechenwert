@@ -51,7 +51,7 @@ export async function fetchPlanReading(leadId: string): Promise<PlanReadingRow |
   return (data as unknown as PlanReadingRow | null) ?? null;
 }
 
-/** Jetzt auslesen (Planung oder Angebot der Anfrage); wartet auf das Ergebnis. */
+/** Jetzt auslesen (Planung oder Angebot der Anfrage); läuft im Hintergrund, das Ergebnis kommt per Abfrage. */
 export const readPlanNow = (leadId: string) =>
   planRead<{ reading: PlanReadingRow | null }>({ action: "read", lead_id: leadId }).then((r) => r.reading);
 

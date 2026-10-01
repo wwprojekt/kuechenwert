@@ -48,6 +48,7 @@ export function AdminPlanReading({ leadId, statedPriceEur, onApply }: AdminPlanR
     onSuccess: (row) => {
       qc.setQueryData(queryKey, row);
       if (row?.status === "done") toast.success("Planung ausgelesen – Vorschlag unten prüfen.");
+      else toast.success("Auslesen gestartet – das Ergebnis erscheint in etwa einer Minute.");
     },
     onError: (err) => toast.error(errorMessage(err)),
   });
@@ -80,7 +81,7 @@ export function AdminPlanReading({ leadId, statedPriceEur, onApply }: AdminPlanR
       ) : (
         <div className="mt-3 space-y-3">
           {warnings.map((w) => (
-            <p key={w} className="flex gap-2 rounded-md bg-amber-50 p-2 text-amber-900">
+            <p key={w} className="flex gap-2 rounded-md bg-warning/10 p-2 text-warning">
               <AlertTriangle className="mt-0.5 h-4 w-4 flex-none" aria-hidden="true" />
               {w}
             </p>

@@ -8,7 +8,7 @@
  * Aktionen (POST { action, ... }); Admin, Service-Role oder Cron-Geheimnis:
  *   sweep   nächste wartende Auslesung (Cron kw-plan-reading, jede Minute nur
  *           bei Bedarf); antwortet sofort, liest im Hintergrund
- *   read    { lead_id }: jetzt auslesen und das Ergebnis zurückgeben (Admin)
+ *   read    { lead_id }: jetzt auslesen (Admin); antwortet 202, Ergebnis per Abfrage
  *   status  Schlüssel vorhanden, eingeschaltet, Modell
  *
  * Neue Unterlagen stellt der Trigger auf lead_files in die Warteschlange.
@@ -211,10 +211,11 @@ async function actionRead(req: Request, sb: SupabaseClient, body: Record<string,
   if (error) throw error;
   const row = ((data ?? []) as ReadingRow[])[0];
   if (!row) throw new HttpError(409, "Die Unterlagen werden gerade ausgelesen. Bitte gleich noch einmal nachsehen.", "running");
-  const outcome = await process(sb, row, settings, apiKey);
-  if (outcome.status === "skipped" && outcome.code === "no_readable_files") throw new HttpError(422, outcome.message, outcome.code);
+  // Wie sweep: Mistral braucht oft über eine Minute; die Function antwortet
+  // sofort, das Ergebnis holt die Admin-Ansicht per Abfrage.
+  inBackground(process(sb, row, settings, apiKey));
   const { data: reading } = await sb.from("kw_plan_readings").select(READING_COLUMNS).eq("lead_id", leadId).maybeSingle();
-  return jsonResponse(req, { reading });
+  return jsonResponse(req, { reading }, 202);
 }
 
 async function actionStatus(req: Request, sb: SupabaseClient) {

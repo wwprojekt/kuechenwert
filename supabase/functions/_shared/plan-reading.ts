@@ -338,6 +338,8 @@ export function planReadingNotes(r: PlanReading): string | null {
     r.summary,
     r.fronts && `Fronten: ${r.fronts}`,
     r.worktop && `Arbeitsplatte: ${r.worktop}`,
+    r.wall_lengths_cm.length > 0 && `Wände: ${r.wall_lengths_cm.map(meters).join(" · ")}`,
+    r.ceiling_height_cm && `Raumhöhe: ${meters(r.ceiling_height_cm)}`,
     appliancesText(r.appliances) && `Geräte: ${appliancesText(r.appliances)}`,
     r.sink && `Spüle: ${r.sink}`,
     r.extras.length > 0 && `Ausstattung: ${r.extras.join(", ")}`,

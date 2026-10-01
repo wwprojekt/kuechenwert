@@ -150,6 +150,8 @@ describe("Vorschlag fürs Briefing und Hinweise fürs Team", () => {
       offer_valid_until: modelAnswer.offer_valid_until,
     });
     expect(briefing.notes).toContain("Fronten: Alpinweiß Ultramatt, grifflos");
+    expect(briefing.notes).toContain("Wände: 3,2 m · 2,4 m");
+    expect(briefing.notes).toContain("Raumhöhe: 2,5 m");
     expect(briefing.notes).toContain("Geräte: Backofen: Siemens HB778G3B1; Herd / Kochfeld: Siemens");
     expect(briefingFromPlanReading(normalizePlanReading({}))).toEqual({});
   });

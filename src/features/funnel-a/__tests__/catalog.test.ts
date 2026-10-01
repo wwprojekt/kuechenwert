@@ -293,6 +293,15 @@ describe("describeFunnelB / describeLeadSummary", () => {
     expect(rows({ offerValidUntil: "bald" })).toEqual([{ label: "Vorhandenes Angebot", value: "18.000 €" }]);
   });
 
+  it("sagt Studios, ob sie die Planung genau so oder geändert anbieten sollen", () => {
+    const changes = (answers: Record<string, unknown>) =>
+      describeFunnelB({ source: "b", existing_offer_eur: 18_000, answers })[0]?.rows.find((r) => r.label === "Änderungswünsche")?.value;
+    expect(changes({ planChanges: "none" })).toBe("Keine – genau so anbieten");
+    expect(changes({ planChanges: "changes", planChangesText: "Geräte von Siemens statt Bosch" })).toBe("Geräte von Siemens statt Bosch");
+    expect(changes({ planChanges: "changes", planChangesText: null })).toBe("Ja – Details nach dem Experten-Check");
+    expect(changes({})).toBeUndefined();
+  });
+
   it("baut aus einer leads-Zeile dieselbe Struktur wie kw_lead_public_summary", () => {
     const summary = leadSummaryFromRow({
       funnel_type: "b",

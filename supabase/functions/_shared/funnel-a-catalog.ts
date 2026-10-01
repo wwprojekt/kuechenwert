@@ -666,7 +666,14 @@ export function isoDateText(value: unknown): string | null {
   return `${d}.${m}.${y}`;
 }
 
-/** Lesbare Angaben eines Funnel-B-Projekts (vorhandenes Studio-Angebot). */
+/** Ob die Studios die Planung genau so oder mit Änderungen anbieten sollen; null ohne Antwort. */
+function planChangesText(answers: Record<string, unknown>): string | null {
+  if (answers.planChanges === "none") return "Keine – genau so anbieten";
+  if (answers.planChanges === "changes") return text(answers.planChangesText) ?? "Ja – Details nach dem Experten-Check";
+  return null;
+}
+
+/** Lesbare Angaben eines Funnel-B-Projekts (Planung und genannter Preis eines Studios). */
 export function describeFunnelB(summary: unknown): DetailGroup[] {
   const s = asRecord(summary);
   const a = asRecord(s.answers);
@@ -678,6 +685,7 @@ export function describeFunnelB(summary: unknown): DetailGroup[] {
     typeof s.existing_offer_eur === "number" && s.existing_offer_eur > 0 ? row("Vorhandenes Angebot", eur(s.existing_offer_eur)) : null,
     row("Im Preis enthalten", offerIncludesText(a.offerIncludes)),
     row("Gültig bis", isoDateText(a.offerValidUntil)),
+    row("Änderungswünsche", planChangesText(a)),
     row("Form", formLabel(s.kitchen_form)),
     row("Küchenmarke", brand),
     row("Front", text(a.frontName)),

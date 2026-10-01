@@ -5,7 +5,9 @@
  *   submit        Genannter Preis + Kontakt + AGB-Haken → Lead und
  *                 Einwilligungen. Für angekündigte Dateien (Planung, Angebot,
  *                 Fotos): Upload-Token plus signierte Upload-URLs (lead-files,
- *                 siehe _shared/lead-files.ts).
+ *                 siehe _shared/lead-files.ts). Mit hochgeladener Planung
+ *                 schickt der Browser statt Detailangaben nur, ob die Studios
+ *                 sie genau so oder geändert anbieten sollen (planChanges).
  *   attach-files  Nach dem Upload: vorhandene Dateien am Lead eintragen.
  *
  * Unterlagen lassen sich später über den Projektlink nachreichen (kw-project).
@@ -42,6 +44,8 @@ import {
   FINANCING_OPTIONS,
   OFFER_INCLUDES,
   OFFER_INCLUDES_UNKNOWN,
+  PLAN_CHANGES,
+  PLAN_CHANGES_TEXT_MAX,
   TIMEFRAMES,
   plausibleOfferDate,
 } from "../_shared/funnel-b-catalog.ts";
@@ -61,6 +65,7 @@ const FINANCING = new Set<string>(FINANCING_OPTIONS.map((f) => f.slug));
 const EXTRAS = new Set<string>(EXTRAS_OPTIONS.map((e) => e.slug));
 const INCLUDES = OFFER_INCLUDES.map((o) => o.slug);
 const FORMS = new Set<string>(FORM_OPTIONS.map((f) => f.id));
+const PLAN_CHANGE_SLUGS = new Set<string>(PLAN_CHANGES.map((p) => p.slug));
 
 /** Freitext, den Studios sehen: gekürzt und ohne Kontaktdaten. */
 function studioText(value: unknown, max: number): string | null {
@@ -160,6 +165,7 @@ async function actionSubmit(req: Request, sb: SupabaseClient, body: Record<strin
     };
   });
   const kitchenForm = typeof d.kitchenForm === "string" && FORMS.has(d.kitchenForm) ? d.kitchenForm : null;
+  const planChanges = slugIn(d.planChanges, PLAN_CHANGE_SLUGS);
   // Erst nach der Validierung: ein Eingabefehler soll das Token nicht verbrauchen.
   const botCheck = await checkTurnstile(body.turnstile_token, ip);
   const waste = slugIn(d.wasteSeparationSystem, WASTE_SEPARATION);
@@ -232,6 +238,8 @@ async function actionSubmit(req: Request, sb: SupabaseClient, body: Record<strin
         extrasNotes: studioText(d.extrasNotes, 1000),
         offerIncludes: offerIncludes(d.offerIncludes),
         offerValidUntil: plausibleOfferDate(d.offerValidUntil),
+        planChanges,
+        planChangesText: planChanges === "changes" ? studioText(d.planChangesText, PLAN_CHANGES_TEXT_MAX) : null,
         salutation,
         offerDeliveryMethod: offerDelivery,
         timeframeSlug: timeframe,

@@ -34,6 +34,14 @@ describe("ProjectDetailsCard", () => {
     expect(screen.getByRole("group", { name: "Dunstabzug" })).toBeInTheDocument();
   });
 
+  it("fragt mit hochgeladener Studio-Planung weder Maße noch Dunstabzug ab", () => {
+    renderCard({ kitchenForm: null, planned: { ceiling: true, ventilation: true } });
+    expect(screen.queryByLabelText("Raumhöhe (cm)")).not.toBeInTheDocument();
+    expect(screen.queryByRole("group", { name: "Dunstabzug" })).not.toBeInTheDocument();
+    expect(screen.getByText(/Was in Ihrer Planung steht, müssen Sie hier nicht wiederholen/)).toBeInTheDocument();
+    expect(screen.getByLabelText("Hinweis für die Studios")).toBeInTheDocument();
+  });
+
   it("prüft die Maße, bevor gespeichert wird", () => {
     renderCard();
     fireEvent.change(screen.getByLabelText("Raumhöhe (cm)"), { target: { value: "900" } });

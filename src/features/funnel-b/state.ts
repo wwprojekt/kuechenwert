@@ -1,4 +1,5 @@
-import type { PendingLeadFile } from "./files";
+import type { PlanChangesSlug } from "@/config/funnel-b-stammdaten";
+import { isStudioPlanningFile, type PendingLeadFile } from "./files";
 
 export type OfferDeliveryMethod = "" | "now" | "later";
 
@@ -47,6 +48,9 @@ export interface FunnelBData {
   /** Unterlagen: "now" = jetzt hochladen, "later" = später über den Projektlink nachreichen */
   offerDeliveryMethod: OfferDeliveryMethod;
   uploads: PendingLeadFile[];
+  /** Planung genau so anbieten („none“) oder mit Änderungen („changes“, beschrieben in planChangesText). */
+  planChanges: "" | PlanChangesSlug;
+  planChangesText: string;
   /** Nur im Browser: Detailfragen beantworten („ja“) oder direkt zu den Kontaktdaten („nein“). */
   wantsDetails: "" | "ja" | "nein";
 
@@ -88,6 +92,8 @@ export const initialFunnelBData: FunnelBData = {
   existingOfferPriceEur: "",
   offerDeliveryMethod: "",
   uploads: [],
+  planChanges: "",
+  planChangesText: "",
   wantsDetails: "",
   postalCode: "",
   city: "",
@@ -129,12 +135,12 @@ export function isOfferReady(data: FunnelBData): boolean {
   return data.offerDeliveryMethod === "now" && data.uploads.length > 0;
 }
 
-/**
- * Die Daten für kw-lead-b: ohne Dateien und ohne reine Browser-Felder.
- * consentShare/consentCall verlangt kw-lead-b in der Fassung vor dem
- * AGB-Haken; der Hinweis am Haken deckt beides ab.
- */
-export function submissionFields(data: FunnelBData): Record<string, unknown> {
-  const { uploads: _uploads, wantsDetails: _details, ...fields } = data;
-  return { ...fields, consentShare: data.acceptTerms, consentCall: data.acceptTerms };
+/** Planung oder Angebot liegt bei: Was darin steht, fragt der Funnel nicht noch einmal ab. */
+export function planningOnFile(data: Pick<FunnelBData, "offerDeliveryMethod" | "uploads">): boolean {
+  return data.offerDeliveryMethod === "now" && data.uploads.some((u) => isStudioPlanningFile(u.category));
+}
+
+/** Dateien gehen nur mit „Jetzt hochladen“ mit; bei „Später nachreichen“ ist der Upload nicht im Pfad. */
+export function submissionUploads(data: FunnelBData): PendingLeadFile[] {
+  return data.offerDeliveryMethod === "now" ? data.uploads : [];
 }

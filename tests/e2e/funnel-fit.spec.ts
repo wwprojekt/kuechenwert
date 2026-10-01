@@ -15,7 +15,12 @@ const VIEWPORTS = [
 ];
 
 const A_STEPS = ['kuechenform', 'stil', 'groesse', 'raum', 'farbe', 'arbeitsplatte', 'kochfeld', 'backofen', 'kuehlen', 'geraete', 'leistungen', 'kochstil', 'anlass', 'wohnsituation', 'entscheidung', 'zeitrahmen', 'budget', 'plz', 'name', 'kontakt'];
-const B_STEPS = ['preis', 'leistungsumfang', 'unterlagen', 'hochladen', 'kuechenform', 'zeitrahmen', 'details', 'marke', 'fronten', 'griffe', 'arbeitsplatte', 'arbeitsplatte-name', 'geraete', 'spuele', 'spuele-marke', 'extras', 'notizen', 'zahlung', 'anzahlung', 'plz', 'name', 'kontakt'];
+const B_STEPS = ['preis', 'leistungsumfang', 'unterlagen', 'hochladen', 'aenderungen', 'kuechenform', 'zeitrahmen', 'details', 'marke', 'fronten', 'griffe', 'arbeitsplatte', 'arbeitsplatte-name', 'geraete', 'spuele', 'spuele-marke', 'extras', 'notizen', 'zahlung', 'anzahlung', 'plz', 'name', 'kontakt'];
+/** Zustand je Schritt; „aenderungen“ mit eingeblendetem Freitext, dem höchsten Stand des Schritts. */
+const B_SEED: Record<string, object> = {
+  hochladen: { offerDeliveryMethod: 'now' },
+  aenderungen: { planChanges: 'changes' },
+};
 const C_PLAN = ['form', 'masse', 'foto', 'stil', 'qualitaet', 'fronten', 'farbe', 'griffe', 'arbeitsplatte', 'plattenfarbe', 'schraenke', 'spuele', 'geraeteklasse', 'kochen', 'abluft', 'geraete', 'extras', 'leistungen', 'wuensche', 'plz'];
 const C_LEAD = ['zeitrahmen', 'budget', 'anlass', 'wohnsituation', 'name', 'kontakt'];
 
@@ -96,7 +101,7 @@ for (const viewport of VIEWPORTS) {
 
     for (const key of B_STEPS) {
       test(`Funnel B: ${key}`, async ({ page }) => {
-        await seed(page, 'session', 'kw_funnel_b', key === 'hochladen' ? { ...B_STATE, offerDeliveryMethod: 'now' } : B_STATE);
+        await seed(page, 'session', 'kw_funnel_b', { ...B_STATE, ...B_SEED[key] });
         await page.goto(`/funnel/b?schritt=${key}`);
         await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
         await expectFits(page);

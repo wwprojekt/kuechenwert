@@ -1,19 +1,22 @@
 import { plausibleOfferDate } from "@/config/funnel-b-stammdaten";
 import { TERMS_MISSING } from "../../../supabase/functions/_shared/lead-terms.ts";
-import { isOfferReady, type FunnelBData } from "./state";
+import { initialFunnelBData, isOfferReady, planningOnFile, type FunnelBData } from "./state";
 
 /**
- * Funnel B („Studio-Preis unterbieten“): eine Frage pro Bildschirm. Die meisten
- * Studios geben kein schriftliches Angebot mit, aber die Planung (Grundriss,
- * Ansichten, Geräteliste) und nennen einen Preis. Nach Preis, Leistungsumfang,
- * Planung, Küchenform und Zeitrahmen entscheidet der Kunde, ob er Details
- * angibt; wer die Planung hochlädt, braucht sie meist nicht.
+ * Funnel B („Fertige Planung vergleichen“): eine Frage pro Bildschirm. Die
+ * meisten Studios geben kein schriftliches Angebot mit, aber die Planung
+ * (Grundriss, Ansichten, Geräteliste) und nennen einen Preis. Liegt die
+ * Planung oder das Angebot bei, fragt der Funnel nichts ab, was darin steht:
+ * nach Preis, Leistungsumfang und Upload nur, ob sich an der Planung etwas
+ * ändern soll, dann Zeitrahmen und Kontakt. Ohne Planung (später nachreichen
+ * oder nur Fotos) folgen Küchenform und auf Wunsch die Detailfragen.
  */
 export type FunnelBStepKey =
   | "preis"
   | "leistungsumfang"
   | "unterlagen"
   | "hochladen"
+  | "aenderungen"
   | "kuechenform"
   | "zeitrahmen"
   | "details"
@@ -57,7 +60,8 @@ export const FUNNEL_B_STEPS: readonly FunnelBStep[] = [
     question: "Haben Sie die Planung vom Küchenstudio?",
     hint: "Grundriss, Ansichten oder Geräteliste – damit können die Studios genau Ihre Küche anbieten.",
   },
-  { key: "hochladen", question: "Laden Sie Ihre Planung hoch", hint: "Handyfotos der Ausdrucke genügen – PDF oder Bilder, höchstens 10 Dateien à 20 MB." },
+  { key: "hochladen", question: "Laden Sie Ihre Planung hoch", hint: "Handyfotos der Ausdrucke genügen – Detailfragen zur Küche entfallen dann." },
+  { key: "aenderungen", question: "Soll sich an der Planung noch etwas ändern?", hint: "Sonst bieten die Studios genau Ihre Planung an." },
   { key: "kuechenform", question: "Welche Form hat die geplante Küche?", hint: "Damit Studios Ihre Küche auch ohne Planung einordnen können." },
   { key: "zeitrahmen", question: "Wann soll die Küche geliefert werden?", hint: "Ein fester Termin bringt oft den besseren Preis." },
   { key: "details", question: "Möchten Sie Details zu Ihrer Küche angeben?", hint: "Freiwillig – was Sie nicht wissen, klären wir im Experten-Check." },
@@ -102,9 +106,14 @@ export function funnelBStep(key: FunnelBStepKey): FunnelBStep {
   return FUNNEL_B_STEPS.find((s) => s.key === key) ?? FUNNEL_B_STEPS[0]!;
 }
 
+/** Steht in der Planung: Mit Planung oder Angebot im Upload entfallen diese Schritte samt Detailfragen. */
+const IN_PLANNING: ReadonlySet<FunnelBStepKey> = new Set(["kuechenform", "details"]);
+
 export function funnelBFlow(data: FunnelBData): FunnelBStepKey[] {
+  const planned = planningOnFile(data);
   return FUNNEL_B_STEPS.filter((s) => {
     if (s.key === "hochladen") return data.offerDeliveryMethod === "now";
+    if (planned && (s.detail || IN_PLANNING.has(s.key))) return false;
     if (s.detail) return data.wantsDetails === "ja";
     return true;
   }).map((s) => s.key);
@@ -119,8 +128,62 @@ export function guardFunnelBStep(key: FunnelBStepKey, data: FunnelBData): Funnel
   return data.offerDeliveryMethod === "now" ? "hochladen" : "unterlagen";
 }
 
+type FieldKey = keyof FunnelBData;
+
+/** Was jeder Schritt erfragt; Schritte, die immer im Pfad liegen, fehlen. */
+const STEP_FIELDS: Partial<Record<FunnelBStepKey, readonly FieldKey[]>> = {
+  aenderungen: ["planChanges", "planChangesText"],
+  kuechenform: ["kitchenForm"],
+  marke: ["brand", "brandCustom"],
+  fronten: ["frontName", "frontMaterialName"],
+  griffe: ["handleType"],
+  arbeitsplatte: ["worktopMaterial"],
+  "arbeitsplatte-name": ["worktopDesign", "worktopDesignCustom"],
+  geraete: ["appliances"],
+  spuele: ["sinkMaterial"],
+  "spuele-marke": ["sinkBrand", "sinkDesignation"],
+  extras: ["extras"],
+  notizen: ["extrasNotes"],
+  zahlung: ["paymentFinancing", "paymentFinancingApr", "paymentFinancingMonths"],
+  anzahlung: ["paymentDownPaymentPercent"],
+};
+
+/** Felder, die ihr Schritt nur nach einer bestimmten Auswahl zeigt. */
+const SHOWN_IF: Partial<Record<FieldKey, (data: FunnelBData) => boolean>> = {
+  planChangesText: (d) => d.planChanges === "changes",
+  brandCustom: (d) => d.brand === "sonstiger",
+  paymentFinancingApr: (d) => d.paymentFinancing === "with_interest",
+  paymentFinancingMonths: (d) => d.paymentFinancing === "with_interest",
+};
+
+/**
+ * Die Daten für kw-lead-b: nur, was der Kunde auf seinem Weg durch den Funnel
+ * zuletzt gesehen hat. Antworten aus Schritten außerhalb des Pfads (etwa
+ * Details vor dem Upload der Planung) gehen nicht mit, sonst hielten Studios
+ * sie für aktuelle Wünsche. Ohne Dateien und ohne reine Browser-Felder;
+ * consentShare/consentCall verlangt kw-lead-b in der Fassung vor dem
+ * AGB-Haken, der Hinweis am Haken deckt beides ab.
+ */
+export function submissionFields(data: FunnelBData): Record<string, unknown> {
+  const flow = new Set(funnelBFlow(data));
+  const hidden = new Set<FieldKey>();
+  for (const [step, keys] of Object.entries(STEP_FIELDS) as [FunnelBStepKey, readonly FieldKey[]][]) {
+    if (!flow.has(step)) keys.forEach((key) => hidden.add(key));
+  }
+  for (const [key, shown] of Object.entries(SHOWN_IF) as [FieldKey, (d: FunnelBData) => boolean][]) {
+    if (!shown(data)) hidden.add(key);
+  }
+  const fields: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(data) as [FieldKey, unknown][]) {
+    if (key === "uploads" || key === "wantsDetails") continue;
+    fields[key] = hidden.has(key) ? initialFunnelBData[key] : value;
+  }
+  return { ...fields, consentShare: data.acceptTerms, consentCall: data.acceptTerms };
+}
+
 /** Freiwillige Einzelauswahl je Schritt: ohne Antwort heißt „Weiter“ „Überspringen“. */
 const OPTIONAL_CHOICE: Partial<Record<FunnelBStepKey, keyof FunnelBData>> = {
+  aenderungen: "planChanges",
   kuechenform: "kitchenForm",
   zeitrahmen: "timeframe",
   griffe: "handleType",
@@ -161,6 +224,11 @@ export function missingIn(key: FunnelBStepKey, data: FunnelBData): Missing[] {
       break;
     case "hochladen":
       if (data.uploads.length === 0) add("uploads", "Bitte laden Sie mindestens eine Datei hoch – oder wählen Sie „Später nachreichen“.", "funnel-b-uploads");
+      break;
+    case "aenderungen":
+      if (data.planChanges === "changes" && !data.planChangesText.trim()) {
+        add("plan_changes_text", "Bitte beschreiben Sie kurz, was sich ändern soll – oder wählen Sie „Nein, genau so“.", "funnel-b-plan-changes-text");
+      }
       break;
     case "details":
       if (!data.wantsDetails) add("wants_details", "Bitte wählen Sie eine Antwort aus.", "funnel-b-details");

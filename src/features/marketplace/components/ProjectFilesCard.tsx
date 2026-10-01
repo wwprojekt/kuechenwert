@@ -30,7 +30,7 @@ interface ProjectFilesCardProps {
 
 const INTRO: Record<"offer" | "room", string> = {
   offer:
-    "Laden Sie Ihr Angebot und – falls vorhanden – die Planung aus dem Küchenstudio hoch. Damit können wir Ihr Angebot prüfen und Studios genau vergleichen.",
+    "Laden Sie die Planung aus dem Küchenstudio hoch – Grundriss, Ansichten, Geräteliste; Handyfotos genügen. Dann bieten die Studios genau Ihre Küche an.",
   room: "Ein Grundriss oder Fotos Ihres Raums helfen den Studios, genauer zu planen – und Ihnen, Rückfragen zu sparen.",
 };
 

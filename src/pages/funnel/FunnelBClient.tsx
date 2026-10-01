@@ -5,8 +5,17 @@ import { toast } from "sonner";
 import { FunnelFrame } from "@/components/funnel/funnel-frame";
 import { FunnelTrustStrip } from "@/components/funnel/funnel-shell";
 import { submitFunnelB } from "@/features/funnel-b/api";
-import { loadFunnelB, serializeFunnelB, submissionFields, FUNNEL_B_STORAGE_KEY, type FunnelBData } from "@/features/funnel-b/state";
-import { funnelBFlow, funnelBStep, guardFunnelBStep, isSkippable, missingIn, parseFunnelBStep, type FunnelBStepKey } from "@/features/funnel-b/steps";
+import { loadFunnelB, serializeFunnelB, submissionUploads, FUNNEL_B_STORAGE_KEY, type FunnelBData } from "@/features/funnel-b/state";
+import {
+  funnelBFlow,
+  funnelBStep,
+  guardFunnelBStep,
+  isSkippable,
+  missingIn,
+  parseFunnelBStep,
+  submissionFields,
+  type FunnelBStepKey,
+} from "@/features/funnel-b/steps";
 import { ContactStep, NameStep, PlzCityStep } from "@/features/funnel-b/steps/ContactSteps";
 import {
   AppliancesStep,
@@ -27,6 +36,7 @@ import {
   DocumentsChoiceStep,
   KitchenFormStep,
   OfferIncludesStep,
+  PlanChangesStep,
   PriceStep,
   TimeframeStep,
   UploadStep,
@@ -119,14 +129,15 @@ export default function FunnelBClient() {
 
   const submit = useCallback(async () => {
     const current = latest.current.data;
+    const uploads = submissionUploads(current);
     setSubmitting(true);
     setSubmitError(null);
     try {
       const turnstileToken = await waitForToken();
-      setUploadProgress(current.uploads.length > 0 ? { done: 0, total: current.uploads.length } : null);
+      setUploadProgress(uploads.length > 0 ? { done: 0, total: uploads.length } : null);
       const { failedUploads, studiosInArea, reviewRequired } = await submitFunnelB({
         data: submissionFields(current),
-        uploads: current.uploads,
+        uploads,
         onUploadProgress: (done, count) => setUploadProgress({ done, total: count }),
         turnstileToken,
         website: honeypot,
@@ -225,6 +236,7 @@ export default function FunnelBClient() {
     leistungsumfang: <OfferIncludesStep {...props} />,
     unterlagen: <DocumentsChoiceStep {...props} />,
     hochladen: <UploadStep {...props} />,
+    aenderungen: <PlanChangesStep {...props} />,
     kuechenform: <KitchenFormStep {...props} />,
     zeitrahmen: <TimeframeStep {...props} />,
     details: <DetailsChoiceStep {...props} />,

@@ -56,7 +56,10 @@ interface ProjectDetailsCardProps {
   kitchenForm: string | null;
   details: CustomerDetails | null;
   updatedAt: string | null;
-  /** Planer-Projekte: Wandlängen stehen in der Planung, Raumhöhe und Dunstabzug womöglich auch. */
+  /**
+   * Es gibt eine Planung (Konfigurator oder vom Studio hochgeladen): Die Wandlängen
+   * stehen darin, Raumhöhe und Dunstabzug, soweit gesetzt, auch.
+   */
   planned?: { ceiling: boolean; ventilation: boolean } | null;
   className?: string;
 }
@@ -119,7 +122,9 @@ export function ProjectDetailsCard({ token, kitchenForm, details, updatedAt, pla
         <div>
           <h2 className="font-bold leading-snug">Angaben vervollständigen</h2>
           <p className="mt-1 text-sm text-muted-foreground">
-            Je genauer Ihre Angaben, desto genauer die Angebote. Alles ist freiwillig; Studios sehen es ohne Ihren Namen und Ihre Kontaktdaten.
+            {planned
+              ? "Was in Ihrer Planung steht, müssen Sie hier nicht wiederholen. Alles ist freiwillig; Studios sehen es ohne Ihren Namen und Ihre Kontaktdaten."
+              : "Je genauer Ihre Angaben, desto genauer die Angebote. Alles ist freiwillig; Studios sehen es ohne Ihren Namen und Ihre Kontaktdaten."}
           </p>
         </div>
       </div>

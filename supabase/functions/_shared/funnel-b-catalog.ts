@@ -264,6 +264,19 @@ export const OFFER_INCLUDES = [
 /** Einzige Auswahl, wenn der Kunde den Leistungsumfang nicht kennt. */
 export const OFFER_INCLUDES_UNKNOWN = "unknown";
 
+/**
+ * Ob die Studios die Planung des Kunden unverändert anbieten sollen
+ * („none“) oder mit Änderungen, die er in planChangesText beschreibt.
+ */
+export const PLAN_CHANGES = [
+  { slug: "none", name: "Nein, genau so" },
+  { slug: "changes", name: "Ja, etwas ändern" },
+] as const;
+
+export type PlanChangesSlug = (typeof PLAN_CHANGES)[number]["slug"];
+
+export const PLAN_CHANGES_TEXT_MAX = 1000;
+
 const DAY_MS = 86_400_000;
 
 /** „Angebot gültig bis“ (YYYY-MM-DD): bis ein Jahr zurück (abgelaufen) und zwei Jahre voraus. */

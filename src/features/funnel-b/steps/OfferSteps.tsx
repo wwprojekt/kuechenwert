@@ -1,10 +1,12 @@
 import {
+  ClipboardCheck,
   CloudUpload,
   Droplets,
   HelpCircle,
   ListChecks,
   Mail,
   MessagesSquare,
+  PencilLine,
   Plug,
   Recycle,
   Refrigerator,
@@ -14,13 +16,21 @@ import {
   Wrench,
   type LucideIcon,
 } from "lucide-react";
+import { useEffect, useRef } from "react";
 import { CardStep } from "@/components/funnel/card-step";
 import { FUNNEL_HEADING_ID } from "@/components/funnel/funnel-frame";
 import { TIMEFRAME_ICONS_B } from "@/components/funnel/funnel-b-icons";
 import { ImageCardStep } from "@/components/funnel/image-card-step";
 import { MultiCardStep } from "@/components/funnel/multi-card-step";
 import { KitchenFormPlan, hasKitchenFormPlan } from "@/components/kitchen/KitchenFormPlan";
-import { OFFER_INCLUDES, OFFER_INCLUDES_UNKNOWN, TIMEFRAMES, offerValidityRange } from "@/config/funnel-b-stammdaten";
+import {
+  OFFER_INCLUDES,
+  OFFER_INCLUDES_UNKNOWN,
+  PLAN_CHANGES_TEXT_MAX,
+  TIMEFRAMES,
+  offerValidityRange,
+  type PlanChangesSlug,
+} from "@/config/funnel-b-stammdaten";
 import { FORM_OPTIONS } from "@/features/funnel-a/catalog";
 import { Field } from "../Field";
 import { LEAD_FILE_CATEGORIES, MAX_LEAD_FILES, type LeadFileCategory } from "../files";
@@ -146,7 +156,7 @@ export function DocumentsChoiceStep({ data, update, onAdvance }: FunnelBStepProp
         onSelect={(v) => update({ offerDeliveryMethod: v as OfferDeliveryMethod })}
         onAutoAdvance={onAdvance}
         options={[
-          { id: "now", label: "Ja, jetzt hochladen", description: "Fotos vom Handy oder PDF – gern auch das Angebot", icon: <CloudUpload /> },
+          { id: "now", label: "Ja, jetzt hochladen", description: "Handyfotos oder PDF – dann entfallen die Detailfragen", icon: <CloudUpload /> },
           { id: "later", label: "Später nachreichen", description: "Über Ihren persönlichen Projektlink aus der E-Mail", icon: <Mail /> },
         ]}
       />
@@ -182,6 +192,61 @@ export function UploadStep({ data, update }: Omit<FunnelBStepProps, "onAdvance">
   );
 }
 
+/** Planung genau so anbieten lassen oder Änderungen beschreiben (z. B. andere Geräte). */
+export function PlanChangesStep({ data, update, onAdvance }: FunnelBStepProps) {
+  const textRef = useRef<HTMLTextAreaElement>(null);
+  const focusText = useRef(false);
+  // Auto-Weiter läuft nach dem Klick: dann zählt die neue Auswahl („Ja“ wartet auf den Text).
+  const latest = useRef(data.planChanges);
+  latest.current = data.planChanges;
+  const wantsChanges = data.planChanges === "changes";
+
+  useEffect(() => {
+    if (!wantsChanges || !focusText.current) return;
+    focusText.current = false;
+    textRef.current?.focus();
+  }, [wantsChanges]);
+
+  return (
+    <div className="space-y-3">
+      <div id="funnel-b-plan-changes">
+        <CardStep
+          labelledBy={FUNNEL_HEADING_ID}
+          columns={2}
+          mobileColumns={1}
+          selected={data.planChanges}
+          onSelect={(v) => {
+            focusText.current = v === "changes";
+            update({ planChanges: v as PlanChangesSlug });
+          }}
+          onAutoAdvance={() => {
+            if (latest.current === "none") onAdvance();
+          }}
+          options={[
+            { id: "none", label: "Nein, genau so", description: "Die Studios bieten Ihre Planung 1:1 an", icon: <ClipboardCheck /> },
+            { id: "changes", label: "Ja, etwas ändern", description: "Zum Beispiel andere Geräte oder Arbeitsplatte", icon: <PencilLine /> },
+          ]}
+        />
+      </div>
+      {wantsChanges && (
+        <Field label="Was soll anders sein?" hint="Telefonnummern, E-Mail-Adressen und Links entfernen wir automatisch.">
+          <textarea
+            ref={textRef}
+            id="funnel-b-plan-changes-text"
+            name="plan_changes_text"
+            rows={3}
+            maxLength={PLAN_CHANGES_TEXT_MAX}
+            className="input-field h-auto min-h-[5.5rem] py-3 xshort:min-h-[4.5rem]"
+            placeholder="z. B. Geräte von Siemens statt Bosch, Arbeitsplatte in Eiche"
+            value={data.planChangesText}
+            onChange={(e) => update({ planChangesText: e.target.value })}
+          />
+        </Field>
+      )}
+    </div>
+  );
+}
+
 export function TimeframeStep({ data, update, onAdvance }: FunnelBStepProps) {
   return (
     <CardStep
@@ -195,8 +260,8 @@ export function TimeframeStep({ data, update, onAdvance }: FunnelBStepProps) {
   );
 }
 
+/** Nur ohne hochgeladene Planung: Mit Planung entfallen die Detailfragen ganz (funnelBFlow). */
 export function DetailsChoiceStep({ data, update, onAdvance }: FunnelBStepProps) {
-  const hasFiles = data.uploads.length > 0;
   return (
     <div id="funnel-b-details">
       <CardStep
@@ -207,12 +272,7 @@ export function DetailsChoiceStep({ data, update, onAdvance }: FunnelBStepProps)
         onSelect={(v) => update({ wantsDetails: v as FunnelBData["wantsDetails"] })}
         onAutoAdvance={onAdvance}
         options={[
-          {
-            id: "nein",
-            label: hasFiles ? "Nein, steht in meiner Planung" : "Nein, direkt weiter",
-            description: "Weiter zu Ihren Kontaktdaten",
-            icon: <SkipForward />,
-          },
+          { id: "nein", label: "Nein, direkt weiter", description: "Weiter zu Ihren Kontaktdaten", icon: <SkipForward /> },
           { id: "ja", label: "Ja, Details angeben", description: "Marke, Fronten, Geräte & Co. – ca. 2 Minuten", icon: <ListChecks /> },
         ]}
       />

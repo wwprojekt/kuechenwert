@@ -16,6 +16,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
+import { isStudioPlanningFile } from "@/features/funnel-b/files";
 import { ApiError, errorMessage } from "@/features/marketplace/api-client";
 import { OfferCard } from "@/features/marketplace/components/OfferCard";
 import { PhoneCaptureCard } from "@/features/marketplace/components/PhoneCaptureCard";
@@ -261,9 +262,11 @@ export function ProjectView({ token }: { token: string }) {
   );
   const customerDetails = view.details?.customer ?? null;
   const plannedRoom = view.planner?.room;
+  // Funnel B mit Planung oder Angebot vom Studio: Maße, Raumhöhe und Dunstabzug stehen darin.
+  const studioPlanning = view.lead.funnel_type === "b" && files.some((f) => isStudioPlanningFile(f.category));
   const showDetails = tender?.status !== "cancelled";
-  // Direkt nach der Anfrage ist Ergänzen der nächste sinnvolle Schritt: dann oben.
-  const detailsFirst = showDetails && !closed && !hasDetails(customerDetails);
+  // Direkt nach der Anfrage ist Ergänzen der nächste sinnvolle Schritt: dann oben, außer die Planung liegt schon vor.
+  const detailsFirst = showDetails && !closed && !hasDetails(customerDetails) && !studioPlanning;
   const detailsCard = showDetails && (
     <ProjectDetailsCard
       token={token}
@@ -271,9 +274,11 @@ export function ProjectView({ token }: { token: string }) {
       details={customerDetails}
       updatedAt={view.details?.updated_at ?? null}
       planned={
-        view.lead.funnel_type === "traumkueche"
-          ? { ceiling: plannedRoom?.ceilingHeightCm != null, ventilation: !!plannedRoom?.ventilation }
-          : null
+        studioPlanning
+          ? { ceiling: true, ventilation: true }
+          : view.lead.funnel_type === "traumkueche"
+            ? { ceiling: plannedRoom?.ceilingHeightCm != null, ventilation: !!plannedRoom?.ventilation }
+            : null
       }
     />
   );

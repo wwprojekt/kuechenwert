@@ -63,6 +63,11 @@ export function leadFileCategoriesFor(funnelType: string): LeadFileCategoryOptio
   return funnelType === "b" ? LEAD_FILE_CATEGORIES : ROOM_FILE_CATEGORIES;
 }
 
+/** Funnel B: Planung oder Angebot aus dem Studio, im Unterschied zu Fotos. */
+export function isStudioPlanningFile(category: string): boolean {
+  return category === "grundriss" || category === "angebot";
+}
+
 const CATEGORY_LABELS: Record<string, string> = {
   angebot: "Angebot",
   grundriss: "Planung / Grundriss",

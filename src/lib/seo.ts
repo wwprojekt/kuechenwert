@@ -208,7 +208,7 @@ export function getBreadcrumbsFromPath(path: string): BreadcrumbItem[] {
     '/agb': 'AGB',
     '/formular': 'Küchenangebote einholen',
     '/funnel/a': 'Angebote einholen',
-    '/funnel/b': 'Studio-Preis unterbieten',
+    '/funnel/b': 'Fertige Planung vergleichen',
     '/funnel/c': 'KI-Traumküchen-Planer',
     '/preise': 'Preise & Leistungen',
     '/kuechenrechner': 'KüchenRechner',

@@ -64,10 +64,10 @@ const REQUEST_PATHS: ResourceLink[] = [
   {
     to: "/funnel/b",
     icon: TrendingDown,
-    title: "Preis unterbieten lassen",
+    title: "Fertige Planung vergleichen",
     description:
-      "Sie haben schon eine Planung und einen Preis vom Studio? Andere Studios können ihn 72 Stunden lang unterbieten.",
-    cta: "Preis unterbieten lassen",
+      "Sie haben schon eine fertige Planung und einen Preis vom Studio? Andere Studios können Ihnen 72 Stunden lang ein günstigeres Angebot machen.",
+    cta: "Planung vergleichen",
   },
 ];
 

@@ -11,8 +11,8 @@ export default function FunnelB() {
   return (
     <>
       <FunnelSeo
-        title="Studio-Preis unterbieten"
-        description="Nennen Sie den Preis Ihres Küchenstudios und laden Sie die Planung hoch – geprüfte Studios aus Ihrer Region können ihn 72 Stunden lang unterbieten. Kostenlos und unverbindlich."
+        title="Fertige Küchenplanung vergleichen"
+        description="Schon eine fertige Planung vom Küchenstudio? Preis nennen, Planung hochladen – geprüfte Studios aus Ihrer Region können 72 Stunden lang günstiger anbieten. Kostenlos und unverbindlich."
         canonicalPath="/funnel/b"
       />
       <FunnelBClient />

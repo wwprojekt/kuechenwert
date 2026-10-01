@@ -475,7 +475,7 @@ const Kuechenrechner = () => {
                   <Button asChild size="lg" variant="outline" className="w-full h-14 font-semibold border-2">
                     <Link to="/funnel/b">
                       <TrendingDown className="mr-2 h-4 w-4" aria-hidden="true" />
-                      Vorhandenes Angebot unterbieten lassen
+                      Fertige Planung vergleichen
                     </Link>
                   </Button>
                 </div>

@@ -8,7 +8,7 @@ const STEPS = [
   {
     icon: ClipboardList,
     title: "Projekt anlegen",
-    description: "Raumfoto und Maße im Konfigurator, kurzer Fragebogen oder Ihr vorhandenes Studio-Angebot – ganz wie Sie möchten.",
+    description: "Raumfoto und Maße im Konfigurator, kurzer Fragebogen oder Ihre fertige Planung vom Studio – ganz wie Sie möchten.",
     duration: "2–5 Min",
   },
   {
@@ -115,8 +115,8 @@ const Process = () => {
               Persönlicher <span className="text-primary">Service für Sie</span>
             </h3>
             <p className="text-base leading-relaxed text-muted-foreground sm:text-lg">
-              Unser Team beantwortet Ihre Fragen zu Anfrage, Angeboten und Ablauf – telefonisch oder per E-Mail. Ein vorhandenes
-              Studio-Angebot gehen wir vor der Angebotsphase im Telefonat mit Ihnen durch.
+              Unser Team beantwortet Ihre Fragen zu Anfrage, Angeboten und Ablauf – telefonisch oder per E-Mail. Eine fertige
+              Planung vom Studio gehen wir vor der Angebotsphase im Telefonat mit Ihnen durch.
             </p>
             <div className="grid grid-cols-3 gap-3 sm:gap-4">
               {[

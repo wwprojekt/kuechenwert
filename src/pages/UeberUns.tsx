@@ -70,7 +70,7 @@ const UeberUns = () => {
       year: "2026",
       title: "Konzeption",
       description:
-        "Entwicklung einer Plattform speziell für neue Küchen: Angebote von Küchenstudios, Unterbieten vorhandener Studio-Angebote und KI-Planer für Traumküchen.",
+        "Entwicklung einer Plattform speziell für neue Küchen: Angebote von Küchenstudios, Preisvergleich für fertige Studio-Planungen und KI-Planer für Traumküchen.",
     },
     {
       year: "Apr 2026",
@@ -124,7 +124,7 @@ const UeberUns = () => {
     <PageLayout
       breadcrumbs={true}
       title="Über uns – Ihr Partner für die neue Traumküche"
-      description={`Erfahren Sie mehr über ${siteName} – die Plattform für Ihre neue Küche: Angebote von geprüften Küchenstudios, Unterbieten vorhandener Angebote und KI-Planer. Ein Angebot der ${BRAND.legalName}.`}
+      description={`Erfahren Sie mehr über ${siteName} – die Plattform für Ihre neue Küche: Angebote von geprüften Küchenstudios, Preisvergleich für fertige Planungen und KI-Planer. Ein Angebot der ${BRAND.legalName}.`}
       keywords="über uns, KüchenWert, neue Küche planen, Küchen-Vermittlung, Küchenstudio Vergleich, Traumküche"
       canonicalPath="/ueber-uns"
       structuredData={[

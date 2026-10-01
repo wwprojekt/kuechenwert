@@ -12,7 +12,7 @@ import { BRAND } from "@/lib/brand";
 const customerFreeServices = [
   "KüchenRechner: Preisspanne als Richtwert mit 4 kurzen Fragen",
   "Angebote von geprüften Küchenstudios einholen",
-  "Vorhandenes Studio-Angebot unterbieten lassen",
+  "Günstigere Angebote für Ihre fertige Planung vom Studio",
   "KI-Konfigurator mit Visualisierung im eigenen Raum",
   "Alle Angebote auf Ihrer persönlichen Projektseite vergleichen",
   "Persönlicher Support per Telefon und E-Mail",

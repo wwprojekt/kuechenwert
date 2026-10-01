@@ -42,13 +42,13 @@ const CHANNELS: Channel[] = [
   {
     icon: TrendingDown,
     badge: "Schon beim Studio gewesen?",
-    title: "Studio-Preis unterbieten",
-    subtitle: "Studios unterbieten den Preis Ihrer Planung",
+    title: "Fertige Planung vergleichen",
+    subtitle: "Andere Studios können dieselbe Küche günstiger anbieten",
     description:
-      "Sie haben eine Planung vom Küchenstudio und einen Preis? Laden Sie die Planung hoch – ein schriftliches Angebot brauchen Sie nicht. Nach einem kurzen Telefonat mit unserem Team können andere geprüfte Studios 72 Stunden lang ein günstigeres Angebot für dieselbe oder eine vergleichbare Küche machen.",
+      "Sie haben eine fertige Planung vom Küchenstudio und einen Preis? Laden Sie die Planung hoch – ein schriftliches Angebot brauchen Sie nicht. Nach einem kurzen Telefonat mit unserem Team können andere geprüfte Studios 72 Stunden lang ein günstigeres Angebot für dieselbe oder eine vergleichbare Küche machen.",
     benefits: ["72 Stunden Angebotsphase", "Planung als Handyfoto genügt", "Ohne Ihren Namen vorgestellt"],
     to: "/funnel/b",
-    ctaLabel: "Preis unterbieten lassen",
+    ctaLabel: "Planung vergleichen",
   },
 ];
 

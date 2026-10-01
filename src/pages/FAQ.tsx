@@ -27,7 +27,7 @@ const FAQPage = () => {
     <PageLayout
       breadcrumbs={true}
       title="Häufig gestellte Fragen (FAQ)"
-      description={`Antworten auf häufige Fragen zu ${BRAND.name}: KI-Küchenplaner, Preisschätzung, Studio-Angebote, Unterbieten, Partnerstudios und Datenschutz.`}
+      description={`Antworten auf häufige Fragen zu ${BRAND.name}: KI-Küchenplaner, Preisschätzung, Studio-Angebote, fertige Planungen, Partnerstudios und Datenschutz.`}
       keywords="KüchenWert FAQ, KI Küchenplaner, Küche visualisieren, Küchenangebot vergleichen, Küchenstudio Angebote, Küchenangebot unterbieten"
       canonicalPath="/faq"
       structuredData={faqSchema}

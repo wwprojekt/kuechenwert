@@ -46,7 +46,7 @@ const Barrierefreiheit = () => {
           <h2>Unsere Dienstleistung</h2>
           <p>
             Über {BRAND.name} holen Sie kostenlos und unverbindlich Angebote für eine neue Küche ein. Sie können
-            ein vorhandenes Angebot von anderen Küchenstudios unterbieten lassen oder Ihre Küche mit KI planen und
+            eine fertige Planung vom Küchenstudio mit Angeboten anderer Studios vergleichen oder Ihre Küche mit KI planen und
             in Ihrem eigenen Raum ansehen. Geprüfte Küchenstudios aus Ihrer Region machen Ihnen Angebote – ob und
             welches Sie annehmen, entscheiden Sie.
           </p>

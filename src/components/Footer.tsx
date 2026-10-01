@@ -114,7 +114,7 @@ const Footer = () => {
               <SiteLogo variant="footer" />
               <p className="text-sm text-white/75 leading-relaxed max-w-sm">
                 {settings?.site_description ||
-                  `${BRAND.name} ist das Vergleichsportal für neue Küchen. Angebote einholen, Studio-Preise unterbieten lassen oder mit KI visualisieren – kostenlos und unverbindlich.`}
+                  `${BRAND.name} ist das Vergleichsportal für neue Küchen. Angebote einholen, fertige Planungen vergleichen oder mit KI visualisieren – kostenlos und unverbindlich.`}
               </p>
 
               <div className="flex items-center gap-3">
@@ -146,7 +146,7 @@ const Footer = () => {
                 </li>
                 <li>
                   <Link to="/funnel/b" className="text-sm text-white/75 hover:text-white transition-colors">
-                    Studio-Preis unterbieten
+                    Fertige Planung vergleichen
                   </Link>
                 </li>
                 <li>

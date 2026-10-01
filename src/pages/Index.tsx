@@ -14,7 +14,7 @@ const Index = () => {
   const organizationSchema = generateOrganizationSchema(settings);
   const serviceSchema = generateServiceSchema(
     "KI-Küchenplanung & Studio-Angebote",
-    "Traumküche im eigenen Raum mit KI visualisieren, Preis schätzen und Angebote geprüfter Küchenstudios vergleichen – oder ein vorhandenes Studio-Angebot unterbieten lassen."
+    "Traumküche im eigenen Raum mit KI visualisieren, Preis schätzen und Angebote geprüfter Küchenstudios vergleichen – oder für eine fertige Planung vom Studio günstigere Angebote einholen."
   );
 
   return (

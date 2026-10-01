@@ -35,7 +35,7 @@ export const FAQ_ITEMS: FaqItem[] = [
   {
     question: "Wie läuft die Angebotsphase ab?",
     answer:
-      "Nach dem Absenden stellen wir Ihr Projekt ohne Ihren Namen geprüften Studios in Ihrer Region vor – für 7 Tage, beim Unterbieten eines vorhandenen Angebots für 72 Stunden. Studios sehen zunächst nur PLZ-Bereich, Maße, Wünsche und Visualisierung. Jedes Studio kann ein Angebot abgeben und es danach nur noch senken. Alle Angebote sehen Sie auf Ihrer persönlichen Projektseite; anschließend haben Sie 21 Tage Zeit für Ihre Entscheidung.",
+      "Nach dem Absenden stellen wir Ihr Projekt ohne Ihren Namen geprüften Studios in Ihrer Region vor – für 7 Tage, bei einer fertigen Planung vom Studio für 72 Stunden. Studios sehen zunächst nur PLZ-Bereich, Maße, Wünsche und Visualisierung. Jedes Studio kann ein Angebot abgeben und es danach nur noch senken. Alle Angebote sehen Sie auf Ihrer persönlichen Projektseite; anschließend haben Sie 21 Tage Zeit für Ihre Entscheidung.",
   },
   {
     question: "Was unterscheidet KüchenWert von anderen Küchenportalen?",
@@ -43,7 +43,7 @@ export const FAQ_ITEMS: FaqItem[] = [
       "Drei Dinge: 1) Sie sehen Ihre Küche per KI im eigenen Raum, bevor Sie mit einem Studio sprechen – inklusive Preisschätzung. 2) Studios machen Ihnen Angebote und können ein abgegebenes Angebot nur noch senken – Sie müssen nicht jedes Studio einzeln anfragen. 3) Den Preis, den Ihnen ein Studio für Ihre Planung genannt hat, können andere Studios 72 Stunden lang unterbieten – nach einem kurzen, kostenlosen Telefonat mit unserem Team.",
   },
   {
-    question: "Wie funktioniert das Unterbieten eines Studio-Preises?",
+    question: "Ich habe schon eine fertige Planung – wie bekomme ich günstigere Angebote?",
     answer:
       "Sie nennen den Preis, den Ihnen Ihr Küchenstudio genannt hat, und laden die Planung hoch – Grundriss, Ansichten oder Geräteliste; ein Handyfoto genügt, ein schriftliches Angebot brauchen Sie nicht. Nach einem kurzen Telefonat mit unserem Team stellen wir Ihre Planung ohne Ihren Namen und ohne den Namen des Studios 72 Stunden lang geprüften Küchenstudios aus Ihrer Region vor. Diese können Ihnen ein günstigeres Angebot für dieselbe oder eine vergleichbare Ausstattung machen. Sie nehmen das beste Angebot an – oder lehnen alle ab.",
   },
@@ -60,7 +60,7 @@ export const FAQ_ITEMS: FaqItem[] = [
   {
     question: "Wann bekomme ich die ersten Angebote?",
     answer:
-      "Preisschätzung und KI-Vorschau sehen Sie im Konfigurator direkt am Ende Ihrer Planung – nach wenigen Minuten. Studio-Angebote können während der gesamten Angebotsphase eingehen: 7 Tage bei einer neuen Anfrage, 72 Stunden beim Unterbieten eines vorhandenen Angebots. Über jedes neue Angebot informieren wir Sie per E-Mail. Nehmen in Ihrer Region noch keine Studios teil, melden wir uns persönlich bei Ihnen.",
+      "Preisschätzung und KI-Vorschau sehen Sie im Konfigurator direkt am Ende Ihrer Planung – nach wenigen Minuten. Studio-Angebote können während der gesamten Angebotsphase eingehen: 7 Tage bei einer neuen Anfrage, 72 Stunden bei einer fertigen Planung vom Studio. Über jedes neue Angebot informieren wir Sie per E-Mail. Nehmen in Ihrer Region noch keine Studios teil, melden wir uns persönlich bei Ihnen.",
   },
   {
     question: "Welche Küchenstudios machen mit?",

@@ -3,7 +3,7 @@ import { expect, test } from './fixtures';
 const REQUEST_PATHS = [
   { href: '/funnel/c', title: /Traumküche/ },
   { href: '/formular', title: /Küchenangebote/ },
-  { href: '/funnel/b', title: /unterbieten/ },
+  { href: '/funnel/b', title: /Küchenplanung vergleichen/ },
 ];
 
 const urlFor = (path: string) => new RegExp(`${path}(?:[/?#]|$)`);

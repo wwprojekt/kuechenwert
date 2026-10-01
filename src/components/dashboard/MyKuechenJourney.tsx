@@ -67,12 +67,12 @@ const FUNNEL_META: Record<
     description: "Bis zu 3 geprüfte Studios geben Ihnen ein unverbindliches Angebot.",
   },
   b: {
-    title: "Studio-Preis unterbieten",
+    title: "Fertige Planung vergleichen",
     href: "/funnel/b",
     icon: TrendingDown,
     color:
       "text-warning bg-amber-50 border-amber-200 dark:bg-amber-950/20 dark:border-amber-800",
-    description: "Bestehendes Küchen-Angebot von geprüften Küchenstudios unterbieten lassen.",
+    description: "Planung vom Studio hochladen – andere geprüfte Küchenstudios können dieselbe Küche günstiger anbieten.",
   },
   traumkueche: {
     title: "Traumküche planen",

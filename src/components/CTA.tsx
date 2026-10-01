@@ -34,7 +34,7 @@ const CTA = () => {
               <Button asChild variant="outline" className="border-amber-300 hover:bg-amber-50 w-full sm:w-auto">
                 <Link to="/funnel/b">
                   <TrendingDown className="h-4 w-4 mr-2" />
-                  Studio-Angebot unterbieten
+                  Fertige Planung vergleichen
                 </Link>
               </Button>
             </div>

@@ -50,7 +50,7 @@ interface NavItem {
 
 const MAIN_NAV: NavItem[] = [
   { to: "/formular", label: "Angebote holen", activePaths: ["/funnel/a"] },
-  { to: "/funnel/b", label: "Preis unterbieten" },
+  { to: "/funnel/b", label: "Planung vergleichen" },
   { to: "/kuechenrechner", label: "KüchenRechner", wideOnly: true },
   { to: "/kuechenstudios", label: "Küchenstudios", wideOnly: true },
 ];
@@ -287,7 +287,7 @@ const Header = () => {
                   Angebote holen
                 </Link>
                 <Link to="/funnel/b" className="rounded-lg bg-primary/10 px-3 py-2.5 text-center text-sm font-semibold text-primary hover:bg-primary/15">
-                  Preis unterbieten
+                  Planung vergleichen
                 </Link>
               </div>
               <Link to="/kuechenrechner" className="mt-2 flex items-center gap-2 py-3 text-sm font-medium text-foreground/80 hover:text-primary">

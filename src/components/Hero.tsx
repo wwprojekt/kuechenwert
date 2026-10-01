@@ -31,8 +31,8 @@ const PATHS: Path[] = [
   {
     to: "/funnel/b",
     icon: TrendingDown,
-    title: "Preis unterbieten lassen",
-    description: "Planung vom Küchenstudio günstiger bekommen",
+    title: "Schon eine fertige Planung?",
+    description: "Günstigere Angebote für dieselbe Küche",
   },
 ];
 

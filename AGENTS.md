@@ -342,3 +342,27 @@ Note: Supabase serves storage via its own Cloudflare with Bot Management (`Set-C
 - **Value feedback (offline conversions):** for leads with a Google click ID, three stages go to Google. „Anfrage veröffentlicht" (category qualified lead): the tender is published (Funnel A/C automatically after the bot check, Funnel B by the admin) and reported only after 24 h without rejection, value = contact price of the tender (fallback `kw_marketplace_settings.contact_price_fallback_cents`), order ID `kw-lead-<lead id>-published`, retracted once the lead becomes `disqualified` or `disputed`. Then every marketplace invoice with its net amount (`lead_purchase` → „Kontakt freigeschaltet", `lead_commission` → „Auftrag vergeben", both category converted lead), so Google learns which clicks bring revenue, not just form fills. `setup` also makes the account goal (category + origin) of the primary stage biddable and keeps call goals out of bidding. Queue `kw_gads_conversion_uploads` (one row per request or invoice in `source_id`, only references and amounts; service role only), filled by `kw_gads_collect_conversions()` and sent by `kw-google-ads` `{ "action": "upload-conversions", "dryRun"? }` (cron `kw-gads-conversion-uploads`, hourly at :25, calls the function only when rows are due). Click IDs and contact data are read fresh from `leads` at upload time, so erasure and anonymization stop uploads. Order ID `kw-inv-<invoice id>` dedupes; cancelled (`status = 'cancelled'`) or refunded (`payment_status = 'refunded'`) invoices are retracted. Retries back off 2 → 24 h, at most 6 attempts, then `rejected`/`retract_failed`. Only invoices within 90 days of the lead (click lookback). Hashed email/phone (Enhanced Conversions for leads) is sent only once the account has accepted the customer data terms and enabled Enhanced Conversions for leads. All three actions are MANY_PER_CLICK (Google rejects ONE_PER_CLICK for gbraid/wbraid) and secondary until their phase. Admin → Tracking shows the counts. `{ "action": "upload-conversions", "probe": true }` sends a made-up conversion and retraction to Google in validate-only mode, without touching the database: expected are per-item errors such as `UNPARSEABLE_GCLID`; `requestAccepted: false` means the request format broke (run it after every `GADS_API_VERSION` bump).
 - `track-conversion` is retired (410, 2026-09-30): funnel leads are measured by the browser tag only (no double counting); revenue goes through the value feedback above.
 - **GA4_API_SECRET**: Must be created in GA4 Admin → Data Streams → Measurement Protocol API secrets
+
+## Lokale Ordnerstruktur (Entwicklungsrechner, Stand 14.10.2026)
+
+Jedes Repository liegt genau einmal unter `C:\Users\Philip Müller\Projects\<repo>`; der Ordnername ist der GitHub-Repo-Name (`wwprojekt/<repo>`). Einträge wie `Documents\caravanwert` oder `Documents\motorwert` sind nur Junctions (Verknüpfungen) auf `Projects\…` und werden später entfernt. Immer den `Projects`-Pfad verwenden.
+
+| Ordner in `Projects` | Was drin ist |
+|---|---|
+| `lumeet` | Lirono: verifizierte Live-, Social- und Dating-Plattform (18+). Flutter-App, Supabase-Backend, Web, Ops-Konsole |
+| `caravanwert` | CaravanWert: Verkaufsplattform für Wohnmobile und Wohnwagen |
+| `motorwert` | MotorWert.de: PKW-Auktionsplattform (Schwesterprojekt von CaravanWert) |
+| `bikewert` | BikeWert: Motorrad-Plattform (Schwesterprojekt) |
+| `landtechnikwert` | LandtechnikWert: P2B-Auktionsplattform für gebrauchte Landtechnik |
+| `kuechenwert` | KüchenWert: Küchenplanung mit KI, Preisschätzung und Studio-Angebote (Lead-Generation) |
+| `kuechenwert-old` | KüchenWert, Vorgängergeneration: Lead-Generation und Rückwärts-Auktion (eigenes Repo, eingefroren) |
+| `WohnWert` | WohnWert24: kostenlose Immobilienbewertung und Makler-Leads |
+| `WohnWert-Test` | WohnWert-Testprojekt (eigenes Repo, eingefroren) |
+| `medilero-final` | Medilero: Plattform für Medizintechnik, Praxissoftware und Praxisberatung (Leads, Anbieter-Matching, CMS) |
+| `dental-service-platform` | ERP und Serviceplattform der Deppe-Dental-Gruppe |
+| `code-charm` | Lovable-generierter Prototyp (Vite/React) |
+| `_tools` | Pflegeskripte: `worktrees-aufraeumen.ps1`, `repo-nach-projects.ps1`, `konsolidierung-nachholen.ps1` |
+
+Parallele Arbeit findet nur in Git-Worktrees unter `<repo>\.worktrees\<aufgabe>` statt, nie als Nachbarordner in `Projects`. Der Hauptordner des Repos bleibt auf `main`. Nach dem Merge wird der Worktree entfernt (`Projects\_tools\worktrees-aufraeumen.ps1`, Modus `Liste` zeigt den Stand).
+
+Weitere Orte: `C:\dev\*` sind Junctions mit kurzen Pfaden für Flutter/Android-Builds, keine Kopien. `C:\Archiv\2026-10-14-projekt-konsolidierung\` enthält alte Kopien und archivierte Worktrees samt Manifest; dort wird nicht gearbeitet und nichts gelöscht. Unversionierte Secrets (`.env`, Firebase-Configs, Keys, `.agents`-Zustand) liegen im jeweiligen Repo-Ordner und bleiben dort.

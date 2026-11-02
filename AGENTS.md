@@ -66,7 +66,7 @@ npm run build        # Production build via Vite → dist/
 npm run test:run     # Vitest single run
 npm run test:e2e     # Playwright E2E tests
 npm run lint         # ESLint full project
-npm run typecheck    # Strict ratchet check (tsconfig.strict.json), CI gate
+npm run typecheck    # Strict ratchet check (tsconfig.strict.json) with TypeScript 7, CI gate
 
 # Prerender public routes into dist/<route>/index.html (after build, needs Chrome/Chromium via PRERENDER_CHROME)
 PRERENDER=1 node scripts/prerender.mjs
@@ -77,6 +77,12 @@ node scripts/check-csp.mjs [--tracking]
 The deploy workflow runs `npm run typecheck`, `npx eslint src` (errors only), `npx vitest run` (all tests) and the build before every Dokploy deploy.
 
 Note: Always lint, test, and typecheck updated files. Use project-wide build only before commit or when explicitly requested.
+
+### TypeScript 7 und betroffene Tests (Philip 02.11.2026)
+- **Typprüfung mit TypeScript 7 (`tsc`)**, Paket `@typescript/native` = `typescript@7`: `npm run typecheck` rund 3–7 s statt 15–56 s, `typecheck:all` rund 5–10 s statt 19–30 s, gleiche Fehler wie mit 5.9. Werkzeuge mit TypeScript-Schnittstelle (ESLint über typescript-eslint) nutzen TypeScript 6.0 (`tsc6`, Paket `typescript` = `@typescript/typescript6`), bis TypeScript 7.1 eine stabile Schnittstelle hat; dann die Aliase entfernen.
+- Typprüfungen immer mit `tsc` (7), nie über `node node_modules/typescript/...` (das ist 6.0). `scripts/typecheck-strict.mjs` startet `node_modules/@typescript/native/bin/tsc` und bricht ab, wenn tsc nicht läuft oder eine tsconfig einen Fehler hat (`baseUrl` gibt es in TypeScript 7 nicht mehr; `paths` gilt relativ zur tsconfig).
+- TypeScript immer auf die neueste Version halten (`@typescript/native` und `typescript` in `package.json`).
+- Während der Arbeit nur betroffene Tests: `npx vitest related --run <geänderte Dateien>`. Die volle Prüfung (`npm run typecheck`, `npx eslint src`, `npx vitest run`, `npm run build`) läuft vor dem Push und im Deploy-Workflow; auf dem Entwicklungsrechner arbeiten oft viele Agenten gleichzeitig.
 
 ## When Stuck
 - Ask a clarifying question or propose a short plan

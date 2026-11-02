@@ -21,7 +21,7 @@
     "noImplicitAny": false,
     "noFallthroughCasesInSwitch": false,
 
-    "baseUrl": ".",
+    /* paths gilt relativ zu dieser Datei; baseUrl ist seit TypeScript 6 veraltet und in 7 entfernt. */
     "paths": {
       "@/*": ["./src/*"]
     }

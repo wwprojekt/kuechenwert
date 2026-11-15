@@ -372,3 +372,28 @@ Jedes Repository liegt genau einmal unter `C:\Users\Philip Müller\Projects\<rep
 Parallele Arbeit findet nur in Git-Worktrees unter `<repo>\.worktrees\<aufgabe>` statt, nie als Nachbarordner in `Projects`. Der Hauptordner des Repos bleibt auf `main`. Nach dem Merge wird der Worktree entfernt (`Projects\_tools\worktrees-aufraeumen.ps1`, Modus `Liste` zeigt den Stand).
 
 Weitere Orte: `C:\dev\*` sind Junctions mit kurzen Pfaden für Flutter/Android-Builds, keine Kopien. `C:\Archiv\2026-10-14-projekt-konsolidierung\` enthält alte Kopien und archivierte Worktrees samt Manifest; dort wird nicht gearbeitet und nichts gelöscht. Unversionierte Secrets (`.env`, Firebase-Configs, Keys, `.agents`-Zustand) liegen im jeweiligen Repo-Ordner und bleiben dort.
+
+## Geheimnisse nie ins Repository (alle Agenten, Roni 15.11.2026)
+
+Gilt für jeden Agenten (Claude, Cursor, Codex, Kimi …) und jeden Menschen, der hier committet. Der Secret-Scan
+aller Repositories vom 15.11.2026 fand gültige Schlüssel in eingecheckten `.env`-Dateien, als Konstante im Code,
+unter `[vars]` in `wrangler.toml`, als „z. B.“-Wert in Workflow-Kommentaren, in Migrationsnotizen und im Protokoll
+eines CI-Laufs. Jeder davon musste beim Anbieter gewechselt werden.
+
+- **Nie in eine Datei im Repository:** API-Schlüssel, Tokens, Passwörter, Signier- und Webhook-Geheimnisse, private
+  Schlüssel und Zertifikate, Verbindungs-URLs mit Passwort, `service_role`-Schlüssel. Auch nicht als Beispiel, im
+  Kommentar, in Doku, Tests, Fixtures oder MCP-Konfiguration (`.cursor/mcp.json`, `.mcp.json`).
+- **Auch nicht in** Commit-Nachrichten, PR- und Issue-Texten, CI-Ausgaben (`echo`, `cat`, `set -x`) oder Chat- und
+  Terminalausgaben. Ob ein Wert stimmt, zeigt sein Name, seine Länge oder seine Prüfsumme, nie der Wert selbst.
+- **Stattdessen:** in den Geheimnisspeicher des Dienstes (GitHub Actions Secrets, Supabase Edge Function Secrets,
+  Cloudflare Worker-Secrets, Umgebung des Servers) und lokal in `.env`, die in `.gitignore` steht. Der Code liest aus
+  der Umgebung und verweigert ohne Wert den Dienst, statt auf einen eingebauten Wert zurückzufallen.
+- **Beispiele nur mit Platzhaltern:** `.env.example` und Doku nennen Name und Herkunft
+  (`RESEND_API_KEY=<aus dem Resend-Dashboard>`), nie einen echten oder echt aussehenden Wert.
+- **Öffentlich ist nur, was ohnehin im Browser landet:** etwa Supabase-URL und `anon`/publishable Key. Alles andere
+  ist geheim.
+- **Vor jedem Commit** `git diff --cached` auf Geheimnisse ansehen, besonders bei `.env*`, `*.pem`, `*.p12`, `*.key`,
+  `mcp.json`, `wrangler.toml` und Workflows.
+- **Ist es doch passiert:** Der Wert gilt als geleakt, auch wenn der Commit sofort wieder verschwindet (Historie,
+  Forks, Caches). Sofort beim Anbieter wechseln, den neuen Wert in den Geheimnisspeicher setzen und Roni Bescheid
+  geben. Auf dem Entwicklungsrechner steht der neue Wert in `Desktop\<projekt>-zugangsdaten.txt`, nie im Repository.

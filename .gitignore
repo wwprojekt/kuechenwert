@@ -37,6 +37,9 @@ dist-ssr
 # Vite dependency cache
 .vite/
 
+# Git-Worktrees für parallele Arbeit (AGENTS.md, Lokale Ordnerstruktur)
+.worktrees/
+
 # Temp/debug files
 .tmp-*
 .tmp_*

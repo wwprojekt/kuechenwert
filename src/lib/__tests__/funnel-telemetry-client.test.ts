@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import type * as Telemetry from "../funnelTelemetry";
 
 type TelemetryModule = typeof Telemetry;
@@ -47,6 +47,14 @@ async function load(): Promise<TelemetryModule> {
 function sentBodies(): Array<{ session_id: string; funnel: string; consent_id: string | null; events: Array<Record<string, unknown>> }> {
   return fetchMock.mock.calls.map(([, init]) => JSON.parse((init as RequestInit).body as string));
 }
+
+// Der erste Import zieht den Modulgraphen (CookieBanner samt UI-Komponenten) durch die
+// Transformation. In der vollen Suite dauerte das mit Vitest 5 länger als die 5 s eines Tests,
+// und der erste Test lief in die Zeitgrenze (Werkzeug-Update 16.11.2026). Danach lädt load()
+// nach resetModules aus dem Cache; das Modul registriert beim Import keine Listener.
+beforeAll(async () => {
+  await import("../funnelTelemetry");
+}, 30_000);
 
 beforeEach(() => {
   vi.stubGlobal("localStorage", memoryStorage());

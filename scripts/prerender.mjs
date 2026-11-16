@@ -182,6 +182,14 @@ function serializePage(shellScriptSources) {
   });
   // Von Bibliotheken zur Laufzeit in <head> eingefügte Styles setzt die App selbst neu.
   removeAll("head style");
+  // Seit Vite 8 setzt der Preload-Helfer die Links nachgeladener Chunks mit absoluter Adresse
+  // (import.meta.resolve). Relativ wie bis Vite 5: Sonst findet defer-app-start.mjs die
+  // modulepreload-Links nicht, und sie laden im <head> schon vor dem ersten Paint
+  // (Werkzeug-Update 16.11.2026).
+  document.querySelectorAll('link[rel="modulepreload"][href], link[rel="stylesheet"][href]').forEach((el) => {
+    const url = new URL(el.getAttribute("href"), location.href);
+    if (url.origin === location.origin) el.setAttribute("href", url.pathname + url.search);
+  });
   // Nachgeladene Skripte (z. B. Turnstile) lädt die App selbst; sonst liefen sie doppelt.
   // JSON-LD bleibt, die Shell enthält kein Inline-Skript (CSP ohne 'unsafe-inline').
   document.querySelectorAll("script").forEach((el) => {

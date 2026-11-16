@@ -16,7 +16,7 @@ const versionPublicScripts = (): Plugin => ({
     handler: (html) =>
       html.replace(/<script src="\/js\/([\w.-]+\.js)"><\/script>/g, (_tag, file: string) => {
         const hash = createHash("sha256")
-          .update(readFileSync(path.resolve(__dirname, "public/js", file)))
+          .update(readFileSync(path.resolve(import.meta.dirname, "public/js", file)))
           .digest("hex")
           .slice(0, 10);
         return `<script src="/js/${file}?v=${hash}"></script>`;
@@ -62,7 +62,16 @@ const fontDisplayOptional = (): Plugin => ({
   },
 });
 
-// https://vitejs.dev/config/
+// Gehört ein Modul zu einem der Pakete? Unabhängig vom Pfadtrenner (Windows) und vom Layout des
+// Paketmanagers (pnpm legt Pakete unter node_modules/.pnpm/<paket>@<version>/node_modules/<paket> ab).
+const ausPaket =
+  (...pakete: string[]) =>
+  (id: string) => {
+    const pfad = id.replaceAll("\\", "/");
+    return pakete.some((paket) => pfad.includes(`/node_modules/${paket}`));
+  };
+
+// https://vite.dev/config/
 export default defineConfig(({ mode }) => ({
   server: {
     host: "::",
@@ -77,10 +86,14 @@ export default defineConfig(({ mode }) => ({
   ].filter(Boolean),
   resolve: {
     alias: {
-      "@": path.resolve(__dirname, "./src"),
+      "@": path.resolve(import.meta.dirname, "./src"),
     },
   },
   build: {
+    // Browserziele wie mit Vite 5 (Vorgabe 'modules'): Seit Vite 7 hebt die Vorgabe sie auf
+    // Safari 16.4 / Chrome 111 an, ältere iPhones und iPads bekämen dann womöglich eine leere Seite.
+    // Ob die Ziele steigen dürfen, ist eine eigene Entscheidung (Werkzeug-Update 16.11.2026).
+    target: ["es2020", "edge88", "firefox78", "chrome87", "safari14"],
     // Vite's default modulePreload walks the entry's transitive async-import
     // graph and emits <link rel="modulepreload"> for every reachable chunk.
     // For our SPA that means heavy admin-only bundles (recharts, the rich
@@ -101,88 +114,50 @@ export default defineConfig(({ mode }) => ({
           return true;
         }),
     },
-    rollupOptions: {
+    rolldownOptions: {
       output: {
-        manualChunks(id) {
-          // React core – rarely changes, excellent cache hit rate
-          if (
-            id.includes("node_modules/react/") ||
-            id.includes("node_modules/react-dom/") ||
-            id.includes("node_modules/react-router-dom/") ||
-            id.includes("node_modules/react-router/") ||
-            id.includes("node_modules/@remix-run/")
-          ) {
-            return "vendor-react";
-          }
-
-          // Supabase client – separate chunk for backend SDK
-          if (id.includes("node_modules/@supabase/")) {
-            return "vendor-supabase";
-          }
-
-          // Data fetching and state management
-          if (id.includes("node_modules/@tanstack/")) {
-            return "vendor-query";
-          }
-
-          // Kleine Helfer, die App und Admin-Bibliotheken teilen. Ohne eigenen
-          // Chunk legt Rollup sie in vendor-recharts bzw. vendor-editor ab, und
-          // der Einstieg lädt beide auf jeder Seite (clsx allein zog 107 KB
-          // Diagramme, deren fast-equals weitere 119 KB Editor).
-          // scripts/check-entry-chunks.mjs prüft das nach jedem Build.
-          if (
-            id.includes("node_modules/clsx/") ||
-            id.includes("node_modules/tailwind-merge/") ||
-            id.includes("node_modules/class-variance-authority/") ||
-            id.includes("node_modules/fast-equals/")
-          ) {
-            return "vendor-utils";
-          }
-
-          // Charts library – only needed on pages with charts
-          if (
-            id.includes("node_modules/recharts/") ||
-            id.includes("node_modules/d3-") ||
-            id.includes("node_modules/victory-")
-          ) {
-            return "vendor-recharts";
-          }
-
-          // Date utilities
-          if (id.includes("node_modules/date-fns/")) {
-            return "vendor-date";
-          }
-
-          // Icon library
-          if (id.includes("node_modules/lucide-react/")) {
-            return "vendor-icons";
-          }
-
-          // Rich text editor (tiptap + prosemirror)
-          if (
-            id.includes("node_modules/@tiptap/") ||
-            id.includes("node_modules/prosemirror-") ||
-            id.includes("node_modules/@prosemirror/")
-          ) {
-            return "vendor-editor";
-          }
-
-          // Form handling
-          if (
-            id.includes("node_modules/react-hook-form/") ||
-            id.includes("node_modules/@hookform/") ||
-            id.includes("node_modules/zod/")
-          ) {
-            return "vendor-forms";
-          }
-
-          // UI primitives (Radix + related)
-          if (
-            id.includes("node_modules/@radix-ui/") ||
-            id.includes("node_modules/@floating-ui/")
-          ) {
-            return "vendor-ui";
-          }
+        // Vendor-Chunks für langes Caching. Seit Vite 8 (Rolldown) als Gruppen statt manualChunks:
+        // Eine Gruppe nimmt die Abhängigkeiten ihrer Module mit, soweit keine Gruppe mit höherer
+        // Priorität sie schon hat. Mit der alten manualChunks-Funktion landete react-dom im
+        // Editor-Chunk, und der Einstieg hing statisch an Editor und Diagrammen: Jede Seite hätte
+        // beide geladen (500 statt 290 KiB gzip, Werkzeug-Update 16.11.2026).
+        // scripts/check-entry-chunks.mjs prüft das nach jedem Build.
+        codeSplitting: {
+          groups: [
+            // React core – rarely changes, excellent cache hit rate
+            {
+              name: "vendor-react",
+              priority: 90,
+              test: ausPaket("react/", "react-dom/", "react-router-dom/", "react-router/", "@remix-run/"),
+            },
+            // Kleine Helfer, die App und Admin-Bibliotheken teilen. Ohne eigenen Chunk landen sie
+            // in vendor-recharts bzw. vendor-editor, und der Einstieg lädt beide auf jeder Seite
+            // (clsx allein zog 107 KB Diagramme, deren fast-equals weitere 119 KB Editor).
+            {
+              name: "vendor-utils",
+              priority: 85,
+              test: ausPaket("clsx/", "tailwind-merge/", "class-variance-authority/", "fast-equals/"),
+            },
+            // UI primitives (Radix + related)
+            { name: "vendor-ui", priority: 80, test: ausPaket("@radix-ui/", "@floating-ui/") },
+            // Data fetching and state management
+            { name: "vendor-query", priority: 70, test: ausPaket("@tanstack/") },
+            // Supabase client – separate chunk for backend SDK
+            { name: "vendor-supabase", priority: 60, test: ausPaket("@supabase/") },
+            // Form handling
+            { name: "vendor-forms", priority: 50, test: ausPaket("react-hook-form/", "@hookform/", "zod/") },
+            // Date utilities
+            { name: "vendor-date", priority: 40, test: ausPaket("date-fns/") },
+            // Icon library
+            { name: "vendor-icons", priority: 30, test: ausPaket("lucide-react/") },
+            // Diagramme (nur AdminAnalytics) und Editor (nur AdminBlog) kommen zuletzt, damit sie
+            // keine Bibliothek an sich ziehen, die auch die übrigen Seiten laden.
+            { name: "vendor-recharts", priority: 20, test: ausPaket("recharts/", "d3-", "victory-") },
+            { name: "vendor-editor", priority: 10, test: ausPaket("@tiptap/", "prosemirror-", "@prosemirror/") },
+            // Eigener Code, den jede Seite beim Start braucht, in einen Chunk (wie bisher im
+            // Einstiegs-Chunk). Rolldown legt ihn sonst in ein Dutzend kleiner Dateien.
+            { name: "app", priority: 0, tags: ["$initial"] },
+          ],
         },
       },
     },

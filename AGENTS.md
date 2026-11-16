@@ -4,7 +4,7 @@
 - German-language kitchen (Küche) lead-gen and comparison platform, forked from a caravan auction stack
 - Live domain: `kuechenwert24.de` (brand: KüchenWert)
 - Supabase project ID: `gzqayoalwtmypndrmqes`
-- Stack: React 18 + TypeScript + Vite 5 + Tailwind + shadcn/ui + Supabase
+- Stack: React 18 + TypeScript + Vite 8 + Tailwind + shadcn/ui + Supabase
 - **Primary product:** Funnels A/B/C + Küchenrechner + dealer marketplace. Do NOT implement new Wohnmobil/Caravan features. User-facing copy must say Küche, never Fahrzeug/Wohnmobil.
 - Caravan frontend code and Edge Functions were removed or tombstoned on 2026-09-28; the caravan tables, functions and types were dropped on 2026-09-30 (`20260930120643_kw_drop_caravan_legacy`). Not caravan leftovers: the internal names of the KüchenWert tender (`lead_auctions`, `lead_bids`, `lead_status` `in_auction`) and the role `seller` (see Dealer System).
 
@@ -83,6 +83,15 @@ Note: Always lint, test, and typecheck updated files. Use project-wide build onl
 - Typprüfungen immer mit `tsc` (7), nie über `node node_modules/typescript/...` (das ist 6.0). `scripts/typecheck-strict.mjs` startet `node_modules/@typescript/native/bin/tsc` und bricht ab, wenn tsc nicht läuft oder eine tsconfig einen Fehler hat (`baseUrl` gibt es in TypeScript 7 nicht mehr; `paths` gilt relativ zur tsconfig).
 - TypeScript immer auf die neueste Version halten (`@typescript/native` und `typescript` in `package.json`).
 - Während der Arbeit nur betroffene Tests: `npx vitest related --run <geänderte Dateien>`. Die volle Prüfung (`npm run typecheck`, `npx eslint src`, `npx vitest run`, `npm run build`) läuft vor dem Push und im Deploy-Workflow; auf dem Entwicklungsrechner arbeiten oft viele Agenten gleichzeitig.
+
+### Bauwerkzeuge: Vite 8, Vitest 5, ESLint 10 (seit 16.11.2026, Freigabe Roni 15.11.2026)
+- Vite 8 (Rolldown, Oxc, Lightning CSS), Vitest 5 mit jsdom 31, ESLint 10 (Flat Config über `defineConfig` aus `eslint/config`). jsdom 31 braucht Node 22.22 oder 24.15 und neuer; Docker-Image und Deploy-Workflow laufen mit Node 22.
+- Vendor-Chunks stehen als `build.rolldownOptions.output.codeSplitting.groups` in `vite.config.ts`, nicht mehr als `manualChunks`. Unter Rolldown legte die alte Funktion react-dom in den Editor-Chunk, und der Einstieg hing statisch an `vendor-editor` und `vendor-recharts` (Startseite 500 statt 290 KiB gzip; `check-entry-chunks.mjs` hielt den Build an). Eine Gruppe nimmt die Abhängigkeiten ihrer Module mit, soweit keine Gruppe mit höherer Priorität sie hat: Ein Paket, das öffentliche Seiten und Admin-Bibliotheken teilen, braucht eine Gruppe mit Priorität über `vendor-recharts`/`vendor-editor` (wie `vendor-utils`). Die Gruppe `app` (`tags: ["$initial"]`) hält den Startcode im Einstiegs-Chunk, sonst kommen fünf kleine Dateien dazu.
+- `build.target` bleibt bewusst auf den Zielen von Vite 5 (Safari 14, Chrome 87, Firefox 78, Edge 88); die Vorgabe von Vite 8 (Safari 16.4, Chrome 111) wäre eine eigene Entscheidung.
+- Der Preload-Helfer von Vite 8 setzt die `modulepreload`-Links nachgeladener Chunks mit absoluter Adresse. `scripts/prerender.mjs` macht sie vor dem Speichern relativ; sonst findet `defer-app-start.mjs` sie nicht, und die Routen-Chunks laden auf vorgerenderten Seiten schon vor dem ersten Paint. Nach Änderungen am Prerendering prüfen, dass `dist/<route>/index.html` keinen `rel="modulepreload"`-Link mehr enthält.
+- CSS minifiziert Lightning CSS: Zahlen mit höchstens sechs Stellen (`1.33333em` statt `1.3333333em` aus `@tailwindcss/typography`) und Farben als Hex mit Alpha. Rechtsseiten mit `prose` liegen dadurch bis 0,45 px anders, Schatten und Verläufe um eine Farbstufe; sichtbar ist das nicht (Vergleich 16.11.2026).
+- Lint: Neue Regeln aus ESLint 10 und eslint-plugin-react-hooks 7 mit Fundstellen im Bestand stehen als Warnung (`eslint.config.js`, 67 Fundstellen am 16.11.2026); ihre Behebung ändert Verhalten und gehört in eigene Commits. Die übrigen neuen Regeln sind Fehler.
+- Vitest 4+: Was der Code mit `new` aufruft, braucht in `vi.fn()` eine `function`-Implementierung (eine Pfeilfunktion wirft „is not a constructor“). Fake-Timer fälschen jetzt auch `performance`, `requestAnimationFrame` und `requestIdleCallback`. Ein kalter dynamischer Import eines großen Modulgraphen dauerte in der vollen Suite länger als die 5 s eines Tests: vorab in `beforeAll` importieren (`funnel-telemetry-client.test.ts`).
 
 ## When Stuck
 - Ask a clarifying question or propose a short plan

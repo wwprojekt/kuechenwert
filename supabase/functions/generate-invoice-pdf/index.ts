@@ -1,7 +1,6 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.100.1';
 import { getCorsHeaders, handleCorsPreflightRequest } from '../_shared/cors.ts';
-// @deno-types="https://esm.sh/jspdf@2.5.2"
-import { jsPDF } from 'https://esm.sh/jspdf@2.5.2';
+import { jsPDF } from 'npm:jspdf@4.2.1';
 import { checkServiceRoleOrAdmin } from '../_shared/auth.ts';
 import { BRAND as BRAND_META } from '../_shared/brand-config.ts';
 import { describeInvoice } from '../_shared/invoice-labels.ts';

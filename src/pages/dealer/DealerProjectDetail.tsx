@@ -5,7 +5,8 @@ import { useState } from "react";
 import { Controller, useForm } from "react-hook-form";
 import { Link, useParams } from "react-router-dom";
 import { toast } from "sonner";
-import { z } from "zod";
+import { z } from "@/lib/zod";
+import { GANZE_ZAHL } from "@/lib/germanErrors";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -48,8 +49,8 @@ import { BeforeAfterSlider } from "@/features/planner/components/BeforeAfterSlid
 const euro = (n: number) => `${Math.round(n).toLocaleString("de-DE")} €`;
 
 const offerSchema = z.object({
-  price: z.coerce.number({ invalid_type_error: "Bitte einen Preis angeben" }).min(500, "Bitte einen realistischen Preis angeben").max(1_999_999),
-  delivery_weeks: z.coerce.number().int().min(1).max(78).optional().or(z.literal("").transform(() => undefined)),
+  price: z.coerce.number({ error: (issue) => (issue.code === "invalid_type" ? "Bitte einen Preis angeben" : undefined) }).min(500, "Bitte einen realistischen Preis angeben").max(1_999_999),
+  delivery_weeks: z.coerce.number().refine(Number.isInteger, GANZE_ZAHL).min(1).max(78).optional().or(z.literal("").transform(() => undefined)),
   valid_until: z.string().optional(),
   message: z.string().max(2000).optional(),
   includes: z.object({
@@ -62,11 +63,13 @@ const offerSchema = z.object({
   }),
 });
 type OfferValues = z.infer<typeof offerSchema>;
+// zod 4: z.coerce nimmt unknown an; das Formular hält Eingabe- und Ausgabetyp getrennt (@hookform/resolvers ab 5).
+type OfferInput = z.input<typeof offerSchema>;
 
 function OfferForm({ detail, intro, onDone }: { detail: Detail; intro: string | null; onDone: () => void }) {
   const mine = detail.my_offer && detail.my_offer.status === "active" ? detail.my_offer : null;
   const includes = (mine?.includes ?? {}) as OfferIncludes;
-  const form = useForm<OfferValues>({
+  const form = useForm<OfferInput, unknown, OfferValues>({
     resolver: zodResolver(offerSchema),
     defaultValues: {
       price: mine?.price_eur ?? (undefined as unknown as number),

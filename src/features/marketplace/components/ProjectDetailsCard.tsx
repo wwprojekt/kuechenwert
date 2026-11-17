@@ -2,7 +2,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { ClipboardList, Loader2 } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
-import { z } from "zod";
+import { z } from "@/lib/zod";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -16,7 +16,7 @@ import { saveProjectDetails } from "../project-api";
 const lengthField = (min: number, max: number) => z.union([z.literal(""), z.coerce.number().int().min(min).max(max)]);
 const measuresSchema = z.object({
   ceiling: lengthField(CEILING_HEIGHT_RANGE.min, CEILING_HEIGHT_RANGE.max),
-  walls: z.record(lengthField(60, 1200)),
+  walls: z.record(z.string(), lengthField(60, 1200)),
 });
 
 type Option = { id: string; label: string };

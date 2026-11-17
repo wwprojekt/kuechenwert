@@ -2,7 +2,8 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Loader2, Save } from "lucide-react";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
-import { z } from "zod";
+import { z } from "@/lib/zod";
+import { GANZE_ZAHL } from "@/lib/germanErrors";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -15,7 +16,7 @@ import { ModelSelect } from "./ModelSelect";
 
 // Grenzen = CHECK-Constraints von kw_ai_settings
 const schema = z.object({
-  daily_render_cap: z.coerce.number().int().min(0, "Mindestens 0.").max(5000, "Höchstens 5.000."),
+  daily_render_cap: z.coerce.number().refine(Number.isInteger, GANZE_ZAHL).min(0, "Mindestens 0.").max(5000, "Höchstens 5.000."),
   lora_scale: z.coerce.number().min(0, "Mindestens 0.").max(2, "Höchstens 2."),
   lora_url: z
     .string()

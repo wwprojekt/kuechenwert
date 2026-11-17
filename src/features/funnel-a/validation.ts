@@ -1,4 +1,4 @@
-import { z } from "zod";
+import { z } from "@/lib/zod";
 import { TERMS_MISSING } from "../../../supabase/functions/_shared/lead-terms.ts";
 
 export const SALUTATIONS = ["Herr", "Frau", "Divers"] as const;
@@ -97,7 +97,7 @@ const contactSchema = z.object({
       (value) => PHONE_PATTERN.test(value) && countDigits(value) >= 6 && countDigits(value) <= 16,
       "Bitte geben Sie eine gültige Telefonnummer mit Vorwahl an, z. B. 0511 123456.",
     ),
-  accept_terms: z.literal(true, { errorMap: () => ({ message: TERMS_MISSING }) }),
+  accept_terms: z.literal(true, { error: TERMS_MISSING }),
 });
 
 // Die jeweils fehlende Eigenschaft als undefined deklariert: So greift die

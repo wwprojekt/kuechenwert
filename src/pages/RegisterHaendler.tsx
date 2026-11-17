@@ -13,7 +13,7 @@ import { Label } from "@/components/ui/label";
 import { Card } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { useTurnstile } from "@/hooks/useTurnstile";
-import { z } from "zod";
+import { z } from "@/lib/zod";
 import {
   Select,
   SelectContent,
@@ -84,7 +84,7 @@ function createDealerSchema(countryCode: string) {
     phone: z.string().regex(/^[\d\s\-+()]+$/, tr.errorPhoneInvalid),
     vatId: z.string().optional().or(z.literal("")),
     website: z.string().url(tr.errorUrlInvalid).optional().or(z.literal("")),
-    agbAccepted: z.literal(true, { errorMap: () => ({ message: tr.errorAgbRequired }) }),
+    agbAccepted: z.literal(true, { error: tr.errorAgbRequired }),
   }).refine((data) => data.password === data.passwordConfirm, {
     message: tr.errorPasswordsMismatch,
     path: ["passwordConfirm"],

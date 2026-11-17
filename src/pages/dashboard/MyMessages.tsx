@@ -23,7 +23,7 @@ import { withSessionRetry, ensureValidRLSSession, isNetworkError } from "@/lib/s
 import { logger } from "@/lib/logger";
 import { format } from "date-fns";
 import { de } from "date-fns/locale";
-import { z } from "zod";
+import { z } from "@/lib/zod";
 
 const messageSchema = z.object({
   subject: z.string().trim().min(3, "Bitte geben Sie einen Betreff ein"),
@@ -95,7 +95,7 @@ export default function MyMessages() {
       if (error instanceof z.ZodError) {
         toast({
           title: "Bitte prüfen Sie Ihre Eingaben",
-          description: error.errors[0].message,
+          description: error.issues[0].message,
           variant: "destructive",
         });
       }

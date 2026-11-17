@@ -2,7 +2,8 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Loader2, Save } from "lucide-react";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
-import { z } from "zod";
+import { z } from "@/lib/zod";
+import { GANZE_ZAHL } from "@/lib/germanErrors";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -14,13 +15,13 @@ import { fetchMarketplaceSettings, saveMarketplaceSettings, type MarketplaceSett
 
 // Grenzen = CHECK-Constraints von kw_marketplace_settings
 const formSchema = z.object({
-  tenderDays: z.coerce.number().int().min(1, "Mindestens 1 Tag.").max(30, "Höchstens 30 Tage."),
-  underbidDays: z.coerce.number().int().min(1, "Mindestens 1 Tag.").max(14, "Höchstens 14 Tage."),
-  decisionDays: z.coerce.number().int().min(3, "Mindestens 3 Tage.").max(90, "Höchstens 90 Tage."),
-  maxContacts: z.coerce.number().int().min(0, "Mindestens 0.").max(10, "Höchstens 10."),
+  tenderDays: z.coerce.number().refine(Number.isInteger, GANZE_ZAHL).min(1, "Mindestens 1 Tag.").max(30, "Höchstens 30 Tage."),
+  underbidDays: z.coerce.number().refine(Number.isInteger, GANZE_ZAHL).min(1, "Mindestens 1 Tag.").max(14, "Höchstens 14 Tage."),
+  decisionDays: z.coerce.number().refine(Number.isInteger, GANZE_ZAHL).min(3, "Mindestens 3 Tage.").max(90, "Höchstens 90 Tage."),
+  maxContacts: z.coerce.number().refine(Number.isInteger, GANZE_ZAHL).min(0, "Mindestens 0.").max(10, "Höchstens 10."),
   contactPriceEur: z.coerce.number().min(0, "Nicht negativ.").max(1000, "Höchstens 1.000 €."),
-  radiusKm: z.coerce.number().int().min(10, "Mindestens 10 km.").max(500, "Höchstens 500 km."),
-  minOfferPercent: z.coerce.number().int().min(5, "Mindestens 5 %.").max(100, "Höchstens 100 %."),
+  radiusKm: z.coerce.number().refine(Number.isInteger, GANZE_ZAHL).min(10, "Mindestens 10 km.").max(500, "Höchstens 500 km."),
+  minOfferPercent: z.coerce.number().refine(Number.isInteger, GANZE_ZAHL).min(5, "Mindestens 5 %.").max(100, "Höchstens 100 %."),
 });
 
 type FormValues = Record<keyof z.infer<typeof formSchema>, string>;

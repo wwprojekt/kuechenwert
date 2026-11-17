@@ -5,7 +5,7 @@
  * in verständliche deutsche Fehlermeldungen für Kunden und Küchenstudios.
  */
 
-import { z } from 'zod';
+import type { z } from 'zod';
 
 // ============================================================================
 // Fehlercode-Definitionen
@@ -299,92 +299,78 @@ export function getGermanErrorMessage(error: unknown): string {
 }
 
 /**
- * Erstellt eine benutzerdefinierte Zod-Fehlerkarte für deutsche Meldungen.
- * Wird als globale errorMap in Zod gesetzt.
+ * Ganze Zahl in Formularen: `.refine(Number.isInteger, GANZE_ZAHL)` statt `.int()`. So meldete
+ * zod 3 `.int()` über die globale Karte, und Unter- und Obergrenze prüften weiter. zod 4 bricht
+ * bei `.int()` ab und meldet Zahlen ab 2^53 als „maximal 9007199254740991“; Masken, die je Feld
+ * die letzte Meldung zeigen, nennten dann nicht mehr ihre eigene Grenze (Vergleich 17.11.2026).
  */
-export const germanZodErrorMap: z.ZodErrorMap = (issue, ctx) => {
-  let message: string;
+export const GANZE_ZAHL = 'Ungültiger Wert. Erwartet: integer.';
 
+/**
+ * Erstellt eine benutzerdefinierte Zod-Fehlerkarte für deutsche Meldungen.
+ * Wird als globale Fehlerkarte gesetzt (`z.config({ customError })` in main.tsx).
+ *
+ * zod 4 (seit 17.11.2026): Die Fälle tragen andere Namen als in zod 3
+ * (`invalid_format` statt `invalid_string`, `invalid_value` statt
+ * `invalid_enum_value`, `origin` statt `type`, `input` statt `received`); die
+ * Texte sind dieselben. Meldungen am Schema oder an der Prüfung gehen vor.
+ * `undefined` heißt: englische Standardmeldung von zod – wie in zod 3, wo
+ * sich keiner dieser Standardtexte übersetzen ließ.
+ */
+export const germanZodErrorMap: z.core.$ZodErrorMap = (issue) => {
   switch (issue.code) {
-    case z.ZodIssueCode.invalid_type:
-      if (issue.received === 'undefined' || issue.received === 'null') {
-        message = 'Dieses Feld ist ein Pflichtfeld.';
-      } else if (issue.expected === 'number') {
-        message = 'Bitte geben Sie eine gültige Zahl ein.';
-      } else if (issue.expected === 'string') {
-        message = 'Bitte geben Sie einen Text ein.';
-      } else if (issue.expected === 'boolean') {
-        message = 'Bitte wählen Sie eine Option aus.';
-      } else {
-        message = `Ungültiger Wert. Erwartet: ${issue.expected}.`;
+    case 'invalid_type': {
+      const expected = issue.expected === 'int' ? 'integer' : issue.expected;
+      if (issue.input === undefined || issue.input === null) {
+        return 'Dieses Feld ist ein Pflichtfeld.';
       }
-      break;
+      if (expected === 'number') return 'Bitte geben Sie eine gültige Zahl ein.';
+      if (expected === 'string') return 'Bitte geben Sie einen Text ein.';
+      if (expected === 'boolean') return 'Bitte wählen Sie eine Option aus.';
+      // zod 3 meldete ein ungültiges Datum als eigenen Fall (invalid_date).
+      if (expected === 'date' && issue.input instanceof Date) return 'Bitte geben Sie ein gültiges Datum ein.';
+      return `Ungültiger Wert. Erwartet: ${expected}.`;
+    }
 
-    case z.ZodIssueCode.too_small:
-      if (issue.type === 'string') {
-        if (issue.minimum === 1) {
-          message = 'Dieses Feld darf nicht leer sein.';
-        } else {
-          message = `Mindestens ${issue.minimum} Zeichen erforderlich.`;
-        }
-      } else if (issue.type === 'number') {
-        message = `Der Wert muss mindestens ${issue.minimum} sein.`;
-      } else if (issue.type === 'array') {
-        message = `Mindestens ${issue.minimum} Einträge erforderlich.`;
-      } else {
-        message = `Der Wert ist zu klein. Minimum: ${issue.minimum}.`;
+    case 'too_small': {
+      const origin = issue.origin === 'int' ? 'number' : issue.origin;
+      if (origin === 'string') {
+        return Number(issue.minimum) === 1
+          ? 'Dieses Feld darf nicht leer sein.'
+          : `Mindestens ${issue.minimum} Zeichen erforderlich.`;
       }
-      break;
+      if (origin === 'number') return `Der Wert muss mindestens ${issue.minimum} sein.`;
+      if (origin === 'array') return `Mindestens ${issue.minimum} Einträge erforderlich.`;
+      return `Der Wert ist zu klein. Minimum: ${issue.minimum}.`;
+    }
 
-    case z.ZodIssueCode.too_big:
-      if (issue.type === 'string') {
-        message = `Maximal ${issue.maximum} Zeichen erlaubt.`;
-      } else if (issue.type === 'number') {
-        message = `Der Wert darf maximal ${issue.maximum} sein.`;
-      } else if (issue.type === 'array') {
-        message = `Maximal ${issue.maximum} Einträge erlaubt.`;
-      } else {
-        message = `Der Wert ist zu groß. Maximum: ${issue.maximum}.`;
-      }
-      break;
+    case 'too_big': {
+      const origin = issue.origin === 'int' ? 'number' : issue.origin;
+      if (origin === 'string') return `Maximal ${issue.maximum} Zeichen erlaubt.`;
+      if (origin === 'number') return `Der Wert darf maximal ${issue.maximum} sein.`;
+      if (origin === 'array') return `Maximal ${issue.maximum} Einträge erlaubt.`;
+      return `Der Wert ist zu groß. Maximum: ${issue.maximum}.`;
+    }
 
-    case z.ZodIssueCode.invalid_string:
-      if (issue.validation === 'email') {
-        message = 'Bitte geben Sie eine gültige E-Mail-Adresse ein.';
-      } else if (issue.validation === 'url') {
-        message = 'Bitte geben Sie eine gültige URL ein.';
-      } else if (issue.validation === 'uuid') {
-        message = 'Ungültige ID.';
-      } else {
-        message = 'Ungültiger Text.';
-      }
-      break;
+    case 'invalid_format':
+      if (issue.format === 'email') return 'Bitte geben Sie eine gültige E-Mail-Adresse ein.';
+      if (issue.format === 'url') return 'Bitte geben Sie eine gültige URL ein.';
+      if (issue.format === 'uuid' || issue.format === 'guid') return 'Ungültige ID.';
+      return 'Ungültiger Text.';
 
-    case z.ZodIssueCode.invalid_enum_value:
-      message = `Bitte wählen Sie einen gültigen Wert aus: ${issue.options.join(', ')}.`;
-      break;
+    case 'invalid_value': {
+      // zod 4 meldet Enum und Literal gleich; zod 3 übersetzte nur das Enum.
+      const art = (issue.inst as { _zod?: { def?: { type?: string } } } | undefined)?._zod?.def?.type;
+      if (art === 'literal') return undefined;
+      return `Bitte wählen Sie einen gültigen Wert aus: ${issue.values.join(', ')}.`;
+    }
 
-    case z.ZodIssueCode.invalid_date:
-      message = 'Bitte geben Sie ein gültiges Datum ein.';
-      break;
-
-    case z.ZodIssueCode.custom:
-      message = issue.message || 'Ungültige Eingabe.';
-      break;
+    case 'custom':
+      return issue.message || 'Ungültige Eingabe.';
 
     default:
-      message = ctx.defaultError;
-      // Versuche den Default-Error zu übersetzen
-      if (message && !isGerman(message)) {
-        const translated = translateError(message);
-        if (translated.code !== 'UNTRANSLATED') {
-          message = translated.message;
-        }
-      }
-      break;
+      return undefined;
   }
-
-  return { message };
 };
 
 // ============================================================================

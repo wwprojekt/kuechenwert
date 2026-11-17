@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { z } from "zod";
+import { z } from "@/lib/zod";
 import { handleValidationError, handleAuthError } from "@/lib/errorLogService";
 import { trackUserRegistered, setEnhancedConversionData } from "@/lib/gadsConversionService";
 import { trackMetaCompleteRegistration } from "@/lib/metaPixelService";
@@ -27,7 +27,7 @@ const signUpSchema = z.object({
   phone: z.string().trim()
     .refine((value) => value === "" || /^[+]?[\d\s\-()]{8,20}$/.test(value), "Ungültige Telefonnummer"),
   companyName: z.string().trim().optional(),
-  agbAccepted: z.literal(true, { errorMap: () => ({ message: "Bitte akzeptieren Sie die AGB." }) }),
+  agbAccepted: z.literal(true, { error: "Bitte akzeptieren Sie die AGB." }),
 }).refine((data) => data.password === data.passwordConfirm, {
   message: "Passwörter stimmen nicht überein",
   path: ["passwordConfirm"],

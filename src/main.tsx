@@ -2,8 +2,6 @@ import "./lib/projectTokenBootstrap";
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { HelmetProvider } from "react-helmet-async";
-import { z } from "zod";
-import { germanZodErrorMap } from "./lib/germanErrors";
 import { installGlobalErrorHandlers, initBreadcrumbTracking } from "./lib/errorLogService";
 import { AuthProvider } from "./contexts/AuthContext";
 import { SettingsProvider } from "./contexts/SettingsContext";
@@ -19,8 +17,7 @@ import "@fontsource/fira-sans/latin-700.css";
 import "@fontsource/fira-sans/latin-800.css";
 import "./index.css";
 
-// Globale deutsche Fehlermeldungen für alle Zod-Validierungen setzen
-z.setErrorMap(germanZodErrorMap);
+// Die deutschen Zod-Meldungen setzt src/lib/zod.ts, sobald ein Formular zod lädt.
 
 // scripts/prerender.mjs setzt das Flag per Init-Skript: Beim Rendern zur
 // Build-Zeit weder Service Worker noch Fehlerprotokoll an Supabase.

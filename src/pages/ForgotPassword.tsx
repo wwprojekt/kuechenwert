@@ -10,7 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { z } from "zod";
+import { z } from "@/lib/zod";
 import { logger } from "@/lib/logger";
 import { handleValidationError } from "@/lib/errorLogService";
 import { Mail, ArrowLeft, Loader2, CheckCircle2 } from "lucide-react";

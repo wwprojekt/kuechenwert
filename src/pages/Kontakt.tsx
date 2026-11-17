@@ -13,7 +13,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useSettings } from "@/contexts/SettingsContext";
 import { useSupportPhone } from "@/hooks/useSupportPhone";
 import { supabase } from "@/integrations/supabase/client";
-import { z } from "zod";
+import { z } from "@/lib/zod";
 import { handleValidationError } from "@/lib/errorLogService";
 import { trackEvent } from "@/lib/analyticsService";
 import { trackMetaContact } from "@/lib/metaPixelService";

@@ -2,7 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Flag, Loader2 } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
-import { z } from "zod";
+import { z } from "@/lib/zod";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
@@ -14,7 +14,7 @@ import { COMPLAINT_REASON_LABELS, fetchComplaintStatus, fileComplaint, type Comp
 const complaintSchema = z
   .object({
     reason: z.enum(["nicht_erreichbar", "falsche_kontaktdaten", "kein_kuechenprojekt", "doppelt", "sonstiges"], {
-      errorMap: () => ({ message: "Bitte einen Grund auswählen." }),
+      error: "Bitte einen Grund auswählen.",
     }),
     note: z.string().trim().max(1000, "Höchstens 1.000 Zeichen."),
   })

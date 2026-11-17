@@ -196,6 +196,23 @@ function serializePage(shellScriptSources) {
     const src = el.getAttribute("src");
     if (src ? !shellScriptSources.includes(src) : el.type !== "application/ld+json") el.remove();
   });
+  // react-helmet-async meldet einen <Helmet> schon in render() an. Verwirft React dieses Rendern
+  // (die nachgeladene Seite wird unterbrochen, etwa weil die Einstellungen eintreffen), bleibt sein
+  // Stand angemeldet: /ueber-uns trug dann zwei Organization-Blöcke, der erste mit der
+  // Standardbeschreibung (Vergleich der Prerender-Ausgabe, 17.11.2026). Von Blöcken desselben Typs
+  // gilt der zuletzt eingefügte.
+  const jsonLdByType = new Map();
+  document.querySelectorAll('script[type="application/ld+json"][data-rh]').forEach((el) => {
+    let key;
+    try {
+      const data = JSON.parse(el.textContent ?? "");
+      key = JSON.stringify(Array.isArray(data) ? data.map((item) => item?.["@type"]) : data?.["@type"]);
+    } catch {
+      return;
+    }
+    jsonLdByType.get(key)?.remove();
+    jsonLdByType.set(key, el);
+  });
 
   return `<!doctype html>\n${document.documentElement.outerHTML}\n`;
 }

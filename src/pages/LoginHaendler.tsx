@@ -1,4 +1,4 @@
-import { Navigate, useSearchParams } from "react-router-dom";
+import { Navigate, useSearchParams } from "react-router";
 
 /**
  * Studio-Login unter /login/haendler: leitet auf das gemeinsame /login weiter

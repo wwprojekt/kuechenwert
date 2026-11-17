@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router";
 import { FunnelShell } from "@/components/funnel/funnel-shell";
 import { submitFunnelA, trackFunnelALead } from "@/features/funnel-a/api";
 import { CONTACT_FORM_ID, ContactStep } from "@/features/funnel-a/components/ContactStep";

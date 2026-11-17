@@ -3,7 +3,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ArrowLeft, Clock, Download, FileJson, KeyRound, Loader2, MapPin, Phone, Printer, Trophy, Users } from "lucide-react";
 import { useState } from "react";
 import { Controller, useForm } from "react-hook-form";
-import { Link, useParams } from "react-router-dom";
+import { Link, useParams } from "react-router";
 import { toast } from "sonner";
 import { z } from "@/lib/zod";
 import { GANZE_ZAHL } from "@/lib/germanErrors";

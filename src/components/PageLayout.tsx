@@ -5,7 +5,7 @@ import ScrollToTop from "@/components/ScrollToTop";
 import Breadcrumbs from "@/components/Breadcrumbs";
 import { Helmet } from "react-helmet-async";
 import { useSettings } from "@/contexts/SettingsContext";
-import { useLocation } from "react-router-dom";
+import { useLocation } from "react-router";
 import { getCanonicalUrl, injectStructuredData } from "@/lib/seo";
 import type { BreadcrumbItem } from "@/lib/seo";
 import { BRAND } from "@/lib/brand/config";

@@ -1,5 +1,5 @@
 import { CheckCircle2, FolderOpen, Mail, MapPin, Phone } from "lucide-react";
-import { Link, useSearchParams } from "react-router-dom";
+import { Link, useSearchParams } from "react-router";
 import { FunnelSeo } from "@/components/funnel/funnel-seo";
 import { Button } from "@/components/ui/button";
 import { useSettings } from "@/contexts/SettingsContext";

@@ -1,5 +1,5 @@
 import { ArrowRight, MessagesSquare } from "lucide-react";
-import { Link } from "react-router-dom";
+import { Link } from "react-router";
 import { KitchenFormPlan } from "@/components/kitchen/KitchenFormPlan";
 import { FORM_OPTIONS, UNSURE, type ChoiceOption } from "@/features/funnel-a/catalog";
 import { cn } from "@/lib/utils";

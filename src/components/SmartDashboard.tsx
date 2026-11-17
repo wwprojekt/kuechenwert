@@ -13,7 +13,7 @@
 
 import React, { useEffect, useState, Suspense } from 'react';
 import { lazyRetry } from '@/lib/lazyRetry';
-import { useNavigate, Link, Routes, Route } from 'react-router-dom';
+import { useNavigate, Link, Routes, Route } from 'react-router';
 import { useUserRole } from '@/hooks/useUserRole';
 import { useDealerPending } from '@/hooks/useDealerPending';
 import { useAuth } from '@/contexts/AuthContext';

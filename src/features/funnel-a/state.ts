@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { useSearchParams } from "react-router-dom";
+import { useSearchParams } from "react-router";
 import { emptyFunnelAAnswers, sanitizeFunnelAAnswers, type FunnelAAnswers } from "./catalog";
 import { emptyContact, sanitizeContact, type FunnelAContact } from "./validation";
 

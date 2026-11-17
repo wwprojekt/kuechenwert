@@ -8,7 +8,7 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Calendar, ArrowRight } from "lucide-react";
-import { Link } from "react-router-dom";
+import { Link } from "react-router";
 import { format } from "date-fns";
 import { de } from "date-fns/locale";
 import { BLOG_CATEGORIES } from "@/data/blog-categories";

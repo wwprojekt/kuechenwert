@@ -1,4 +1,4 @@
-import { NavLink } from "react-router-dom";
+import { NavLink } from "react-router";
 import {
   LayoutDashboard,
   Users,
@@ -37,7 +37,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
 import { SiteLogo } from "@/components/SiteLogo";
-import { useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router";
 import { useState } from "react";
 import { useAdminNotificationCounts } from "@/components/admin/AdminNotificationBell";
 

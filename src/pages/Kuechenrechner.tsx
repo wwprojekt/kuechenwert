@@ -15,7 +15,7 @@ import {
   TrendingDown,
   CheckCircle2,
 } from "lucide-react";
-import { Link } from "react-router-dom";
+import { Link } from "react-router";
 import { clsx } from "clsx";
 import { BRAND } from "@/lib/brand/config";
 import {

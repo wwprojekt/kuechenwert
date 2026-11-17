@@ -1,4 +1,4 @@
-import { Link } from "react-router-dom";
+import { Link } from "react-router";
 import PageLayout from "@/components/PageLayout";
 import PageHero from "@/components/PageHero";
 import { useSettings } from "@/contexts/SettingsContext";

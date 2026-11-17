@@ -1,4 +1,4 @@
-import { Link } from "react-router-dom";
+import { Link } from "react-router";
 import { ArrowRight, BadgeCheck, Building2, EyeOff, Handshake, MapPin, type LucideIcon } from "lucide-react";
 import PageLayout from "@/components/PageLayout";
 import PageHero from "@/components/PageHero";

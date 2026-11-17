@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useParams, Navigate } from "react-router-dom";
+import { useParams, Navigate } from "react-router";
 import RatgeberTemplate from "./RatgeberTemplate";
 import {
   loadRatgeberConfig,

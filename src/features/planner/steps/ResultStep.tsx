@@ -1,5 +1,5 @@
 import { AlertTriangle, CheckCircle2, ImageIcon, PencilLine, RefreshCcw, Wand2 } from "lucide-react";
-import { Link } from "react-router-dom";
+import { Link } from "react-router";
 import { Button } from "@/components/ui/button";
 import { ConsentCheckbox } from "@/features/funnel-a/components/ContactFields";
 import type { RenderFeedbackReason } from "../../../../supabase/functions/_shared/render-feedback.ts";

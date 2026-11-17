@@ -1,6 +1,6 @@
 import { BadgeEuro, Clock3, ShieldCheck } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router";
 import { toast } from "sonner";
 import { FunnelFrame } from "@/components/funnel/funnel-frame";
 import { FunnelTrustStrip } from "@/components/funnel/funnel-shell";

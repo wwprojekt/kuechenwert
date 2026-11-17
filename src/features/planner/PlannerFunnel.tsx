@@ -1,6 +1,6 @@
 import { ShieldCheck } from "lucide-react";
 import type { ReactNode } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router";
 import { FunnelFrame, type FunnelNav } from "@/components/funnel/funnel-frame";
 import { PlzStep } from "@/components/funnel/plz-step";
 import { RequestOffersDialog } from "./components/RequestOffersDialog";

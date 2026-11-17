@@ -1,4 +1,4 @@
-import { Link } from "react-router-dom";
+import { Link } from "react-router";
 import { useSettings } from "@/contexts/SettingsContext";
 import { BRAND, BRAND_LOGOS } from "@/lib/brand";
 

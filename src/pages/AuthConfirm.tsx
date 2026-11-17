@@ -1,8 +1,9 @@
 import { useEffect, useState } from "react";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router";
 import { supabase } from "@/integrations/supabase/client";
 import PageLayout from "@/components/PageLayout";
 import { BRAND } from "@/lib/brand";
+import { safeRedirectPath } from "@/lib/redirectTarget";
 
 type VerifyType = "signup" | "recovery" | "invite" | "magiclink" | "email_change" | "email";
 
@@ -75,7 +76,8 @@ const AuthConfirm = () => {
     const confirmEmail = async () => {
       const tokenHash = searchParams.get("token_hash");
       const type = (searchParams.get("type") || "signup") as VerifyType;
-      const redirectTo = searchParams.get("redirect_to");
+      // Nur eigene Pfade (kw-auth-email setzt Pfad und Suche, ein Link lässt sich aber von Hand ändern).
+      const redirectTo = safeRedirectPath(searchParams.get("redirect_to"));
 
       if (!tokenHash) {
         setStatus("error");

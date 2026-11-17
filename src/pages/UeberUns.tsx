@@ -22,7 +22,7 @@ import {
   CheckCircle2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Link } from "react-router-dom";
+import { Link } from "react-router";
 import studioConsultant from "@/assets/studio-consultant.webp";
 import kitchenConsultation from "@/assets/kitchen-consultation.webp";
 import { useSettings } from "@/contexts/SettingsContext";

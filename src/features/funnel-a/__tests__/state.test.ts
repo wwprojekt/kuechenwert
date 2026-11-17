@@ -2,8 +2,8 @@ import { existsSync } from "node:fs";
 import { join } from "node:path";
 import { act, renderHook } from "@testing-library/react";
 import { createElement, type ReactNode } from "react";
-import { MemoryRouter } from "react-router-dom";
-import type * as RouterDom from "react-router-dom";
+import { MemoryRouter } from "react-router";
+import type * as RouterDom from "react-router";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { EXTRA_APPLIANCE_ICONS, SERVICE_ICONS, choiceIcon } from "@/components/funnel/funnel-a-icons";
 import { WORKTOP_PICTOGRAMS } from "@/components/funnel/funnel-a-pictograms";
@@ -281,7 +281,7 @@ describe("Zwischenstand im sessionStorage", () => {
 
 describe("useFunnelA", () => {
   async function renderFunnel(initialEntry: string) {
-    const { useLocation } = await vi.importActual<typeof RouterDom>("react-router-dom");
+    const { useLocation } = await vi.importActual<typeof RouterDom>("react-router");
     const wrapper = ({ children }: { children: ReactNode }) =>
       createElement(MemoryRouter, { initialEntries: [initialEntry] }, children);
     return renderHook(() => ({ funnel: useFunnelA(), location: useLocation() }), { wrapper });

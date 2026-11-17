@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link } from "react-router";
 import { FunctionsHttpError } from "@supabase/supabase-js";
 import { AlertTriangle, CheckCircle2, Loader2 } from "lucide-react";
 import PageLayout from "@/components/PageLayout";

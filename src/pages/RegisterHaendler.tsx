@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useMemo } from "react";
-import { useNavigate, Link } from "react-router-dom";
+import { useNavigate, Link } from "react-router";
 import { useAuth } from "@/contexts/AuthContext";
 import { handleValidationError, handleAuthError } from "@/lib/errorLogService";
 import { trackUserRegistered, setEnhancedConversionData } from "@/lib/gadsConversionService";

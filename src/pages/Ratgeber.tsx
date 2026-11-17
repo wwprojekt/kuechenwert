@@ -12,7 +12,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Link } from "react-router-dom";
+import { Link } from "react-router";
 import { BRAND } from "@/lib/brand";
 
 // Solange es keine Ratgeber-Artikel gibt, leitet /ratgeber/:slug hierher um.

@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Mail, Phone, MapPin, ArrowRight, Facebook, Instagram, Youtube, Linkedin, Shield, Award, Clock, CheckCircle2, Cookie } from "lucide-react";
 import { useSettings } from "@/contexts/SettingsContext";
-import { Link, useLocation } from "react-router-dom";
+import { Link, useLocation } from "react-router";
 import { Button } from "@/components/ui/button";
 import { SiteLogo } from "@/components/SiteLogo";
 import { CookieSettingsModal } from "@/components/CookieSettingsModal";

@@ -27,7 +27,7 @@ import {
   DialogDescription,
 } from "@/components/ui/dialog";
 import { Loader2, Eye, ExternalLink } from "lucide-react";
-import { Link, useSearchParams } from "react-router-dom";
+import { Link, useSearchParams } from "react-router";
 import { KITCHEN_FORMS, STYLES, labelOf } from "@/features/planner/core";
 import { falModel } from "../../../supabase/functions/_shared/fal-models.ts";
 

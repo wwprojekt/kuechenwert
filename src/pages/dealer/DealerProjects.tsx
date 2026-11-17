@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { Inbox, Loader2, MapPinned, Settings2 } from "lucide-react";
-import { Link, useSearchParams } from "react-router-dom";
+import { Link, useSearchParams } from "react-router";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useAuth } from "@/contexts/AuthContext";

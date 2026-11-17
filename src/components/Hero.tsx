@@ -1,5 +1,5 @@
 import { ArrowRight, BadgeCheck, Calculator, Inbox, Lock, ShieldCheck, Sparkles, TrendingDown, type LucideIcon } from "lucide-react";
-import { Link } from "react-router-dom";
+import { Link } from "react-router";
 import { BeforeAfterSlider } from "@/features/planner/components/BeforeAfterSlider";
 import { BRAND_IMAGES } from "@/lib/brand";
 import { cn } from "@/lib/utils";

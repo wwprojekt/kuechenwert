@@ -2,7 +2,7 @@ import { useState, useMemo, useEffect } from "react";
 import { AdminPagination } from "@/components/admin/AdminPagination";
 import { useExport } from "@/hooks/useExport";
 import { ExportButton } from "@/components/ExportButton";
-import { useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { invokeWithAuth, ensureValidRLSSession } from "@/lib/sessionGuard";

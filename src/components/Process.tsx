@@ -1,5 +1,5 @@
 import { ArrowRight, CheckCircle2, ClipboardList, Handshake, Scale, Sparkles } from "lucide-react";
-import { Link } from "react-router-dom";
+import { Link } from "react-router";
 import { Button } from "@/components/ui/button";
 import coupleImage from "@/assets/couple-kitchen.webp";
 import showroomImage from "@/assets/kitchen-showroom.webp";

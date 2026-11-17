@@ -1,5 +1,5 @@
 import { Clock, ImageIcon, KeyRound, MapPin, Trophy, Users } from "lucide-react";
-import { Link } from "react-router-dom";
+import { Link } from "react-router";
 import { formLabel } from "@/features/funnel-a/catalog";
 import { AiBadge } from "@/features/planner/components/AiBadge";
 import { cn } from "@/lib/utils";

@@ -1,6 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { ArrowRight, Sparkles, CheckCircle, Calculator, TrendingDown } from "lucide-react";
-import { Link } from "react-router-dom";
+import { Link } from "react-router";
 
 const CTA = () => {
   return (

@@ -128,7 +128,7 @@ export default defineConfig(({ mode }) => ({
             {
               name: "vendor-react",
               priority: 90,
-              test: ausPaket("react/", "react-dom/", "react-router-dom/", "react-router/", "@remix-run/"),
+              test: ausPaket("react/", "react-dom/", "react-router/"),
             },
             // Kleine Helfer, die App und Admin-Bibliotheken teilen. Ohne eigenen Chunk landen sie
             // in vendor-recharts bzw. vendor-editor, und der Einstieg lädt beide auf jeder Seite

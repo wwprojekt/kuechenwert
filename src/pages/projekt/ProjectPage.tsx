@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { CheckCircle2, Clock, Hourglass, Inbox, Loader2, MapPin, PartyPopper, Store, XCircle } from "lucide-react";
 import { useEffect, useState } from "react";
-import { Link, useLocation, useNavigate, useParams, useSearchParams } from "react-router-dom";
+import { Link, useLocation, useNavigate, useParams, useSearchParams } from "react-router";
 import { toast } from "sonner";
 import PageLayout from "@/components/PageLayout";
 import {

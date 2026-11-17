@@ -1,4 +1,4 @@
-import { useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router";
 import { AdminPagination } from "@/components/admin/AdminPagination";
 import { useExport } from "@/hooks/useExport";
 import { ExportButton } from "@/components/ExportButton";

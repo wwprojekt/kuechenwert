@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { CheckCircle2, ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
-import { Link } from "react-router-dom";
+import { Link } from "react-router";
 import { StudioPricing } from "@/components/pricing/StudioPricing";
 import { BRAND } from "@/lib/brand";
 

@@ -1,5 +1,5 @@
 import type { ElementType } from "react";
-import { Link } from "react-router-dom";
+import { Link } from "react-router";
 import {
   Users, TrendingUp, UserPlus, Mail, AlertCircle, MessageSquare, Building2,
   FileText, CheckCircle2, Bell, Inbox, RefreshCw, ExternalLink,

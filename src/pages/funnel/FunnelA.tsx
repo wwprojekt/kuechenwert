@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { Navigate, useLocation, useParams } from "react-router-dom";
+import { Navigate, useLocation, useParams } from "react-router";
 import { FunnelSeo } from "@/components/funnel/funnel-seo";
 import { FUNNEL_A_FIRST_SLUG, isFunnelAStepSlug, stepPath } from "@/features/funnel-a/steps";
 import { captureUtmParams } from "@/lib/utm";

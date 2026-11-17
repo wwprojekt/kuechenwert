@@ -5,7 +5,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { ThemeProvider } from "@/components/ThemeProvider";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { queryClient } from "./lib/queryClient";
-import { BrowserRouter, Routes, Route, useLocation } from "react-router-dom";
+import { BrowserRouter, Routes, Route, useLocation } from "react-router";
 import PageTransition from "./components/PageTransition";
 import { ErrorBoundary } from "./components/ErrorBoundary";
 import { WhatsAppButton } from "./components/WhatsAppButton";

@@ -1,6 +1,6 @@
 import { fireEvent, render, screen } from "@testing-library/react";
-import type * as RouterDom from "react-router-dom";
-import { MemoryRouter, Route, Routes } from "react-router-dom";
+import type * as RouterDom from "react-router";
+import { MemoryRouter, Route, Routes } from "react-router";
 import { describe, expect, it, vi } from "vitest";
 import { FunnelFooter } from "../funnel-footer";
 import { FunnelHeader } from "../funnel-header";
@@ -8,8 +8,8 @@ import { FunnelShell } from "../funnel-shell";
 
 const { navigateMock } = vi.hoisted(() => ({ navigateMock: vi.fn() }));
 
-vi.mock("react-router-dom", async () => {
-  const actual = await vi.importActual<typeof RouterDom>("react-router-dom");
+vi.mock("react-router", async () => {
+  const actual = await vi.importActual<typeof RouterDom>("react-router");
   return { ...actual, useNavigate: () => navigateMock };
 });
 vi.mock("@/hooks/useSupportPhone", () => ({

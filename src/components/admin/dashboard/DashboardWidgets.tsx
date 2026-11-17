@@ -1,5 +1,5 @@
 import { useMemo, useState, type ElementType } from "react";
-import { Link } from "react-router-dom";
+import { Link } from "react-router";
 import { AlertTriangle, Banknote, ChevronRight, Euro, Receipt } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";

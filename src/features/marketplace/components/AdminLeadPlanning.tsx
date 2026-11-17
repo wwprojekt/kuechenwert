@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { ExternalLink, Loader2 } from "lucide-react";
-import { Link } from "react-router-dom";
+import { Link } from "react-router";
 import type { Database } from "@/integrations/supabase/types";
 import { errorMessage } from "../api-client";
 import { fetchAdminTender, fetchLeadPlanner } from "../admin-api";

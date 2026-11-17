@@ -1,6 +1,6 @@
 import { ArrowUp, BadgeCheck, Lock, ShieldCheck } from "lucide-react";
 import { useEffect, useRef } from "react";
-import { useLocation } from "react-router-dom";
+import { useLocation } from "react-router";
 import PageLayout from "@/components/PageLayout";
 import { FunnelFooter } from "@/components/funnel/funnel-footer";
 import { FunnelHeader } from "@/components/funnel/funnel-header";

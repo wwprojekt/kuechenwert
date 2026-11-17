@@ -1,4 +1,4 @@
-import { NavLink } from "react-router-dom";
+import { NavLink } from "react-router";
 import {
   LayoutDashboard,
   User,
@@ -24,7 +24,7 @@ import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
 import { SiteLogo } from "@/components/SiteLogo";
 import { useUserRole } from "@/hooks/useUserRole";
-import { useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router";
 import { Separator } from "@/components/ui/separator";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";

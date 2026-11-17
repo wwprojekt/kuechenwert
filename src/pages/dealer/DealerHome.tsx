@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { ArrowRight, Briefcase, KeyRound, Loader2, MapPinned, Send, Trophy } from "lucide-react";
-import { Link } from "react-router-dom";
+import { Link } from "react-router";
 import PendingDealerBanner from "@/components/dashboard/PendingDealerBanner";
 import PendingDealerDocumentUpload from "@/components/dashboard/PendingDealerDocumentUpload";
 import { Button } from "@/components/ui/button";

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useSearchParams } from "react-router-dom";
+import { useSearchParams } from "react-router";
 import { toast } from "sonner";
 import { ApiError, errorMessage } from "@/features/marketplace/api-client";
 import { getStoredProjectToken, storeProjectToken } from "@/features/marketplace/project-token";

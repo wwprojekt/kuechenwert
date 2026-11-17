@@ -4,7 +4,7 @@ import RelatedContent, { haendlerRelatedLinks } from "@/components/RelatedConten
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { BellRing, CheckCircle2, FileDown, Handshake, KeyRound, MapPinned, Sparkles, TrendingDown } from "lucide-react";
-import { Link } from "react-router-dom";
+import { Link } from "react-router";
 import studioConsultant from "@/assets/studio-consultant.webp";
 import { useSettings } from "@/contexts/SettingsContext";
 import { BRAND } from "@/lib/brand/config";

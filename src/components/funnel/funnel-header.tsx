@@ -1,7 +1,7 @@
 import * as AlertDialogPrimitive from "@radix-ui/react-alert-dialog";
 import { Phone } from "lucide-react";
 import { useEffect, useRef, useState, type MouseEvent, type ReactNode } from "react";
-import { Link, useLocation, useNavigate } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router";
 import { SiteLogo } from "@/components/SiteLogo";
 import {
   AlertDialog,

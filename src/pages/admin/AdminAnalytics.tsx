@@ -1,4 +1,4 @@
-import { useSearchParams } from "react-router-dom";
+import { useSearchParams } from "react-router";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { FunnelTab } from "@/components/admin/analytics/FunnelTab";
 import { PlatformTab } from "@/components/admin/analytics/PlatformTab";

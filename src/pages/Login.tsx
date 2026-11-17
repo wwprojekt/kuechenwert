@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useNavigate, Link, useSearchParams } from "react-router-dom";
+import { useNavigate, Link, useSearchParams } from "react-router";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { useUserRole } from "@/hooks/useUserRole";
@@ -14,6 +14,7 @@ import { trackUserLoggedIn } from "@/lib/gadsConversionService";
 import { Mail, Lock, ArrowRight } from "lucide-react";
 import PageLayout from "@/components/PageLayout";
 import { BRAND } from "@/lib/brand";
+import { safeRedirectPath } from "@/lib/redirectTarget";
 
 const signInSchema = z.object({
   email: z.string().trim().email("Bitte geben Sie eine gültige E-Mail-Adresse ein"),
@@ -23,7 +24,8 @@ const signInSchema = z.object({
 const Login = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const redirectTo = searchParams.get('redirect');
+  // Nur eigene Pfade; ein fremdes Ziel führte nach der Anmeldung auf eine andere Seite.
+  const redirectTo = safeRedirectPath(searchParams.get('redirect'));
   const { user } = useAuth();
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);

@@ -7,3 +7,10 @@ allowBuilds:
   # Kommt transitiv über vitest (@vitest/mocker). Das Skript kopiert nur den
   # Mock-Service-Worker nach public/ – nicht nötig.
   msw: false
+
+# @tailwindcss/typography (auch 0.5.20, die neueste) legt postcss-selector-parser auf genau
+# 6.0.10 fest; das ist von GHSA-rj75-hqrm-r3gf betroffen (behoben in 6.1.5). 6.1 ist innerhalb
+# der Hauptversion verträglich. Entfernen, sobald typography die Abhängigkeit selbst hebt.
+# Abhängigkeiten 17.11.2026.
+overrides:
+  "@tailwindcss/typography>postcss-selector-parser": ^6.1.6

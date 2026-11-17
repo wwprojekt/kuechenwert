@@ -308,7 +308,7 @@ export const GANZE_ZAHL = 'Ungültiger Wert. Erwartet: integer.';
 
 /**
  * Erstellt eine benutzerdefinierte Zod-Fehlerkarte für deutsche Meldungen.
- * Wird als globale Fehlerkarte gesetzt (`z.config({ customError })` in main.tsx).
+ * Wird als globale Fehlerkarte gesetzt (`z.config({ customError })` in src/lib/zod.ts).
  *
  * zod 4 (seit 17.11.2026): Die Fälle tragen andere Namen als in zod 3
  * (`invalid_format` statt `invalid_string`, `invalid_value` statt
